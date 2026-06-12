@@ -1,0 +1,24 @@
+# Runtime logs
+*.log
+*.err.log
+
+# Temporary / validation database builds
+ic_database_checks/
+
+# Local PDF storage. Keep the folders, not the PDFs.
+ic_database/pdfs/*
+!ic_database/pdfs/.gitkeep
+ic_database/pdf_inbox/*
+!ic_database/pdf_inbox/.gitkeep
+
+# External references and previous Zotero workspace
+references/
+zotero-downloads/
+scripts/install-zotero-plugins.ps1
+scripts/setup-zotero.ps1
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

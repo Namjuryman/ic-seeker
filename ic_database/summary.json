@@ -1,0 +1,995 @@
+{
+  "generatedAt": "2026-06-12T15:54:05.210Z",
+  "rows": 38732,
+  "summary": [
+    {
+      "venue": "TCAS-II",
+      "papers": 4566,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "TCAS-I",
+      "papers": 4469,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "JSSC",
+      "papers": 3845,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "TCAD",
+      "papers": 3725,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "ISCAS",
+      "papers": 2902,
+      "min_year": 2016,
+      "max_year": 2025
+    },
+    {
+      "venue": "TVLSI",
+      "papers": 2891,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "DAC",
+      "papers": 2835,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "ISSCC",
+      "papers": 2479,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "IEDM",
+      "papers": 2285,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "ICCAD",
+      "papers": 2081,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "VLSI Symposium",
+      "papers": 1588,
+      "min_year": 2016,
+      "max_year": 2025
+    },
+    {
+      "venue": "CICC",
+      "papers": 1326,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "DATE",
+      "papers": 1120,
+      "min_year": 2016,
+      "max_year": 2023
+    },
+    {
+      "venue": "ASSCC",
+      "papers": 996,
+      "min_year": 2016,
+      "max_year": 2026
+    },
+    {
+      "venue": "ESSCIRC",
+      "papers": 816,
+      "min_year": 2016,
+      "max_year": 2024
+    },
+    {
+      "venue": "ESSERC",
+      "papers": 808,
+      "min_year": 2016,
+      "max_year": 2026
+    }
+  ],
+  "byDomain": [
+    {
+      "domain": "Analog & Mixed-Signal",
+      "papers": 8709
+    },
+    {
+      "domain": "RF/mmWave & Wireline",
+      "papers": 6498
+    },
+    {
+      "domain": "General IC",
+      "papers": 5602
+    },
+    {
+      "domain": "EDA, CAD & Verification",
+      "papers": 4242
+    },
+    {
+      "domain": "Digital IC & Architecture",
+      "papers": 3762
+    },
+    {
+      "domain": "Devices, Process & 3D Integration",
+      "papers": 3057
+    },
+    {
+      "domain": "Memory & Compute-in-Memory",
+      "papers": 2982
+    },
+    {
+      "domain": "Clocking & Frequency Generation",
+      "papers": 1440
+    },
+    {
+      "domain": "Power Management",
+      "papers": 1299
+    },
+    {
+      "domain": "Security & Reliability",
+      "papers": 661
+    },
+    {
+      "domain": "Biomedical, Sensor & Imaging IC",
+      "papers": 480
+    }
+  ],
+  "byVenueYear": [
+    {
+      "venue": "ASSCC",
+      "year": 2016,
+      "papers": 94
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2017,
+      "papers": 85
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2018,
+      "papers": 99
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2019,
+      "papers": 95
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2020,
+      "papers": 48
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2021,
+      "papers": 106
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2022,
+      "papers": 99
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2023,
+      "papers": 102
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2024,
+      "papers": 126
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2025,
+      "papers": 140
+    },
+    {
+      "venue": "ASSCC",
+      "year": 2026,
+      "papers": 2
+    },
+    {
+      "venue": "CICC",
+      "year": 2016,
+      "papers": 10
+    },
+    {
+      "venue": "CICC",
+      "year": 2017,
+      "papers": 141
+    },
+    {
+      "venue": "CICC",
+      "year": 2018,
+      "papers": 120
+    },
+    {
+      "venue": "CICC",
+      "year": 2019,
+      "papers": 137
+    },
+    {
+      "venue": "CICC",
+      "year": 2020,
+      "papers": 88
+    },
+    {
+      "venue": "CICC",
+      "year": 2021,
+      "papers": 92
+    },
+    {
+      "venue": "CICC",
+      "year": 2022,
+      "papers": 106
+    },
+    {
+      "venue": "CICC",
+      "year": 2023,
+      "papers": 130
+    },
+    {
+      "venue": "CICC",
+      "year": 2024,
+      "papers": 153
+    },
+    {
+      "venue": "CICC",
+      "year": 2025,
+      "papers": 164
+    },
+    {
+      "venue": "CICC",
+      "year": 2026,
+      "papers": 185
+    },
+    {
+      "venue": "DAC",
+      "year": 2016,
+      "papers": 201
+    },
+    {
+      "venue": "DAC",
+      "year": 2017,
+      "papers": 194
+    },
+    {
+      "venue": "DAC",
+      "year": 2018,
+      "papers": 379
+    },
+    {
+      "venue": "DAC",
+      "year": 2019,
+      "papers": 199
+    },
+    {
+      "venue": "DAC",
+      "year": 2020,
+      "papers": 311
+    },
+    {
+      "venue": "DAC",
+      "year": 2021,
+      "papers": 289
+    },
+    {
+      "venue": "DAC",
+      "year": 2022,
+      "papers": 306
+    },
+    {
+      "venue": "DAC",
+      "year": 2023,
+      "papers": 335
+    },
+    {
+      "venue": "DAC",
+      "year": 2024,
+      "papers": 306
+    },
+    {
+      "venue": "DAC",
+      "year": 2025,
+      "papers": 314
+    },
+    {
+      "venue": "DAC",
+      "year": 2026,
+      "papers": 1
+    },
+    {
+      "venue": "DATE",
+      "year": 2016,
+      "papers": 139
+    },
+    {
+      "venue": "DATE",
+      "year": 2017,
+      "papers": 156
+    },
+    {
+      "venue": "DATE",
+      "year": 2018,
+      "papers": 149
+    },
+    {
+      "venue": "DATE",
+      "year": 2019,
+      "papers": 148
+    },
+    {
+      "venue": "DATE",
+      "year": 2020,
+      "papers": 130
+    },
+    {
+      "venue": "DATE",
+      "year": 2021,
+      "papers": 131
+    },
+    {
+      "venue": "DATE",
+      "year": 2022,
+      "papers": 135
+    },
+    {
+      "venue": "DATE",
+      "year": 2023,
+      "papers": 132
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2016,
+      "papers": 124
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2017,
+      "papers": 97
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2018,
+      "papers": 96
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2019,
+      "papers": 100
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2020,
+      "papers": 2
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2021,
+      "papers": 123
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2022,
+      "papers": 135
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2023,
+      "papers": 137
+    },
+    {
+      "venue": "ESSCIRC",
+      "year": 2024,
+      "papers": 2
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2016,
+      "papers": 113
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2017,
+      "papers": 76
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2018,
+      "papers": 72
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2019,
+      "papers": 67
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2020,
+      "papers": 1
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2021,
+      "papers": 71
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2022,
+      "papers": 51
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2023,
+      "papers": 51
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2024,
+      "papers": 154
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2025,
+      "papers": 150
+    },
+    {
+      "venue": "ESSERC",
+      "year": 2026,
+      "papers": 2
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2016,
+      "papers": 57
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2017,
+      "papers": 249
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2018,
+      "papers": 82
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2019,
+      "papers": 217
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2020,
+      "papers": 118
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2021,
+      "papers": 202
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2022,
+      "papers": 140
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2023,
+      "papers": 296
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2024,
+      "papers": 281
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2025,
+      "papers": 438
+    },
+    {
+      "venue": "ICCAD",
+      "year": 2026,
+      "papers": 1
+    },
+    {
+      "venue": "IEDM",
+      "year": 2016,
+      "papers": 227
+    },
+    {
+      "venue": "IEDM",
+      "year": 2017,
+      "papers": 226
+    },
+    {
+      "venue": "IEDM",
+      "year": 2018,
+      "papers": 224
+    },
+    {
+      "venue": "IEDM",
+      "year": 2019,
+      "papers": 226
+    },
+    {
+      "venue": "IEDM",
+      "year": 2020,
+      "papers": 224
+    },
+    {
+      "venue": "IEDM",
+      "year": 2021,
+      "papers": 219
+    },
+    {
+      "venue": "IEDM",
+      "year": 2022,
+      "papers": 220
+    },
+    {
+      "venue": "IEDM",
+      "year": 2023,
+      "papers": 224
+    },
+    {
+      "venue": "IEDM",
+      "year": 2024,
+      "papers": 244
+    },
+    {
+      "venue": "IEDM",
+      "year": 2025,
+      "papers": 250
+    },
+    {
+      "venue": "IEDM",
+      "year": 2026,
+      "papers": 1
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2016,
+      "papers": 294
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2017,
+      "papers": 278
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2018,
+      "papers": 297
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2019,
+      "papers": 251
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2020,
+      "papers": 296
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2021,
+      "papers": 295
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2022,
+      "papers": 308
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2023,
+      "papers": 276
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2024,
+      "papers": 294
+    },
+    {
+      "venue": "ISCAS",
+      "year": 2025,
+      "papers": 313
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2016,
+      "papers": 223
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2017,
+      "papers": 234
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2018,
+      "papers": 212
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2019,
+      "papers": 214
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2020,
+      "papers": 214
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2021,
+      "papers": 213
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2022,
+      "papers": 218
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2023,
+      "papers": 219
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2024,
+      "papers": 242
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2025,
+      "papers": 240
+    },
+    {
+      "venue": "ISSCC",
+      "year": 2026,
+      "papers": 250
+    },
+    {
+      "venue": "JSSC",
+      "year": 2016,
+      "papers": 345
+    },
+    {
+      "venue": "JSSC",
+      "year": 2017,
+      "papers": 410
+    },
+    {
+      "venue": "JSSC",
+      "year": 2018,
+      "papers": 349
+    },
+    {
+      "venue": "JSSC",
+      "year": 2019,
+      "papers": 359
+    },
+    {
+      "venue": "JSSC",
+      "year": 2020,
+      "papers": 340
+    },
+    {
+      "venue": "JSSC",
+      "year": 2021,
+      "papers": 324
+    },
+    {
+      "venue": "JSSC",
+      "year": 2022,
+      "papers": 357
+    },
+    {
+      "venue": "JSSC",
+      "year": 2023,
+      "papers": 327
+    },
+    {
+      "venue": "JSSC",
+      "year": 2024,
+      "papers": 407
+    },
+    {
+      "venue": "JSSC",
+      "year": 2025,
+      "papers": 444
+    },
+    {
+      "venue": "JSSC",
+      "year": 2026,
+      "papers": 183
+    },
+    {
+      "venue": "TCAD",
+      "year": 2016,
+      "papers": 246
+    },
+    {
+      "venue": "TCAD",
+      "year": 2017,
+      "papers": 332
+    },
+    {
+      "venue": "TCAD",
+      "year": 2018,
+      "papers": 336
+    },
+    {
+      "venue": "TCAD",
+      "year": 2019,
+      "papers": 242
+    },
+    {
+      "venue": "TCAD",
+      "year": 2020,
+      "papers": 370
+    },
+    {
+      "venue": "TCAD",
+      "year": 2021,
+      "papers": 325
+    },
+    {
+      "venue": "TCAD",
+      "year": 2022,
+      "papers": 389
+    },
+    {
+      "venue": "TCAD",
+      "year": 2023,
+      "papers": 336
+    },
+    {
+      "venue": "TCAD",
+      "year": 2024,
+      "papers": 450
+    },
+    {
+      "venue": "TCAD",
+      "year": 2025,
+      "papers": 489
+    },
+    {
+      "venue": "TCAD",
+      "year": 2026,
+      "papers": 210
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2016,
+      "papers": 328
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2017,
+      "papers": 379
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2018,
+      "papers": 371
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2019,
+      "papers": 370
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2020,
+      "papers": 477
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2021,
+      "papers": 443
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2022,
+      "papers": 442
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2023,
+      "papers": 460
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2024,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2025,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-I",
+      "year": 2026,
+      "papers": 199
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2016,
+      "papers": 380
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2017,
+      "papers": 289
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2018,
+      "papers": 430
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2019,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2020,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2021,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2022,
+      "papers": 501
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2023,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2024,
+      "papers": 500
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2025,
+      "papers": 349
+    },
+    {
+      "venue": "TCAS-II",
+      "year": 2026,
+      "papers": 117
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2016,
+      "papers": 300
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2017,
+      "papers": 360
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2018,
+      "papers": 304
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2019,
+      "papers": 285
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2020,
+      "papers": 219
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2021,
+      "papers": 196
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2022,
+      "papers": 206
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2023,
+      "papers": 245
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2024,
+      "papers": 293
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2025,
+      "papers": 312
+    },
+    {
+      "venue": "TVLSI",
+      "year": 2026,
+      "papers": 171
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2016,
+      "papers": 108
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2017,
+      "papers": 137
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2018,
+      "papers": 113
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2019,
+      "papers": 136
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2020,
+      "papers": 121
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2021,
+      "papers": 137
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2022,
+      "papers": 210
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2023,
+      "papers": 208
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2024,
+      "papers": 215
+    },
+    {
+      "venue": "VLSI Symposium",
+      "year": 2025,
+      "papers": 203
+    }
+  ]
+}

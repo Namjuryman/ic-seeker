@@ -1,0 +1,16 @@
+{
+  "name": "ic-seeker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local IC paper search and academic profiling tool.",
+  "type": "module",
+  "scripts": {
+    "start": "node ./ic_seeker/server.mjs",
+    "build:database": "node ./scripts/build-ic-database.mjs --years=2016-2026 --max-per-venue-year=500 --max-per-venue=6000 --no-source-backfill",
+    "import:pdfs": "node ./scripts/import-local-pdfs.mjs",
+    "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "venue": "JSSC",
+    "sources": [
+      {
+        "id": "https://openalex.org/S83637746",
+        "name": "IEEE Journal of Solid-State Circuits",
+        "type": "journal"
+      }
+    ]
+  }
+]

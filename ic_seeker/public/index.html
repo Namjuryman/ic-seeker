@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IC Seeker</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="mark">AI</div>
+          <div>
+            <h1>IC Seeker</h1>
+            <p>Local IC paper database</p>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Venue</span>
+          <select id="venue"></select>
+        </label>
+        <label class="field">
+          <span>Domain</span>
+          <select id="field"></select>
+        </label>
+        <label class="field">
+          <span>Rank</span>
+          <select id="rank"></select>
+        </label>
+        <div class="year-grid">
+          <label class="field">
+            <span>From</span>
+            <input id="yearFrom" inputmode="numeric" value="2016">
+          </label>
+          <label class="field">
+            <span>To</span>
+            <input id="yearTo" inputmode="numeric" value="2026">
+          </label>
+        </div>
+        <label class="check">
+          <input id="hasPdf" type="checkbox">
+          <span>Has local PDF</span>
+        </label>
+        <a class="download" href="/download/csv">Download CSV</a>
+
+        <div class="stats" id="stats"></div>
+        <div class="side-panel" id="pdfInbox"></div>
+        <div class="side-panel" id="coverage"></div>
+      </aside>
+
+      <main class="main">
+        <header class="toolbar">
+          <div class="searchbox">
+            <span aria-hidden="true">&#128269;</span>
+            <input id="q" placeholder="Search architecture, metric, device, author, DOI...">
+          </div>
+          <select id="sort" class="sort">
+            <option value="relevance">Relevance</option>
+            <option value="score">Score</option>
+            <option value="year">Year</option>
+            <option value="citations">Citations</option>
+            <option value="title">Title</option>
+          </select>
+        </header>
+
+        <section class="summary" id="summary"></section>
+        <section class="inspector">
+          <div class="method" id="methodology"></div>
+          <div class="leaderboard" id="professors"></div>
+          <div class="leaderboard" id="institutions"></div>
+        </section>
+        <section class="content">
+          <div class="results" id="results"></div>
+          <article class="detail" id="detail">
+            <div class="empty">Select a paper to inspect abstract, DOI, score, and PDF status.</div>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
