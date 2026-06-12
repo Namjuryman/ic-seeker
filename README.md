@@ -150,6 +150,18 @@ Start_IC_Seeker.bat
 Build_IC_Database.bat
 ```
 
+## Roadmap
+
+Future product ideas are collected in [docs/ROADMAP.md](docs/ROADMAP.md), including:
+
+- Web SaaS and API layer
+- Daily circuit learning for mobile/PWA
+- New-paper monitoring
+- Author and institution profile upgrades
+- Chinese interface
+- Local PDF library and private paper reading
+- Monetization and deployment notes
+
 ## Data Policy
 
 This project stores metadata and local user-provided PDFs. It does not bypass paywalls and does not bulk-download publisher PDFs.
