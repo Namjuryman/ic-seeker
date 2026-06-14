@@ -298,6 +298,49 @@ button {
   background: var(--panel);
 }
 
+.quickbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+}
+
+.topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip,
+.icon-button {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.chip:hover,
+.chip.active,
+.icon-button:hover,
+.icon-button.active {
+  border-color: #9fc4e5;
+  background: #eaf3fb;
+  color: #154f82;
+}
+
+.view-switch {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
 .toggle {
   display: flex;
   align-items: center;
@@ -478,6 +521,28 @@ button {
   font-weight: 700;
 }
 
+.results.compact .paper {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  padding: 8px 12px;
+}
+
+.results.compact .paper-title {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.results.compact .meta {
+  justify-content: flex-end;
+}
+
+.results.compact .pill:nth-child(n+6) {
+  display: none;
+}
+
 .star {
   color: #b16b00;
   margin-right: 6px;
@@ -493,6 +558,20 @@ button {
   padding: 8px 14px;
   font-size: 12px;
   font-weight: 650;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.result-head strong {
+  color: var(--text);
+}
+
+.result-head span {
+  border: 1px solid #d6dde7;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #fff;
 }
 
 .meta {
@@ -731,8 +810,21 @@ button {
     flex-wrap: wrap;
   }
 
+  .quickbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .sort {
     width: 100%;
+  }
+
+  .view-switch {
+    width: 100%;
+  }
+
+  .icon-button {
+    flex: 1;
   }
 
   .inspector {
@@ -766,5 +858,13 @@ button {
 
   .detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .results.compact .paper {
+    grid-template-columns: 1fr;
+  }
+
+  .results.compact .meta {
+    justify-content: flex-start;
   }
 }

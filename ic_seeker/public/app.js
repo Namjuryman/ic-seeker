@@ -8,8 +8,21 @@ const state = {
   rows: [],
   activeId: null,
   activePaper: null,
+  resultMeta: null,
+  view: 'comfort',
   total: 0
 };
+
+const quickTopics = [
+  ['ADC', 'adc'],
+  ['PLL', 'pll'],
+  ['DC-DC', 'dcdc'],
+  ['LDO', 'ldo'],
+  ['RF', 'rf'],
+  ['SerDes', 'serdes'],
+  ['SRAM', 'sram'],
+  ['Bandgap', 'bandgap']
+];
 
 const $ = id => document.getElementById(id);
 
@@ -215,6 +228,19 @@ function renderInstitutions() {
   document.querySelectorAll('[data-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.institution)));
 }
 
+function renderTopicChips() {
+  $('topicChips').innerHTML = quickTopics.map(([label, query]) => (
+    `<button class="chip ${$('q').value.trim().toLowerCase() === query ? 'active' : ''}" data-topic="${escapeHtml(query)}" type="button">${escapeHtml(label)}</button>`
+  )).join('');
+  document.querySelectorAll('[data-topic]').forEach(el => {
+    el.addEventListener('click', () => {
+      $('q').value = el.dataset.topic;
+      $('semantic').checked = true;
+      search();
+    });
+  });
+}
+
 function tokenLinks(value, type) {
   const attr = type === 'author' ? 'data-author-link' : 'data-institution-link';
   return String(value || '')
@@ -309,7 +335,9 @@ async function search() {
   const data = await api(`/api/search?${params().toString()}`);
   state.rows = data.rows;
   state.total = data.total;
+  state.resultMeta = data;
   renderSummary();
+  renderTopicChips();
   renderResults(data.engine);
 }
 
@@ -318,8 +346,16 @@ function renderResults(engine = '') {
     $('results').innerHTML = '<div class="empty">No papers match the current filters.</div>';
     return;
   }
+  const expanded = state.resultMeta?.expandedQuery && state.resultMeta.expandedQuery !== state.resultMeta.query
+    ? `<span title="${escapeHtml(state.resultMeta.expandedQuery)}">expanded</span>`
+    : '';
+  $('results').classList.toggle('compact', state.view === 'compact');
   $('results').innerHTML = `
-    <div class="result-head">${fmt(state.total)} matches${engine ? ` - ${escapeHtml(engine)}` : ''}</div>
+    <div class="result-head">
+      <strong>${fmt(state.total)} matches</strong>
+      ${engine ? `<span>${escapeHtml(engine)}</span>` : ''}
+      ${expanded}
+    </div>
     ${state.rows.map(row => `
       <div class="paper ${row.id === state.activeId ? 'active' : ''}" data-id="${row.id}">
         <p class="paper-title">${row.favorite ? '<span class="star">*</span>' : ''}${escapeHtml(row.title)}</p>
@@ -461,6 +497,7 @@ function debounce(fn, ms = 250) {
 async function bootApp() {
   showApp();
   await loadStats();
+  renderTopicChips();
   const doSearch = debounce(search);
   for (const id of ['q', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'hasPdf', 'favoriteOnly', 'semantic', 'statusFilter', 'tagFilter']) {
     $(id).addEventListener(id === 'q' ? 'input' : 'change', doSearch);
@@ -468,11 +505,20 @@ async function bootApp() {
   $('importDoi').addEventListener('click', () => importDoi().catch(err => $('importStatus').textContent = err.message));
   $('importManual').addEventListener('click', () => importManual().catch(err => $('importStatus').textContent = err.message));
   $('saveApiKey').addEventListener('click', () => saveApiKey().catch(err => $('apiKeys').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`));
+  $('viewComfort').addEventListener('click', () => setView('comfort'));
+  $('viewCompact').addEventListener('click', () => setView('compact'));
   $('logout').addEventListener('click', async () => {
     await api('/api/auth/logout', { method: 'POST', body: '{}' });
     showLogin('');
   });
   await search();
+}
+
+function setView(view) {
+  state.view = view;
+  $('viewComfort').classList.toggle('active', view === 'comfort');
+  $('viewCompact').classList.toggle('active', view === 'compact');
+  renderResults(state.resultMeta?.engine || '');
 }
 
 async function main() {

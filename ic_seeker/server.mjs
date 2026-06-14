@@ -240,7 +240,11 @@ const semanticAliases = new Map([
   ['dac', ['digital to analog', 'd/a', 'converter', 'current steering']],
   ['pll', ['phase locked loop', 'clock generator', 'jitter', 'frequency synthesizer']],
   ['ldo', ['low dropout', 'regulator', 'power management']],
-  ['dc-dc', ['buck', 'boost', 'converter', 'power management']],
+  ['dcdc', ['buck', 'boost', 'switched capacitor', 'charge pump', 'pmic']],
+  ['dc-dc', ['dcdc', 'buck', 'boost', 'switched capacitor', 'charge pump', 'pmic']],
+  ['dc/dc', ['dcdc', 'buck', 'boost', 'switched capacitor', 'charge pump', 'pmic']],
+  ['pmic', ['power management', 'dc-dc', 'dcdc', 'ldo', 'buck', 'boost']],
+  ['bandgap', ['voltage reference', 'reference circuit', 'temperature coefficient']],
   ['serdes', ['wireline', 'transceiver', 'equalizer', 'cdr']],
   ['rf', ['radio frequency', 'mixer', 'pa', 'lna', 'oscillator']],
   ['memory', ['sram', 'dram', 'nonvolatile', 'compute in memory']],
@@ -259,9 +263,12 @@ function semanticText(input) {
   const q = String(input || '').trim();
   if (!q) return '';
   const lower = q.toLowerCase();
+  const compact = lower.replace(/[^\p{L}\p{N}]+/gu, '');
   const extra = [];
   for (const [key, values] of semanticAliases) {
-    if (lower.includes(key.toLowerCase())) extra.push(...values);
+    const keyLower = key.toLowerCase();
+    const keyCompact = keyLower.replace(/[^\p{L}\p{N}]+/gu, '');
+    if (lower.includes(keyLower) || (keyCompact && compact.includes(keyCompact))) extra.push(...values);
   }
   return [...new Set([q, ...extra])].join(' ');
 }
