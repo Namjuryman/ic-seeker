@@ -5,13 +5,14 @@ import { DatabaseSync } from 'node:sqlite';
 const outRootArg = process.argv.find(a => a.startsWith('--out-root='));
 const outRoot = outRootArg ? outRootArg.split('=').slice(1).join('=') : 'ic_database';
 const yearsArg = process.argv.find(a => a.startsWith('--years='));
+const currentYear = new Date().getFullYear();
 const [sinceYear, untilYear] = yearsArg
   ? yearsArg.split('=')[1].split('-').map(Number)
-  : [2016, 2026];
+  : [2000, currentYear];
 const maxPerVenueArg = process.argv.find(a => a.startsWith('--max-per-venue='));
-const maxPerVenue = maxPerVenueArg ? Number(maxPerVenueArg.split('=')[1]) : 6000;
+const maxPerVenue = maxPerVenueArg ? Number(maxPerVenueArg.split('=')[1]) : 12000;
 const maxPerVenueYearArg = process.argv.find(a => a.startsWith('--max-per-venue-year='));
-const maxPerVenueYear = maxPerVenueYearArg ? Number(maxPerVenueYearArg.split('=')[1]) : 500;
+const maxPerVenueYear = maxPerVenueYearArg ? Number(maxPerVenueYearArg.split('=')[1]) : 700;
 const venueFilterArg = process.argv.find(a => a.startsWith('--venues='));
 const venueFilter = venueFilterArg ? new Set(venueFilterArg.split('=')[1].split(',').map(v => v.trim()).filter(Boolean)) : null;
 const useSourceBackfill = !process.argv.includes('--no-source-backfill');

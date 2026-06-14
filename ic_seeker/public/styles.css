@@ -275,7 +275,7 @@ textarea:focus {
 .app-layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: 280px minmax(480px, 1fr) 390px;
+  grid-template-columns: 280px minmax(360px, 1fr) minmax(320px, 33vw);
 }
 
 .sidebar,
@@ -453,6 +453,54 @@ textarea:focus {
   border-radius: var(--radius);
   overflow: hidden;
   background: var(--panel);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 16px 16px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.page-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.page-button {
+  min-width: 34px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.page-button:hover,
+.page-button.active {
+  border-color: #9fc4e5;
+  background: var(--accent-soft);
+  color: #154f82;
+}
+
+.page-gap,
+.page-status {
+  color: var(--muted);
+}
+
+.button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .result-head {
@@ -857,22 +905,13 @@ textarea:focus {
   }
 
   .app-layout {
-    grid-template-columns: 260px minmax(420px, 1fr);
+    grid-template-columns: 240px minmax(320px, 1fr) minmax(300px, 33vw);
   }
 
   .right-rail {
-    grid-column: 1 / -1;
-    border-left: 0;
-    border-top: 1px solid var(--line);
-  }
-
-  .right-rail {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
-  }
-
-  .inspector {
-    padding-top: 16px;
+    grid-column: auto;
+    border-left: 1px solid var(--line);
+    border-top: 0;
   }
 }
 

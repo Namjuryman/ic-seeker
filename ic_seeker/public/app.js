@@ -10,6 +10,8 @@ const state = {
   activePaper: null,
   resultMeta: null,
   view: 'comfort',
+  page: 1,
+  limit: 30,
   total: 0
 };
 
@@ -115,7 +117,8 @@ function params() {
   if ($('semantic').checked) p.set('semantic', '1');
   if ($('statusFilter').value) p.set('status', $('statusFilter').value);
   if ($('tagFilter').value) p.set('tag', $('tagFilter').value);
-  p.set('limit', '120');
+  p.set('limit', String(state.limit));
+  p.set('offset', String((state.page - 1) * state.limit));
   return p;
 }
 
@@ -258,7 +261,7 @@ function renderTopicChips() {
     el.addEventListener('click', () => {
       $('q').value = el.dataset.topic;
       $('semantic').checked = true;
-      search();
+      searchFirstPage();
     });
   });
 }
@@ -361,9 +364,63 @@ async function search() {
   renderSummary();
   renderTopicChips();
   renderResults(data.engine);
+  renderPagination();
   if (state.rows.length && !state.rows.some(row => row.id === state.activeId)) {
     await loadPaper(state.rows[0].id);
   }
+}
+
+function pageWindow(current, total) {
+  if (total <= 9) return Array.from({ length: total }, (_, index) => index + 1);
+  const pages = new Set([1, 2, total - 1, total]);
+  for (let page = current - 2; page <= current + 2; page += 1) {
+    if (page >= 1 && page <= total) pages.add(page);
+  }
+  const sorted = [...pages].sort((a, b) => a - b);
+  const result = [];
+  for (const page of sorted) {
+    if (result.length && page - result[result.length - 1] > 1) result.push('gap');
+    result.push(page);
+  }
+  return result;
+}
+
+function renderPagination() {
+  const pages = Math.max(1, Math.ceil((state.total || 0) / state.limit));
+  const start = state.total ? (state.page - 1) * state.limit + 1 : 0;
+  const end = Math.min(state.total, state.page * state.limit);
+  $('pagination').innerHTML = `
+    <button class="button" id="prevPage" type="button" ${state.page <= 1 ? 'disabled' : ''}>Previous</button>
+    <div class="page-numbers">
+      ${pageWindow(state.page, pages).map(item => item === 'gap'
+        ? '<span class="page-gap">...</span>'
+        : `<button class="page-button ${item === state.page ? 'active' : ''}" type="button" data-page="${item}">${item}</button>`
+      ).join('')}
+    </div>
+    <span class="page-status">Page ${state.page} of ${pages} · ${fmt(start)}-${fmt(end)} / ${fmt(state.total)}</span>
+    <button class="button" id="nextPage" type="button" ${state.page >= pages ? 'disabled' : ''}>Next</button>
+  `;
+  $('prevPage').addEventListener('click', () => {
+    if (state.page > 1) {
+      state.page -= 1;
+      search();
+    }
+  });
+  $('nextPage').addEventListener('click', () => {
+    if (state.page < pages) {
+      state.page += 1;
+      search();
+    }
+  });
+  document.querySelectorAll('.page-button[data-page]').forEach(button => {
+    button.addEventListener('click', () => {
+      const page = Number(button.dataset.page);
+      if (page && page !== state.page) {
+        state.page = page;
+        search();
+      }
+    });
+  });
 }
 
 function renderResults(engine = '') {
@@ -521,25 +578,30 @@ function debounce(fn, ms = 250) {
   };
 }
 
+function searchFirstPage() {
+  state.page = 1;
+  return search();
+}
+
 async function bootApp() {
   showApp();
   await loadStats();
   renderTopicChips();
-  const doSearch = debounce(search);
+  const doSearch = debounce(searchFirstPage);
   for (const id of ['q', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'hasPdf', 'favoriteOnly', 'semantic', 'statusFilter', 'tagFilter']) {
     $(id).addEventListener(id === 'q' ? 'input' : 'change', doSearch);
   }
   $('importDoi').addEventListener('click', () => importDoi().catch(err => $('importStatus').textContent = err.message));
   $('importManual').addEventListener('click', () => importManual().catch(err => $('importStatus').textContent = err.message));
   $('saveApiKey').addEventListener('click', () => saveApiKey().catch(err => $('apiKeys').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`));
-  $('searchNow').addEventListener('click', () => search());
+  $('searchNow').addEventListener('click', () => searchFirstPage());
   $('resetFilters').addEventListener('click', () => {
     for (const id of ['venue', 'field', 'rank', 'statusFilter', 'tagFilter']) $(id).value = '';
     $('yearFrom').value = '2016';
     $('yearTo').value = '2026';
     $('hasPdf').checked = false;
     $('favoriteOnly').checked = false;
-    search();
+    searchFirstPage();
   });
   $('viewComfort').addEventListener('click', () => setView('comfort'));
   $('viewCompact').addEventListener('click', () => setView('compact'));
