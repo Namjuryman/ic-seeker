@@ -25,14 +25,48 @@
       </form>
     </section>
 
-    <div class="shell" id="appShell" hidden>
-      <aside class="sidebar">
+    <div class="app" id="appShell" hidden>
+      <header class="app-header">
         <div class="brand">
           <div class="mark">IC</div>
           <div>
             <h1 id="appTitle">IC Seeker</h1>
-            <p>Private local paper database</p>
+            <p>Private IC scholar intelligence</p>
           </div>
+        </div>
+
+        <div class="searchbox">
+          <span aria-hidden="true">&#128269;</span>
+          <input id="q" placeholder="Search papers, circuits, authors, DOI...">
+        </div>
+        <button class="button primary search-action" id="searchNow" type="button">Search</button>
+        <label class="toggle">
+          <input id="semantic" type="checkbox" checked>
+          <span>Semantic</span>
+        </label>
+        <select id="sort" class="sort">
+          <option value="relevance">Relevance</option>
+          <option value="score">Score</option>
+          <option value="year">Year</option>
+          <option value="citations">Citations</option>
+          <option value="title">Title</option>
+        </select>
+        <button class="button ghost logout-button" id="logout" type="button">Log out</button>
+      </header>
+
+      <section class="quickbar">
+        <div class="topic-chips" id="topicChips"></div>
+        <div class="view-switch" aria-label="Result view">
+          <button class="icon-button active" id="viewComfort" type="button" title="Comfort view">Rows</button>
+          <button class="icon-button" id="viewCompact" type="button" title="Compact view">Table</button>
+        </div>
+      </section>
+
+      <div class="app-layout">
+      <aside class="sidebar">
+        <div class="panel-title">
+          <strong>Filters</strong>
+          <button class="text-link" id="resetFilters" type="button">Reset</button>
         </div>
 
         <label class="field">
@@ -80,17 +114,15 @@
           <span>Tag</span>
           <select id="tagFilter"></select>
         </label>
-        <a class="download" href="/download/csv">Download CSV</a>
-        <button class="button ghost" id="logout" type="button">Log out</button>
 
         <div class="stats" id="stats"></div>
-        <div class="side-panel import-panel">
-          <h3>Paper import</h3>
+        <details class="side-panel import-panel">
+          <summary>Paper import</summary>
           <div class="inline-form">
             <input id="doiInput" placeholder="DOI">
             <button class="button" id="importDoi" type="button">Import</button>
           </div>
-          <details>
+          <details class="nested-details">
             <summary>Manual metadata</summary>
             <input id="manualTitle" placeholder="Title">
             <input id="manualAuthors" placeholder="Authors separated by ;">
@@ -100,9 +132,9 @@
             <button class="button" id="importManual" type="button">Add paper</button>
           </details>
           <p class="hint" id="importStatus"></p>
-        </div>
-        <div class="side-panel admin-panel">
-          <h3>API keys</h3>
+        </details>
+        <details class="side-panel admin-panel">
+          <summary>API keys</summary>
           <div id="apiKeys"></div>
           <div class="inline-form">
             <select id="apiProvider">
@@ -113,51 +145,31 @@
             <input id="apiValue" type="password" placeholder="Paste key">
           </div>
           <button class="button" id="saveApiKey" type="button">Save key</button>
-        </div>
-        <div class="side-panel" id="pdfInbox"></div>
+        </details>
+        <details class="side-panel">
+          <summary>Local PDF inbox</summary>
+          <div id="pdfInbox"></div>
+        </details>
         <div class="side-panel" id="coverage"></div>
+        <a class="download" href="/download/csv">Download CSV</a>
       </aside>
 
       <main class="main">
-        <header class="toolbar">
-          <div class="searchbox">
-            <span aria-hidden="true">&#128269;</span>
-            <input id="q" placeholder="Search architecture, metric, device, author, DOI...">
-          </div>
-          <label class="toggle">
-            <input id="semantic" type="checkbox" checked>
-            <span>Semantic</span>
-          </label>
-          <select id="sort" class="sort">
-            <option value="relevance">Relevance</option>
-            <option value="score">Score</option>
-            <option value="year">Year</option>
-            <option value="citations">Citations</option>
-            <option value="title">Title</option>
-          </select>
-        </header>
-
-        <section class="quickbar">
-          <div class="topic-chips" id="topicChips"></div>
-          <div class="view-switch" aria-label="Result view">
-            <button class="icon-button active" id="viewComfort" type="button" title="Comfort view">Rows</button>
-            <button class="icon-button" id="viewCompact" type="button" title="Compact view">Table</button>
-          </div>
-        </section>
-
         <section class="summary" id="summary"></section>
+        <div class="results" id="results"></div>
+      </main>
+
+      <aside class="right-rail">
+        <article class="detail" id="detail">
+          <div class="empty">Select a paper to inspect abstract, DOI, score, PDF status, notes, and tags.</div>
+        </article>
         <section class="inspector">
           <div class="method" id="methodology"></div>
           <div class="leaderboard" id="professors"></div>
           <div class="leaderboard" id="institutions"></div>
         </section>
-        <section class="content">
-          <div class="results" id="results"></div>
-          <article class="detail" id="detail">
-            <div class="empty">Select a paper to inspect abstract, DOI, score, PDF status, notes, and tags.</div>
-          </article>
-        </section>
-      </main>
+      </aside>
+      </div>
     </div>
     <script src="/app.js"></script>
   </body>

@@ -359,7 +359,7 @@ function search(params) {
           FROM papers_fts
           WHERE papers_fts MATCH ?
         )
-        SELECT papers.id, title, authors, year, venue, venue_rank AS rank, domain AS field,
+        SELECT papers.id, title, authors, abstract, year, venue, venue_rank AS rank, domain AS field,
                quality_score AS score, doi, pdf_link AS pdfLink, local_pdf AS localPdf,
                download_status AS downloadStatus, citation_count AS citations,
                verification_status AS verificationStatus, searchRank
@@ -373,7 +373,7 @@ function search(params) {
     }
     const total = db.prepare(`SELECT COUNT(*) AS n FROM papers ${where.sql}`).get(...where.args).n;
     const rows = db.prepare(`
-      SELECT id, title, authors, year, venue, venue_rank AS rank, domain AS field,
+      SELECT id, title, authors, abstract, year, venue, venue_rank AS rank, domain AS field,
              quality_score AS score, doi, pdf_link AS pdfLink, local_pdf AS localPdf,
              download_status AS downloadStatus, citation_count AS citations,
              verification_status AS verificationStatus

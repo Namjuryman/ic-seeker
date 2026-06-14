@@ -40,8 +40,30 @@ function escapeHtml(value) {
   }[ch]));
 }
 
+function cleanDisplayText(value) {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\$?\\mu\$?/g, 'u')
+    .replace(/\$?\\Omega\$?/g, 'ohm')
+    .replace(/\$?\\Delta\$?/g, 'Delta')
+    .replace(/\$?\\sigma\$?/g, 'sigma')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function optionList(el, values, label = 'All') {
   el.innerHTML = `<option value="">${label}</option>` + values.map(v => `<option>${escapeHtml(v)}</option>`).join('');
+}
+
+function textSnippet(value, max = 240) {
+  const text = cleanDisplayText(value);
+  if (!text) return '';
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
 async function api(path, options = {}) {
@@ -268,7 +290,7 @@ function profilePapers(papers) {
   return `<div class="profile-papers">
     ${papers.slice(0, 80).map(row => `
       <div class="profile-paper" data-id="${row.id}">
-        <p>${escapeHtml(row.title)}</p>
+        <p>${escapeHtml(cleanDisplayText(row.title))}</p>
         <div class="meta">
           <span class="pill rank">${escapeHtml(row.rank)}</span>
           <span class="pill">${escapeHtml(row.venue)}</span>
@@ -339,6 +361,9 @@ async function search() {
   renderSummary();
   renderTopicChips();
   renderResults(data.engine);
+  if (state.rows.length && !state.rows.some(row => row.id === state.activeId)) {
+    await loadPaper(state.rows[0].id);
+  }
 }
 
 function renderResults(engine = '') {
@@ -358,7 +383,8 @@ function renderResults(engine = '') {
     </div>
     ${state.rows.map(row => `
       <div class="paper ${row.id === state.activeId ? 'active' : ''}" data-id="${row.id}">
-        <p class="paper-title">${row.favorite ? '<span class="star">*</span>' : ''}${escapeHtml(row.title)}</p>
+        <p class="paper-title">${row.favorite ? '<span class="star">*</span>' : ''}${escapeHtml(cleanDisplayText(row.title))}</p>
+        <p class="paper-authors">${escapeHtml(textSnippet(row.authors, 170) || 'Unknown authors')}</p>
         <div class="meta">
           <span class="pill rank">${escapeHtml(row.rank)}</span>
           <span class="pill">${escapeHtml(row.venue)}</span>
@@ -369,6 +395,7 @@ function renderResults(engine = '') {
           ${row.localPdf ? '<span class="pill pdf">PDF</span>' : ''}
           ${(row.tags || []).map(tag => `<span class="pill tag">${escapeHtml(tag.name)}</span>`).join('')}
         </div>
+        <p class="paper-snippet">${escapeHtml(textSnippet(row.abstract || row.field || '', 260))}</p>
       </div>
     `).join('')}
   `;
@@ -377,12 +404,12 @@ function renderResults(engine = '') {
 
 async function loadPaper(id) {
   state.activeId = id;
-  renderResults();
+  renderResults(state.resultMeta?.engine || '');
   const paper = await api(`/api/papers/${id}`);
   state.activePaper = paper;
   const pdfHref = paper.local_pdf || paper.pdf_link || '';
   $('detail').innerHTML = `
-    <h2>${escapeHtml(paper.title)}</h2>
+    <h2>${escapeHtml(cleanDisplayText(paper.title))}</h2>
     <div class="meta">
       <span class="pill rank">${escapeHtml(paper.venue_rank)}</span>
       <span class="pill">${escapeHtml(paper.venue)}</span>
@@ -419,7 +446,7 @@ async function loadPaper(id) {
       <dt>Affiliations</dt><dd>${tokenLinks(paper.affiliations, 'institution')}</dd>
     </dl>
     <h3>Abstract</h3>
-    <div class="abstract">${escapeHtml(paper.abstract || 'No abstract available.')}</div>
+    <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || 'No abstract available.')}</div>
   `;
   $('savePaperState').addEventListener('click', savePaperState);
   bindProfileLinks();
@@ -448,7 +475,7 @@ async function importDoi() {
   if (!doi) return;
   $('importStatus').textContent = 'Importing metadata...';
   const paper = await api('/api/import/doi', { method: 'POST', body: JSON.stringify({ doi }) });
-  $('importStatus').textContent = `Imported: ${paper.title}`;
+  $('importStatus').textContent = `Imported: ${cleanDisplayText(paper.title)}`;
   $('doiInput').value = '';
   await loadStats();
   await search();
@@ -467,7 +494,7 @@ async function importManual() {
       abstract: $('manualAbstract').value
     })
   });
-  $('importStatus').textContent = `Added: ${paper.title}`;
+  $('importStatus').textContent = `Added: ${cleanDisplayText(paper.title)}`;
   ['manualTitle', 'manualAuthors', 'manualVenue', 'manualYear', 'manualAbstract'].forEach(id => $(id).value = '');
   await loadStats();
   await search();
@@ -505,6 +532,15 @@ async function bootApp() {
   $('importDoi').addEventListener('click', () => importDoi().catch(err => $('importStatus').textContent = err.message));
   $('importManual').addEventListener('click', () => importManual().catch(err => $('importStatus').textContent = err.message));
   $('saveApiKey').addEventListener('click', () => saveApiKey().catch(err => $('apiKeys').innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`));
+  $('searchNow').addEventListener('click', () => search());
+  $('resetFilters').addEventListener('click', () => {
+    for (const id of ['venue', 'field', 'rank', 'statusFilter', 'tagFilter']) $(id).value = '';
+    $('yearFrom').value = '2016';
+    $('yearTo').value = '2026';
+    $('hasPdf').checked = false;
+    $('favoriteOnly').checked = false;
+    search();
+  });
   $('viewComfort').addEventListener('click', () => setView('comfort'));
   $('viewCompact').addEventListener('click', () => setView('compact'));
   $('logout').addEventListener('click', async () => {
@@ -522,6 +558,15 @@ function setView(view) {
 }
 
 async function main() {
+  const auth = await api('/api/auth/status');
+  $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'same-origin',
+    body: '{}'
+  }).catch(() => {});
+  showLogin('');
   $('loginForm').addEventListener('submit', async event => {
     event.preventDefault();
     $('loginError').textContent = '';
@@ -532,15 +577,6 @@ async function main() {
       $('loginError').textContent = err.message;
     }
   });
-  const auth = await api('/api/auth/status');
-  $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
-  await fetch('/api/auth/logout', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    credentials: 'same-origin',
-    body: '{}'
-  }).catch(() => {});
-  showLogin('');
 }
 
 main().catch(err => {
