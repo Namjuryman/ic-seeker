@@ -78,7 +78,8 @@ p {
 }
 
 select,
-input {
+input,
+textarea {
   width: 100%;
   min-height: 36px;
   border: 1px solid var(--line);
@@ -90,9 +91,70 @@ input {
 }
 
 select:focus,
-input:focus {
+input:focus,
+textarea:focus {
   outline: 2px solid rgba(29, 111, 184, .18);
   border-color: var(--accent);
+}
+
+textarea {
+  min-height: 86px;
+  padding: 9px 10px;
+  resize: vertical;
+}
+
+button {
+  font: inherit;
+}
+
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: linear-gradient(140deg, #eef6fc, #f7f8fa 55%, #eef8f4);
+}
+
+.login-card {
+  width: min(420px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .12);
+}
+
+.button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 11px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.button:hover {
+  background: #f3f7fb;
+}
+
+.button.primary {
+  width: 100%;
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.button.ghost {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.error {
+  color: #a13535;
+  min-height: 20px;
+  margin-top: 10px;
 }
 
 .year-grid {
@@ -123,6 +185,42 @@ input:focus {
   padding: 9px 10px;
   font-weight: 650;
   box-shadow: var(--shadow);
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.import-panel details {
+  margin-top: 8px;
+}
+
+.import-panel summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.import-panel details input,
+.import-panel details textarea {
+  margin-top: 8px;
+}
+
+.key-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.key-row strong {
+  color: var(--text);
+  font-weight: 650;
 }
 
 .stats {
@@ -200,6 +298,24 @@ input:focus {
   background: var(--panel);
 }
 
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.toggle input {
+  width: 16px;
+  min-height: 16px;
+}
+
 .searchbox {
   flex: 1;
   display: flex;
@@ -231,7 +347,7 @@ input:focus {
 
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 10px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--line);
@@ -362,6 +478,23 @@ input:focus {
   font-weight: 700;
 }
 
+.star {
+  color: #b16b00;
+  margin-right: 6px;
+}
+
+.result-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfe;
+  color: var(--muted);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .meta {
   display: flex;
   gap: 7px;
@@ -387,6 +520,12 @@ input:focus {
   color: #fff;
   background: var(--accent-2);
   border-color: var(--accent-2);
+}
+
+.pill.tag {
+  background: #edf8f3;
+  border-color: #b8decf;
+  color: #0f6f59;
 }
 
 .detail {
@@ -440,6 +579,31 @@ input:focus {
   grid-template-columns: repeat(4, minmax(110px, 1fr));
   gap: 10px;
   margin: 14px 0;
+}
+
+.reader-box {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 170px) minmax(180px, 1fr);
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  padding: 12px;
+  margin: 14px 0;
+  box-shadow: var(--shadow);
+}
+
+.reader-box .wide,
+.reader-box .button,
+.reader-box .hint {
+  grid-column: 1 / -1;
+}
+
+.reader-box .button {
+  width: auto;
+  justify-self: start;
+  padding: 0 14px;
 }
 
 .mini-bars {
@@ -563,11 +727,44 @@ input:focus {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .sort {
+    width: 100%;
+  }
+
   .inspector {
     grid-template-columns: 1fr;
   }
 
   .profile-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .reader-box {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .sidebar,
+  .detail,
+  .toolbar {
+    padding: 14px;
+  }
+
+  .summary,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
   }
 }

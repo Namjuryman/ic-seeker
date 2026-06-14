@@ -1,6 +1,7 @@
 # Runtime logs
 *.log
 *.err.log
+.env
 
 # Temporary / validation database builds
 ic_database_checks/

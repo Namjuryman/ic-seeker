@@ -1,8 +1,8 @@
 # IC Seeker
 
-IC Seeker is a local, ChipSeeker-style paper search and academic profiling tool for integrated-circuit research.
+IC Seeker is a private, ChipSeeker-style paper search and reading-management tool for integrated-circuit research.
 
-It builds a local SQLite database from public scholarly metadata, provides full-text search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength.
+It builds a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current web app is designed as a private MVP, not a public multi-user SaaS.
 
 ## Current Dataset
 
@@ -23,14 +23,22 @@ Publisher PDFs are not included.
 ## Features
 
 - Local SQLite + FTS5 search over title, abstract, authors, venue, domain, and DOI
+- Private admin login with a signed HTTP-only cookie
+- Lightweight semantic search through IC-domain alias expansion
 - Venue, domain, rank, year, local-PDF, and sort filters
 - Paper detail view with DOI, source link, PDF link status, score, affiliations, and collection method
+- Paper import by DOI through Crossref metadata
+- Manual paper import for missing records
+- Favorites, reading status, private notes, and tags
+- Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
 - Institution leaderboard for school/lab strength
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
 - Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
 - CSV export compatible with ChipSeeker-like workflows
+- Mobile-friendly web layout
+- Docker deployment
 
 ## Quick Start
 
@@ -42,6 +50,8 @@ Requirements:
 Run:
 
 ```powershell
+copy .env.example .env
+notepad .env
 npm start
 ```
 
@@ -57,11 +67,35 @@ Open:
 http://127.0.0.1:8750
 ```
 
+Log in with `ADMIN_PASSWORD` from `.env`. Change the default password and `COOKIE_SECRET` before exposing the site outside your own machine.
+
 On Windows, you can also double-click:
 
 ```text
 Start_IC_Seeker.bat
 ```
+
+## Docker
+
+Create `.env` first, then run:
+
+```powershell
+npm run docker:up
+```
+
+The Compose setup mounts `./ic_database` into the container so your SQLite database, PDF inbox, notes, tags, and imports persist locally.
+
+For server deployment, put the app behind an HTTPS reverse proxy and keep `HOST=0.0.0.0` only inside Docker or trusted server environments.
+
+## Private MVP Workflow
+
+- Search papers with the main search bar. Keep `Semantic` enabled to expand common IC terms such as PLL, ADC, LDO, and their Chinese equivalents.
+- Open a paper detail page to save favorite status, reading status, tags, and notes.
+- Import missing papers by DOI from the sidebar. This stores metadata only and links to the DOI/source.
+- Use manual import for papers that are missing from public metadata.
+- Store optional service keys from the API-key panel. Values are masked in the UI.
+
+More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).
 
 ## Rebuild The Database
 

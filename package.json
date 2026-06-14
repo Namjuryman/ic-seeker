@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./ic_seeker/server.mjs",
+    "docker:up": "docker compose up --build",
     "build:database": "node ./scripts/build-ic-database.mjs --years=2016-2026 --max-per-venue-year=500 --max-per-venue=6000 --no-source-backfill",
     "import:pdfs": "node ./scripts/import-local-pdfs.mjs",
     "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite"
