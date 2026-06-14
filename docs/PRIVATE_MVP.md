@@ -7,6 +7,7 @@ This version turns IC Seeker into a private paper search and reading-management 
 Included in the first private MVP:
 
 - Private admin login with an HTTP-only signed cookie
+- Login gate on every page load before the main app is shown
 - Local SQLite database with startup migrations
 - Paper import by DOI through Crossref metadata
 - Manual paper import for private notes or missing metadata
@@ -35,6 +36,8 @@ npm start
 ```
 
 Open `http://127.0.0.1:8750`.
+
+The browser entry page always shows the password screen first. A stale session cookie is cleared on page load, so the main app is shown only after the password is submitted.
 
 ## Docker Run
 

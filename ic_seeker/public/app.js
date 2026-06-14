@@ -319,10 +319,10 @@ function renderResults(engine = '') {
     return;
   }
   $('results').innerHTML = `
-    <div class="result-head">${fmt(state.total)} matches${engine ? ` · ${escapeHtml(engine)}` : ''}</div>
+    <div class="result-head">${fmt(state.total)} matches${engine ? ` - ${escapeHtml(engine)}` : ''}</div>
     ${state.rows.map(row => `
       <div class="paper ${row.id === state.activeId ? 'active' : ''}" data-id="${row.id}">
-        <p class="paper-title">${row.favorite ? '<span class="star">★</span>' : ''}${escapeHtml(row.title)}</p>
+        <p class="paper-title">${row.favorite ? '<span class="star">*</span>' : ''}${escapeHtml(row.title)}</p>
         <div class="meta">
           <span class="pill rank">${escapeHtml(row.rank)}</span>
           <span class="pill">${escapeHtml(row.venue)}</span>
@@ -488,8 +488,13 @@ async function main() {
   });
   const auth = await api('/api/auth/status');
   $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
-  if (auth.authenticated) await bootApp();
-  else showLogin('');
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    credentials: 'same-origin',
+    body: '{}'
+  }).catch(() => {});
+  showLogin('');
 }
 
 main().catch(err => {
