@@ -16,6 +16,7 @@ const port = Number(process.env.PORT || 8750);
 const bindHost = process.env.HOST || '127.0.0.1';
 const appName = process.env.APP_NAME || 'IC Seeker Private';
 const adminPassword = process.env.ADMIN_PASSWORD || 'change-me-now';
+const authEnabled = process.env.IC_SEEKER_REQUIRE_LOGIN === '1' || process.env.IC_SEEKER_AUTH === 'password';
 const cookieSecret = process.env.COOKIE_SECRET || crypto.createHash('sha256').update(`${adminPassword}:${dbPath}`).digest('hex');
 const cookieName = 'ic_seeker_session';
 const loginFailures = new Map();
@@ -139,6 +140,7 @@ function parseCookies(req) {
 }
 
 function currentUser(req) {
+  if (!authEnabled) return { name: 'local' };
   const token = parseCookies(req)[cookieName];
   if (!token || !token.includes('.')) return null;
   const [payload, mac] = token.split('.');
@@ -278,9 +280,22 @@ function stats() {
   try {
     const total = db.prepare('SELECT COUNT(*) AS n FROM papers').get().n;
     const pdfs = db.prepare("SELECT COUNT(*) AS n FROM papers WHERE local_pdf != ''").get().n;
+    const aminerRows = db.prepare("SELECT COUNT(*) AS n FROM papers WHERE openalex_id LIKE 'aminer:%' OR collection_method LIKE 'aminer%'").get().n;
     const byVenue = db.prepare('SELECT venue, venue_rank AS rank, COUNT(*) AS count, ROUND(AVG(quality_score), 1) AS avgScore FROM papers GROUP BY venue, venue_rank ORDER BY MAX(quality_score) DESC').all();
     const byField = db.prepare('SELECT domain AS field, COUNT(*) AS count FROM papers GROUP BY domain ORDER BY count DESC').all();
     const byVenueYear = db.prepare('SELECT venue, year, COUNT(*) AS count FROM papers GROUP BY venue, year ORDER BY venue, year').all();
+    const byCollectionMethod = db.prepare(`
+      SELECT COALESCE(NULLIF(collection_method, ''), 'unknown') AS method, COUNT(*) AS count
+      FROM papers
+      GROUP BY COALESCE(NULLIF(collection_method, ''), 'unknown')
+      ORDER BY count DESC, method
+    `).all();
+    const byVerification = db.prepare(`
+      SELECT COALESCE(NULLIF(verification_status, ''), 'unverified') AS status, COUNT(*) AS count
+      FROM papers
+      GROUP BY COALESCE(NULLIF(verification_status, ''), 'unverified')
+      ORDER BY count DESC, status
+    `).all();
     const years = db.prepare('SELECT MIN(year) AS minYear, MAX(year) AS maxYear FROM papers').get();
     const venues = db.prepare('SELECT DISTINCT venue FROM papers ORDER BY venue').all().map(r => r.venue);
     const fields = db.prepare('SELECT DISTINCT domain FROM papers ORDER BY domain').all().map(r => r.domain);
@@ -288,7 +303,27 @@ function stats() {
     const favorites = db.prepare('SELECT COUNT(*) AS n FROM favorites').get().n;
     const notes = db.prepare("SELECT COUNT(*) AS n FROM notes WHERE body != ''").get().n;
     const tags = db.prepare('SELECT name, color FROM tags ORDER BY name').all();
-    return { appName, total, pdfs, favorites, notes, byVenue, byField, byVenueYear, years, venues, fields, ranks, tags, csvPath, dbPath, pdfInboxPath };
+    return {
+      appName,
+      total,
+      pdfs,
+      favorites,
+      notes,
+      aminerRows,
+      byVenue,
+      byField,
+      byVenueYear,
+      byCollectionMethod,
+      byVerification,
+      years,
+      venues,
+      fields,
+      ranks,
+      tags,
+      csvPath,
+      dbPath,
+      pdfInboxPath
+    };
   } finally {
     db.close();
   }
@@ -362,7 +397,7 @@ function search(params) {
         SELECT papers.id, title, authors, abstract, year, venue, venue_rank AS rank, domain AS field,
                quality_score AS score, doi, pdf_link AS pdfLink, local_pdf AS localPdf,
                download_status AS downloadStatus, citation_count AS citations,
-               verification_status AS verificationStatus, searchRank
+               verification_status AS verificationStatus, collection_method AS collectionMethod, searchRank
         FROM matched
         JOIN papers ON papers.id = matched.id
         ${where.sql}
@@ -376,7 +411,7 @@ function search(params) {
       SELECT id, title, authors, abstract, year, venue, venue_rank AS rank, domain AS field,
              quality_score AS score, doi, pdf_link AS pdfLink, local_pdf AS localPdf,
              download_status AS downloadStatus, citation_count AS citations,
-             verification_status AS verificationStatus
+             verification_status AS verificationStatus, collection_method AS collectionMethod
       FROM papers
       ${where.sql}
       ORDER BY ${order}
@@ -475,7 +510,7 @@ function apiKeys() {
   const db = openDb();
   try {
     const rows = db.prepare('SELECT provider, value, updated_at AS updatedAt FROM api_keys ORDER BY provider').all();
-    const envProviders = ['OPENAI_API_KEY', 'IEEE_API_KEY', 'AMINER_API_KEY', 'CROSSREF_MAILTO']
+    const envProviders = ['OPENAI_API_KEY', 'IEEE_API_KEY', 'AMINER_API_KEY', 'AMINER_AUTH_TOKEN', 'CROSSREF_MAILTO']
       .filter(name => process.env[name])
       .map(name => ({ provider: name.toLowerCase(), masked: maskSecret(process.env[name]), source: 'env' }));
     return [
@@ -711,6 +746,7 @@ function authorProfile(name) {
     });
     return {
       name,
+      paperCount: summary.papers,
       authorScore,
       ...summary,
       coauthors: [...coauthors.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 40),
@@ -772,6 +808,7 @@ function institutionProfile(name) {
     const summary = summarizePaperRows(rows);
     return {
       name,
+      paperCount: summary.papers,
       institutionScore: scoreAuthor({
         scoreSum: summary.scoreSum,
         sPlus: summary.ranks.sPlus,
@@ -900,8 +937,9 @@ async function serveStatic(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = parseUrl(req);
   try {
-    if (url.pathname === '/api/auth/status') return json(res, { authenticated: Boolean(currentUser(req)), appName });
+    if (url.pathname === '/api/auth/status') return json(res, { authenticated: Boolean(currentUser(req)), authEnabled, appName });
     if (url.pathname === '/api/auth/login' && req.method === 'POST') {
+      if (!authEnabled) return json(res, { ok: true, user: 'local', appName });
       const key = ipKey(req);
       const failures = loginFailures.get(key) || { count: 0, last: 0 };
       if (failures.count >= 8 && Date.now() - failures.last < 60_000) return bad(res, 'Too many login attempts. Try again later.', 429);

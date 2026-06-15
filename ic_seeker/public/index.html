@@ -31,7 +31,7 @@
           <div class="mark">IC</div>
           <div>
             <h1 id="appTitle">IC Seeker</h1>
-            <p>Private IC scholar intelligence</p>
+            <p>IC paper, scholar, and institution intelligence</p>
           </div>
         </div>
 
@@ -55,6 +55,11 @@
       </header>
 
       <section class="quickbar">
+        <nav class="scope-tabs" aria-label="Search scope">
+          <button class="scope-tab active" type="button" data-panel-jump="papers">Papers</button>
+          <button class="scope-tab" type="button" data-panel-jump="authors">Authors</button>
+          <button class="scope-tab" type="button" data-panel-jump="institutions">Institutions</button>
+        </nav>
         <div class="topic-chips" id="topicChips"></div>
         <div class="view-switch" aria-label="Result view">
           <button class="icon-button active" id="viewComfort" type="button" title="Comfort view">Rows</button>
@@ -84,7 +89,7 @@
         <div class="year-grid">
           <label class="field">
             <span>From</span>
-            <input id="yearFrom" inputmode="numeric" value="2016">
+            <input id="yearFrom" inputmode="numeric" value="2000">
           </label>
           <label class="field">
             <span>To</span>
@@ -116,6 +121,10 @@
         </label>
 
         <div class="stats" id="stats"></div>
+        <details class="side-panel" open>
+          <summary>Data sources</summary>
+          <div id="sourceStatus"></div>
+        </details>
         <details class="side-panel import-panel">
           <summary>Paper import</summary>
           <div class="inline-form">
@@ -165,11 +174,12 @@
         <article class="detail" id="detail">
           <div class="empty">Select a paper to inspect abstract, DOI, score, PDF status, notes, and tags.</div>
         </article>
-        <section class="inspector">
+        <details class="inspector" id="insightsPanel">
+          <summary>Scholar and institution insight</summary>
           <div class="method" id="methodology"></div>
           <div class="leaderboard" id="professors"></div>
           <div class="leaderboard" id="institutions"></div>
-        </section>
+        </details>
       </aside>
       </div>
     </div>

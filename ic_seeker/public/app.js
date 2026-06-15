@@ -1,8 +1,10 @@
 const state = {
   authenticated: false,
+  authEnabled: false,
   stats: null,
   methodology: null,
   pdfInbox: null,
+  apiKeys: [],
   professors: [],
   institutions: [],
   rows: [],
@@ -75,7 +77,7 @@ async function api(path, options = {}) {
     ...options
   });
   if (res.status === 401) {
-    showLogin('Session expired. Please log in again.');
+    if (state.authEnabled) showLogin('Session expired. Please log in again.');
     throw new Error('Authentication required');
   }
   if (!res.ok) {
@@ -94,6 +96,7 @@ async function api(path, options = {}) {
 
 function showLogin(message = '') {
   state.authenticated = false;
+  state.authEnabled = true;
   $('loginScreen').hidden = false;
   $('appShell').hidden = true;
   $('loginError').textContent = message;
@@ -134,6 +137,7 @@ async function loadStats() {
   state.stats = stats;
   state.methodology = methodology;
   state.pdfInbox = pdfInbox;
+  state.apiKeys = apiKeys;
   state.professors = professors;
   state.institutions = institutions;
   $('appTitle').textContent = stats.appName || 'IC Seeker';
@@ -143,12 +147,14 @@ async function loadStats() {
   optionList($('tagFilter'), (state.stats.tags || []).map(tag => tag.name));
   $('stats').innerHTML = [
     ['Database rows', fmt(state.stats.total)],
+    ['AMiner rows', fmt(state.stats.aminerRows)],
     ['Local PDFs', fmt(state.stats.pdfs)],
     ['Favorites', fmt(state.stats.favorites)],
     ['Notes', fmt(state.stats.notes)],
     ['Year range', `${state.stats.years.minYear || '-'}-${state.stats.years.maxYear || '-'}`]
   ].map(([k, v]) => `<div class="stat-row"><span>${k}</span><strong>${v}</strong></div>`).join('');
   renderApiKeys(apiKeys);
+  renderSourceStatus();
   renderSummary();
   renderCoverage();
   renderPdfInbox();
@@ -161,6 +167,51 @@ function renderApiKeys(keys) {
   $('apiKeys').innerHTML = keys.length
     ? keys.map(row => `<div class="key-row"><span>${escapeHtml(row.provider)}</span><strong>${escapeHtml(row.masked)}</strong></div>`).join('')
     : '<p class="hint">No keys saved yet.</p>';
+}
+
+function hasProvider(keys, names) {
+  const set = new Set(keys.map(row => String(row.provider || '').toLowerCase()));
+  return names.some(name => set.has(name) || set.has(`${name}_api_key`) || set.has(`${name}_auth_token`));
+}
+
+function methodLabel(method) {
+  const value = String(method || 'unknown');
+  return value
+    .replace(/^aminer.*/i, 'AMiner')
+    .replace(/^openalex.*/i, 'OpenAlex')
+    .replace(/^venue_year_search.*/i, 'OpenAlex')
+    .replace(/^crossref.*/i, 'Crossref')
+    .replace(/^manual.*/i, 'Manual');
+}
+
+function aggregateSources(rows) {
+  const totals = new Map();
+  for (const row of rows || []) {
+    const label = methodLabel(row.method);
+    totals.set(label, (totals.get(label) || 0) + Number(row.count || 0));
+  }
+  return [...totals.entries()]
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function renderSourceStatus() {
+  const keys = state.apiKeys || [];
+  const sources = aggregateSources(state.stats?.byCollectionMethod || []);
+  const verified = state.stats?.byVerification || [];
+  $('sourceStatus').innerHTML = `
+    <div class="source-grid">
+      <div><span>AMiner</span><strong>${hasProvider(keys, ['aminer']) ? 'ready' : 'on demand'}</strong></div>
+      <div><span>IEEE</span><strong>${hasProvider(keys, ['ieee']) ? 'ready' : 'planned'}</strong></div>
+    </div>
+    <div class="source-list">
+      ${sources.slice(0, 5).map(row => `<div class="source-row"><span>${escapeHtml(row.label)}</span><strong>${fmt(row.count)}</strong></div>`).join('')}
+    </div>
+    <div class="source-list muted-list">
+      ${verified.slice(0, 3).map(row => `<div class="source-row"><span>${escapeHtml(row.status)}</span><strong>${fmt(row.count)}</strong></div>`).join('')}
+    </div>
+    <p class="hint">AMiner is kept as targeted enrichment so full crawls do not burn quota.</p>
+  `;
 }
 
 function renderSummary() {
@@ -178,7 +229,8 @@ function renderSummary() {
 function renderCoverage() {
   const rows = state.stats?.byVenueYear || [];
   const years = [];
-  for (let year = Number($('yearFrom').value || 2016); year <= Number($('yearTo').value || 2026); year++) years.push(year);
+  const currentYear = new Date().getFullYear();
+  for (let year = Number($('yearFrom').value || 2000); year <= Number($('yearTo').value || currentYear); year++) years.push(year);
   const important = ['ISSCC', 'JSSC', 'VLSI Symposium', 'CICC', 'ASSCC', 'ESSCIRC'];
   const byVenue = new Map();
   for (const row of rows) {
@@ -314,6 +366,7 @@ function bindProfileLinks() {
 
 async function loadAuthor(name) {
   const profile = await api(`/api/authors/${encodeURIComponent(name)}`);
+  const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   $('detail').innerHTML = `
     <h2>${escapeHtml(profile.name)}</h2>
     <div class="actions">
@@ -322,7 +375,7 @@ async function loadAuthor(name) {
     </div>
     <section class="profile-grid">
       <div class="metric"><span>Author score</span><strong>${escapeHtml(profile.authorScore)}</strong></div>
-      <div class="metric"><span>Papers</span><strong>${fmt(profile.papers)}</strong></div>
+      <div class="metric"><span>Papers</span><strong>${fmt(paperCount)}</strong></div>
       <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
       <div class="metric"><span>Avg score</span><strong>${escapeHtml(profile.avgScore)}</strong></div>
     </section>
@@ -338,11 +391,12 @@ async function loadAuthor(name) {
 
 async function loadInstitution(name) {
   const profile = await api(`/api/institutions/${encodeURIComponent(name)}`);
+  const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   $('detail').innerHTML = `
     <h2>${escapeHtml(profile.name)}</h2>
     <section class="profile-grid">
       <div class="metric"><span>Institution score</span><strong>${escapeHtml(profile.institutionScore)}</strong></div>
-      <div class="metric"><span>Papers</span><strong>${fmt(profile.papers)}</strong></div>
+      <div class="metric"><span>Papers</span><strong>${fmt(paperCount)}</strong></div>
       <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
       <div class="metric"><span>Avg score</span><strong>${escapeHtml(profile.avgScore)}</strong></div>
     </section>
@@ -397,7 +451,7 @@ function renderPagination() {
         : `<button class="page-button ${item === state.page ? 'active' : ''}" type="button" data-page="${item}">${item}</button>`
       ).join('')}
     </div>
-    <span class="page-status">Page ${state.page} of ${pages} · ${fmt(start)}-${fmt(end)} / ${fmt(state.total)}</span>
+    <span class="page-status">Page ${state.page} of ${pages} / ${fmt(start)}-${fmt(end)} of ${fmt(state.total)}</span>
     <button class="button" id="nextPage" type="button" ${state.page >= pages ? 'disabled' : ''}>Next</button>
   `;
   $('prevPage').addEventListener('click', () => {
@@ -448,6 +502,7 @@ function renderResults(engine = '') {
           <span class="pill">${escapeHtml(row.field)}</span>
           <span class="pill">${escapeHtml(row.year)}</span>
           <span class="pill">score ${escapeHtml(row.score)}</span>
+          <span class="pill source">${escapeHtml(methodLabel(row.collectionMethod))}</span>
           <span class="pill">${escapeHtml(row.readingStatus || 'unread')}</span>
           ${row.localPdf ? '<span class="pill pdf">PDF</span>' : ''}
           ${(row.tags || []).map(tag => `<span class="pill tag">${escapeHtml(tag.name)}</span>`).join('')}
@@ -481,6 +536,17 @@ async function loadPaper(id) {
       ${pdfHref ? `<a target="_blank" href="${escapeHtml(pdfHref)}">Open PDF Link</a>` : ''}
       ${paper.source_url ? `<a target="_blank" href="${escapeHtml(paper.source_url)}">Source</a>` : ''}
     </div>
+    <dl class="detail-grid">
+      <dt>DOI</dt><dd>${escapeHtml(paper.doi || '-')}</dd>
+      <dt>Authors</dt><dd>${tokenLinks(paper.authors, 'author')}</dd>
+      <dt>Collected by</dt><dd>${escapeHtml(paper.collection_method || '-')}</dd>
+      <dt>PDF status</dt><dd>${escapeHtml(paper.download_status || '-')}</dd>
+      <dt>Local PDF</dt><dd>${escapeHtml(paper.local_pdf || '-')}</dd>
+      <dt>Article no.</dt><dd>${escapeHtml(paper.ieee_article_number || '-')}</dd>
+      <dt>Affiliations</dt><dd>${tokenLinks(paper.affiliations, 'institution')}</dd>
+    </dl>
+    <h3>Abstract</h3>
+    <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || 'No abstract available.')}</div>
     <section class="reader-box">
       <label class="check"><input id="paperFavorite" type="checkbox" ${paper.favorite ? 'checked' : ''}><span>Favorite</span></label>
       <label class="field"><span>Status</span>
@@ -493,17 +559,6 @@ async function loadPaper(id) {
       <button class="button primary" id="savePaperState" type="button">Save reading state</button>
       <p class="hint" id="paperStateMsg"></p>
     </section>
-    <dl class="detail-grid">
-      <dt>Authors</dt><dd>${tokenLinks(paper.authors, 'author')}</dd>
-      <dt>DOI</dt><dd>${escapeHtml(paper.doi || '-')}</dd>
-      <dt>PDF status</dt><dd>${escapeHtml(paper.download_status || '-')}</dd>
-      <dt>Local PDF</dt><dd>${escapeHtml(paper.local_pdf || '-')}</dd>
-      <dt>Article no.</dt><dd>${escapeHtml(paper.ieee_article_number || '-')}</dd>
-      <dt>Collected by</dt><dd>${escapeHtml(paper.collection_method || '-')}</dd>
-      <dt>Affiliations</dt><dd>${tokenLinks(paper.affiliations, 'institution')}</dd>
-    </dl>
-    <h3>Abstract</h3>
-    <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || 'No abstract available.')}</div>
   `;
   $('savePaperState').addEventListener('click', savePaperState);
   bindProfileLinks();
@@ -597,17 +652,33 @@ async function bootApp() {
   $('searchNow').addEventListener('click', () => searchFirstPage());
   $('resetFilters').addEventListener('click', () => {
     for (const id of ['venue', 'field', 'rank', 'statusFilter', 'tagFilter']) $(id).value = '';
-    $('yearFrom').value = '2016';
-    $('yearTo').value = '2026';
+    $('yearFrom').value = '2000';
+    $('yearTo').value = String(new Date().getFullYear());
     $('hasPdf').checked = false;
     $('favoriteOnly').checked = false;
     searchFirstPage();
   });
   $('viewComfort').addEventListener('click', () => setView('comfort'));
   $('viewCompact').addEventListener('click', () => setView('compact'));
-  $('logout').addEventListener('click', async () => {
-    await api('/api/auth/logout', { method: 'POST', body: '{}' });
-    showLogin('');
+  $('logout').hidden = !state.authEnabled;
+  if (state.authEnabled) {
+    $('logout').addEventListener('click', async () => {
+      await api('/api/auth/logout', { method: 'POST', body: '{}' });
+      showLogin('');
+    });
+  }
+  document.querySelectorAll('[data-panel-jump]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('[data-panel-jump]').forEach(tab => tab.classList.toggle('active', tab === button));
+      const target = button.dataset.panelJump;
+      if (target === 'authors' || target === 'institutions') {
+        $('insightsPanel').open = true;
+        const block = target === 'authors' ? $('professors') : $('institutions');
+        block.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else {
+        $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    });
   });
   await search();
 }
@@ -621,13 +692,12 @@ function setView(view) {
 
 async function main() {
   const auth = await api('/api/auth/status');
+  state.authEnabled = Boolean(auth.authEnabled);
   $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
-  await fetch('/api/auth/logout', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    credentials: 'same-origin',
-    body: '{}'
-  }).catch(() => {});
+  if (!state.authEnabled || auth.authenticated) {
+    await bootApp();
+    return;
+  }
   showLogin('');
   $('loginForm').addEventListener('submit', async event => {
     event.preventDefault();
@@ -642,5 +712,9 @@ async function main() {
 }
 
 main().catch(err => {
-  showLogin(err.message);
+  if (state.authEnabled) showLogin(err.message);
+  else {
+    $('appShell').hidden = false;
+    $('results').innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+  }
 });
