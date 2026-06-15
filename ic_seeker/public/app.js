@@ -1,6 +1,9 @@
 const state = {
   authenticated: false,
   authEnabled: false,
+  language: localStorage.getItem('icSeekerLanguage') || 'zh',
+  navCollapsed: localStorage.getItem('icSeekerNavCollapsed') === '1',
+  detailCollapsed: true,
   stats: null,
   methodology: null,
   pdfInbox: null,
@@ -16,6 +19,179 @@ const state = {
   limit: 30,
   total: 0
 };
+
+const i18n = {
+  en: {
+    navSearch: 'Academic Search',
+    navAuthors: 'Scholars',
+    navInstitutions: 'Institutions',
+    navSources: 'Data Sources',
+    navPdfs: 'Local PDFs',
+    navPrivate: 'Private IC intelligence',
+    tagline: 'IC paper, scholar, and institution intelligence',
+    scopeAll: 'All',
+    scopePapers: 'Papers',
+    scopeAuthors: 'Authors',
+    searchPlaceholder: 'Search papers, circuits, authors, DOI...',
+    search: 'Search',
+    semantic: 'Semantic',
+    sortRelevance: 'Relevance',
+    sortScore: 'Score',
+    sortYear: 'Year',
+    sortCitations: 'Citations',
+    sortTitle: 'Title',
+    logout: 'Log out',
+    tabPapers: 'Papers',
+    tabAuthors: 'Authors',
+    tabInstitutions: 'Institutions',
+    rows: 'Rows',
+    table: 'Table',
+    filters: 'Filters',
+    reset: 'Reset',
+    venue: 'Venue',
+    domain: 'Domain',
+    rank: 'Rank',
+    from: 'From',
+    to: 'To',
+    hasPdf: 'Has local PDF',
+    favoriteOnly: 'Favorites only',
+    status: 'Status',
+    tag: 'Tag',
+    dataSources: 'Data sources',
+    paperImport: 'Paper import',
+    import: 'Import',
+    manualMetadata: 'Manual metadata',
+    addPaper: 'Add paper',
+    apiKeys: 'API keys',
+    saveKey: 'Save key',
+    localPdfInbox: 'Local PDF inbox',
+    downloadCsv: 'Download CSV',
+    selectPaper: 'Select a paper to inspect abstract, DOI, score, PDF status, notes, and tags.',
+    insight: 'Scholar and institution insight',
+    statsRows: 'Database rows',
+    statsAminer: 'AMiner rows',
+    statsPdfs: 'Local PDFs',
+    statsFavorites: 'Favorites',
+    statsNotes: 'Notes',
+    statsYears: 'Year range',
+    summaryPapers: 'Papers',
+    summaryPdfs: 'Local PDFs',
+    summaryFavorites: 'Favorites',
+    summaryTopVenue: 'Top Venue',
+    summaryTopField: 'Top Field',
+    matches: 'matches',
+    page: 'Page',
+    of: 'of',
+    previous: 'Previous',
+    next: 'Next',
+    openDoi: 'Open DOI',
+    openPdf: 'Open PDF Link',
+    source: 'Source',
+    authors: 'Authors',
+    collectedBy: 'Collected by',
+    pdfStatus: 'PDF status',
+    localPdf: 'Local PDF',
+    articleNo: 'Article no.',
+    affiliations: 'Affiliations',
+    abstract: 'Abstract',
+    favorite: 'Favorite',
+    readingState: 'Status',
+    tags: 'Tags',
+    notes: 'Notes',
+    saveReading: 'Save reading state',
+    noAbstract: 'No abstract available.',
+    sourceHint: 'AMiner is kept as targeted enrichment so full crawls do not burn quota.',
+    collapseDetail: 'Collapse detail',
+    expandDetail: 'Expand detail'
+  },
+  zh: {
+    navSearch: '学术搜索',
+    navAuthors: '学者画像',
+    navInstitutions: '机构实力',
+    navSources: '数据来源',
+    navPdfs: '本地 PDF',
+    navPrivate: '私人 IC 情报库',
+    tagline: 'IC 论文、学者与机构知识库',
+    scopeAll: '全部',
+    scopePapers: '论文',
+    scopeAuthors: '作者',
+    searchPlaceholder: '搜索论文、电路方向、作者、DOI...',
+    search: '搜索',
+    semantic: '语义',
+    sortRelevance: '综合',
+    sortScore: '评分',
+    sortYear: '年份',
+    sortCitations: '引用',
+    sortTitle: '标题',
+    logout: '退出',
+    tabPapers: '论文',
+    tabAuthors: '专家',
+    tabInstitutions: '机构',
+    rows: '列表',
+    table: '紧凑',
+    filters: '筛选',
+    reset: '重置',
+    venue: '会议/期刊',
+    domain: '方向',
+    rank: '等级',
+    from: '起始',
+    to: '结束',
+    hasPdf: '有本地 PDF',
+    favoriteOnly: '只看收藏',
+    status: '阅读状态',
+    tag: '标签',
+    dataSources: '数据来源',
+    paperImport: '论文导入',
+    import: '导入',
+    manualMetadata: '手动录入',
+    addPaper: '添加论文',
+    apiKeys: 'API 密钥',
+    saveKey: '保存密钥',
+    localPdfInbox: '本地 PDF 接入',
+    downloadCsv: '下载 CSV',
+    selectPaper: '选择一篇论文查看摘要、DOI、评分、PDF 状态、笔记和标签。',
+    insight: '学者与机构画像',
+    statsRows: '数据库论文',
+    statsAminer: 'AMiner 行数',
+    statsPdfs: '本地 PDF',
+    statsFavorites: '收藏',
+    statsNotes: '笔记',
+    statsYears: '年份范围',
+    summaryPapers: '论文',
+    summaryPdfs: '本地 PDF',
+    summaryFavorites: '收藏',
+    summaryTopVenue: '最多来源',
+    summaryTopField: '热门方向',
+    matches: '条结果',
+    page: '第',
+    of: '页，共',
+    previous: '上一页',
+    next: '下一页',
+    openDoi: '打开 DOI',
+    openPdf: '打开 PDF 链接',
+    source: '来源',
+    authors: '作者',
+    collectedBy: '采集来源',
+    pdfStatus: 'PDF 状态',
+    localPdf: '本地 PDF',
+    articleNo: '文章号',
+    affiliations: '机构',
+    abstract: '摘要',
+    favorite: '收藏',
+    readingState: '阅读状态',
+    tags: '标签',
+    notes: '笔记',
+    saveReading: '保存阅读状态',
+    noAbstract: '暂无摘要。',
+    sourceHint: 'AMiner 保持按需增强，避免全量抓取烧额度。',
+    collapseDetail: '收起详情',
+    expandDetail: '展开详情'
+  }
+};
+
+function t(key) {
+  return i18n[state.language]?.[key] || i18n.en[key] || key;
+}
 
 const quickTopics = [
   ['ADC', 'adc'],
@@ -125,6 +301,46 @@ function params() {
   return p;
 }
 
+function applyLanguage() {
+  document.documentElement.lang = state.language === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll('option[data-i18n]').forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  $('languageToggle').textContent = state.language === 'zh' ? 'EN' : '中文';
+  $('navCollapse').setAttribute('aria-label', state.navCollapsed
+    ? (state.language === 'zh' ? '展开导航' : 'Expand navigation')
+    : (state.language === 'zh' ? '收起导航' : 'Collapse navigation'));
+  $('detailCollapse').setAttribute('aria-label', state.detailCollapsed ? t('expandDetail') : t('collapseDetail'));
+}
+
+function applyNavState() {
+  document.body.classList.toggle('nav-collapsed', state.navCollapsed);
+  $('navCollapse').textContent = state.navCollapsed ? '>' : '<';
+  $('navCollapse').style.left = state.navCollapsed ? '4px' : '216px';
+  localStorage.setItem('icSeekerNavCollapsed', state.navCollapsed ? '1' : '0');
+  applyLanguage();
+}
+
+function applyDetailState() {
+  document.body.classList.toggle('detail-collapsed', state.detailCollapsed);
+  $('detailCollapse').textContent = state.detailCollapsed ? '<' : '>';
+  $('detailCollapse').setAttribute('aria-label', state.detailCollapsed ? t('expandDetail') : t('collapseDetail'));
+}
+
+function renderEmptyDetail() {
+  state.activeId = null;
+  state.activePaper = null;
+  state.detailCollapsed = true;
+  $('detail').innerHTML = `<div class="empty">${escapeHtml(t('selectPaper'))}</div>`;
+  applyDetailState();
+}
+
 async function loadStats() {
   const [stats, methodology, pdfInbox, professors, institutions, apiKeys] = await Promise.all([
     api('/api/stats'),
@@ -141,18 +357,19 @@ async function loadStats() {
   state.professors = professors;
   state.institutions = institutions;
   $('appTitle').textContent = stats.appName || 'IC Seeker';
-  optionList($('venue'), state.stats.venues);
-  optionList($('field'), state.stats.fields);
-  optionList($('rank'), state.stats.ranks);
-  optionList($('tagFilter'), (state.stats.tags || []).map(tag => tag.name));
+  optionList($('venue'), state.stats.venues, state.language === 'zh' ? '全部' : 'All');
+  optionList($('field'), state.stats.fields, state.language === 'zh' ? '全部' : 'All');
+  optionList($('rank'), state.stats.ranks, state.language === 'zh' ? '全部' : 'All');
+  optionList($('tagFilter'), (state.stats.tags || []).map(tag => tag.name), state.language === 'zh' ? '全部' : 'All');
   $('stats').innerHTML = [
-    ['Database rows', fmt(state.stats.total)],
-    ['AMiner rows', fmt(state.stats.aminerRows)],
-    ['Local PDFs', fmt(state.stats.pdfs)],
-    ['Favorites', fmt(state.stats.favorites)],
-    ['Notes', fmt(state.stats.notes)],
-    ['Year range', `${state.stats.years.minYear || '-'}-${state.stats.years.maxYear || '-'}`]
+    [t('statsRows'), fmt(state.stats.total)],
+    [t('statsAminer'), fmt(state.stats.aminerRows)],
+    [t('statsPdfs'), fmt(state.stats.pdfs)],
+    [t('statsFavorites'), fmt(state.stats.favorites)],
+    [t('statsNotes'), fmt(state.stats.notes)],
+    [t('statsYears'), `${state.stats.years.minYear || '-'}-${state.stats.years.maxYear || '-'}`]
   ].map(([k, v]) => `<div class="stat-row"><span>${k}</span><strong>${v}</strong></div>`).join('');
+  $('navTotal').textContent = `${fmt(state.stats.total)} ${state.language === 'zh' ? '篇论文' : 'papers'}`;
   renderApiKeys(apiKeys);
   renderSourceStatus();
   renderSummary();
@@ -210,7 +427,7 @@ function renderSourceStatus() {
     <div class="source-list muted-list">
       ${verified.slice(0, 3).map(row => `<div class="source-row"><span>${escapeHtml(row.status)}</span><strong>${fmt(row.count)}</strong></div>`).join('')}
     </div>
-    <p class="hint">AMiner is kept as targeted enrichment so full crawls do not burn quota.</p>
+    <p class="hint">${escapeHtml(t('sourceHint'))}</p>
   `;
 }
 
@@ -218,11 +435,11 @@ function renderSummary() {
   const topVenue = state.stats?.byVenue?.[0];
   const topField = state.stats?.byField?.[0];
   $('summary').innerHTML = [
-    ['Papers', fmt(state.total || state.stats?.total)],
-    ['Local PDFs', fmt(state.stats?.pdfs)],
-    ['Favorites', fmt(state.stats?.favorites)],
-    ['Top Venue', topVenue ? `${topVenue.venue} (${fmt(topVenue.count)})` : '-'],
-    ['Top Field', topField ? `${topField.field} (${fmt(topField.count)})` : '-']
+    [t('summaryPapers'), fmt(state.total || state.stats?.total)],
+    [t('summaryPdfs'), fmt(state.stats?.pdfs)],
+    [t('summaryFavorites'), fmt(state.stats?.favorites)],
+    [t('summaryTopVenue'), topVenue ? `${topVenue.venue} (${fmt(topVenue.count)})` : '-'],
+    [t('summaryTopField'), topField ? `${topField.field} (${fmt(topField.count)})` : '-']
   ].map(([k, v]) => `<div class="metric"><span>${escapeHtml(k)}</span><strong>${escapeHtml(v)}</strong></div>`).join('');
 }
 
@@ -419,8 +636,8 @@ async function search() {
   renderTopicChips();
   renderResults(data.engine);
   renderPagination();
-  if (state.rows.length && !state.rows.some(row => row.id === state.activeId)) {
-    await loadPaper(state.rows[0].id);
+  if (!state.activeId || !state.rows.some(row => row.id === state.activeId)) {
+    renderEmptyDetail();
   }
 }
 
@@ -444,15 +661,15 @@ function renderPagination() {
   const start = state.total ? (state.page - 1) * state.limit + 1 : 0;
   const end = Math.min(state.total, state.page * state.limit);
   $('pagination').innerHTML = `
-    <button class="button" id="prevPage" type="button" ${state.page <= 1 ? 'disabled' : ''}>Previous</button>
+    <button class="button" id="prevPage" type="button" ${state.page <= 1 ? 'disabled' : ''}>${escapeHtml(t('previous'))}</button>
     <div class="page-numbers">
       ${pageWindow(state.page, pages).map(item => item === 'gap'
         ? '<span class="page-gap">...</span>'
         : `<button class="page-button ${item === state.page ? 'active' : ''}" type="button" data-page="${item}">${item}</button>`
       ).join('')}
     </div>
-    <span class="page-status">Page ${state.page} of ${pages} / ${fmt(start)}-${fmt(end)} of ${fmt(state.total)}</span>
-    <button class="button" id="nextPage" type="button" ${state.page >= pages ? 'disabled' : ''}>Next</button>
+    <span class="page-status">${escapeHtml(t('page'))} ${state.page} ${escapeHtml(t('of'))} ${pages} / ${fmt(start)}-${fmt(end)} ${escapeHtml(t('of'))} ${fmt(state.total)}</span>
+    <button class="button" id="nextPage" type="button" ${state.page >= pages ? 'disabled' : ''}>${escapeHtml(t('next'))}</button>
   `;
   $('prevPage').addEventListener('click', () => {
     if (state.page > 1) {
@@ -488,7 +705,7 @@ function renderResults(engine = '') {
   $('results').classList.toggle('compact', state.view === 'compact');
   $('results').innerHTML = `
     <div class="result-head">
-      <strong>${fmt(state.total)} matches</strong>
+      <strong>${fmt(state.total)} ${escapeHtml(t('matches'))}</strong>
       ${engine ? `<span>${escapeHtml(engine)}</span>` : ''}
       ${expanded}
     </div>
@@ -508,6 +725,11 @@ function renderResults(engine = '') {
           ${(row.tags || []).map(tag => `<span class="pill tag">${escapeHtml(tag.name)}</span>`).join('')}
         </div>
         <p class="paper-snippet">${escapeHtml(textSnippet(row.abstract || row.field || '', 260))}</p>
+        <div class="paper-actions">
+          <span>${escapeHtml(t('summaryPapers'))}</span>
+          <span>AI</span>
+          <span>${escapeHtml(t('favorite'))}</span>
+        </div>
       </div>
     `).join('')}
   `;
@@ -516,6 +738,8 @@ function renderResults(engine = '') {
 
 async function loadPaper(id) {
   state.activeId = id;
+  state.detailCollapsed = false;
+  applyDetailState();
   renderResults(state.resultMeta?.engine || '');
   const paper = await api(`/api/papers/${id}`);
   state.activePaper = paper;
@@ -532,31 +756,31 @@ async function loadPaper(id) {
       <span class="pill">${escapeHtml(paper.verification_status || 'unverified')}</span>
     </div>
     <div class="actions">
-      ${paper.doi ? `<a class="primary" target="_blank" href="https://doi.org/${encodeURIComponent(paper.doi)}">Open DOI</a>` : ''}
-      ${pdfHref ? `<a target="_blank" href="${escapeHtml(pdfHref)}">Open PDF Link</a>` : ''}
-      ${paper.source_url ? `<a target="_blank" href="${escapeHtml(paper.source_url)}">Source</a>` : ''}
+      ${paper.doi ? `<a class="primary" target="_blank" href="https://doi.org/${encodeURIComponent(paper.doi)}">${escapeHtml(t('openDoi'))}</a>` : ''}
+      ${pdfHref ? `<a target="_blank" href="${escapeHtml(pdfHref)}">${escapeHtml(t('openPdf'))}</a>` : ''}
+      ${paper.source_url ? `<a target="_blank" href="${escapeHtml(paper.source_url)}">${escapeHtml(t('source'))}</a>` : ''}
     </div>
     <dl class="detail-grid">
       <dt>DOI</dt><dd>${escapeHtml(paper.doi || '-')}</dd>
-      <dt>Authors</dt><dd>${tokenLinks(paper.authors, 'author')}</dd>
-      <dt>Collected by</dt><dd>${escapeHtml(paper.collection_method || '-')}</dd>
-      <dt>PDF status</dt><dd>${escapeHtml(paper.download_status || '-')}</dd>
-      <dt>Local PDF</dt><dd>${escapeHtml(paper.local_pdf || '-')}</dd>
-      <dt>Article no.</dt><dd>${escapeHtml(paper.ieee_article_number || '-')}</dd>
-      <dt>Affiliations</dt><dd>${tokenLinks(paper.affiliations, 'institution')}</dd>
+      <dt>${escapeHtml(t('authors'))}</dt><dd>${tokenLinks(paper.authors, 'author')}</dd>
+      <dt>${escapeHtml(t('collectedBy'))}</dt><dd>${escapeHtml(paper.collection_method || '-')}</dd>
+      <dt>${escapeHtml(t('pdfStatus'))}</dt><dd>${escapeHtml(paper.download_status || '-')}</dd>
+      <dt>${escapeHtml(t('localPdf'))}</dt><dd>${escapeHtml(paper.local_pdf || '-')}</dd>
+      <dt>${escapeHtml(t('articleNo'))}</dt><dd>${escapeHtml(paper.ieee_article_number || '-')}</dd>
+      <dt>${escapeHtml(t('affiliations'))}</dt><dd>${tokenLinks(paper.affiliations, 'institution')}</dd>
     </dl>
-    <h3>Abstract</h3>
-    <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || 'No abstract available.')}</div>
+    <h3>${escapeHtml(t('abstract'))}</h3>
+    <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || t('noAbstract'))}</div>
     <section class="reader-box">
-      <label class="check"><input id="paperFavorite" type="checkbox" ${paper.favorite ? 'checked' : ''}><span>Favorite</span></label>
-      <label class="field"><span>Status</span>
+      <label class="check"><input id="paperFavorite" type="checkbox" ${paper.favorite ? 'checked' : ''}><span>${escapeHtml(t('favorite'))}</span></label>
+      <label class="field"><span>${escapeHtml(t('readingState'))}</span>
         <select id="paperStatus">
           ${['unread', 'reading', 'read', 'important', 'skip'].map(x => `<option value="${x}" ${paper.readingStatus === x ? 'selected' : ''}>${x}</option>`).join('')}
         </select>
       </label>
-      <label class="field"><span>Tags</span><input id="paperTags" value="${escapeHtml((paper.tags || []).map(tag => tag.name).join(', '))}" placeholder="adc, must-read"></label>
-      <label class="field wide"><span>Notes</span><textarea id="paperNote" placeholder="Your private reading note">${escapeHtml(paper.note || '')}</textarea></label>
-      <button class="button primary" id="savePaperState" type="button">Save reading state</button>
+      <label class="field"><span>${escapeHtml(t('tags'))}</span><input id="paperTags" value="${escapeHtml((paper.tags || []).map(tag => tag.name).join(', '))}" placeholder="adc, must-read"></label>
+      <label class="field wide"><span>${escapeHtml(t('notes'))}</span><textarea id="paperNote" placeholder="Your private reading note">${escapeHtml(paper.note || '')}</textarea></label>
+      <button class="button primary" id="savePaperState" type="button">${escapeHtml(t('saveReading'))}</button>
       <p class="hint" id="paperStateMsg"></p>
     </section>
   `;
@@ -640,6 +864,9 @@ function searchFirstPage() {
 
 async function bootApp() {
   showApp();
+  applyLanguage();
+  applyNavState();
+  applyDetailState();
   await loadStats();
   renderTopicChips();
   const doSearch = debounce(searchFirstPage);
@@ -660,6 +887,25 @@ async function bootApp() {
   });
   $('viewComfort').addEventListener('click', () => setView('comfort'));
   $('viewCompact').addEventListener('click', () => setView('compact'));
+  $('navCollapse').addEventListener('click', () => {
+    state.navCollapsed = !state.navCollapsed;
+    applyNavState();
+  });
+  $('detailCollapse').addEventListener('click', () => {
+    state.detailCollapsed = !state.detailCollapsed;
+    applyDetailState();
+  });
+  $('languageToggle').addEventListener('click', async () => {
+    state.language = state.language === 'zh' ? 'en' : 'zh';
+    localStorage.setItem('icSeekerLanguage', state.language);
+    applyLanguage();
+    await loadStats();
+    renderTopicChips();
+    renderResults(state.resultMeta?.engine || '');
+    renderPagination();
+    if (state.activeId) await loadPaper(state.activeId);
+    else renderEmptyDetail();
+  });
   $('logout').hidden = !state.authEnabled;
   if (state.authEnabled) {
     $('logout').addEventListener('click', async () => {
@@ -675,6 +921,10 @@ async function bootApp() {
         $('insightsPanel').open = true;
         const block = target === 'authors' ? $('professors') : $('institutions');
         block.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else if (target === 'sources') {
+        $('sourceStatus').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      } else if (target === 'pdfs') {
+        $('pdfInbox').scrollIntoView({ block: 'start', behavior: 'smooth' });
       } else {
         $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
@@ -694,6 +944,7 @@ async function main() {
   const auth = await api('/api/auth/status');
   state.authEnabled = Boolean(auth.authEnabled);
   $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
+  applyLanguage();
   if (!state.authEnabled || auth.authenticated) {
     await bootApp();
     return;
