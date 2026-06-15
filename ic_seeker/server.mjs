@@ -475,7 +475,7 @@ function apiKeys() {
   const db = openDb();
   try {
     const rows = db.prepare('SELECT provider, value, updated_at AS updatedAt FROM api_keys ORDER BY provider').all();
-    const envProviders = ['OPENAI_API_KEY', 'IEEE_API_KEY', 'CROSSREF_MAILTO']
+    const envProviders = ['OPENAI_API_KEY', 'IEEE_API_KEY', 'AMINER_API_KEY', 'CROSSREF_MAILTO']
       .filter(name => process.env[name])
       .map(name => ({ provider: name.toLowerCase(), masked: maskSecret(process.env[name]), source: 'env' }));
     return [
