@@ -192,6 +192,49 @@ Today 12 new JSSC papers were added.
 2 are from University of Macau.
 ```
 
+## Low-Cost Data Strategy
+
+AMiner is useful for author and institution intelligence, but its `venue/paper/relation` endpoint is a paid/credit-consuming interface. Do not use AMiner as the default full-corpus crawler.
+
+Recommended source split:
+
+- OpenAlex: main free/low-cost scholarly metadata base for 2000-current coverage.
+- Crossref: DOI, publisher metadata, publication dates, and duplicate correction.
+- IEEE Xplore API: IC-focused precision layer for ISSCC, JSSC, VLSI, CICC, ASSCC, ESSCIRC, IEDM, TCAS, TVLSI, and related IEEE venues.
+- DBLP: supplement DAC, ICCAD, DATE, EDA, CAD, and architecture-adjacent conference records.
+- Semantic Scholar: citation graph, related papers, and recommendation features when needed.
+- AMiner: on-demand enrichment only, such as professor profiles, institution pages, collaborator networks, and manually selected missing venue-year gaps.
+- Google Scholar: outbound/manual search links only; do not scrape it.
+
+IEEE Xplore should become the preferred IC metadata refinement source once an API key is available. It can provide title, authors, publication year, venue, DOI, abstract, IEEE article number, abstract URL, author URL, and other publication metadata. It should not be used to redistribute full text or publisher PDFs.
+
+Cost guardrails:
+
+- AMiner import commands should be opt-in and scoped by venue/year.
+- Never run AMiner over all venues and all years by default.
+- Add a dry-run or budget preview before paid API calls.
+- Cache every successful AMiner response locally.
+- Skip AMiner calls when a DOI/source ID/title-year record already exists.
+- Use AMiner only after OpenAlex, Crossref, IEEE, and DBLP have been tried.
+
+Suggested low-cost ingestion order:
+
+```text
+OpenAlex + Crossref baseline
+-> IEEE Xplore precision backfill for IC venues
+-> DBLP backfill for EDA/CAD venues
+-> local deduplication by DOI, IEEE article number, title, year, venue
+-> AMiner targeted enrichment for selected authors, institutions, and gaps
+-> Semantic Scholar citation/recommendation enrichment
+```
+
+For public SaaS operation:
+
+- Store and show metadata only: DOI, title, authors, abstract, venue, year, tags, and official links.
+- Link users to IEEE/DOI/publisher pages for paper access.
+- Allow private user-uploaded PDFs for personal reading features only.
+- Keep API keys and paid-token usage server-side with per-job budgets.
+
 ## Author And Institution Profiles
 
 The professor profile can take inspiration from AMiner-style pages, but stay IC-focused.
