@@ -9,6 +9,7 @@
     "docker:up": "docker compose up --build",
     "build:database": "node ./scripts/build-ic-database.mjs --max-per-venue-year=700 --max-per-venue=12000",
     "build:database:fast": "node ./scripts/build-ic-database.mjs --max-per-venue-year=500 --max-per-venue=9000 --no-source-backfill",
+    "import:aminer": "node ./scripts/import-aminer-venues.mjs --limit=100 --max-pages=100",
     "import:pdfs": "node ./scripts/import-local-pdfs.mjs",
     "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite"
   },
