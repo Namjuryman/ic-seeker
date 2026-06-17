@@ -61,9 +61,9 @@ const coverageTargets = {
 
 const domains = [
   ['Analog & Mixed-Signal', ['adc', 'dac', 'analog-to-digital', 'digital-to-analog', 'sigma-delta', 'delta-sigma', 'sar', 'amplifier', 'comparator', 'bandgap', 'reference', 'bias', 'filter', 'continuous-time', 'sensor interface']],
-  ['RF/mmWave & Wireline', ['rf', 'mm-wave', 'millimeter-wave', 'wireline', 'serdes', 'transceiver', 'receiver', 'transmitter', 'mixer', 'power amplifier', 'phased array', 'front-end', 'pam-4', 'cdr', 'equalizer']],
+  ['RF/mmWave & Wireline', ['rf', 'mm-wave', 'millimeter-wave', 'wireline', 'serdes', 'transceiver', 'receiver', 'transmitter', 'mixer', 'power amplifier', 'phased array', 'pam-4', 'cdr', 'equalizer']],
   ['Clocking & Frequency Generation', ['pll', 'dll', 'oscillator', 'vco', 'dco', 'jitter', 'frequency synthesizer', 'clock generator', 'time-to-digital', 'tdc']],
-  ['Power Management', ['ldo', 'dc-dc', 'buck', 'boost', 'regulator', 'power management', 'pmic', 'charger', 'energy harvesting', 'switched-capacitor converter', 'voltage converter']],
+  ['Power Management', ['ldo', 'dc-dc', 'dc dc', 'dcdc', 'buck', 'boost', 'regulator', 'voltage regulator', 'power management', 'pmic', 'charger', 'energy harvesting', 'switched-capacitor', 'switched-capacitor converter', 'charge pump', 'voltage converter', 'power converter', 'dual-path hybrid', 'dph', 'continuous-current-input']],
   ['Digital IC & Architecture', ['microprocessor', 'processor', 'risc-v', 'cpu', 'gpu', 'accelerator', 'neural network processor', 'machine learning accelerator', 'ai accelerator', 'compute-in-memory', 'computing-in-memory', 'cryptographic', 'aes', 'soc']],
   ['Memory & Compute-in-Memory', ['sram', 'dram', 'nand', 'flash memory', 'rram', 'mram', 'memory', 'compute-in-memory', 'computing-in-memory', 'in-memory', 'hbm', 'gddr', 'lpddr']],
   ['EDA, CAD & Verification', ['placement', 'routing', 'synthesis', 'verification', 'formal verification', 'timing analysis', 'static timing', 'layout', 'design automation', 'eda', 'cad', 'floorplan', 'physical design']],
@@ -155,16 +155,23 @@ function text(work) {
     abstract(work),
     ...sourceNames(work),
     ...(work.concepts || []).map(c => c.display_name)
-  ].join(' ').toLowerCase();
+  ].join(' ').toLowerCase().replace(/[–—]/g, '-');
 }
 
-function countHits(hay, words) {
-  return words.filter(word => hay.includes(word)).length;
+function countHits(hay, words, domain = '') {
+  let hits = 0;
+  for (const word of words) {
+    if (!hay.includes(word)) continue;
+    if (domain === 'Power Management' && /dc-dc|dcdc|buck|boost|pmic|ldo|switched-capacitor|charge pump|voltage regulator|dual-path hybrid|continuous-current-input|power converter/.test(word)) hits += 3;
+    else hits += 1;
+  }
+  if (domain === 'Power Management' && /\bdc\s*-?\s*dc\b/.test(hay)) hits += 3;
+  return hits;
 }
 
 function classify(work) {
   const hay = text(work);
-  const scores = domains.map(([domain, words]) => ({ domain, hits: countHits(hay, words) }));
+  const scores = domains.map(([domain, words]) => ({ domain, hits: countHits(hay, words, domain) }));
   scores.sort((a, b) => b.hits - a.hits);
   return scores[0].hits ? scores[0] : { domain: 'General IC', hits: countHits(hay, generalIcTerms) };
 }

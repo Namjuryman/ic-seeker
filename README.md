@@ -27,14 +27,18 @@ Publisher PDFs are not included.
 - Lightweight semantic search through IC-domain alias expansion
 - Venue, domain, rank, year, local-PDF, and sort filters
 - Paper detail view with DOI, source link, PDF link status, score, affiliations, and collection method
+- Quick citation copy from the paper detail panel in IEEE, APA, and BibTeX formats
 - Paper import by DOI through Crossref metadata
 - Manual paper import for missing records
 - Favorites, reading status, private notes, and tags
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
+- AMiner-style author page layout: author papers stay in the main area while the right rail shows the professor profile, inferred career stage, yearly activity, collaborators, and institutions
 - Institution leaderboard for school/lab strength
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
+- Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
+- Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
 - CSV export compatible with ChipSeeker-like workflows
 - Mobile-friendly web layout
@@ -86,6 +90,21 @@ npm run docker:up
 The Compose setup mounts `./ic_database` into the container so your SQLite database, PDF inbox, notes, tags, and imports persist locally.
 
 For server deployment, put the app behind an HTTPS reverse proxy and keep `HOST=0.0.0.0` only inside Docker or trusted server environments.
+
+## Public Deployment Plan
+
+Recommended first public setup:
+
+- Rent a small VPS with Docker support.
+- Point your domain to Cloudflare DNS.
+- Run IC Seeker with `docker compose up -d` on the VPS.
+- Put Caddy, Nginx Proxy Manager, or Cloudflare Tunnel in front of port `8750` for HTTPS.
+- Keep `ADMIN_PASSWORD`, `COOKIE_SECRET`, and future IEEE/OpenAI keys in `.env`, never in Git.
+- Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/` regularly.
+- For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
+- When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
+
+Vercel is useful for a future static/Next.js frontend, but the current app is a Node server plus SQLite file, so a Docker VPS or Cloudflare Tunnel is the cleanest deployment path.
 
 ## Private MVP Workflow
 
@@ -164,6 +183,12 @@ quality_score = venue_base + 10 * domain_keyword_hits + citation_boost + recency
 
 Classification uses keyword dictionaries over title, abstract, source name, and concepts. The domain with the most keyword hits wins; otherwise papers fall back to `General IC`.
 
+PMIC/DC-DC classification now uses higher-weight phrase matching for terms such as `dc-dc`, `dcdc`, `buck`, `boost`, `ldo`, `pmic`, `switched-capacitor`, `charge pump`, `dual-path hybrid`, and `continuous-current-input`. To repair an existing database after imports, run:
+
+```powershell
+node .\scripts\repair-power-management-domains.mjs
+```
+
 ## Caveats
 
 - Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.
@@ -176,10 +201,16 @@ Classification uses keyword dictionaries over title, abstract, source name, and 
 
 ```text
 ic_seeker/                 Web app and local API server
+ic_seeker/routes/          HTTP route modules
+ic_seeker/services/        Search, paper, profile, topic, geo, and admin logic
+ic_seeker/repositories/    SQLite repository wrapper
+ic_seeker/config/          Environment and path config
+ic_seeker/db/              SQLite connection helper
 ic_database/               Ready-to-use SQLite, CSV, summary, and PDF folders
 scripts/build-ic-database.mjs
 scripts/merge-ic-databases.mjs
 scripts/import-local-pdfs.mjs
+scripts/repair-power-management-domains.mjs
 Start_IC_Seeker.bat
 Build_IC_Database.bat
 ```

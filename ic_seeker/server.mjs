@@ -8,6 +8,7 @@ import { createPaperService } from './services/paper.service.mjs';
 import { createProfileService } from './services/profile.service.mjs';
 import { createSearchService } from './services/search.service.mjs';
 import { createTopicService } from './services/topic.service.mjs';
+import { createGeoService } from './services/geo.service.mjs';
 import { createSqliteRepository } from './repositories/sqlite.repository.mjs';
 import { createAuthRoutes } from './routes/auth.routes.mjs';
 import { createApiRoutes } from './routes/api.routes.mjs';
@@ -34,6 +35,7 @@ const services = {
   paper: createPaperService({ openDb }),
   profile: createProfileService({ openDb }),
   search: createSearchService({ openDb }),
+  geo: createGeoService({ openDb }),
   topic: createTopicService({ openDb })
 };
 

@@ -34,6 +34,7 @@
         <nav class="nav-menu" aria-label="Primary navigation">
           <button class="nav-item active" type="button" data-panel-jump="papers" data-i18n="navSearch">Academic Search</button>
           <button class="nav-item" type="button" data-panel-jump="topics" data-i18n="navTopics">Topics</button>
+          <button class="nav-item" type="button" data-panel-jump="geo" data-i18n="navGeo">Geo Map</button>
           <button class="nav-item" type="button" data-panel-jump="authors" data-i18n="navAuthors">Scholars</button>
           <button class="nav-item" type="button" data-panel-jump="institutions" data-i18n="navInstitutions">Institutions</button>
           <button class="nav-item" type="button" data-panel-jump="sources" data-i18n="navSources">Data Sources</button>
@@ -84,11 +85,13 @@
         <nav class="scope-tabs" aria-label="Search scope">
           <button class="scope-tab active" type="button" data-panel-jump="papers" data-i18n="tabPapers">Papers</button>
           <button class="scope-tab" type="button" data-panel-jump="topics" data-i18n="tabTopics">Topics</button>
+          <button class="scope-tab" type="button" data-panel-jump="geo" data-i18n="tabGeo">Geo</button>
           <button class="scope-tab" type="button" data-panel-jump="authors" data-i18n="tabAuthors">Authors</button>
           <button class="scope-tab" type="button" data-panel-jump="institutions" data-i18n="tabInstitutions">Institutions</button>
         </nav>
         <div class="topic-chips" id="topicChips"></div>
         <div class="view-switch" aria-label="Result view">
+          <button class="icon-button" id="filterCollapse" type="button" title="Filters" data-i18n="filters">Filters</button>
           <button class="icon-button active" id="viewComfort" type="button" title="Comfort view" data-i18n="rows">Rows</button>
           <button class="icon-button" id="viewCompact" type="button" title="Compact view" data-i18n="table">Table</button>
         </div>

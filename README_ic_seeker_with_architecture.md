@@ -54,6 +54,7 @@ Publisher PDFs are **not** included.
 - IC-domain alias expansion for terms such as `PLL`, `ADC`, `DAC`, `LDO`, `SAR`, `bandgap`, and Chinese equivalents
 - Filters by venue, year, domain, rank, local PDF status, and sort method
 - Paper detail page with DOI, source link, abstract, score, affiliations, and collection method
+- Quick citation copy in IEEE, APA, and BibTeX formats
 
 ### Reading Management
 
@@ -69,9 +70,11 @@ Publisher PDFs are **not** included.
 ### Academic Profiling
 
 - Author/professor leaderboard
-- Author profile pages with papers, yearly trend, venue/rank distribution, collaborators, and institutions
+- AMiner-style author profile pages: the main area stays focused on the professor's papers, while the right rail shows the professor profile, inferred career stage, yearly trend, collaborators, institutions, and external search links
 - Institution leaderboard
 - Institution profile pages with yearly output, venues, fields, authors, and representative papers
+- Topic intelligence pages with field trends, leaders, institutions, venues, and representative papers
+- Regional intelligence map with hoverable countries, all-field strength, institution view, single-topic strength such as PMIC, and regional strength-change summaries
 - CSV export for ChipSeeker-like workflows
 
 ### Deployment
@@ -258,6 +261,12 @@ Topic classification currently uses keyword dictionaries over:
 
 The domain with the most keyword hits is selected. If no strong topic signal exists, the paper falls back to `General IC`.
 
+Power-management classification has an additional weighted repair path for PMIC/DC-DC papers. Strong phrases such as `dc-dc`, `dcdc`, `buck`, `boost`, `ldo`, `pmic`, `switched-capacitor`, `charge pump`, `dual-path hybrid`, and `continuous-current-input` are treated as high-confidence power-management signals. Existing databases can be repaired with:
+
+```bash
+node ./scripts/repair-power-management-domains.mjs
+```
+
 Example topic groups include:
 
 - Analog and mixed-signal
@@ -344,10 +353,17 @@ Planned improvements:
 
 ```text
 ic_seeker/                     Web app and local API server
+ic_seeker/config/              Environment configuration
+ic_seeker/db/                  SQLite connection helper
+ic_seeker/lib/                 HTTP/auth utilities
+ic_seeker/routes/              Auth, API, static, and request routing
+ic_seeker/services/            Admin, paper, profile, search, topic, geo, and methodology services
+ic_seeker/repositories/        SQLite repository wrapper
 ic_database/                   SQLite database, CSV export, summary, and PDF folders
 scripts/build-ic-database.mjs  Metadata collection and database builder
 scripts/merge-ic-databases.mjs Database merge utility
 scripts/import-local-pdfs.mjs  Local PDF matching utility
+scripts/repair-power-management-domains.mjs
 docs/                          Methodology, roadmap, and MVP notes
 Start_IC_Seeker.bat            Windows local launcher
 Build_IC_Database.bat          Windows database build helper
@@ -375,23 +391,46 @@ Users may attach local PDFs only for private personal reading and research manag
 
 ## Architecture Notes and Refactoring Plan
 
-The current implementation is intentionally compact. It is suitable for a private MVP because it keeps the web app, local API server, SQLite database, and personal reading workflow easy to run and easy to modify.
-
-However, as IC Seeker grows beyond the private-MVP stage, both the backend and frontend architecture should be gradually modularized.
+The current implementation is still local-first and easy to run, but the backend has moved beyond the original single-file prototype. The server now has a modular backend skeleton with config, database, lib, route, service, and repository layers. The frontend is still mostly a single vanilla JavaScript app and should be the next major structure cleanup area.
 
 ### Current Architecture Status
 
-The current structure is good for fast iteration:
+Current backend structure:
 
 ```text
 ic_seeker/
-  server.mjs        Local API server and backend logic
-  index.html        Main web page
-  app.js            Frontend interaction logic
-  styles.css        UI styles
+  server.mjs
+  config/env.mjs
+  db/connection.mjs
+  lib/auth.mjs
+  lib/http.mjs
+  routes/
+    auth.routes.mjs
+    api.routes.mjs
+    static.routes.mjs
+    index.mjs
+  services/
+    admin.service.mjs
+    paper.service.mjs
+    profile.service.mjs
+    search.service.mjs
+    topic.service.mjs
+    geo.service.mjs
+    methodology.service.mjs
+  repositories/sqlite.repository.mjs
 ```
 
-This is acceptable for a local-first prototype, but long-term development will become harder if all backend logic remains in one server file and all frontend state/rendering remains in one large JavaScript file.
+Current frontend structure:
+
+```text
+ic_seeker/public/
+  index.html
+  app.js
+  styles.css
+  js/bootstrap.js
+```
+
+This is acceptable for the current private MVP, but long-term development will become harder if all frontend state, routing, rendering, maps, citation tools, profiles, and search interactions remain in one large JavaScript file.
 
 The main risk is not that the app cannot run. The main risk is that future features will become difficult to maintain.
 
@@ -412,14 +451,13 @@ Examples of future features that will increase complexity:
 
 ### Backend Refactoring Direction
 
-The backend should gradually move from a single-file server toward a layered structure:
+The backend is already partway through this layered structure:
 
 ```text
 ic_seeker/
   server.mjs
   config/
     env.mjs
-    paths.mjs
   db/
     connection.mjs
     migrations.mjs
@@ -439,6 +477,7 @@ ic_seeker/
     institution.service.mjs
     scoring.service.mjs
     topic.service.mjs
+    geo.service.mjs
     pdf.service.mjs
   repositories/
     paper.repo.mjs
@@ -452,7 +491,7 @@ ic_seeker/
     errors.mjs
 ```
 
-Recommended separation:
+Current and recommended separation:
 
 ```text
 routes        HTTP request and response handling
@@ -464,6 +503,14 @@ lib           shared utilities
 ```
 
 This separation is especially important for IC Seeker because the project's core value is not just displaying papers. The core value is the data-recognition layer: author identity, institution normalization, venue mapping, topic classification, scoring, and paper deduplication.
+
+Remaining backend work:
+
+- Add `db/schema.sql` and migration handling
+- Move scoring/topic keyword dictionaries into a dedicated `scoring.service.mjs` or `classification.service.mjs`
+- Add canonical venue, author, and institution repositories
+- Add manual override files for important professors and schools
+- Add request logging, API-rate limiting, and production error handling before public deployment
 
 ### Frontend Refactoring Direction
 
@@ -566,18 +613,18 @@ Which venues matter for this topic?
 
 ### Recommended Refactoring Order
 
-Do not rewrite everything at once. The recommended order is:
+Backend step 1 has already been completed. Continue with this order:
 
 ```text
-1. Split backend services and repositories
-2. Move scoring, topic classification, author logic, and institution logic out of server.mjs
-3. Add db/schema.sql and migration handling
-4. Split frontend API, state, router, rendering, and utilities
-5. Improve paper deduplication and venue canonical mapping
-6. Improve institution normalization
-7. Improve author identity disambiguation
-8. Improve weighted topic classification
-9. Add PDF title/text recognition
+1. Add db/schema.sql and migrations
+2. Move scoring/topic classification into dedicated services
+3. Split frontend API, state, router, rendering, and utilities
+4. Improve paper deduplication and venue canonical mapping
+5. Improve institution normalization
+6. Improve author identity disambiguation
+7. Add IEEE metadata sync and scheduled new-paper monitoring
+8. Add PDF title/text recognition
+9. Add public deployment hardening, backups, and monitoring
 10. Consider React/Vue/Next only after the feature set becomes too complex for modular vanilla JavaScript
 ```
 
@@ -594,10 +641,11 @@ Near-term:
 - Improve author identity recognition
 - Improve institution normalization
 - Improve topic classification
+- Import richer IEEE metadata and refresh 2000-current venue coverage
 - Add canonical venue mapping
 - Add profile override files
 - Improve paper deduplication
-- Add better dashboard and topic pages
+- Improve dashboard, topic, and regional intelligence pages
 - Add Chinese/English interface
 
 Mid-term:

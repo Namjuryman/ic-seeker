@@ -3,6 +3,7 @@ const state = {
   authEnabled: false,
   language: localStorage.getItem('icSeekerLanguage') || 'zh',
   navCollapsed: localStorage.getItem('icSeekerNavCollapsed') === '1',
+  filtersCollapsed: localStorage.getItem('icSeekerFiltersCollapsed') !== '0',
   detailCollapsed: true,
   stats: null,
   methodology: null,
@@ -26,6 +27,7 @@ const i18n = {
   en: {
     navSearch: 'Academic Search',
     navTopics: 'Topic Intelligence',
+    navGeo: 'Geo Intelligence',
     navAuthors: 'Scholars',
     navInstitutions: 'Institutions',
     navSources: 'Data Sources',
@@ -46,6 +48,7 @@ const i18n = {
     logout: 'Log out',
     tabPapers: 'Papers',
     tabTopics: 'Topics',
+    tabGeo: 'Geo',
     tabAuthors: 'Authors',
     tabInstitutions: 'Institutions',
     rows: 'Rows',
@@ -148,7 +151,22 @@ const i18n = {
     topicTrend: 'Yearly trend',
     openTopic: 'Open topic',
     topicSummaryText: '{field} has {papers} indexed papers. Peak year: {peakYear}. S+ share: {splus}%.',
-    setAsSearch: 'Search this topic'
+    setAsSearch: 'Search this topic',
+    geoIntelligence: 'Regional intelligence',
+    geoOverall: 'Academic strength',
+    geoInstitutions: 'Institution view',
+    geoTopic: 'Single-topic strength',
+    geoTopicPick: 'Topic',
+    geoTrend: 'Regional strength change',
+    geoTopCountries: 'Top countries',
+    geoTopInstitutions: 'Top institutions',
+    geoHoverHint: 'Hover a country to inspect strength, institutions, and yearly trend.',
+    geoPapers: 'Mapped papers',
+    quickCitation: 'Quick citation',
+    copyIeee: 'Copy IEEE',
+    copyApa: 'Copy APA',
+    copyBibtex: 'Copy BibTeX',
+    copied: 'Copied.'
   },
   zh: {
     navSearch: '学术搜索',
@@ -423,6 +441,16 @@ function applyDetailState() {
   $('detailCollapse').setAttribute('aria-label', state.detailCollapsed ? t('expandDetail') : t('collapseDetail'));
 }
 
+function applyFilterState() {
+  document.body.classList.toggle('filters-collapsed', state.filtersCollapsed);
+  const button = $('filterCollapse');
+  if (button) {
+    button.classList.toggle('active', !state.filtersCollapsed);
+    button.setAttribute('aria-pressed', String(!state.filtersCollapsed));
+  }
+  localStorage.setItem('icSeekerFiltersCollapsed', state.filtersCollapsed ? '1' : '0');
+}
+
 function currentSearchRoute() {
   return {
     view: 'papers',
@@ -454,6 +482,7 @@ function routeUrl(route) {
     institution: new Set(['name']),
     rankings: new Set(['kind']),
     topics: new Set(['field']),
+    geo: new Set(['field', 'mode', 'country']),
     paper: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page', 'id']),
     papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page'])
   };
@@ -495,7 +524,9 @@ function routeFromLocation() {
     id: params.get('id') || '',
     name: params.get('name') || '',
     kind: params.get('kind') || '',
-    field: params.get('field') || ''
+    field: params.get('field') || '',
+    mode: params.get('mode') || '',
+    country: params.get('country') || ''
   };
   return route;
 }
@@ -539,6 +570,9 @@ async function restoreRoute(route = history.state || routeFromLocation()) {
     } else if (view === 'topics') {
       setActivePanel('topics');
       await renderTopics(route.field || '', { history: 'skip' });
+    } else if (view === 'geo') {
+      setActivePanel('geo');
+      await renderGeo(route.field || '', { history: 'skip', mode: route.mode || '', country: route.country || '' });
     } else {
       setActivePanel('papers');
       applySearchRoute(route || {});
@@ -1054,32 +1088,22 @@ async function loadAuthor(name, options = {}) {
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
   const strength = yearlySeriesFromPapers(profile.papers, 'score');
-  state.detailCollapsed = true;
+  state.detailCollapsed = false;
   applyDetailState();
   $('summary').innerHTML = '';
   $('pagination').innerHTML = '';
   $('results').classList.remove('compact');
   $('results').innerHTML = `
-    <section class="scholar-profile">
-      <div class="profile-hero">
-        ${renderPhotoPlaceholder()}
-        <div class="profile-main">
+    <section class="author-paper-page">
+      <div class="profile-results-head">
+        <div>
           <p class="profile-kicker">${escapeHtml(t('navAuthors'))}</p>
           <h2>${escapeHtml(profile.name)}</h2>
-          <div class="profile-tags">
-            <span>${escapeHtml(t('scholarType'))}: ${escapeHtml(scholarType(profile, paperCount))}</span>
-            <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
-            <span>S+ ${fmt(profile.ranks.sPlus)} / S ${fmt(profile.ranks.s)} / A ${fmt(profile.ranks.a)}</span>
-          </div>
-          <div class="actions">
-            <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
-            <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
-          </div>
+          <p>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))} / ${escapeHtml(t('summaryTopField'))}: ${escapeHtml(profile.byDomain?.[0]?.key || '-')}</p>
         </div>
-        <div class="profile-score">
-          <span>${escapeHtml(t('sortScore'))}</span>
-          <strong>${escapeHtml(profile.authorScore)}</strong>
-          <em>${escapeHtml(t('summaryTopField'))}: ${escapeHtml(profile.byDomain?.[0]?.key || '-')}</em>
+        <div class="profile-tags">
+          <span>${escapeHtml(t('scholarType'))}: ${escapeHtml(scholarType(profile, paperCount))}</span>
+          <span>S+ ${fmt(profile.ranks.sPlus)} / S ${fmt(profile.ranks.s)} / A ${fmt(profile.ranks.a)}</span>
         </div>
       </div>
       <section class="profile-grid wide-profile-grid">
@@ -1088,18 +1112,42 @@ async function loadAuthor(name, options = {}) {
         <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
         <div class="metric"><span>${escapeHtml(t('summaryTopField'))}</span><strong>${escapeHtml(profile.byDomain?.[0]?.key || '-')}</strong></div>
       </section>
+      ${profilePapers(profile.papers)}
+    </section>
+  `;
+  $('detail').innerHTML = `
+    <section class="author-profile-detail">
+      <div class="profile-hero compact-profile-hero">
+        ${renderPhotoPlaceholder()}
+        <div class="profile-main">
+          <p class="profile-kicker">${escapeHtml(t('profileSummary'))}</p>
+          <h2>${escapeHtml(profile.name)}</h2>
+          <div class="profile-tags">
+            <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+            <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.authorScore)}</span>
+          </div>
+          <div class="actions">
+            <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
+            <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
+          </div>
+        </div>
+      </div>
       ${renderProfileSummary(profile, paperCount)}
-      <section class="profile-analytics">
-        ${renderSparkBars(strength, t('careerStrength'), 'line')}
-        ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
-        <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
+      ${renderSparkBars(strength, t('careerStrength'), 'line')}
+      ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
+      <section class="profile-side-panel">
+        <h3>${escapeHtml(t('rankDistribution'))}</h3>
+        ${renderRankDonut(profile.ranks)}
       </section>
       ${renderCareerInference(profile, paperCount)}
-      <section class="profile-columns">
-        <div><h3>${escapeHtml(t('collaboratorNetwork'))}</h3>${renderClickableMiniBars(profile.coauthors, 'papers', 'author')}</div>
-        <div><h3>${escapeHtml(t('institutionHistory'))}</h3><div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div></div>
+      <section class="profile-side-panel">
+        <h3>${escapeHtml(t('collaboratorNetwork'))}</h3>
+        ${renderClickableMiniBars(profile.coauthors.slice(0, 16), 'papers', 'author')}
       </section>
-      ${profilePapers(profile.papers)}
+      <section class="profile-side-panel">
+        <h3>${escapeHtml(t('institutionHistory'))}</h3>
+        <div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div>
+      </section>
     </section>
   `;
   bindProfileLinks();
@@ -1211,6 +1259,159 @@ function renderTopicCards(topics, selectedField) {
       <em>S+ ${fmt(topic.sPlus)} · ${topic.firstYear}-${topic.lastYear}</em>
     </button>`).join('')}
   </div>`;
+}
+
+function geoMetric(country, mode) {
+  if (mode === 'institutions') return Number(country.topInstitutions?.length || 0);
+  if (mode === 'topic') return Number(country.score || 0);
+  return Number(country.recentScore || country.score || 0);
+}
+
+function renderGeoMap(countries, selectedCode, mode) {
+  const max = Math.max(1, ...countries.map(country => geoMetric(country, mode)));
+  return `<div class="geo-map-canvas" aria-label="${escapeHtml(t('geoIntelligence'))}">
+    <svg viewBox="0 0 100 64" aria-hidden="true" class="geo-map-bg">
+      <path d="M6 22 C14 10 30 9 39 18 C44 24 41 33 32 36 C23 39 11 35 6 28 Z"></path>
+      <path d="M44 18 C54 9 72 13 84 20 C94 26 93 40 82 45 C70 51 50 45 43 35 C39 29 39 23 44 18 Z"></path>
+      <path d="M60 47 C68 44 82 50 87 59 C76 62 65 60 58 55 Z"></path>
+      <path d="M28 41 C35 43 37 51 32 61 C25 58 22 48 28 41 Z"></path>
+    </svg>
+    ${countries.map(country => {
+      const value = geoMetric(country, mode);
+      const size = Math.max(18, Math.min(46, 14 + value / max * 34));
+      return `<button class="geo-country ${country.code === selectedCode ? 'active' : ''}" type="button"
+        data-geo-country="${escapeHtml(country.code)}"
+        style="left:${country.x}%;top:${country.y}%;width:${size}px;height:${size}px">
+        <span>${escapeHtml(country.code)}</span>
+        <i>${escapeHtml(Math.round(value))}</i>
+      </button>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderGeoCountryDetail(country, mode) {
+  if (!country) return `<div class="empty">${escapeHtml(t('geoHoverHint'))}</div>`;
+  const trend = (country.byYear || []).map(row => ({
+    key: row.year,
+    count: mode === 'institutions' ? row.papers : Math.round(Number(row.score || 0))
+  }));
+  return `
+    <section class="geo-country-detail">
+      <div class="geo-detail-head">
+        <div>
+          <p class="profile-kicker">${escapeHtml(country.region)}</p>
+          <h3>${escapeHtml(country.name)}</h3>
+        </div>
+        <strong>${escapeHtml(country.code)}</strong>
+      </div>
+      <div class="profile-grid geo-metrics">
+        <div class="metric"><span>${escapeHtml(t('summaryPapers'))}</span><strong>${fmt(country.papers)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('sortScore'))}</span><strong>${escapeHtml(country.score)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('summaryTopField'))}</span><strong>${escapeHtml(country.topField)}</strong></div>
+        <div class="metric"><span>S+ / S / A</span><strong>${fmt(country.ranks?.sPlus)} / ${fmt(country.ranks?.s)} / ${fmt(country.ranks?.a)}</strong></div>
+      </div>
+      ${renderSparkBars(trend, t('geoTrend'), 'line')}
+      <section class="geo-detail-columns">
+        <div><h4>${escapeHtml(t('geoTopInstitutions'))}</h4>${renderMiniBars((country.topInstitutions || []).map(row => ({ key: row.name, count: row.count })), 'papers')}</div>
+        <div><h4>${escapeHtml(t('domain'))}</h4>${renderMiniBars(country.byField || [], 'papers')}</div>
+      </section>
+    </section>
+  `;
+}
+
+function regionMomentum(regionTrends) {
+  const currentYear = new Date().getFullYear();
+  const recentStart = currentYear - 9;
+  const previousStart = currentYear - 19;
+  const rows = new Map();
+  for (const row of regionTrends || []) {
+    const item = rows.get(row.region) || { region: row.region, recent: 0, previous: 0, papers: 0 };
+    const year = Number(row.year || 0);
+    if (year >= recentStart) item.recent += Number(row.score || 0);
+    else if (year >= previousStart) item.previous += Number(row.score || 0);
+    item.papers += Number(row.papers || 0);
+    rows.set(row.region, item);
+  }
+  return [...rows.values()]
+    .map(row => ({ ...row, delta: Math.round((row.recent - row.previous) * 10) / 10 }))
+    .sort((a, b) => b.recent - a.recent || b.delta - a.delta);
+}
+
+async function renderGeo(field = '', options = {}) {
+  const mode = options.mode || routeFromLocation().mode || 'overall';
+  const query = field ? `?field=${encodeURIComponent(field)}` : '';
+  const data = await api(`/api/geo${query}`);
+  const selectedCode = options.country || routeFromLocation().country || data.countries[0]?.code || '';
+  const selectedCountry = data.countries.find(country => country.code === selectedCode) || data.countries[0];
+  if (options.history !== 'skip') writeRoute({ view: 'geo', field: data.field || '', mode, country: selectedCountry?.code || '' });
+  state.currentView = 'geo';
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  const momentum = regionMomentum(data.regionTrends);
+  const fieldOptions = ['Power Management', ...(data.fields || []).filter(item => item !== 'Power Management')];
+  $('results').innerHTML = `
+    <section class="geo-page">
+      <div class="geo-hero">
+        <div>
+          <p class="profile-kicker">${escapeHtml(t('geoIntelligence'))}</p>
+          <h2>${escapeHtml(mode === 'topic' && data.field ? data.field : t('geoOverall'))}</h2>
+          <p>${fmt(data.countries.reduce((sum, country) => sum + country.papers, 0))} ${escapeHtml(t('geoPapers'))} / ${fmt(data.skippedWithoutCountry)} unmapped affiliations</p>
+        </div>
+        <div class="geo-controls">
+          <button class="profile-filter ${mode === 'overall' ? 'active' : ''}" type="button" data-geo-mode="overall">${escapeHtml(t('geoOverall'))}</button>
+          <button class="profile-filter ${mode === 'institutions' ? 'active' : ''}" type="button" data-geo-mode="institutions">${escapeHtml(t('geoInstitutions'))}</button>
+          <button class="profile-filter ${mode === 'topic' ? 'active' : ''}" type="button" data-geo-mode="topic">${escapeHtml(t('geoTopic'))}</button>
+          <select id="geoFieldSelect" aria-label="${escapeHtml(t('geoTopicPick'))}">
+            <option value="">All topics</option>
+            ${fieldOptions.map(item => `<option value="${escapeHtml(item)}" ${item === data.field ? 'selected' : ''}>${escapeHtml(item === 'Power Management' ? 'PMIC / Power Management' : item)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="geo-grid">
+        <section class="geo-map-panel">
+          ${renderGeoMap(data.countries, selectedCountry?.code || '', mode)}
+          <p class="hint">${escapeHtml(t('geoHoverHint'))}</p>
+        </section>
+        <aside class="geo-side" id="geoCountryDetail">${renderGeoCountryDetail(selectedCountry, mode)}</aside>
+      </div>
+      <section class="geo-lower">
+        <div class="geo-card">
+          <h3>${escapeHtml(t('geoTrend'))}</h3>
+          ${renderMiniBars(momentum.map(row => ({ key: row.region, count: Math.round(row.recent) })), 'strength')}
+        </div>
+        <div class="geo-card">
+          <h3>${escapeHtml(t('geoTopCountries'))}</h3>
+          <div class="geo-country-list">
+            ${data.countries.slice(0, 12).map((country, index) => `<button class="geo-country-row" type="button" data-geo-country="${escapeHtml(country.code)}">
+              <span>${index + 1}</span><strong>${escapeHtml(country.name)}</strong><em>${fmt(country.papers)} papers / ${escapeHtml(country.score)}</em>
+            </button>`).join('')}
+          </div>
+        </div>
+      </section>
+    </section>
+  `;
+  const updateCountry = (code, write = false) => {
+    const country = data.countries.find(item => item.code === code) || data.countries[0];
+    if (!country) return;
+    document.querySelectorAll('[data-geo-country]').forEach(item => item.classList.toggle('active', item.dataset.geoCountry === country.code));
+    $('geoCountryDetail').innerHTML = renderGeoCountryDetail(country, mode);
+    if (write) writeRoute({ view: 'geo', field: data.field || '', mode, country: country.code });
+  };
+  document.querySelectorAll('.geo-country').forEach(button => {
+    button.addEventListener('mouseenter', () => updateCountry(button.dataset.geoCountry, false));
+    button.addEventListener('focus', () => updateCountry(button.dataset.geoCountry, false));
+    button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
+  });
+  document.querySelectorAll('.geo-country-row').forEach(button => {
+    button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
+  });
+  document.querySelectorAll('[data-geo-mode]').forEach(button => {
+    button.addEventListener('click', () => renderGeo(data.field || '', { mode: button.dataset.geoMode }));
+  });
+  $('geoFieldSelect')?.addEventListener('change', event => renderGeo(event.target.value, { mode: event.target.value ? 'topic' : mode }));
 }
 
 async function renderTopics(field = '', options = {}) {
@@ -1391,6 +1592,66 @@ function renderResults(engine = '') {
   document.querySelectorAll('.paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
 }
 
+function citationAuthorList(authors, style = 'ieee') {
+  const names = splitProfileList(authors);
+  if (!names.length) return 'Unknown';
+  if (style === 'apa') {
+    if (names.length > 6) return `${names.slice(0, 6).join(', ')}, et al.`;
+    return names.join(', ');
+  }
+  if (names.length > 3) return `${names.slice(0, 3).join(', ')}, et al.`;
+  return names.join(', ');
+}
+
+function citationFormats(paper) {
+  const authorsIeee = citationAuthorList(paper.authors, 'ieee');
+  const authorsApa = citationAuthorList(paper.authors, 'apa');
+  const title = cleanDisplayText(paper.title);
+  const venue = paper.publication_title || paper.venue || '';
+  const year = paper.year || '';
+  const doi = paper.doi ? ` doi: ${paper.doi}` : '';
+  const key = `${splitProfileList(paper.authors)[0] || 'paper'}${year}`.replace(/[^a-z0-9]+/gi, '').slice(0, 28) || `paper${paper.id}`;
+  return {
+    ieee: `${authorsIeee}, "${title}," ${venue}, ${year}.${doi}`,
+    apa: `${authorsApa}. (${year}). ${title}. ${venue}.${paper.doi ? ` https://doi.org/${paper.doi}` : ''}`,
+    bibtex: `@article{${key},\n  title = {${title}},\n  author = {${splitProfileList(paper.authors).join(' and ')}},\n  journal = {${venue}},\n  year = {${year}},\n  doi = {${paper.doi || ''}}\n}`
+  };
+}
+
+function renderCitationBox(paper) {
+  const formats = citationFormats(paper);
+  return `<section class="citation-box">
+    <div class="citation-head">
+      <h3>${escapeHtml(t('quickCitation'))}</h3>
+      <p class="hint" id="citationMsg"></p>
+    </div>
+    <div class="citation-actions">
+      <button class="button" type="button" data-copy-citation="ieee">${escapeHtml(t('copyIeee'))}</button>
+      <button class="button" type="button" data-copy-citation="apa">${escapeHtml(t('copyApa'))}</button>
+      <button class="button" type="button" data-copy-citation="bibtex">${escapeHtml(t('copyBibtex'))}</button>
+    </div>
+    <pre class="citation-preview" id="citationPreview">${escapeHtml(formats.ieee)}</pre>
+  </section>`;
+}
+
+function bindCitationCopy(paper) {
+  const formats = citationFormats(paper);
+  document.querySelectorAll('[data-copy-citation]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const style = button.dataset.copyCitation;
+      const value = formats[style] || formats.ieee;
+      $('citationPreview').textContent = value;
+      try {
+        await navigator.clipboard.writeText(value);
+        $('citationMsg').textContent = t('copied');
+      } catch {
+        $('citationPreview').focus?.();
+        $('citationMsg').textContent = 'Copy blocked; select the citation text.';
+      }
+    });
+  });
+}
+
 async function loadPaper(id, options = {}) {
   if (options.history !== 'skip') writeRoute({ ...currentSearchRoute(), view: 'paper', id: String(id) });
   state.activeId = id;
@@ -1427,6 +1688,7 @@ async function loadPaper(id, options = {}) {
     </dl>
     <h3>${escapeHtml(t('abstract'))}</h3>
     <div class="abstract">${escapeHtml(cleanDisplayText(paper.abstract) || t('noAbstract'))}</div>
+    ${renderCitationBox(paper)}
     <section class="reader-box">
       <label class="check"><input id="paperFavorite" type="checkbox" ${paper.favorite ? 'checked' : ''}><span>${escapeHtml(t('favorite'))}</span></label>
       <label class="field"><span>${escapeHtml(t('readingState'))}</span>
@@ -1441,6 +1703,7 @@ async function loadPaper(id, options = {}) {
     </section>
   `;
   $('savePaperState').addEventListener('click', savePaperState);
+  bindCitationCopy(paper);
   bindProfileLinks();
 }
 
@@ -1523,6 +1786,7 @@ async function bootApp() {
   applyLanguage();
   applyNavState();
   applyDetailState();
+  applyFilterState();
   await loadStats();
   renderTopicChips();
   const doSearch = debounce(searchFirstPage);
@@ -1551,6 +1815,10 @@ async function bootApp() {
     state.detailCollapsed = !state.detailCollapsed;
     applyDetailState();
   });
+  $('filterCollapse').addEventListener('click', () => {
+    state.filtersCollapsed = !state.filtersCollapsed;
+    applyFilterState();
+  });
   $('languageToggle').addEventListener('click', async () => {
     state.language = state.language === 'zh' ? 'en' : 'zh';
     localStorage.setItem('icSeekerLanguage', state.language);
@@ -1575,6 +1843,8 @@ async function bootApp() {
       setActivePanel(target);
       if (target === 'topics') {
         renderTopics();
+      } else if (target === 'geo') {
+        renderGeo();
       } else if (target === 'authors') {
         renderRankings('authors');
       } else if (target === 'institutions') {

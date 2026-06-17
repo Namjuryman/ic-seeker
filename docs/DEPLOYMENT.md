@@ -5,6 +5,8 @@ IC Seeker is a Node.js service backed by a local SQLite database and PDF inbox. 
 1. Run the app on a small VPS or your own always-on machine with Docker.
 2. Put Cloudflare in front of it with either Cloudflare Tunnel or normal DNS + reverse proxy.
 
+The current public-safe product shape should expose metadata, DOI links, abstracts, search, author/institution/topic/region intelligence, and personal reading state. It should not serve publisher PDFs to other users. For a commercial public site, keep paper reading as official-source redirects unless you have redistribution rights.
+
 Vercel is not the recommended target for the current architecture because the app expects a persistent SQLite file and long-running Node server process. Vercel is better after the backend is split into serverless APIs and the database is moved to a hosted database.
 
 ## Option A: Cloudflare Tunnel
@@ -75,3 +77,17 @@ Before a Vercel deployment, migrate to:
 - Back up `ic_database/ic_papers.sqlite`.
 - Do not proxy raw publisher PDFs unless you have rights to redistribute them.
 - Keep AMiner/IEEE API keys in environment variables, not frontend code.
+- Schedule regular database backups before running new crawls/imports.
+- Add a private admin route or script for IEEE API sync rather than calling paid APIs directly from the frontend.
+- Add rate limiting before public traffic or paid subscriptions.
+
+## Upgrade Path
+
+When the site grows beyond private usage:
+
+1. Keep the current Docker+SQLite version as the local/private edition.
+2. Move metadata to Postgres, with migrations and normalized tables for papers, authors, institutions, venues, topics, and paper-source provenance.
+3. Move user PDFs, if any, to private object storage with per-user access control.
+4. Split the frontend into a static app or Next.js app, then deploy that frontend to Vercel/Cloudflare Pages.
+5. Run IEEE/OpenAlex/Crossref/AMiner sync jobs on the backend with quotas, logs, retries, and source provenance.
+6. Add billing only after the metadata policy, access control, and source terms are clear.

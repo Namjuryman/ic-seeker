@@ -1,9 +1,11 @@
 # IC Seeker
 
-Local ChipSeeker-style paper search for IC papers.
+Local ChipSeeker-style paper search, reading, and academic-intelligence web app for IC papers.
 
 Search is fully local. The database is a SQLite file with an FTS5 full-text
 index over title, abstract, authors, venue, domain, and DOI.
+
+Current web features include paper search, reading notes, favorites, tags, author and institution profiles, topic intelligence, a regional intelligence map, and quick citation copy in IEEE/APA/BibTeX formats.
 
 ## Build Database
 
@@ -34,6 +36,12 @@ node .\scripts\build-ic-database.mjs --years=2016-2026 --max-per-venue-year=220 
 With `IEEE_API_KEY`, IEEE Xplore metadata is queried first. Without it, the
 builder falls back to OpenAlex and Crossref metadata.
 
+After importing or rebuilding, repair obvious PMIC/DC-DC topic misses with:
+
+```powershell
+node .\scripts\repair-power-management-domains.mjs
+```
+
 ## Run App
 
 ```powershell
@@ -53,6 +61,8 @@ http://127.0.0.1:8750
 - The app is independent from Zotero and does not modify the Zotero library.
 - Scoring is transparent in the app: venue base score plus domain keyword hits,
   citation boost, and recency boost.
+- The regional map is metadata-only and infers country from affiliation strings;
+  it should be upgraded with canonical institution identities later.
 - Local PDF matching is available with:
 
 ```powershell
