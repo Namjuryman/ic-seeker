@@ -117,7 +117,14 @@ const i18n = {
     institutionHistory: 'Institutions',
     authorRankings: 'Scholar rankings',
     institutionRankings: 'Institution rankings',
-    openProfile: 'Open profile'
+    openProfile: 'Open profile',
+    careerInference: 'Career inference',
+    estimatedAge: 'Age / stage',
+    careerSpan: 'Publication span',
+    firstPublication: 'First indexed paper',
+    affiliationPath: 'Affiliation path',
+    educationCareerUnknown: 'Education and first job need CV/profile data.',
+    inferredFromPapers: 'Inferred from local paper metadata; not a verified CV.'
   },
   zh: {
     navSearch: '学术搜索',
@@ -213,7 +220,14 @@ const i18n = {
     institutionHistory: '任职/合作机构',
     authorRankings: '老师排名',
     institutionRankings: '学校排名',
-    openProfile: '打开画像'
+    openProfile: '打开画像',
+    careerInference: '履历推断',
+    estimatedAge: '年龄 / 阶段',
+    careerSpan: '发文跨度',
+    firstPublication: '首次收录发文',
+    affiliationPath: '机构流动',
+    educationCareerUnknown: '本硕博和第一份工作需要接入个人主页/CV 数据。',
+    inferredFromPapers: '根据本地论文元数据推断，不等同于已核验简历。'
   }
 };
 
@@ -385,12 +399,21 @@ function routeUrl(route) {
   const url = new URL(window.location.href);
   url.search = '';
   const params = url.searchParams;
-  params.set('view', route.view || 'papers');
+  const view = route.view || 'papers';
+  params.set('view', view);
+  const allowedKeys = {
+    author: new Set(['name']),
+    institution: new Set(['name']),
+    rankings: new Set(['kind']),
+    paper: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page', 'id']),
+    papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page'])
+  };
+  const allowed = allowedKeys[view] || allowedKeys.papers;
   for (const [key, value] of Object.entries(route)) {
-    if (key === 'view' || value === undefined || value === null || value === '' || value === '0') continue;
+    if (key === 'view' || !allowed.has(key) || value === undefined || value === null || value === '' || value === '0') continue;
     params.set(key, String(value));
   }
-  if ((route.view || 'papers') === 'papers') params.delete('view');
+  if (view === 'papers') params.delete('view');
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
@@ -736,17 +759,125 @@ function yearlySeriesFromPapers(papers, field) {
     .sort((a, b) => Number(a.key) - Number(b.key));
 }
 
-function renderSparkBars(rows, label) {
+function renderSparkBars(rows, label, mode = 'bar') {
   const max = Math.max(1, ...rows.map(row => Number(row.count || 0)));
+  const chartRows = rows.length ? rows : [{ key: '-', count: 0 }];
+  const width = 320;
+  const height = 150;
+  const padX = 20;
+  const top = 18;
+  const bottom = 28;
+  const chartHeight = height - top - bottom;
+  const step = chartRows.length > 1 ? (width - padX * 2) / (chartRows.length - 1) : 0;
+  const points = chartRows.map((row, index) => {
+    const x = chartRows.length > 1 ? padX + index * step : width / 2;
+    const value = Number(row.count || 0);
+    const y = top + chartHeight - (value / max) * chartHeight;
+    return { x, y, value, key: row.key };
+  });
+  const polyline = points.map(point => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+  const barWidth = Math.max(8, Math.min(18, (width - padX * 2) / Math.max(1, chartRows.length) * 0.55));
   return `<div class="spark-panel">
     <h3>${escapeHtml(label)}</h3>
-    <div class="spark-bars">
-      ${rows.map(row => `<div class="spark-bar" title="${escapeHtml(row.key)}: ${escapeHtml(row.count)}">
-        <i style="height:${Math.max(8, Number(row.count || 0) / max * 100)}%"></i>
-        <span>${escapeHtml(String(row.key).slice(-2))}</span>
-      </div>`).join('')}
+    <div class="spark-chart">
+      <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)}">
+        <line x1="${padX}" y1="${top + chartHeight}" x2="${width - padX}" y2="${top + chartHeight}" class="chart-axis"></line>
+        ${mode === 'line'
+          ? `<polyline class="chart-line" points="${polyline}"></polyline>
+             ${points.map(point => `<circle class="chart-dot" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="3.5"><title>${escapeHtml(point.key)}: ${escapeHtml(point.value)}</title></circle>`).join('')}`
+          : points.map(point => {
+              const barHeight = Math.max(6, top + chartHeight - point.y);
+              return `<rect class="chart-bar" x="${(point.x - barWidth / 2).toFixed(1)}" y="${(top + chartHeight - barHeight).toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="4"><title>${escapeHtml(point.key)}: ${escapeHtml(point.value)}</title></rect>`;
+            }).join('')}
+        ${points.map((point, index) => {
+          if (chartRows.length > 8 && index % 2 === 1) return '';
+          return `<text x="${point.x.toFixed(1)}" y="${height - 8}" text-anchor="middle">${escapeHtml(String(point.key).slice(-2))}</text>`;
+        }).join('')}
+      </svg>
     </div>
   </div>`;
+}
+
+function renderClickableMiniBars(rows, label = 'count', type = 'author') {
+  const max = Math.max(1, ...rows.map(row => Number(row.count || 0)));
+  const attr = type === 'author' ? 'data-author-link' : 'data-institution-link';
+  return `<div class="mini-bars">
+    ${rows.map(row => `
+      <div class="mini-row">
+        <button class="text-link mini-link" ${attr}="${escapeHtml(row.key)}">${escapeHtml(row.key)}</button>
+        <div><i style="width:${Math.max(4, Number(row.count || 0) / max * 100)}%"></i></div>
+        <strong>${escapeHtml(row.count)} ${escapeHtml(label)}</strong>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function splitProfileList(value) {
+  return String(value || '')
+    .split(';')
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function careerStageText(profile, paperCount) {
+  const years = (profile.byYear || []).map(row => Number(row.key)).filter(Boolean);
+  const firstYear = years.length ? Math.min(...years) : null;
+  const lastYear = years.length ? Math.max(...years) : null;
+  const careerYears = firstYear && lastYear ? lastYear - firstYear + 1 : 0;
+  const type = scholarType(profile, paperCount);
+  return { firstYear, lastYear, careerYears, type };
+}
+
+function affiliationTimeline(papers) {
+  const byYear = new Map();
+  for (const paper of papers || []) {
+    const year = Number(paper.year || 0);
+    if (!year) continue;
+    if (!byYear.has(year)) byYear.set(year, new Map());
+    const counts = byYear.get(year);
+    for (const institution of splitProfileList(paper.affiliations)) {
+      counts.set(institution, (counts.get(institution) || 0) + 1);
+    }
+  }
+  const yearly = [...byYear.entries()]
+    .map(([year, counts]) => {
+      const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      return top ? { year, institution: top[0], count: top[1] } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.year - b.year);
+  const compressed = [];
+  for (const item of yearly) {
+    const last = compressed.at(-1);
+    if (last && last.institution === item.institution) {
+      last.end = item.year;
+      last.count += item.count;
+    } else {
+      compressed.push({ start: item.year, end: item.year, institution: item.institution, count: item.count });
+    }
+  }
+  return compressed.slice(-8);
+}
+
+function renderCareerInference(profile, paperCount) {
+  const stage = careerStageText(profile, paperCount);
+  const span = stage.firstYear ? `${stage.firstYear}-${stage.lastYear} (${stage.careerYears}y indexed)` : '-';
+  const timeline = affiliationTimeline(profile.papers);
+  return `<section class="career-inference">
+    <h3>${escapeHtml(t('careerInference'))}</h3>
+    <p class="hint">${escapeHtml(t('inferredFromPapers'))}</p>
+    <div class="career-grid">
+      <div><span>${escapeHtml(t('estimatedAge'))}</span><strong>${escapeHtml(stage.type)}</strong><em>${escapeHtml(t('educationCareerUnknown'))}</em></div>
+      <div><span>${escapeHtml(t('careerSpan'))}</span><strong>${escapeHtml(span)}</strong><em>${escapeHtml(t('firstPublication'))}: ${escapeHtml(stage.firstYear || '-')}</em></div>
+    </div>
+    <h4>${escapeHtml(t('affiliationPath'))}</h4>
+    <div class="career-path">
+      ${timeline.length ? timeline.map(item => `<button class="career-step" type="button" data-institution-link="${escapeHtml(item.institution)}">
+        <span>${escapeHtml(item.start === item.end ? item.start : `${item.start}-${item.end}`)}</span>
+        <strong>${escapeHtml(item.institution)}</strong>
+      </button>`).join('<i></i>') : `<span class="hint">${escapeHtml(t('educationCareerUnknown'))}</span>`}
+    </div>
+  </section>`;
 }
 
 function renderRankDonut(ranks) {
@@ -831,12 +962,13 @@ async function loadAuthor(name, options = {}) {
         <div class="metric"><span>${escapeHtml(t('summaryTopField'))}</span><strong>${escapeHtml(profile.byDomain?.[0]?.key || '-')}</strong></div>
       </section>
       <section class="profile-analytics">
-        ${renderSparkBars(strength, t('careerStrength'))}
-        ${renderSparkBars(activity, t('yearlyActivity'))}
+        ${renderSparkBars(strength, t('careerStrength'), 'line')}
+        ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
         <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
       </section>
+      ${renderCareerInference(profile, paperCount)}
       <section class="profile-columns">
-        <div><h3>${escapeHtml(t('collaboratorNetwork'))}</h3>${renderMiniBars(profile.coauthors, 'papers')}</div>
+        <div><h3>${escapeHtml(t('collaboratorNetwork'))}</h3>${renderClickableMiniBars(profile.coauthors, 'papers', 'author')}</div>
         <div><h3>${escapeHtml(t('institutionHistory'))}</h3><div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div></div>
       </section>
       <h3>${escapeHtml(t('recentPapers'))}</h3>
@@ -877,12 +1009,12 @@ async function loadInstitution(name, options = {}) {
         </div>
       </div>
       <section class="profile-analytics">
-        ${renderSparkBars(strength, t('careerStrength'))}
-        ${renderSparkBars(activity, t('yearlyActivity'))}
+        ${renderSparkBars(strength, t('careerStrength'), 'line')}
+        ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
         <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
       </section>
       <section class="profile-columns">
-        <div><h3>${escapeHtml(t('navAuthors'))}</h3>${renderMiniBars(profile.authors, 'papers')}</div>
+        <div><h3>${escapeHtml(t('navAuthors'))}</h3>${renderClickableMiniBars(profile.authors, 'papers', 'author')}</div>
         <div><h3>${escapeHtml(t('venue'))}</h3>${renderMiniBars(profile.byVenue, 'papers')}</div>
       </section>
       <h3>${escapeHtml(t('recentPapers'))}</h3>

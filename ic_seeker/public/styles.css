@@ -1255,33 +1255,44 @@ body.detail-collapsed .detail-collapse {
   font-size: 15px;
 }
 
-.spark-bars {
-  display: flex;
-  align-items: end;
-  gap: 5px;
-  height: 130px;
+.spark-chart {
+  height: 150px;
 }
 
-.spark-bar {
-  display: grid;
-  grid-template-rows: 1fr auto;
-  align-items: end;
-  min-width: 14px;
-  flex: 1;
-  gap: 5px;
-}
-
-.spark-bar i {
+.spark-chart svg {
   display: block;
   width: 100%;
-  border-radius: 999px 999px 4px 4px;
-  background: linear-gradient(180deg, #4658c8, #7c8cff);
+  height: 100%;
+  overflow: visible;
 }
 
-.spark-bar span {
-  color: var(--subtle);
+.spark-chart text {
+  fill: #8a97ad;
   font-size: 10px;
-  text-align: center;
+  font-weight: 700;
+}
+
+.chart-axis {
+  stroke: #dbe2f1;
+  stroke-width: 1;
+}
+
+.chart-bar {
+  fill: #4658c8;
+}
+
+.chart-line {
+  fill: none;
+  stroke: #4658c8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.chart-dot {
+  fill: #26a05f;
+  stroke: #fff;
+  stroke-width: 2;
 }
 
 .rank-stack {
@@ -1325,6 +1336,108 @@ body.detail-collapsed .detail-collapse {
   border-radius: 14px;
   background: #fff;
   padding: 14px;
+}
+
+.mini-link {
+  max-width: 100%;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.career-inference {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  margin: 16px 0;
+  padding: 16px;
+}
+
+.career-inference h3 {
+  margin-bottom: 4px;
+  color: #17213a;
+  font-size: 16px;
+}
+
+.career-inference h4 {
+  margin: 14px 0 8px;
+  color: #4b5870;
+  font-size: 13px;
+}
+
+.career-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.career-grid > div {
+  border: 1px solid #e5ebf5;
+  border-radius: 12px;
+  background: #f8faff;
+  padding: 12px;
+}
+
+.career-grid span,
+.career-grid em {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.career-grid strong {
+  display: block;
+  margin: 3px 0;
+  color: #17213a;
+  font-size: 15px;
+}
+
+.career-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.career-path > i {
+  align-self: center;
+  width: 16px;
+  height: 1px;
+  background: #cfd8ea;
+}
+
+.career-step {
+  display: grid;
+  gap: 3px;
+  max-width: 220px;
+  border: 1px solid #dbe2f1;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px 10px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.career-step:hover {
+  border-color: #4658c8;
+  background: #f3f6ff;
+}
+
+.career-step span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.career-step strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ranking-head {
