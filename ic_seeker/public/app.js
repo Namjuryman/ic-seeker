@@ -127,7 +127,14 @@ const i18n = {
     affiliationPath: 'Affiliation path',
     educationCareerUnknown: 'Education and first job need CV/profile data.',
     inferredFromPapers: 'Inferred from local paper metadata; not a verified CV.',
-    photoPending: 'Photo pending'
+    photoPending: 'Photo pending',
+    profileSummary: 'Profile summary',
+    profileSummaryText: 'Strongest in {field}, most visible at {venue}; {splus}% of indexed papers are S+, with peak activity in {peakYear}.',
+    profilePaperFilters: 'Paper filters',
+    filterAll: 'All',
+    searchWithinProfile: 'Search within this profile...',
+    doiAvailable: 'DOI',
+    noDoi: 'no DOI'
   },
   zh: {
     navSearch: '学术搜索',
@@ -233,7 +240,14 @@ const i18n = {
     affiliationPath: '机构流动',
     educationCareerUnknown: '本硕博和第一份工作需要接入个人主页/CV 数据。',
     inferredFromPapers: '根据本地论文元数据推断，不等同于已核验简历。',
-    photoPending: '照片待接入'
+    photoPending: '照片待接入',
+    profileSummary: '画像速读',
+    profileSummaryText: '主要强项是 {field}，高频发表在 {venue}；收录论文中 {splus}% 为 S+，活跃峰值在 {peakYear}。',
+    profilePaperFilters: '论文筛选',
+    filterAll: '全部',
+    searchWithinProfile: '在该画像内搜索论文...',
+    doiAvailable: 'DOI',
+    noDoi: '无 DOI'
   }
 };
 
@@ -907,10 +921,60 @@ function renderRankDonut(ranks) {
   </div>`;
 }
 
+function topCount(rows, fallback = '-') {
+  return rows?.[0]?.key || fallback;
+}
+
+function countBy(items, keyFn) {
+  const counts = new Map();
+  for (const item of items || []) {
+    const key = keyFn(item) || '-';
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || String(a.key).localeCompare(String(b.key)));
+}
+
+function renderProfileSummary(profile, paperCount) {
+  const topField = topCount(profile.byDomain);
+  const topVenue = topCount(profile.byVenue);
+  const peak = [...(profile.byYear || [])].sort((a, b) => Number(b.count) - Number(a.count))[0];
+  const sPlusShare = Math.round(Number(profile.ranks?.sPlus || 0) / Math.max(1, paperCount) * 100);
+  const text = t('profileSummaryText')
+    .replace('{field}', topField)
+    .replace('{venue}', topVenue)
+    .replace('{splus}', String(sPlusShare))
+    .replace('{peakYear}', String(peak?.key || '-'));
+  return `<section class="profile-summary">
+    <h3>${escapeHtml(t('profileSummary'))}</h3>
+    <p>${escapeHtml(text)}</p>
+    <div class="profile-summary-facts">
+      <span>${escapeHtml(t('scholarType'))}: ${escapeHtml(scholarType(profile, paperCount))}</span>
+      <span>${escapeHtml(t('summaryTopField'))}: ${escapeHtml(topField)}</span>
+      <span>${escapeHtml(t('summaryTopVenue'))}: ${escapeHtml(topVenue)}</span>
+      <span>S+ ${sPlusShare}%</span>
+    </div>
+  </section>`;
+}
+
 function profilePapers(papers) {
-  return `<div class="profile-papers">
-    ${papers.slice(0, 80).map(row => `
-      <div class="profile-paper" data-id="${row.id}">
+  const visiblePapers = papers.slice(0, 120);
+  const fields = countBy(visiblePapers, row => row.field).slice(0, 6);
+  const ranks = countBy(visiblePapers, row => row.rank).slice(0, 6);
+  return `<section class="profile-paper-section">
+    <div class="profile-paper-head">
+      <h3>${escapeHtml(t('recentPapers'))}</h3>
+      <input id="profilePaperSearch" type="search" placeholder="${escapeHtml(t('searchWithinProfile'))}">
+    </div>
+    <div class="profile-filter-group" aria-label="${escapeHtml(t('profilePaperFilters'))}">
+      <button class="profile-filter active" type="button" data-profile-filter="all" data-profile-value="">${escapeHtml(t('filterAll'))}</button>
+      ${fields.map(row => `<button class="profile-filter" type="button" data-profile-filter="field" data-profile-value="${escapeHtml(row.key)}">${escapeHtml(row.key)} <span>${fmt(row.count)}</span></button>`).join('')}
+      ${ranks.map(row => `<button class="profile-filter" type="button" data-profile-filter="rank" data-profile-value="${escapeHtml(row.key)}">${escapeHtml(row.key)} <span>${fmt(row.count)}</span></button>`).join('')}
+    </div>
+    <div class="profile-papers">
+    ${visiblePapers.map(row => `
+      <div class="profile-paper" data-id="${row.id}" data-field="${escapeHtml(row.field)}" data-rank="${escapeHtml(row.rank)}" data-title="${escapeHtml(cleanDisplayText(row.title).toLowerCase())}">
         <p>${escapeHtml(cleanDisplayText(row.title))}</p>
         <div class="meta">
           <span class="pill rank">${escapeHtml(row.rank)}</span>
@@ -918,16 +982,36 @@ function profilePapers(papers) {
           <span class="pill">${escapeHtml(row.field)}</span>
           <span class="pill">${escapeHtml(row.year)}</span>
           <span class="pill">score ${escapeHtml(row.score)}</span>
+          <span class="pill">${escapeHtml(fmt(row.citations || 0))} citations</span>
+          <span class="pill">${escapeHtml(row.doi ? t('doiAvailable') : t('noDoi'))}</span>
         </div>
       </div>
     `).join('')}
-  </div>`;
+    </div>
+  </section>`;
 }
 
 function bindProfileLinks() {
   document.querySelectorAll('[data-author-link]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.authorLink)));
   document.querySelectorAll('[data-institution-link]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.institutionLink)));
   document.querySelectorAll('.profile-paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
+  let activeFilter = { type: 'all', value: '' };
+  const applyProfilePaperFilters = () => {
+    const query = ($('profilePaperSearch')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.profile-paper').forEach(card => {
+      const filterMatch = activeFilter.type === 'all' || card.dataset[activeFilter.type] === activeFilter.value;
+      const textMatch = !query || card.dataset.title.includes(query);
+      card.hidden = !(filterMatch && textMatch);
+    });
+  };
+  document.querySelectorAll('[data-profile-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      activeFilter = { type: button.dataset.profileFilter, value: button.dataset.profileValue || '' };
+      document.querySelectorAll('[data-profile-filter]').forEach(item => item.classList.toggle('active', item === button));
+      applyProfilePaperFilters();
+    });
+  });
+  $('profilePaperSearch')?.addEventListener('input', applyProfilePaperFilters);
 }
 
 async function loadAuthor(name, options = {}) {
@@ -971,6 +1055,7 @@ async function loadAuthor(name, options = {}) {
         <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
         <div class="metric"><span>${escapeHtml(t('summaryTopField'))}</span><strong>${escapeHtml(profile.byDomain?.[0]?.key || '-')}</strong></div>
       </section>
+      ${renderProfileSummary(profile, paperCount)}
       <section class="profile-analytics">
         ${renderSparkBars(strength, t('careerStrength'), 'line')}
         ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
@@ -981,7 +1066,6 @@ async function loadAuthor(name, options = {}) {
         <div><h3>${escapeHtml(t('collaboratorNetwork'))}</h3>${renderClickableMiniBars(profile.coauthors, 'papers', 'author')}</div>
         <div><h3>${escapeHtml(t('institutionHistory'))}</h3><div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div></div>
       </section>
-      <h3>${escapeHtml(t('recentPapers'))}</h3>
       ${profilePapers(profile.papers)}
     </section>
   `;
