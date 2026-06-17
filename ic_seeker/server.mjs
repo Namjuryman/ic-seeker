@@ -1,188 +1,38 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
-import { DatabaseSync } from 'node:sqlite';
+import { createConfig } from './config/env.mjs';
+import { initDb, openDb as openDatabase } from './db/connection.mjs';
+import { bad, json, parseUrl, readJson } from './lib/http.mjs';
+import { createAuth } from './lib/auth.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, '..');
-await loadEnv(path.join(root, '.env'));
-const publicDir = path.join(__dirname, 'public');
-const dbPath = process.env.IC_SEEKER_DB || path.join(root, 'ic_database', 'ic_papers.sqlite');
-const csvPath = process.env.IC_SEEKER_CSV || path.join(root, 'ic_database', 'ic_chipseeker.csv');
-const pdfInboxPath = process.env.IC_SEEKER_PDF_INBOX || path.join(root, 'ic_database', 'pdf_inbox');
-const port = Number(process.env.PORT || 8750);
-const bindHost = process.env.HOST || '127.0.0.1';
-const appName = process.env.APP_NAME || 'IC Seeker Private';
-const adminPassword = process.env.ADMIN_PASSWORD || 'change-me-now';
-const authEnabled = process.env.IC_SEEKER_REQUIRE_LOGIN === '1' || process.env.IC_SEEKER_AUTH === 'password';
-const cookieSecret = process.env.COOKIE_SECRET || crypto.createHash('sha256').update(`${adminPassword}:${dbPath}`).digest('hex');
-const cookieName = 'ic_seeker_session';
+const config = await createConfig(import.meta.url);
+const {
+  publicDir,
+  dbPath,
+  csvPath,
+  pdfInboxPath,
+  port,
+  bindHost,
+  appName,
+  adminPassword,
+  authEnabled,
+  cookieName,
+  cookieSecret
+} = config;
 const loginFailures = new Map();
-
-async function loadEnv(filePath) {
-  try {
-    const text = await fs.readFile(filePath, 'utf8');
-    for (const line of text.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eq = trimmed.indexOf('=');
-      if (eq <= 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      let value = trimmed.slice(eq + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = value;
-    }
-  } catch {
-    // .env is optional for local development.
-  }
-}
-
-function json(res, body, status = 200) {
-  const payload = JSON.stringify(body);
-  res.writeHead(status, {
-    'content-type': 'application/json; charset=utf-8',
-    'content-length': Buffer.byteLength(payload)
-  });
-  res.end(payload);
-}
-
-function bad(res, message, status = 400) {
-  json(res, { error: message }, status);
-}
+const { currentUser, setSession, clearSession, requireAuth, ipKey } = createAuth({
+  authEnabled,
+  cookieName,
+  cookieSecret,
+  bad
+});
 
 function openDb(options = {}) {
-  return new DatabaseSync(dbPath, options);
+  return openDatabase(dbPath, options);
 }
 
-function parseUrl(req) {
-  return new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-}
-
-function initDb() {
-  const db = openDb();
-  try {
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS favorites (
-        paper_id INTEGER PRIMARY KEY,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS reading_status (
-        paper_id INTEGER PRIMARY KEY,
-        status TEXT NOT NULL DEFAULT 'unread',
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS notes (
-        paper_id INTEGER PRIMARY KEY,
-        body TEXT NOT NULL DEFAULT '',
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS tags (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        color TEXT NOT NULL DEFAULT '#1d6fb8',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS paper_tags (
-        paper_id INTEGER NOT NULL,
-        tag_id INTEGER NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (paper_id, tag_id)
-      );
-      CREATE TABLE IF NOT EXISTS api_keys (
-        provider TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE TABLE IF NOT EXISTS import_log (
-        id INTEGER PRIMARY KEY,
-        source TEXT NOT NULL,
-        status TEXT NOT NULL,
-        message TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    ensureColumn(db, 'papers', 'verification_status', "TEXT NOT NULL DEFAULT 'unverified'");
-    ensureColumn(db, 'papers', 'user_added', 'INTEGER NOT NULL DEFAULT 0');
-    ensureColumn(db, 'papers', 'semantic_text', "TEXT NOT NULL DEFAULT ''");
-  } finally {
-    db.close();
-  }
-}
-
-function ensureColumn(db, table, column, definition) {
-  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some(row => row.name === column);
-  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-}
-
-initDb();
-
-function sign(value) {
-  return crypto.createHmac('sha256', cookieSecret).update(value).digest('base64url');
-}
-
-function sessionToken() {
-  const payload = `admin:${Math.floor(Date.now() / 1000)}`;
-  return `${payload}.${sign(payload)}`;
-}
-
-function parseCookies(req) {
-  const out = {};
-  for (const part of String(req.headers.cookie || '').split(';')) {
-    const [rawKey, ...rest] = part.trim().split('=');
-    if (!rawKey) continue;
-    out[rawKey] = decodeURIComponent(rest.join('=') || '');
-  }
-  return out;
-}
-
-function currentUser(req) {
-  if (!authEnabled) return { name: 'local' };
-  const token = parseCookies(req)[cookieName];
-  if (!token || !token.includes('.')) return null;
-  const [payload, mac] = token.split('.');
-  const expected = Buffer.from(sign(payload));
-  const actual = Buffer.from(mac || '');
-  if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return null;
-  const [user, issued] = payload.split(':');
-  const ageSeconds = Math.floor(Date.now() / 1000) - Number(issued || 0);
-  if (user !== 'admin' || ageSeconds > 60 * 60 * 24 * 14) return null;
-  return { name: 'admin' };
-}
-
-function setSession(res) {
-  const token = encodeURIComponent(sessionToken());
-  res.setHeader('set-cookie', `${cookieName}=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24 * 14}`);
-}
-
-function clearSession(res) {
-  res.setHeader('set-cookie', `${cookieName}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`);
-}
-
-function ipKey(req) {
-  return req.socket.remoteAddress || 'local';
-}
-
-async function readJson(req, maxBytes = 2_000_000) {
-  const chunks = [];
-  let size = 0;
-  for await (const chunk of req) {
-    size += chunk.length;
-    if (size > maxBytes) throw new Error('Request body too large');
-    chunks.push(chunk);
-  }
-  const text = Buffer.concat(chunks).toString('utf8');
-  return text ? JSON.parse(text) : {};
-}
-
-function requireAuth(req, res) {
-  if (currentUser(req)) return true;
-  bad(res, 'Authentication required', 401);
-  return false;
-}
+initDb(dbPath);
 
 function whereClause(params) {
   const clauses = [];
