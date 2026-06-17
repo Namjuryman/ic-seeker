@@ -14,6 +14,8 @@ const state = {
   activeId: null,
   activePaper: null,
   resultMeta: null,
+  currentView: 'papers',
+  restoringRoute: false,
   view: 'comfort',
   page: 1,
   limit: 30,
@@ -359,6 +361,124 @@ function applyDetailState() {
   $('detailCollapse').setAttribute('aria-label', state.detailCollapsed ? t('expandDetail') : t('collapseDetail'));
 }
 
+function currentSearchRoute() {
+  return {
+    view: 'papers',
+    q: $('q')?.value || '',
+    scope: $('searchScope')?.value || 'all',
+    venue: $('venue')?.value || '',
+    field: $('field')?.value || '',
+    rank: $('rank')?.value || '',
+    yearFrom: $('yearFrom')?.value || '',
+    yearTo: $('yearTo')?.value || '',
+    sort: $('sort')?.value || 'relevance',
+    semantic: $('semantic')?.checked ? '1' : '0',
+    hasPdf: $('hasPdf')?.checked ? '1' : '',
+    favoriteOnly: $('favoriteOnly')?.checked ? '1' : '',
+    status: $('statusFilter')?.value || '',
+    tag: $('tagFilter')?.value || '',
+    page: String(state.page || 1)
+  };
+}
+
+function routeUrl(route) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  const params = url.searchParams;
+  params.set('view', route.view || 'papers');
+  for (const [key, value] of Object.entries(route)) {
+    if (key === 'view' || value === undefined || value === null || value === '' || value === '0') continue;
+    params.set(key, String(value));
+  }
+  if ((route.view || 'papers') === 'papers') params.delete('view');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function writeRoute(route, mode = 'push') {
+  if (state.restoringRoute) return;
+  const nextRoute = { ...route };
+  const method = mode === 'replace' ? 'replaceState' : 'pushState';
+  history[method](nextRoute, '', routeUrl(nextRoute));
+  state.currentRoute = nextRoute;
+}
+
+function routeFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const route = {
+    view: params.get('view') || 'papers',
+    q: params.get('q') || '',
+    scope: params.get('scope') || 'all',
+    venue: params.get('venue') || '',
+    field: params.get('field') || '',
+    rank: params.get('rank') || '',
+    yearFrom: params.get('yearFrom') || '',
+    yearTo: params.get('yearTo') || '',
+    sort: params.get('sort') || 'relevance',
+    semantic: params.get('semantic') === '0' ? '0' : '1',
+    hasPdf: params.get('hasPdf') || '',
+    favoriteOnly: params.get('favoriteOnly') || '',
+    status: params.get('status') || '',
+    tag: params.get('tag') || '',
+    page: params.get('page') || '1',
+    id: params.get('id') || '',
+    name: params.get('name') || '',
+    kind: params.get('kind') || ''
+  };
+  return route;
+}
+
+function applySearchRoute(route) {
+  $('q').value = route.q || '';
+  $('searchScope').value = route.scope || 'all';
+  $('venue').value = route.venue || '';
+  $('field').value = route.field || '';
+  $('rank').value = route.rank || '';
+  $('yearFrom').value = route.yearFrom || '2000';
+  $('yearTo').value = route.yearTo || String(new Date().getFullYear());
+  $('sort').value = route.sort || 'relevance';
+  $('semantic').checked = route.semantic !== '0';
+  $('hasPdf').checked = route.hasPdf === '1';
+  $('favoriteOnly').checked = route.favoriteOnly === '1';
+  $('statusFilter').value = route.status || '';
+  $('tagFilter').value = route.tag || '';
+  state.page = Math.max(1, Number(route.page || 1));
+}
+
+function setActivePanel(target) {
+  document.querySelectorAll('[data-panel-jump]').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.panelJump === target);
+  });
+}
+
+async function restoreRoute(route = history.state || routeFromLocation()) {
+  state.restoringRoute = true;
+  try {
+    const view = route?.view || 'papers';
+    if (view === 'author' && route.name) {
+      setActivePanel('authors');
+      await loadAuthor(route.name, { history: 'skip' });
+    } else if (view === 'institution' && route.name) {
+      setActivePanel('institutions');
+      await loadInstitution(route.name, { history: 'skip' });
+    } else if (view === 'rankings') {
+      setActivePanel(route.kind === 'institutions' ? 'institutions' : 'authors');
+      renderRankings(route.kind === 'institutions' ? 'institutions' : 'authors', { history: 'skip' });
+    } else {
+      setActivePanel('papers');
+      applySearchRoute(route || {});
+      if (view !== 'paper') {
+        state.activeId = null;
+        state.activePaper = null;
+      }
+      await search({ history: 'skip' });
+      if (view === 'paper' && route.id) await loadPaper(Number(route.id), { history: 'skip' });
+    }
+    state.currentRoute = { ...route, view };
+  } finally {
+    state.restoringRoute = false;
+  }
+}
+
 function renderEmptyDetail() {
   state.activeId = null;
   state.activePaper = null;
@@ -669,7 +789,9 @@ function bindProfileLinks() {
   document.querySelectorAll('.profile-paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
 }
 
-async function loadAuthor(name) {
+async function loadAuthor(name, options = {}) {
+  if (options.history !== 'skip') writeRoute({ view: 'author', name });
+  state.currentView = 'author';
   const profile = await api(`/api/authors/${encodeURIComponent(name)}`);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
@@ -724,7 +846,9 @@ async function loadAuthor(name) {
   bindProfileLinks();
 }
 
-async function loadInstitution(name) {
+async function loadInstitution(name, options = {}) {
+  if (options.history !== 'skip') writeRoute({ view: 'institution', name });
+  state.currentView = 'institution';
   const profile = await api(`/api/institutions/${encodeURIComponent(name)}`);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
@@ -768,7 +892,9 @@ async function loadInstitution(name) {
   bindProfileLinks();
 }
 
-function renderRankings(kind) {
+function renderRankings(kind, options = {}) {
+  if (options.history !== 'skip') writeRoute({ view: 'rankings', kind });
+  state.currentView = 'rankings';
   state.detailCollapsed = true;
   applyDetailState();
   $('summary').innerHTML = '';
@@ -798,7 +924,10 @@ function renderRankings(kind) {
   document.querySelectorAll('[data-rank-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.rankInstitution)));
 }
 
-async function search() {
+async function search(options = {}) {
+  state.currentView = 'papers';
+  setActivePanel('papers');
+  if (options.history !== 'skip') writeRoute(currentSearchRoute(), options.history || 'replace');
   $('results').innerHTML = '<div class="loading">Searching local database...</div>';
   const data = await api(`/api/search?${params().toString()}`);
   state.rows = data.rows;
@@ -846,13 +975,13 @@ function renderPagination() {
   $('prevPage').addEventListener('click', () => {
     if (state.page > 1) {
       state.page -= 1;
-      search();
+      search({ history: 'replace' });
     }
   });
   $('nextPage').addEventListener('click', () => {
     if (state.page < pages) {
       state.page += 1;
-      search();
+      search({ history: 'replace' });
     }
   });
   document.querySelectorAll('.page-button[data-page]').forEach(button => {
@@ -860,7 +989,7 @@ function renderPagination() {
       const page = Number(button.dataset.page);
       if (page && page !== state.page) {
         state.page = page;
-        search();
+        search({ history: 'replace' });
       }
     });
   });
@@ -908,11 +1037,12 @@ function renderResults(engine = '') {
   document.querySelectorAll('.paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
 }
 
-async function loadPaper(id) {
+async function loadPaper(id, options = {}) {
+  if (options.history !== 'skip') writeRoute({ ...currentSearchRoute(), view: 'paper', id: String(id) });
   state.activeId = id;
   state.detailCollapsed = false;
   applyDetailState();
-  renderResults(state.resultMeta?.engine || '');
+  if (state.currentView === 'papers') renderResults(state.resultMeta?.engine || '');
   const paper = await api(`/api/papers/${id}`);
   state.activePaper = paper;
   const pdfHref = paper.local_pdf || paper.pdf_link || '';
@@ -975,7 +1105,7 @@ async function savePaperState() {
   state.activePaper = paper;
   $('paperStateMsg').textContent = 'Saved.';
   await loadStats();
-  await search();
+  if (state.currentView === 'papers') await search({ history: 'skip' });
 }
 
 async function importDoi() {
@@ -986,7 +1116,7 @@ async function importDoi() {
   $('importStatus').textContent = `Imported: ${cleanDisplayText(paper.title)}`;
   $('doiInput').value = '';
   await loadStats();
-  await search();
+  await search({ history: 'replace' });
   await loadPaper(paper.id);
 }
 
@@ -1005,7 +1135,7 @@ async function importManual() {
   $('importStatus').textContent = `Added: ${cleanDisplayText(paper.title)}`;
   ['manualTitle', 'manualAuthors', 'manualVenue', 'manualYear', 'manualAbstract'].forEach(id => $(id).value = '');
   await loadStats();
-  await search();
+  await search({ history: 'replace' });
   await loadPaper(paper.id);
 }
 
@@ -1029,9 +1159,9 @@ function debounce(fn, ms = 250) {
   };
 }
 
-function searchFirstPage() {
+function searchFirstPage(options = {}) {
   state.page = 1;
-  return search();
+  return search(options);
 }
 
 async function bootApp() {
@@ -1087,8 +1217,8 @@ async function bootApp() {
   }
   document.querySelectorAll('[data-panel-jump]').forEach(button => {
     button.addEventListener('click', () => {
-      document.querySelectorAll('[data-panel-jump]').forEach(tab => tab.classList.toggle('active', tab === button));
       const target = button.dataset.panelJump;
+      setActivePanel(target);
       if (target === 'authors') {
         renderRankings('authors');
       } else if (target === 'institutions') {
@@ -1103,7 +1233,22 @@ async function bootApp() {
       }
     });
   });
-  await search();
+  if (!state.routeListenerBound) {
+    window.addEventListener('popstate', event => {
+      restoreRoute(event.state || routeFromLocation()).catch(err => {
+        $('results').innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
+      });
+    });
+    state.routeListenerBound = true;
+  }
+  const initialRoute = routeFromLocation();
+  const hasRoute = window.location.search.length > 1;
+  if (hasRoute) {
+    history.replaceState(initialRoute, '', routeUrl(initialRoute));
+    await restoreRoute(initialRoute);
+  } else {
+    await search({ history: 'replace' });
+  }
 }
 
 function setView(view) {
