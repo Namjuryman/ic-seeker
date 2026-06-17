@@ -1169,6 +1169,20 @@ body.detail-collapsed .detail-collapse {
   font-weight: 900;
 }
 
+.empty-photo {
+  border: 1px dashed #bdc8ec;
+  color: #6b7890;
+  background: #f8faff;
+  box-shadow: none;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.empty-photo span {
+  max-width: 58px;
+}
+
 .institution-photo {
   border-radius: 18px;
   background: linear-gradient(135deg, #26384f, #4658c8);

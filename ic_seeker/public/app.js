@@ -120,11 +120,14 @@ const i18n = {
     openProfile: 'Open profile',
     careerInference: 'Career inference',
     estimatedAge: 'Age / stage',
+    education: 'Education',
+    firstJob: 'First job',
     careerSpan: 'Publication span',
     firstPublication: 'First indexed paper',
     affiliationPath: 'Affiliation path',
     educationCareerUnknown: 'Education and first job need CV/profile data.',
-    inferredFromPapers: 'Inferred from local paper metadata; not a verified CV.'
+    inferredFromPapers: 'Inferred from local paper metadata; not a verified CV.',
+    photoPending: 'Photo pending'
   },
   zh: {
     navSearch: '学术搜索',
@@ -223,11 +226,14 @@ const i18n = {
     openProfile: '打开画像',
     careerInference: '履历推断',
     estimatedAge: '年龄 / 阶段',
+    education: '本硕博',
+    firstJob: '第一份工作',
     careerSpan: '发文跨度',
     firstPublication: '首次收录发文',
     affiliationPath: '机构流动',
     educationCareerUnknown: '本硕博和第一份工作需要接入个人主页/CV 数据。',
-    inferredFromPapers: '根据本地论文元数据推断，不等同于已核验简历。'
+    inferredFromPapers: '根据本地论文元数据推断，不等同于已核验简历。',
+    photoPending: '照片待接入'
   }
 };
 
@@ -746,6 +752,10 @@ function initials(name) {
     .join('') || 'IC';
 }
 
+function renderPhotoPlaceholder() {
+  return `<div class="profile-photo empty-photo"><span>${escapeHtml(t('photoPending'))}</span></div>`;
+}
+
 function yearlySeriesFromPapers(papers, field) {
   const byYear = new Map();
   for (const paper of papers || []) {
@@ -935,7 +945,7 @@ async function loadAuthor(name, options = {}) {
   $('results').innerHTML = `
     <section class="scholar-profile">
       <div class="profile-hero">
-        <div class="profile-photo">${escapeHtml(initials(profile.name))}</div>
+        ${renderPhotoPlaceholder()}
         <div class="profile-main">
           <p class="profile-kicker">${escapeHtml(t('navAuthors'))}</p>
           <h2>${escapeHtml(profile.name)}</h2>
