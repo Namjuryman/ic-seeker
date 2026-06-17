@@ -102,7 +102,20 @@ const i18n = {
     noAbstract: 'No abstract available.',
     sourceHint: 'AMiner is kept as targeted enrichment so full crawls do not burn quota.',
     collapseDetail: 'Collapse detail',
-    expandDetail: 'Expand detail'
+    expandDetail: 'Expand detail',
+    scholarType: 'Scholar type',
+    risingFaculty: 'Rising / early-career faculty',
+    establishedFaculty: 'Established active professor',
+    seniorLeader: 'Senior field leader',
+    careerStrength: 'Career academic strength',
+    yearlyActivity: 'Yearly activity',
+    rankDistribution: 'Venue rank distribution',
+    recentPapers: 'Recent papers',
+    collaboratorNetwork: 'Collaborators',
+    institutionHistory: 'Institutions',
+    authorRankings: 'Scholar rankings',
+    institutionRankings: 'Institution rankings',
+    openProfile: 'Open profile'
   },
   zh: {
     navSearch: '学术搜索',
@@ -185,7 +198,20 @@ const i18n = {
     noAbstract: '暂无摘要。',
     sourceHint: 'AMiner 保持按需增强，避免全量抓取烧额度。',
     collapseDetail: '收起详情',
-    expandDetail: '展开详情'
+    expandDetail: '展开详情',
+    scholarType: '学者判断',
+    risingFaculty: '青年教师 / 新 AP',
+    establishedFaculty: '活跃骨干教授',
+    seniorLeader: '领域大牛',
+    careerStrength: '职业生涯学术实力',
+    yearlyActivity: '每年学术活跃度',
+    rankDistribution: '分区/等级分布',
+    recentPapers: '代表论文',
+    collaboratorNetwork: '合作者网络',
+    institutionHistory: '任职/合作机构',
+    authorRankings: '老师排名',
+    institutionRankings: '学校排名',
+    openProfile: '打开画像'
   }
 };
 
@@ -558,6 +584,68 @@ function renderMiniBars(rows, label = 'count') {
   </div>`;
 }
 
+function scholarType(profile, paperCount) {
+  const years = (profile.byYear || []).map(row => Number(row.key)).filter(Boolean);
+  const firstYear = years.length ? Math.min(...years) : new Date().getFullYear();
+  const careerYears = Math.max(1, new Date().getFullYear() - firstYear + 1);
+  const sPlus = Number(profile.ranks?.sPlus || 0);
+  if (sPlus >= 40 || Number(profile.authorScore || 0) > 8000) return t('seniorLeader');
+  if (careerYears <= 8 || paperCount < 35) return t('risingFaculty');
+  return t('establishedFaculty');
+}
+
+function initials(name) {
+  return String(name || 'IC')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase())
+    .join('') || 'IC';
+}
+
+function yearlySeriesFromPapers(papers, field) {
+  const byYear = new Map();
+  for (const paper of papers || []) {
+    const year = Number(paper.year || 0);
+    if (!year) continue;
+    const value = field === 'score' ? Number(paper.score || 0) : 1;
+    byYear.set(year, (byYear.get(year) || 0) + value);
+  }
+  return [...byYear.entries()]
+    .map(([key, count]) => ({ key, count: Math.round(count * 10) / 10 }))
+    .sort((a, b) => Number(a.key) - Number(b.key));
+}
+
+function renderSparkBars(rows, label) {
+  const max = Math.max(1, ...rows.map(row => Number(row.count || 0)));
+  return `<div class="spark-panel">
+    <h3>${escapeHtml(label)}</h3>
+    <div class="spark-bars">
+      ${rows.map(row => `<div class="spark-bar" title="${escapeHtml(row.key)}: ${escapeHtml(row.count)}">
+        <i style="height:${Math.max(8, Number(row.count || 0) / max * 100)}%"></i>
+        <span>${escapeHtml(String(row.key).slice(-2))}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderRankDonut(ranks) {
+  const items = [
+    ['S+', Number(ranks?.sPlus || 0)],
+    ['S', Number(ranks?.s || 0)],
+    ['A', Number(ranks?.a || 0)],
+    ['Other', Number(ranks?.other || 0)]
+  ];
+  const max = Math.max(1, ...items.map(([, count]) => count));
+  return `<div class="rank-stack">
+    ${items.map(([label, count]) => `<div class="rank-line">
+      <span>${escapeHtml(label)}</span>
+      <div><i style="width:${Math.max(3, count / max * 100)}%"></i></div>
+      <strong>${fmt(count)}</strong>
+    </div>`).join('')}
+  </div>`;
+}
+
 function profilePapers(papers) {
   return `<div class="profile-papers">
     ${papers.slice(0, 80).map(row => `
@@ -584,24 +672,54 @@ function bindProfileLinks() {
 async function loadAuthor(name) {
   const profile = await api(`/api/authors/${encodeURIComponent(name)}`);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
-  $('detail').innerHTML = `
-    <h2>${escapeHtml(profile.name)}</h2>
-    <div class="actions">
-      <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
-      <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
-    </div>
-    <section class="profile-grid">
-      <div class="metric"><span>Author score</span><strong>${escapeHtml(profile.authorScore)}</strong></div>
-      <div class="metric"><span>Papers</span><strong>${fmt(paperCount)}</strong></div>
-      <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
-      <div class="metric"><span>Avg score</span><strong>${escapeHtml(profile.avgScore)}</strong></div>
+  const activity = yearlySeriesFromPapers(profile.papers, 'count');
+  const strength = yearlySeriesFromPapers(profile.papers, 'score');
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = `
+    <section class="scholar-profile">
+      <div class="profile-hero">
+        <div class="profile-photo">${escapeHtml(initials(profile.name))}</div>
+        <div class="profile-main">
+          <p class="profile-kicker">${escapeHtml(t('navAuthors'))}</p>
+          <h2>${escapeHtml(profile.name)}</h2>
+          <div class="profile-tags">
+            <span>${escapeHtml(t('scholarType'))}: ${escapeHtml(scholarType(profile, paperCount))}</span>
+            <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+            <span>S+ ${fmt(profile.ranks.sPlus)} / S ${fmt(profile.ranks.s)} / A ${fmt(profile.ranks.a)}</span>
+          </div>
+          <div class="actions">
+            <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
+            <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
+          </div>
+        </div>
+        <div class="profile-score">
+          <span>${escapeHtml(t('sortScore'))}</span>
+          <strong>${escapeHtml(profile.authorScore)}</strong>
+          <em>${escapeHtml(t('summaryTopField'))}: ${escapeHtml(profile.byDomain?.[0]?.key || '-')}</em>
+        </div>
+      </div>
+      <section class="profile-grid wide-profile-grid">
+        <div class="metric"><span>${escapeHtml(t('summaryPapers'))}</span><strong>${fmt(paperCount)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('summaryTopVenue'))}</span><strong>${escapeHtml(profile.byVenue?.[0]?.key || '-')}</strong></div>
+        <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('summaryTopField'))}</span><strong>${escapeHtml(profile.byDomain?.[0]?.key || '-')}</strong></div>
+      </section>
+      <section class="profile-analytics">
+        ${renderSparkBars(strength, t('careerStrength'))}
+        ${renderSparkBars(activity, t('yearlyActivity'))}
+        <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
+      </section>
+      <section class="profile-columns">
+        <div><h3>${escapeHtml(t('collaboratorNetwork'))}</h3>${renderMiniBars(profile.coauthors, 'papers')}</div>
+        <div><h3>${escapeHtml(t('institutionHistory'))}</h3><div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div></div>
+      </section>
+      <h3>${escapeHtml(t('recentPapers'))}</h3>
+      ${profilePapers(profile.papers)}
     </section>
-    <h3>Yearly strength</h3>${renderMiniBars(profile.byYear, 'papers')}
-    <h3>Venues</h3>${renderMiniBars(profile.byVenue, 'papers')}
-    <h3>Fields</h3>${renderMiniBars(profile.byDomain, 'papers')}
-    <h3>Collaborators</h3>${renderMiniBars(profile.coauthors, 'papers')}
-    <h3>Institutions</h3><div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div>
-    <h3>Papers</h3>${profilePapers(profile.papers)}
   `;
   bindProfileLinks();
 }
@@ -609,21 +727,75 @@ async function loadAuthor(name) {
 async function loadInstitution(name) {
   const profile = await api(`/api/institutions/${encodeURIComponent(name)}`);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
-  $('detail').innerHTML = `
-    <h2>${escapeHtml(profile.name)}</h2>
-    <section class="profile-grid">
-      <div class="metric"><span>Institution score</span><strong>${escapeHtml(profile.institutionScore)}</strong></div>
-      <div class="metric"><span>Papers</span><strong>${fmt(paperCount)}</strong></div>
-      <div class="metric"><span>S+ / S / A</span><strong>${fmt(profile.ranks.sPlus)} / ${fmt(profile.ranks.s)} / ${fmt(profile.ranks.a)}</strong></div>
-      <div class="metric"><span>Avg score</span><strong>${escapeHtml(profile.avgScore)}</strong></div>
+  const activity = yearlySeriesFromPapers(profile.papers, 'count');
+  const strength = yearlySeriesFromPapers(profile.papers, 'score');
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = `
+    <section class="scholar-profile">
+      <div class="profile-hero institution-hero">
+        <div class="profile-photo institution-photo">${escapeHtml(initials(profile.name))}</div>
+        <div class="profile-main">
+          <p class="profile-kicker">${escapeHtml(t('navInstitutions'))}</p>
+          <h2>${escapeHtml(profile.name)}</h2>
+          <div class="profile-tags">
+            <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+            <span>S+ ${fmt(profile.ranks.sPlus)} / S ${fmt(profile.ranks.s)} / A ${fmt(profile.ranks.a)}</span>
+          </div>
+        </div>
+        <div class="profile-score">
+          <span>${escapeHtml(t('sortScore'))}</span>
+          <strong>${escapeHtml(profile.institutionScore)}</strong>
+          <em>${escapeHtml(t('summaryTopField'))}: ${escapeHtml(profile.byDomain?.[0]?.key || '-')}</em>
+        </div>
+      </div>
+      <section class="profile-analytics">
+        ${renderSparkBars(strength, t('careerStrength'))}
+        ${renderSparkBars(activity, t('yearlyActivity'))}
+        <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
+      </section>
+      <section class="profile-columns">
+        <div><h3>${escapeHtml(t('navAuthors'))}</h3>${renderMiniBars(profile.authors, 'papers')}</div>
+        <div><h3>${escapeHtml(t('venue'))}</h3>${renderMiniBars(profile.byVenue, 'papers')}</div>
+      </section>
+      <h3>${escapeHtml(t('recentPapers'))}</h3>
+      ${profilePapers(profile.papers)}
     </section>
-    <h3>Yearly strength</h3>${renderMiniBars(profile.byYear, 'papers')}
-    <h3>Venues</h3>${renderMiniBars(profile.byVenue, 'papers')}
-    <h3>Fields</h3>${renderMiniBars(profile.byDomain, 'papers')}
-    <h3>Authors</h3>${renderMiniBars(profile.authors, 'papers')}
-    <h3>Papers</h3>${profilePapers(profile.papers)}
   `;
   bindProfileLinks();
+}
+
+function renderRankings(kind) {
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  const rows = kind === 'authors' ? state.professors : state.institutions;
+  const title = kind === 'authors' ? t('authorRankings') : t('institutionRankings');
+  $('results').classList.remove('compact');
+  $('results').innerHTML = `
+    <section class="ranking-page">
+      <div class="ranking-head">
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(state.language === 'zh' ? '基于当前本地数据库统计，姓名和机构仍需后续消歧。' : 'Computed from the local database; names and affiliations still need disambiguation.')}</p>
+      </div>
+      <div class="ranking-list">
+        ${rows.map((row, index) => `
+          <button class="ranking-card" type="button" data-rank-${kind === 'authors' ? 'author' : 'institution'}="${escapeHtml(row.name)}">
+            <span class="rank-no">${index + 1}</span>
+            <span class="rank-avatar">${escapeHtml(initials(row.name))}</span>
+            <span class="rank-body"><strong>${escapeHtml(row.name)}</strong><em>${fmt(row.papers)} ${escapeHtml(t('summaryPapers'))}, ${fmt(row.sPlus)} S+</em></span>
+            <span class="rank-score">${escapeHtml(row.authorScore || row.institutionScore)}</span>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+  document.querySelectorAll('[data-rank-author]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.rankAuthor)));
+  document.querySelectorAll('[data-rank-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.rankInstitution)));
 }
 
 async function search() {
@@ -917,15 +1089,16 @@ async function bootApp() {
     button.addEventListener('click', () => {
       document.querySelectorAll('[data-panel-jump]').forEach(tab => tab.classList.toggle('active', tab === button));
       const target = button.dataset.panelJump;
-      if (target === 'authors' || target === 'institutions') {
-        $('insightsPanel').open = true;
-        const block = target === 'authors' ? $('professors') : $('institutions');
-        block.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      if (target === 'authors') {
+        renderRankings('authors');
+      } else if (target === 'institutions') {
+        renderRankings('institutions');
       } else if (target === 'sources') {
         $('sourceStatus').scrollIntoView({ block: 'start', behavior: 'smooth' });
       } else if (target === 'pdfs') {
         $('pdfInbox').scrollIntoView({ block: 'start', behavior: 'smooth' });
       } else {
+        searchFirstPage();
         $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
     });
