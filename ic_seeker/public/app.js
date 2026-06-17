@@ -25,6 +25,7 @@ const state = {
 const i18n = {
   en: {
     navSearch: 'Academic Search',
+    navTopics: 'Topic Intelligence',
     navAuthors: 'Scholars',
     navInstitutions: 'Institutions',
     navSources: 'Data Sources',
@@ -44,6 +45,7 @@ const i18n = {
     sortTitle: 'Title',
     logout: 'Log out',
     tabPapers: 'Papers',
+    tabTopics: 'Topics',
     tabAuthors: 'Authors',
     tabInstitutions: 'Institutions',
     rows: 'Rows',
@@ -134,10 +136,23 @@ const i18n = {
     filterAll: 'All',
     searchWithinProfile: 'Search within this profile...',
     doiAvailable: 'DOI',
-    noDoi: 'no DOI'
+    noDoi: 'no DOI',
+    topicOverview: 'Topic overview',
+    topicIntelligence: 'Topic intelligence',
+    topicStrength: 'Topic strength',
+    topicLeaders: 'Leading scholars',
+    topicInstitutions: 'Leading institutions',
+    topicVenues: 'Main venues',
+    topicPapers: 'Representative papers',
+    recentTopicPapers: 'Recent papers',
+    topicTrend: 'Yearly trend',
+    openTopic: 'Open topic',
+    topicSummaryText: '{field} has {papers} indexed papers. Peak year: {peakYear}. S+ share: {splus}%.',
+    setAsSearch: 'Search this topic'
   },
   zh: {
     navSearch: '学术搜索',
+    navTopics: '方向洞察',
     navAuthors: '学者画像',
     navInstitutions: '机构实力',
     navSources: '数据来源',
@@ -157,6 +172,7 @@ const i18n = {
     sortTitle: '标题',
     logout: '退出',
     tabPapers: '论文',
+    tabTopics: '方向',
     tabAuthors: '专家',
     tabInstitutions: '机构',
     rows: '列表',
@@ -247,7 +263,19 @@ const i18n = {
     filterAll: '全部',
     searchWithinProfile: '在该画像内搜索论文...',
     doiAvailable: 'DOI',
-    noDoi: '无 DOI'
+    noDoi: '无 DOI',
+    topicOverview: '方向总览',
+    topicIntelligence: '方向洞察',
+    topicStrength: '方向强度',
+    topicLeaders: '强相关老师',
+    topicInstitutions: '强相关机构',
+    topicVenues: '主要会议/期刊',
+    topicPapers: '代表论文',
+    recentTopicPapers: '近期论文',
+    topicTrend: '年度趋势',
+    openTopic: '打开方向',
+    topicSummaryText: '{field} 目前收录 {papers} 篇论文，峰值年份 {peakYear}，S+ 占比 {splus}%。',
+    setAsSearch: '搜索该方向'
   }
 };
 
@@ -425,6 +453,7 @@ function routeUrl(route) {
     author: new Set(['name']),
     institution: new Set(['name']),
     rankings: new Set(['kind']),
+    topics: new Set(['field']),
     paper: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page', 'id']),
     papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page'])
   };
@@ -465,7 +494,8 @@ function routeFromLocation() {
     page: params.get('page') || '1',
     id: params.get('id') || '',
     name: params.get('name') || '',
-    kind: params.get('kind') || ''
+    kind: params.get('kind') || '',
+    field: params.get('field') || ''
   };
   return route;
 }
@@ -506,6 +536,9 @@ async function restoreRoute(route = history.state || routeFromLocation()) {
     } else if (view === 'rankings') {
       setActivePanel(route.kind === 'institutions' ? 'institutions' : 'authors');
       renderRankings(route.kind === 'institutions' ? 'institutions' : 'authors', { history: 'skip' });
+    } else if (view === 'topics') {
+      setActivePanel('topics');
+      await renderTopics(route.field || '', { history: 'skip' });
     } else {
       setActivePanel('papers');
       applySearchRoute(route || {});
@@ -958,13 +991,13 @@ function renderProfileSummary(profile, paperCount) {
   </section>`;
 }
 
-function profilePapers(papers) {
+function profilePapers(papers, title = t('recentPapers')) {
   const visiblePapers = papers.slice(0, 120);
   const fields = countBy(visiblePapers, row => row.field).slice(0, 6);
   const ranks = countBy(visiblePapers, row => row.rank).slice(0, 6);
   return `<section class="profile-paper-section">
     <div class="profile-paper-head">
-      <h3>${escapeHtml(t('recentPapers'))}</h3>
+      <h3>${escapeHtml(title)}</h3>
       <input id="profilePaperSearch" type="search" placeholder="${escapeHtml(t('searchWithinProfile'))}">
     </div>
     <div class="profile-filter-group" aria-label="${escapeHtml(t('profilePaperFilters'))}">
@@ -1148,6 +1181,101 @@ function renderRankings(kind, options = {}) {
   `;
   document.querySelectorAll('[data-rank-author]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.rankAuthor)));
   document.querySelectorAll('[data-rank-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.rankInstitution)));
+}
+
+function renderTopicEntityList(rows, type) {
+  const attr = type === 'author' ? 'data-author-link' : 'data-institution-link';
+  return `<div class="topic-entity-list">
+    ${rows.slice(0, 12).map((row, index) => `<button class="topic-entity" type="button" ${attr}="${escapeHtml(row.name)}">
+      <span>${index + 1}</span>
+      <strong>${escapeHtml(row.name)}</strong>
+      <em>${fmt(row.papers)} ${escapeHtml(t('summaryPapers'))} · S+ ${fmt(row.sPlus)} · ${escapeHtml(row.topicScore)}</em>
+    </button>`).join('')}
+  </div>`;
+}
+
+function renderTopicVenueList(rows) {
+  return `<div class="topic-venue-list">
+    ${rows.map(row => `<button class="topic-venue" type="button" data-topic-venue="${escapeHtml(row.key)}">
+      <strong>${escapeHtml(row.key)}</strong>
+      <span>${fmt(row.count)}</span>
+    </button>`).join('')}
+  </div>`;
+}
+
+function renderTopicCards(topics, selectedField) {
+  return `<div class="topic-card-grid">
+    ${topics.map(topic => `<button class="topic-card ${topic.field === selectedField ? 'active' : ''}" type="button" data-topic-field="${escapeHtml(topic.field)}">
+      <strong>${escapeHtml(topic.field)}</strong>
+      <span>${fmt(topic.papers)} ${escapeHtml(t('summaryPapers'))}</span>
+      <em>S+ ${fmt(topic.sPlus)} · ${topic.firstYear}-${topic.lastYear}</em>
+    </button>`).join('')}
+  </div>`;
+}
+
+async function renderTopics(field = '', options = {}) {
+  const topics = await api('/api/topics');
+  const selectedField = field || topics[0]?.field || '';
+  if (options.history !== 'skip') writeRoute({ view: 'topics', field: selectedField });
+  state.currentView = 'topics';
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  if (!selectedField) {
+    $('results').innerHTML = `<div class="empty">${escapeHtml(t('topicOverview'))}</div>`;
+    return;
+  }
+  const detail = await api(`/api/topics/detail?field=${encodeURIComponent(selectedField)}`);
+  const sPlusShare = Math.round(Number(detail.ranks?.sPlus || 0) / Math.max(1, detail.papers) * 100);
+  const summaryText = t('topicSummaryText')
+    .replace('{field}', detail.field)
+    .replace('{papers}', fmt(detail.papers))
+    .replace('{peakYear}', String(detail.peakYear?.year || '-'))
+    .replace('{splus}', String(sPlusShare));
+  $('results').innerHTML = `
+    <section class="topic-page">
+      <div class="topic-hero">
+        <div>
+          <p class="profile-kicker">${escapeHtml(t('topicIntelligence'))}</p>
+          <h2>${escapeHtml(detail.field)}</h2>
+          <p>${escapeHtml(summaryText)}</p>
+        </div>
+        <button class="button primary" type="button" id="topicSearch">${escapeHtml(t('setAsSearch'))}</button>
+      </div>
+      ${renderTopicCards(topics, selectedField)}
+      <section class="profile-grid wide-profile-grid">
+        <div class="metric"><span>${escapeHtml(t('summaryPapers'))}</span><strong>${fmt(detail.papers)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('sortScore'))}</span><strong>${escapeHtml(detail.avgScore)}</strong></div>
+        <div class="metric"><span>S+ / S / A</span><strong>${fmt(detail.ranks.sPlus)} / ${fmt(detail.ranks.s)} / ${fmt(detail.ranks.a)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('topicTrend'))}</span><strong>${escapeHtml(detail.peakYear?.year || '-')}</strong></div>
+      </section>
+      <section class="profile-analytics">
+        ${renderSparkBars(detail.byYear.map(row => ({ key: row.year, count: row.count })), t('topicTrend'), 'bar')}
+        <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(detail.ranks)}</div>
+        <div class="spark-panel"><h3>${escapeHtml(t('topicVenues'))}</h3>${renderTopicVenueList(detail.byVenue.slice(0, 8))}</div>
+      </section>
+      <section class="topic-grid">
+        <div><h3>${escapeHtml(t('topicLeaders'))}</h3>${renderTopicEntityList(detail.authors, 'author')}</div>
+        <div><h3>${escapeHtml(t('topicInstitutions'))}</h3>${renderTopicEntityList(detail.institutions, 'institution')}</div>
+      </section>
+      ${profilePapers(detail.representativePapers, t('topicPapers'))}
+    </section>
+  `;
+  document.querySelectorAll('[data-topic-field]').forEach(el => el.addEventListener('click', () => renderTopics(el.dataset.topicField)));
+  document.querySelectorAll('[data-topic-venue]').forEach(el => el.addEventListener('click', () => {
+    $('venue').value = el.dataset.topicVenue;
+    $('field').value = selectedField;
+    searchFirstPage();
+  }));
+  $('topicSearch')?.addEventListener('click', () => {
+    $('q').value = selectedField;
+    $('field').value = selectedField;
+    $('semantic').checked = true;
+    searchFirstPage();
+  });
+  bindProfileLinks();
 }
 
 async function search(options = {}) {
@@ -1445,7 +1573,9 @@ async function bootApp() {
     button.addEventListener('click', () => {
       const target = button.dataset.panelJump;
       setActivePanel(target);
-      if (target === 'authors') {
+      if (target === 'topics') {
+        renderTopics();
+      } else if (target === 'authors') {
         renderRankings('authors');
       } else if (target === 'institutions') {
         renderRankings('institutions');

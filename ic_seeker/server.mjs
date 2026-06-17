@@ -7,6 +7,7 @@ import { createAdminService } from './services/admin.service.mjs';
 import { createPaperService } from './services/paper.service.mjs';
 import { createProfileService } from './services/profile.service.mjs';
 import { createSearchService } from './services/search.service.mjs';
+import { createTopicService } from './services/topic.service.mjs';
 import { createSqliteRepository } from './repositories/sqlite.repository.mjs';
 import { createAuthRoutes } from './routes/auth.routes.mjs';
 import { createApiRoutes } from './routes/api.routes.mjs';
@@ -32,7 +33,8 @@ const services = {
   admin: createAdminService({ repository: sqliteRepository, config }),
   paper: createPaperService({ openDb }),
   profile: createProfileService({ openDb }),
-  search: createSearchService({ openDb })
+  search: createSearchService({ openDb }),
+  topic: createTopicService({ openDb })
 };
 
 const authRoutes = createAuthRoutes({

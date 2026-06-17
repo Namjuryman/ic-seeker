@@ -2,7 +2,7 @@ import { methodology } from '../services/methodology.service.mjs';
 
 export function createApiRoutes({ services, http }) {
   const { bad, json, readJson } = http;
-  const { admin, paper, profile, search } = services;
+  const { admin, paper, profile, search, topic } = services;
 
   async function handleApi(req, res, url) {
     if (url.pathname === '/api/stats') return json(res, admin.stats());
@@ -11,6 +11,8 @@ export function createApiRoutes({ services, http }) {
     if (url.pathname.startsWith('/api/authors/')) return json(res, profile.authorProfile(decodeURIComponent(url.pathname.split('/').at(-1))));
     if (url.pathname === '/api/institutions') return json(res, profile.institutions(url.searchParams));
     if (url.pathname.startsWith('/api/institutions/')) return json(res, profile.institutionProfile(decodeURIComponent(url.pathname.split('/').at(-1))));
+    if (url.pathname === '/api/topics') return json(res, topic.topics());
+    if (url.pathname === '/api/topics/detail') return json(res, topic.topicDetail(url.searchParams.get('field')));
     if (url.pathname === '/api/pdf-inbox') return json(res, await admin.pdfInbox());
     if (url.pathname === '/api/search') return json(res, search.search(url.searchParams));
     if (url.pathname.startsWith('/api/papers/')) {
