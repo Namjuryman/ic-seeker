@@ -31,7 +31,7 @@ function venueRank(venue) {
     ['TCAS-II', 'A'], ['TVLSI', 'A'], ['ISCAS', 'B'],
     ['Nature Electron.', 'SS+'], ['Nat. Electronics', 'SS+'], ['Nature', 'SSS'], ['Nat. Commun.', 'Hidden'],
     ['IEEE T-MTT', 'A+'], ['IEEE TED', 'B+'], ['IEEE EDL', 'Hidden'],
-    ['IEEE Sensors J.', 'B-'], ['Adv. Mater.', 'B-'], ['Appl. Phys. Lett.', 'C+'],
+    ['IEEE Sensors J.', 'B-'], ['Adv. Mater.', 'Hidden'], ['Appl. Phys. Lett.', 'Hidden'],
     ['Solid-State Electron.', 'C+'], ['IEEE JMEMS', 'B-'], ['IEEE T-Nano', 'C+'],
     ['Microelectron. J.', 'C']
   ]);

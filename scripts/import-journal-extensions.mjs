@@ -81,16 +81,16 @@ const journals = [
     shortName: 'Adv. Mater.',
     fullName: 'Advanced Materials',
     sourceId: 'S99352657',
-    rank: 'B-',
-    baseScore: 38,
+    rank: 'Hidden',
+    baseScore: 0,
     terms: ['semiconductor device', 'transistor', 'memory device', 'integrated circuit', 'neuromorphic device', 'cmos compatible', 'flexible electronics circuit']
   },
   {
     shortName: 'Appl. Phys. Lett.',
     fullName: 'Applied Physics Letters',
     sourceId: 'S105243760',
-    rank: 'C+',
-    baseScore: 34,
+    rank: 'Hidden',
+    baseScore: 0,
     terms: ['semiconductor device', 'transistor', 'mosfet', 'memory device', 'cmos', 'integrated circuit', 'photonic integrated circuit']
   },
   {
