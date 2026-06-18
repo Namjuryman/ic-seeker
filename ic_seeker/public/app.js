@@ -1358,12 +1358,41 @@ const geoLabelOffsets = {
   IT: { dx: 2, dy: 4 }, AU: { dx: 2, dy: 3 }
 };
 
+const geoLabelAnchors = {
+  US: { lon: -98.5, lat: 38.5 },
+  CA: { lon: -105, lat: 57 },
+  CN: { lon: 104, lat: 34 },
+  HK: { lon: 114.17, lat: 22.32 },
+  MO: { lon: 113.55, lat: 22.17 },
+  TW: { lon: 121.0, lat: 23.8 },
+  KR: { lon: 127.8, lat: 36.3 },
+  JP: { lon: 138.2, lat: 37.3 },
+  SG: { lon: 103.82, lat: 1.35 },
+  IN: { lon: 78.9, lat: 22.6 },
+  AU: { lon: 134, lat: -25 },
+  UK: { lon: -2.4, lat: 54 },
+  NL: { lon: 5.3, lat: 52.2 },
+  BE: { lon: 4.6, lat: 50.8 },
+  CH: { lon: 8.2, lat: 46.9 },
+  DE: { lon: 10.4, lat: 51.1 },
+  FR: { lon: 2.4, lat: 46.8 },
+  IT: { lon: 12.3, lat: 42.9 }
+};
+
+const geoDenseRegionCodes = new Set(['HK', 'MO', 'TW', 'KR', 'JP', 'SG', 'UK', 'NL', 'BE', 'CH', 'DE', 'FR', 'IT']);
+
 function projectWorldPoint(lon, lat) {
   const clampedLat = Math.max(-58, Math.min(83, Number(lat || 0)));
   return {
     x: ((Number(lon || 0) + 180) / 360) * 110,
     y: ((83 - clampedLat) / 141) * 62 + 2
   };
+}
+
+function geoCountryAnchor(country) {
+  const anchor = geoLabelAnchors[country.code];
+  if (anchor) return projectWorldPoint(anchor.lon, anchor.lat);
+  return projectWorldPoint(country.x / 100 * 360 - 180, 83 - (country.y / 100) * 141);
 }
 
 function ringPath(ring) {
@@ -1429,8 +1458,18 @@ function renderGeoMap(countries, selectedCode, mode, worldMap) {
   const max = Math.max(1, ...countries.map(country => geoMetric(country, mode)));
   const countryByFeature = new Map(countries.map(country => [countryFeatureCode(country.code), country]));
   const renderedFeatureCodes = new Set();
-  const labelled = new Set(countries.slice(0, 9).map(country => country.code));
+  const labelled = new Set(countries
+    .filter(country => !geoDenseRegionCodes.has(country.code))
+    .slice(0, 6)
+    .map(country => country.code));
   if (selectedCode) labelled.add(selectedCode);
+  const regionalGroups = [
+    { title: 'East Asia', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP', 'SG'] },
+    { title: 'Europe', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT'] }
+  ].map(group => ({
+    ...group,
+    countries: group.codes.map(code => countries.find(country => country.code === code)).filter(Boolean)
+  })).filter(group => group.countries.length);
   return `<div class="geo-map-canvas" aria-label="${escapeHtml(t('geoIntelligence'))}">
     <svg viewBox="0 0 110 66" role="img" class="geo-map-bg">
       <defs>
@@ -1474,17 +1513,31 @@ function renderGeoMap(countries, selectedCode, mode, worldMap) {
         ${countries.map(country => {
           const featureCode = countryFeatureCode(country.code);
           const isPathBacked = renderedFeatureCodes.has(featureCode);
-          const projected = projectWorldPoint(country.x / 100 * 360 - 180, 83 - (country.y / 100) * 141);
+          const projected = geoCountryAnchor(country);
           const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 };
-          const shouldLabel = labelled.has(country.code) || !isPathBacked;
+          const shouldLabel = labelled.has(country.code) || (!isPathBacked && country.code === selectedCode);
           if (!shouldLabel) return '';
           return `<g class="geo-label ${country.code === selectedCode ? 'active' : ''} ${isPathBacked ? '' : 'marker-label'}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}">
-            ${isPathBacked ? '' : `<circle cx="${projected.x.toFixed(2)}" cy="${projected.y.toFixed(2)}" r="1.8"></circle>`}
+            ${isPathBacked ? '' : `<circle class="geo-marker-dot" cx="${projected.x.toFixed(2)}" cy="${projected.y.toFixed(2)}" r=".75"></circle>`}
             <text x="${(projected.x + offset.dx).toFixed(2)}" y="${(projected.y + offset.dy).toFixed(2)}" text-anchor="middle">${escapeHtml(country.code)}</text>
           </g>`;
         }).join('')}
       </g>
     </svg>
+    <div class="geo-inset-tray" aria-label="Dense region selectors">
+      ${regionalGroups.map(group => `<section class="geo-inset-card">
+        <div class="geo-inset-head">
+          <strong>${escapeHtml(group.title)}</strong>
+          <span>${group.countries.length} regions</span>
+        </div>
+        <div class="geo-inset-grid">
+          ${group.countries.map(country => `<button class="geo-region-button ${country.code === selectedCode ? 'active' : ''}" type="button" data-geo-country="${escapeHtml(country.code)}">
+            <span>${escapeHtml(country.code)}</span>
+            <em>${fmt(country.papers)}</em>
+          </button>`).join('')}
+        </div>
+      </section>`).join('')}
+    </div>
   </div>`;
 }
 
@@ -1663,7 +1716,7 @@ async function renderGeo(field = '', options = {}) {
       }
     });
   });
-  document.querySelectorAll('.geo-country-row, .geo-pie-row[data-geo-country]').forEach(button => {
+  document.querySelectorAll('.geo-country-row, .geo-pie-row[data-geo-country], .geo-region-button').forEach(button => {
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
   });
   document.querySelectorAll('[data-geo-mode]').forEach(button => {
