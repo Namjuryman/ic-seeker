@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>IC Seeker</title>
+    <title>SiliconScope</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <section class="login-screen" id="loginScreen" hidden>
       <form class="login-card" id="loginForm">
         <div class="brand">
-          <div class="mark">IC</div>
+          <img src="/logo-48.png" alt="SiliconScope" class="logo-img" width="38" height="38">
           <div>
-            <h1 id="loginTitle">IC Seeker Private</h1>
-            <p>Private paper search and reading workspace</p>
+            <h1 id="loginTitle">SiliconScope</h1>
+            <p>Map the world of integrated-circuit research.</p>
           </div>
         </div>
         <label class="field">
@@ -28,8 +28,8 @@
     <div class="app" id="appShell" hidden>
       <aside class="global-nav">
         <div class="nav-brand">
-          <div class="nav-mark">IC</div>
-          <strong>IC Seeker</strong>
+          <img src="/logo-32.png" alt="SiliconScope" class="nav-logo-img" width="28" height="28">
+          <strong>SiliconScope</strong>
         </div>
         <nav class="nav-menu" aria-label="Primary navigation">
           <button class="nav-item active" type="button" data-panel-jump="papers" data-i18n="navSearch">Academic Search</button>
@@ -37,11 +37,12 @@
           <button class="nav-item" type="button" data-panel-jump="geo" data-i18n="navGeo">Geo Map</button>
           <button class="nav-item" type="button" data-panel-jump="authors" data-i18n="navAuthors">Scholars</button>
           <button class="nav-item" type="button" data-panel-jump="institutions" data-i18n="navInstitutions">Institutions</button>
+          <button class="nav-item" type="button" data-panel-jump="mentor-institutions" data-i18n="navMentors">Mentor Reviews</button>
           <button class="nav-item" type="button" data-panel-jump="sources" data-i18n="navSources">Data Sources</button>
           <button class="nav-item" type="button" data-panel-jump="pdfs" data-i18n="navPdfs">Local PDFs</button>
         </nav>
         <div class="nav-foot">
-          <span data-i18n="navPrivate">Private IC intelligence</span>
+          <span data-i18n="navPrivate">IC Research Intelligence Platform</span>
           <strong id="navTotal">-</strong>
         </div>
       </aside>
@@ -49,10 +50,10 @@
 
       <header class="app-header">
         <div class="brand header-brand">
-          <div class="mark">IC</div>
+          <img src="/logo-48.png" alt="SiliconScope" class="logo-img" width="38" height="38">
           <div>
-            <h1 id="appTitle">IC Seeker</h1>
-            <p data-i18n="tagline">IC paper, scholar, and institution intelligence</p>
+            <h1 id="appTitle">SiliconScope</h1>
+            <p data-i18n="tagline">Research intelligence for the semiconductor era.</p>
           </div>
         </div>
 
@@ -82,12 +83,19 @@
       </header>
 
       <section class="quickbar">
-        <nav class="scope-tabs" aria-label="Search scope">
+        <nav class="section-tabs" aria-label="Section switch">
+          <button class="section-tab active" type="button" data-section="papers" data-i18n="sectionPapers">Papers</button>
+          <button class="section-tab" type="button" data-section="mentors" data-i18n="sectionMentors">Mentors</button>
+        </nav>
+        <nav class="scope-tabs" aria-label="Search scope" id="paperTabs">
           <button class="scope-tab active" type="button" data-panel-jump="papers" data-i18n="tabPapers">Papers</button>
           <button class="scope-tab" type="button" data-panel-jump="topics" data-i18n="tabTopics">Topics</button>
           <button class="scope-tab" type="button" data-panel-jump="geo" data-i18n="tabGeo">Geo</button>
           <button class="scope-tab" type="button" data-panel-jump="authors" data-i18n="tabAuthors">Authors</button>
           <button class="scope-tab" type="button" data-panel-jump="institutions" data-i18n="tabInstitutions">Institutions</button>
+        </nav>
+        <nav class="scope-tabs" aria-label="Mentor scope" id="mentorTabs" hidden>
+          <button class="scope-tab active" type="button" data-panel-jump="mentor-institutions" data-i18n="tabMentorInstitutions">By Institution</button>
         </nav>
         <div class="topic-chips" id="topicChips"></div>
         <div class="view-switch" aria-label="Result view">
@@ -100,7 +108,7 @@
       <section class="command-strip" id="commandStrip" aria-label="Workspace status"></section>
 
       <div class="app-layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
         <div class="panel-title">
           <strong data-i18n="filters">Filters</strong>
           <button class="text-link" id="resetFilters" type="button" data-i18n="reset">Reset</button>
@@ -211,6 +219,14 @@
           <div class="method" id="methodology"></div>
           <div class="leaderboard" id="professors"></div>
           <div class="leaderboard" id="institutions"></div>
+        </details>
+        <details class="inspector" id="discussionPanel">
+          <summary data-i18n="paperDiscussion">Paper Discussion</summary>
+          <div class="discussion-box" id="discussionBox"></div>
+        </details>
+        <details class="inspector" id="reviewPanel">
+          <summary data-i18n="mentorReviews">Mentor Reviews</summary>
+          <div class="review-box" id="reviewBox"></div>
         </details>
       </aside>
       <button class="detail-collapse" id="detailCollapse" type="button" aria-label="Expand detail">&lt;</button>

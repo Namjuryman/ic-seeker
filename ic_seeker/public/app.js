@@ -33,7 +33,13 @@ const state = {
   view: 'comfort',
   page: 1,
   limit: 30,
-  total: 0
+  total: 0,
+  mentorInstitutionLimit: 80,
+  mentorInstitutionQuery: '',
+  mentorInstitutionRegion: '',
+  mentorInstitutionMinPapers: 2,
+  mentorInstitutionQsOnly: false,
+  mentorInstitutionCache: null
 };
 
 const i18n = {
@@ -43,10 +49,11 @@ const i18n = {
     navGeo: 'Geo Intelligence',
     navAuthors: 'Scholars',
     navInstitutions: 'Institutions',
+    navMentors: 'Mentor Reviews',
     navSources: 'Data Sources',
     navPdfs: 'Local PDFs',
-    navPrivate: 'Private IC intelligence',
-    tagline: 'IC paper, scholar, and institution intelligence',
+    navPrivate: 'IC Research Intelligence Platform',
+    tagline: 'Research intelligence for the semiconductor era.',
     scopeAll: 'All',
     scopePapers: 'Papers',
     scopeAuthors: 'Authors',
@@ -179,17 +186,45 @@ const i18n = {
     copyIeee: 'Copy IEEE',
     copyApa: 'Copy APA',
     copyBibtex: 'Copy BibTeX',
-    copied: 'Copied.'
+    copied: 'Copied.',
+    sectionPapers: 'Papers',
+    sectionMentors: 'Mentors',
+    tabMentorInstitutions: 'By Institution',
+    tabMentorRankings: 'QS Rankings',
+    selectInstitution: 'Select an institution to view mentors',
+    selectMentor: 'Select a mentor to view academic profile and reviews',
+    institutionQsRank: 'QS World Rank',
+    institutionRegionRank: 'QS Region Rank',
+    institutionMentors: 'IC Mentors',
+    institutionPapers: 'IC Papers',
+    mentorPapers: 'Papers',
+    mentorScore: 'Academic Score',
+    mentorDomains: 'Research Domains',
+    mentorSPlus: 'S+ Papers',
+    mentorInstitutions: 'Affiliations',
+    backToInstitutions: 'Back to institutions',
+    backToMentors: 'Back to mentors',
+    writeReview: 'Write Review',
+    submitReview: 'Submit Review',
+    reviewAlias: 'Your alias',
+    reviewRelationship: 'Your role',
+    reviewStrengths: 'Strengths / Highlights',
+    reviewCautions: 'Cautions / Weaknesses',
+    reviewFit: 'What kind of student fits?',
+    mentorDisclaimer: 'Reviews are anonymous and moderated. Please be factual and avoid personal attacks.',
+    insufficientData: 'Insufficient data',
+    broadDistribution: 'Broad distribution only'
   },
   zh: {
     navSearch: '学术搜索',
     navTopics: '方向洞察',
     navAuthors: '学者画像',
     navInstitutions: '机构实力',
+    navMentors: '导师评价',
     navSources: '数据来源',
     navPdfs: '本地 PDF',
-    navPrivate: '私人 IC 情报库',
-    tagline: 'IC 论文、学者与机构知识库',
+    navPrivate: 'IC 科研情报平台',
+    tagline: '半导体时代的科研情报平台',
     scopeAll: '全部',
     scopePapers: '论文',
     scopeAuthors: '作者',
@@ -306,7 +341,69 @@ const i18n = {
     topicTrend: '年度趋势',
     openTopic: '打开方向',
     topicSummaryText: '{field} 目前收录 {papers} 篇论文，峰值年份 {peakYear}，S+ 占比 {splus}%。',
-    setAsSearch: '搜索该方向'
+    setAsSearch: '搜索该方向',
+    copied: '已复制',
+    navPrinciples: '产品原则',
+    tabPrinciples: '原则',
+    paperDiscussion: '论文讨论',
+    mentorReviews: '导师评价',
+    addComment: '发表评论',
+    commentType: '评论类型',
+    submitComment: '提交',
+    noComments: '暂无评论。来做第一个讨论者吧。',
+    reviewDisclaimer: '评分为基于元数据的研究发现指标，不代表对学术质量的最终判断。',
+    mentorDisclaimer: '评价为匿名发布，经审核后展示。请基于事实、避免人身攻击。',
+    insufficientData: '数据不足',
+    broadDistribution: '仅展示分布概况',
+    writeReview: '写评价',
+    submitReview: '提交评价',
+    reviewAlias: '你的昵称',
+    reviewRelationship: '你的身份',
+    reviewStrengths: '导师优点 / 闪光点',
+    reviewCautions: '需要注意 / 不足',
+    reviewFit: '适合什么样的学生？',
+    principlesTitle: 'SiliconScope 产品原则',
+    principle1: '构建情报，而非仅搜索。',
+    principle2: '销售结构化洞察，而非八卦。',
+    principle3: '评论论文内容，不攻击作者个人。',
+    principle4: '保护处于权力不平衡中的评价者。',
+    principle5: '信任需要时验证用户。',
+    principle6: '避免黑名单和人身攻击。',
+    principle7: '数据不完整时展示不确定性。',
+    principle8: '保留来源出处。',
+    principle9: '不重新分发受版权保护的 PDF。',
+    principle10: '让排名可解释且有限度。',
+    principleKey: '论文讨论需要公开责任。导师评价需要验证匿名。',
+    subtopics: '子方向',
+    relatedPapers: '相关论文',
+    noRelated: '未找到相关论文。',
+    sectionPapers: '论文',
+    sectionMentors: '导师/机构',
+    tabMentorInstitutions: '按机构',
+    tabMentorRankings: 'QS 排名',
+    selectInstitution: '选择一个学校/机构查看导师列表',
+    selectMentor: '选择一个导师查看学术实力和评价',
+    institutionQsRank: 'QS 世界排名',
+    institutionRegionRank: 'QS 地区排名',
+    institutionMentors: 'IC 导师数',
+    institutionPapers: 'IC 论文数',
+    mentorPapers: '论文',
+    mentorScore: '学术评分',
+    mentorDomains: '研究方向',
+    mentorSPlus: 'S+ 论文',
+    mentorInstitutions: '所属机构',
+    backToInstitutions: '返回机构列表',
+    backToMentors: '返回导师列表',
+    writeReview: '写评价',
+    submitReview: '提交评价',
+    reviewAlias: '你的昵称',
+    reviewRelationship: '你的身份',
+    reviewStrengths: '导师优点 / 闪光点',
+    reviewCautions: '需要注意 / 不足',
+    reviewFit: '适合什么样的学生？',
+    mentorDisclaimer: '评价为匿名发布，经审核后展示。请基于事实、避免人身攻击。',
+    insufficientData: '数据不足',
+    broadDistribution: '仅展示分布概况'
   }
 };
 
@@ -324,6 +421,19 @@ const quickTopics = [
   ['SRAM', 'sram'],
   ['Bandgap', 'bandgap']
 ];
+
+const topicHierarchy = {
+  'Power Management': ['LDO', 'DC-DC', 'buck converter', 'boost converter', 'switched-capacitor converter', 'charge pump'],
+  'Data Converters': ['SAR ADC', 'pipeline ADC', 'sigma-delta ADC', 'DAC'],
+  'Clocking': ['PLL', 'DLL', 'CDR', 'oscillator'],
+  'RF/Wireless': ['LNA', 'Mixer', 'PA', 'Transceiver', 'mmWave'],
+  'Memory/Compute': ['SRAM', 'DRAM', 'Compute-in-Memory', 'Accelerator'],
+  'Wireline': ['SerDes', 'CDR', 'Equalizer', 'NRZ/PAM4'],
+  'EDA/Digital': ['FPGA', 'Placement', 'Routing', 'Verification'],
+  'Biomedical/Sensor': ['Biosensor', 'Neural Interface', 'Imaging'],
+  'Security/Reliability': ['PUF', 'Side-channel', ' Aging'],
+  'General IC': []
+};
 
 const $ = id => document.getElementById(id);
 
@@ -497,7 +607,10 @@ function routeUrl(route) {
     topics: new Set(['field']),
     geo: new Set(['field', 'mode', 'country']),
     paper: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page', 'id']),
-    papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page'])
+    papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page']),
+    'mentor-institutions': new Set([]),
+    'mentor-institution': new Set(['name']),
+    'mentor-profile': new Set(['name'])
   };
   const allowed = allowedKeys[view] || allowedKeys.papers;
   for (const [key, value] of Object.entries(route)) {
@@ -577,11 +690,16 @@ function openPanelTarget(target) {
     renderRankings('authors');
   } else if (target === 'institutions') {
     renderRankings('institutions');
+  } else if (target === 'mentor-institutions') {
+    switchSection('mentors');
+  } else if (target === 'mentor-rankings') {
+    switchSection('mentors');
   } else if (target === 'sources') {
     $('sourceStatus').scrollIntoView({ block: 'start', behavior: 'smooth' });
   } else if (target === 'pdfs') {
     $('pdfInbox').scrollIntoView({ block: 'start', behavior: 'smooth' });
   } else {
+    switchSection('papers');
     searchFirstPage();
     $('results').scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
@@ -606,6 +724,14 @@ async function restoreRoute(route = history.state || routeFromLocation()) {
     } else if (view === 'geo') {
       setActivePanel('geo');
       await renderGeo(route.field || '', { history: 'skip', mode: route.mode || '', country: route.country || '' });
+    } else if (view === 'mentor-institutions') {
+      await switchSection('mentors', { history: 'skip' });
+    } else if (view === 'mentor-institution' && route.name) {
+      await switchSection('mentors', { renderDefault: false });
+      await renderMentorByInstitution(route.name, { history: 'skip' });
+    } else if (view === 'mentor-profile' && route.name) {
+      await switchSection('mentors', { renderDefault: false });
+      await loadMentorProfile(route.name, { history: 'skip' });
     } else {
       setActivePanel('papers');
       applySearchRoute(route || {});
@@ -643,6 +769,10 @@ function renderEmptyDetail() {
       openPanelTarget(action === 'search' ? 'papers' : action);
     });
   });
+  const discussionBox = $('discussionBox');
+  if (discussionBox) discussionBox.innerHTML = '<p class="hint">Select a paper to view discussion.</p>';
+  const reviewBox = $('reviewBox');
+  if (reviewBox) reviewBox.innerHTML = '<p class="hint">Select a scholar to view reviews.</p>';
   applyDetailState();
 }
 
@@ -661,7 +791,7 @@ async function loadStats() {
   state.apiKeys = apiKeys;
   state.professors = professors;
   state.institutions = institutions;
-  $('appTitle').textContent = stats.appName || 'IC Seeker';
+  $('appTitle').textContent = stats.appName || 'SiliconScope';
   optionList($('venue'), state.stats.venues, state.language === 'zh' ? '全部' : 'All');
   optionList($('field'), state.stats.fields, state.language === 'zh' ? '全部' : 'All');
   optionList($('rank'), state.stats.ranks, state.language === 'zh' ? '全部' : 'All');
@@ -1230,10 +1360,12 @@ async function loadAuthor(name, options = {}) {
           <div class="profile-tags">
             <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
             <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.authorScore)}</span>
+            ${profile.qs ? `<span class="qs-badge">${escapeHtml(profile.qs?.name || profile.primaryInstitution)} QS ${profile.qs?.qs_world_rank || 'N/A'}</span>` : ''}
           </div>
           <div class="actions">
             <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
             <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
+            <button class="button primary" id="writeReviewBtn" type="button">${escapeHtml(t('writeReview'))}</button>
           </div>
         </div>
       </div>
@@ -1256,6 +1388,14 @@ async function loadAuthor(name, options = {}) {
     </section>
   `;
   bindProfileLinks();
+  renderMentorReviews(name);
+  $('writeReviewBtn')?.addEventListener('click', () => {
+    const reviewPanel = $('reviewPanel');
+    if (reviewPanel) {
+      reviewPanel.open = true;
+      reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 }
 
 async function loadInstitution(name, options = {}) {
@@ -1280,12 +1420,14 @@ async function loadInstitution(name, options = {}) {
           <div class="profile-tags">
             <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
             <span>S+ ${fmt(profile.ranks.sPlus)} / S ${fmt(profile.ranks.s)} / A ${fmt(profile.ranks.a)}</span>
+            ${profile.qs ? `<span class="qs-badge">QS World ${profile.qs.qs_world_rank}</span>` : ''}
           </div>
         </div>
         <div class="profile-score">
           <span>${escapeHtml(t('sortScore'))}</span>
           <strong>${escapeHtml(profile.institutionScore)}</strong>
           <em>${escapeHtml(t('summaryTopField'))}: ${escapeHtml(profile.byDomain?.[0]?.key || '-')}</em>
+          ${profile.qs ? `<em style="margin-top:4px">${escapeHtml(profile.qs.region)} Rank: ${profile.qs.qs_region_rank}</em>` : ''}
         </div>
       </div>
       <section class="profile-analytics">
@@ -1363,6 +1505,15 @@ function renderTopicCards(topics, selectedField) {
       <span>${fmt(topic.papers)} ${escapeHtml(t('summaryPapers'))}</span>
       <em>S+ ${fmt(topic.sPlus)} · ${topic.firstYear}-${topic.lastYear}</em>
     </button>`).join('')}
+  </div>`;
+}
+
+function renderSubtopics(field) {
+  const subs = topicHierarchy[field] || [];
+  if (!subs.length) return '';
+  return `<div class="subtopic-bar">
+    <strong>${escapeHtml(t('subtopics'))}:</strong>
+    ${subs.map(sub => `<button class="chip" type="button" data-subtopic="${escapeHtml(sub)}">${escapeHtml(sub)}</button>`).join('')}
   </div>`;
 }
 
@@ -1692,6 +1843,7 @@ async function renderTopics(field = '', options = {}) {
         <button class="button primary" type="button" id="topicSearch">${escapeHtml(t('setAsSearch'))}</button>
       </div>
       ${renderTopicCards(topics, selectedField)}
+      ${renderSubtopics(selectedField)}
       <section class="profile-grid wide-profile-grid">
         <div class="metric"><span>${escapeHtml(t('summaryPapers'))}</span><strong>${fmt(detail.papers)}</strong></div>
         <div class="metric"><span>${escapeHtml(t('sortScore'))}</span><strong>${escapeHtml(detail.avgScore)}</strong></div>
@@ -1722,6 +1874,12 @@ async function renderTopics(field = '', options = {}) {
     $('semantic').checked = true;
     searchFirstPage();
   });
+  document.querySelectorAll('[data-subtopic]').forEach(el => el.addEventListener('click', () => {
+    $('q').value = el.dataset.subtopic;
+    $('field').value = selectedField;
+    $('semantic').checked = true;
+    searchFirstPage();
+  }));
   bindProfileLinks();
 }
 
@@ -1729,7 +1887,7 @@ async function search(options = {}) {
   state.currentView = 'papers';
   setActivePanel('papers');
   if (options.history !== 'skip') writeRoute(currentSearchRoute(), options.history || 'replace');
-  $('results').innerHTML = '<div class="loading">Searching local database...</div>';
+  $('results').innerHTML = '<div class="loading">Searching SiliconScope database...</div>';
   const data = await api(`/api/search?${params().toString()}`);
   state.rows = data.rows;
   state.total = data.total;
@@ -1951,6 +2109,7 @@ async function loadPaper(id, options = {}) {
   $('savePaperState').addEventListener('click', savePaperState);
   bindCitationCopy(paper);
   bindProfileLinks();
+  renderPaperDiscussion(id);
 }
 
 async function savePaperState() {
@@ -1969,6 +2128,136 @@ async function savePaperState() {
   $('paperStateMsg').textContent = 'Saved.';
   await loadStats();
   if (state.currentView === 'papers') await search({ history: 'skip' });
+}
+
+async function renderPaperDiscussion(paperId) {
+  const box = $('discussionBox');
+  if (!box) return;
+  try {
+    const comments = await api(`/api/papers/${paperId}/comments`);
+    const commentTypes = ['Question', 'Technical Note', 'Reproduction Note', 'Related Work', 'Correction', 'Reading Summary'];
+    box.innerHTML = `
+      <div class="discussion-list">
+        ${comments.length ? comments.map(c => `
+          <div class="discussion-item">
+            <div class="discussion-meta">
+              <strong>${escapeHtml(c.displayName)}</strong>
+              ${c.verified ? '<span class="badge verified">Verified</span>' : '<span class="badge">Unverified</span>'}
+              <span class="pill">${escapeHtml(c.comment_type)}</span>
+              <em>${escapeHtml(c.created_at?.slice(0, 10) || '')}</em>
+            </div>
+            <p>${escapeHtml(c.body)}</p>
+          </div>
+        `).join('') : `<p class="hint">${escapeHtml(t('noComments'))}</p>`}
+      </div>
+      <div class="discussion-form">
+        <label class="field">
+          <span>${escapeHtml(t('commentType'))}</span>
+          <select id="commentType">
+            ${commentTypes.map(type => `<option>${escapeHtml(type)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('addComment'))}</span>
+          <textarea id="commentBody" placeholder="Discuss methodology, ask questions, or share reproduction notes..."></textarea>
+        </label>
+        <button class="button" id="submitComment" type="button">${escapeHtml(t('submitComment'))}</button>
+        <p class="hint">${escapeHtml(t('reviewDisclaimer'))}</p>
+      </div>
+    `;
+    $('submitComment')?.addEventListener('click', async () => {
+      const body = $('commentBody').value.trim();
+      if (!body) return;
+      await api(`/api/papers/${paperId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ commentType: $('commentType').value, body })
+      });
+      await renderPaperDiscussion(paperId);
+    });
+  } catch (err) {
+    box.innerHTML = `<p class="hint">Discussion loading failed: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+async function renderMentorReviews(authorName) {
+  const box = $('reviewBox');
+  if (!box) return;
+  try {
+    const data = await api(`/api/authors/${encodeURIComponent(authorName)}/reviews`);
+    const { reviews, stats } = data;
+    const threshold = stats.total < 3 ? 'insufficient' : stats.total < 5 ? 'broad' : 'full';
+    const relationshipTypes = ['Former Student', 'Current Student', 'Collaborator', 'External Reviewer'];
+    box.innerHTML = `
+      <div class="review-stats">
+        <div class="metric"><span>Reviews</span><strong>${fmt(stats.total)}</strong></div>
+        <div class="metric"><span>Verified</span><strong>${fmt(stats.verified)}</strong></div>
+      </div>
+      <div class="review-threshold">
+        ${threshold === 'insufficient' ? `<p class="hint">${escapeHtml(t('insufficientData'))}</p>` : ''}
+        ${threshold === 'broad' ? `<p class="hint">${escapeHtml(t('broadDistribution'))}</p>` : ''}
+      </div>
+      <div class="review-list">
+        ${reviews.map(r => `
+          <div class="review-item">
+            <div class="review-meta">
+              <strong>${escapeHtml(r.public_alias)}</strong>
+              <span class="pill">${escapeHtml(r.relationship_type || 'Reviewer')}</span>
+              <em>${escapeHtml(r.created_at?.slice(0, 10) || '')}</em>
+            </div>
+            ${r.scores && Object.keys(r.scores).length ? `
+              <div class="review-scores">
+                ${Object.entries(r.scores).map(([k, v]) => `<span><em>${escapeHtml(k)}</em><strong>${escapeHtml(v)}</strong></span>`).join('')}
+              </div>
+            ` : ''}
+            ${r.strengths_text ? `<p><strong>Strengths:</strong> ${escapeHtml(r.strengths_text)}</p>` : ''}
+            ${r.cautions_text ? `<p><strong>Cautions:</strong> ${escapeHtml(r.cautions_text)}</p>` : ''}
+            ${r.fit_text ? `<p><strong>Fit:</strong> ${escapeHtml(r.fit_text)}</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="review-form">
+        <label class="field">
+          <span>${escapeHtml(t('reviewAlias'))}</span>
+          <input id="reviewAlias" type="text" placeholder="Verified Reviewer" value="Verified Reviewer">
+        </label>
+        <label class="field">
+          <span>${escapeHtml(t('reviewRelationship'))}</span>
+          <select id="reviewRelationship">
+            ${relationshipTypes.map(type => `<option>${escapeHtml(type)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewStrengths'))}</span>
+          <textarea id="reviewStrengths" placeholder="导师的学术优势、指导风格亮点、资源支持等..."></textarea>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewCautions'))}</span>
+          <textarea id="reviewCautions" placeholder="可能需要注意的地方，如指导频率、性格特点、毕业要求等..."></textarea>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewFit'))}</span>
+          <textarea id="reviewFit" placeholder="适合什么样的学生？例如：自主性强的学生、需要手把手指导的学生、偏工程还是偏理论..."></textarea>
+        </label>
+        <button class="button primary" id="submitReview" type="button">${escapeHtml(t('submitReview'))}</button>
+        <p class="hint">${escapeHtml(t('mentorDisclaimer'))}</p>
+      </div>
+    `;
+    $('submitReview')?.addEventListener('click', async () => {
+      const publicAlias = $('reviewAlias').value.trim() || 'Verified Reviewer';
+      const relationshipType = $('reviewRelationship').value;
+      const strengthsText = $('reviewStrengths').value.trim();
+      const cautionsText = $('reviewCautions').value.trim();
+      const fitText = $('reviewFit').value.trim();
+      if (!strengthsText && !cautionsText && !fitText) return;
+      await api(`/api/authors/${encodeURIComponent(authorName)}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ publicAlias, relationshipType, strengthsText, cautionsText, fitText, scores: {} })
+      });
+      await renderMentorReviews(authorName);
+    });
+  } catch (err) {
+    box.innerHTML = `<p class="hint">Reviews loading failed: ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 async function importDoi() {
@@ -2101,6 +2390,11 @@ async function bootApp() {
       openPanelTarget(button.dataset.panelJump);
     });
   });
+  document.querySelectorAll('.section-tab').forEach(button => {
+    button.addEventListener('click', () => {
+      switchSection(button.dataset.section);
+    });
+  });
   if (!state.routeListenerBound) {
     window.addEventListener('popstate', event => {
       restoreRoute(event.state || routeFromLocation()).catch(err => {
@@ -2129,7 +2423,7 @@ function setView(view) {
 async function main() {
   const auth = await api('/api/auth/status');
   state.authEnabled = Boolean(auth.authEnabled);
-  $('loginTitle').textContent = auth.appName || 'IC Seeker Private';
+  $('loginTitle').textContent = auth.appName || 'SiliconScope';
   applyLanguage();
   if (!state.authEnabled || auth.authenticated) {
     await bootApp();
@@ -2155,3 +2449,697 @@ main().catch(err => {
     $('results').innerHTML = `<div class="empty">${escapeHtml(err.message)}</div>`;
   }
 });
+async function switchSection(section, options = {}) {
+  state.activeSection = section;
+  document.body.classList.toggle('mentor-section', section === 'mentors');
+  document.querySelectorAll('.section-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.section === section);
+  });
+  const paperTabs = $('paperTabs');
+  const mentorTabs = $('mentorTabs');
+  if (paperTabs) paperTabs.hidden = section !== 'papers';
+  if (mentorTabs) mentorTabs.hidden = section !== 'mentors';
+  if (section === 'mentors') {
+    $('sidebar').hidden = true;
+    if (options.renderDefault !== false) await renderMentorInstitutions(options);
+  } else {
+    document.body.classList.remove('mentor-section');
+    $('sidebar').hidden = false;
+    await searchFirstPage({ history: 'replace' });
+  }
+}
+
+async function renderMentorInstitutionsLegacy(options = {}) {
+  state.currentView = 'mentor-institutions';
+  if (options.history !== 'skip') writeRoute({ view: 'mentor-institutions' }, options.history || 'push');
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading institutions...</div>';
+  $('detail').innerHTML = `
+    <div class="empty detail-empty">
+      <strong>${escapeHtml(t('selectMentor'))}</strong>
+    </div>`;
+  try {
+    if (!state.mentorInstitutionCache) {
+      state.mentorInstitutionCache = await api('/api/mentor/institutions');
+    }
+    const institutions = state.mentorInstitutionCache;
+    const query = String(state.mentorInstitutionQuery || '').trim().toLowerCase();
+    const filteredInstitutions = query
+      ? institutions.filter(inst => [inst.name, inst.qs?.name, inst.qs?.region].join(' ').toLowerCase().includes(query))
+      : institutions;
+    const visibleInstitutions = filteredInstitutions.slice(0, state.mentorInstitutionLimit);
+    $('results').innerHTML = `
+      <section class="mentor-institutions-page">
+        <div class="ranking-head">
+          <h2>${escapeHtml(state.language === 'zh' ? 'IC 导师机构索引' : 'IC Mentor Institutions')}</h2>
+          <p>${escapeHtml(state.language === 'zh' ? '按 QS 世界排名和 IC 论文数量排序。点击查看导师列表。' : 'Sorted by QS world rank and IC paper volume. Click to view mentors.')}</p>
+        </div>
+        <div class="mentor-index-toolbar">
+          <label class="mentor-index-search">
+            <span>${escapeHtml(state.language === 'zh' ? '搜索机构' : 'Search institution')}</span>
+            <input id="mentorInstitutionSearch" type="search" value="${escapeHtml(state.mentorInstitutionQuery)}" placeholder="MIT, Tsinghua, HKUST...">
+          </label>
+          <div class="mentor-index-count">
+            ${escapeHtml(state.language === 'zh'
+              ? `显示 ${fmt(visibleInstitutions.length)} / ${fmt(filteredInstitutions.length)} 个机构，共 ${fmt(institutions.length)} 个`
+              : `Showing ${fmt(visibleInstitutions.length)} / ${fmt(filteredInstitutions.length)} of ${fmt(institutions.length)}`)}
+          </div>
+        </div>
+        <div class="institution-grid">
+          ${visibleInstitutions.map(inst => `
+            <button class="institution-card" type="button" data-institution="${escapeHtml(inst.name)}">
+              <div class="institution-card-header">
+                <span class="institution-name">${escapeHtml(inst.name)}</span>
+                ${inst.qs ? `<span class="qs-badge" title="QS World ${inst.qs.qs_world_rank}">QS ${inst.qs.qs_world_rank}</span>` : ''}
+              </div>
+              <div class="institution-card-body">
+                <div class="metric"><span>${escapeHtml(t('institutionMentors'))}</span><strong>${fmt(inst.mentorCount)}</strong></div>
+                <div class="metric"><span>${escapeHtml(t('institutionPapers'))}</span><strong>${fmt(inst.papers)}</strong></div>
+                <div class="metric"><span>${escapeHtml(t('mentorScore'))}</span><strong>${escapeHtml(inst.institutionScore)}</strong></div>
+                ${inst.qs ? `<div class="metric"><span>${escapeHtml(t('institutionRegionRank'))}</span><strong>${escapeHtml(inst.qs.region)} ${inst.qs.qs_region_rank}</strong></div>` : ''}
+              </div>
+              <div class="institution-card-footer">
+                <span>S+ ${fmt(inst.sPlus)}</span> · <span>S ${fmt(inst.s)}</span> · <span>A ${fmt(inst.a)}</span>
+              </div>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+    `;
+    document.querySelectorAll('[data-institution]').forEach(el => {
+      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institution));
+    });
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load institutions: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function renderMentorByInstitutionLegacy(name) {
+  if (!name) return;
+  state.currentView = 'mentor-institution';
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading mentors...</div>';
+  $('detail').innerHTML = `
+    <div class="empty detail-empty">
+      <strong>${escapeHtml(t('selectMentor'))}</strong>
+    </div>`;
+  try {
+    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}`);
+    $('results').innerHTML = `
+      <section class="mentor-list-page">
+        <div class="ranking-head">
+          <h2>${escapeHtml(data.institution)}</h2>
+          <div class="institution-qs-bar">
+            ${data.qs ? `
+              <span class="qs-badge large">QS World ${data.qs.qs_world_rank}</span>
+              <span class="qs-badge">${escapeHtml(data.qs.region)} ${data.qs.qs_region_rank}</span>
+            ` : '<span class="qs-badge">QS N/A</span>'}
+            <span class="pill">${fmt(data.mentors.length)} ${escapeHtml(t('institutionMentors'))}</span>
+          </div>
+          <div class="topic-subcategory-bar">
+            ${data.domains.slice(0, 8).map(d => `<span class="chip">${escapeHtml(d.key)} (${d.count})</span>`).join('')}
+          </div>
+          <button class="button" id="backToInstitutions" type="button">${escapeHtml(t('backToInstitutions'))}</button>
+        </div>
+        <div class="ranking-list">
+          ${data.mentors.map((m, index) => `
+            <button class="ranking-card mentor-ranking-card" type="button" data-mentor="${escapeHtml(m.name)}">
+              <span class="rank-no">${index + 1}</span>
+              <span class="rank-avatar">${escapeHtml(initials(m.name))}</span>
+              <span class="rank-body">
+                <strong>${escapeHtml(m.name)}</strong>
+                <em>${fmt(m.papers)} ${escapeHtml(t('mentorPapers'))} · S+ ${fmt(m.sPlus)} · Score ${escapeHtml(m.authorScore)}</em>
+              </span>
+              <span class="rank-score">${escapeHtml(m.authorScore)}</span>
+            </button>
+          `).join('')}
+        </div>
+      </section>
+    `;
+    $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
+    document.querySelectorAll('[data-mentor]').forEach(el => {
+      el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
+    });
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load mentors: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function loadMentorProfileLegacy(name) {
+  if (!name) return;
+  state.currentView = 'mentor-profile';
+  state.detailCollapsed = false;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading mentor profile...</div>';
+  try {
+    const profile = await api(`/api/mentor/authors/${encodeURIComponent(name)}`);
+    const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : 0);
+    const strength = yearlySeriesFromPapers(profile.papers, 'score');
+    const activity = yearlySeriesFromPapers(profile.papers, 'count');
+    const domains = profile.byDomain?.slice(0, 6) || [];
+    const { reviews, reviewStats } = profile;
+    const threshold = (reviewStats?.total || 0) < 3 ? 'insufficient' : (reviewStats?.total || 0) < 5 ? 'broad' : 'full';
+    $('results').innerHTML = `
+      <section class="scholar-profile">
+        <div class="profile-hero compact-profile-hero">
+          ${renderPhotoPlaceholder()}
+          <div class="profile-main">
+            <p class="profile-kicker">${escapeHtml(t('profileSummary'))}</p>
+            <h2>${escapeHtml(profile.name)}</h2>
+            <div class="profile-tags">
+              <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+              <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.authorScore)}</span>
+              ${profile.qs ? `<span class="qs-badge">${escapeHtml(profile.qs?.name || profile.primaryInstitution)} QS ${profile.qs?.qs_world_rank || 'N/A'}</span>` : ''}
+            </div>
+            <div class="actions">
+              <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
+              <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
+              <button class="button primary" id="writeReviewBtn" type="button">${escapeHtml(t('writeReview'))}</button>
+            </div>
+          </div>
+        </div>
+        <div class="profile-domain-bar">
+          ${domains.map(d => `<span class="chip">${escapeHtml(d.key)} (${d.count})</span>`).join('')}
+        </div>
+        ${renderProfileSummary(profile, paperCount)}
+        ${renderSparkBars(strength, t('careerStrength'), 'line')}
+        ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('rankDistribution'))}</h3>
+          ${renderRankDonut(profile.ranks)}
+        </section>
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('collaboratorNetwork'))}</h3>
+          ${renderClickableMiniBars(profile.coauthors.slice(0, 16), 'papers', 'author')}
+        </section>
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('institutionHistory'))}</h3>
+          <div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div>
+        </section>
+
+        <section class="profile-side-panel" style="border-color:var(--accent);background:var(--accent-soft)">
+          <h3>📝 ${escapeHtml(t('mentorReviews'))}</h3>
+          <div class="review-stats" style="margin-bottom:12px">
+            <div class="metric"><span>Reviews</span><strong>${fmt(reviewStats?.total || 0)}</strong></div>
+            <div class="metric"><span>Verified</span><strong>${fmt(reviewStats?.verified || 0)}</strong></div>
+          </div>
+          ${threshold === 'insufficient' ? `<p class="hint">${escapeHtml(t('insufficientData'))}</p>` : ''}
+          ${threshold === 'broad' ? `<p class="hint">${escapeHtml(t('broadDistribution'))}</p>` : ''}
+          <div class="review-list" style="margin-bottom:0">
+            ${(reviews || []).map(r => `
+              <div class="review-item">
+                <div class="review-meta">
+                  <strong>${escapeHtml(r.public_alias)}</strong>
+                  <span class="pill">${escapeHtml(r.relationship_type || 'Reviewer')}</span>
+                  <em>${escapeHtml(r.created_at?.slice(0, 10) || '')}</em>
+                </div>
+                ${r.scores && Object.keys(r.scores).length ? `
+                  <div class="review-scores">
+                    ${Object.entries(r.scores).map(([k, v]) => `<span><em>${escapeHtml(k)}</em><strong>${escapeHtml(v)}</strong></span>`).join('')}
+                  </div>
+                ` : ''}
+                ${r.strengths_text ? `<p><strong>Strengths:</strong> ${escapeHtml(r.strengths_text)}</p>` : ''}
+                ${r.cautions_text ? `<p><strong>Cautions:</strong> ${escapeHtml(r.cautions_text)}</p>` : ''}
+                ${r.fit_text ? `<p><strong>Fit:</strong> ${escapeHtml(r.fit_text)}</p>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          ${(reviews || []).length === 0 ? `<p class="hint">${escapeHtml(t('noComments').replace('讨论', '评价'))}</p>` : ''}
+        </section>
+
+        <details class="profile-side-panel" style="cursor:pointer">
+          <summary><strong>${escapeHtml(t('recentPapers'))} (${fmt(paperCount)})</strong></summary>
+          <div style="margin-top:8px">${profilePapers(profile.papers)}</div>
+        </details>
+      </section>
+    `;
+    bindProfileLinks();
+    $('writeReviewBtn')?.addEventListener('click', () => {
+      const reviewPanel = $('reviewPanel');
+      if (reviewPanel) {
+        reviewPanel.open = true;
+        reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load mentor: ${escapeHtml(err.message)}</div>`;
+  }
+  // Render write-review form in right rail
+  const box = $('reviewBox');
+  if (!box) return;
+  try {
+    const relationshipTypes = ['Former Student', 'Current Student', 'Collaborator', 'External Reviewer'];
+    box.innerHTML = `
+      <div class="review-form" style="border-top:none;padding-top:0">
+        <h4 style="margin-bottom:10px;color:var(--accent)">📝 ${escapeHtml(t('writeReview'))}</h4>
+        <label class="field">
+          <span>${escapeHtml(t('reviewAlias'))}</span>
+          <input id="reviewAlias" type="text" placeholder="Verified Reviewer" value="Verified Reviewer">
+        </label>
+        <label class="field">
+          <span>${escapeHtml(t('reviewRelationship'))}</span>
+          <select id="reviewRelationship">
+            ${relationshipTypes.map(type => `<option>${escapeHtml(type)}</option>`).join('')}
+          </select>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewStrengths'))}</span>
+          <textarea id="reviewStrengths" placeholder="导师的学术优势、指导风格亮点、资源支持等..."></textarea>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewCautions'))}</span>
+          <textarea id="reviewCautions" placeholder="可能需要注意的地方，如指导频率、性格特点、毕业要求等..."></textarea>
+        </label>
+        <label class="field wide">
+          <span>${escapeHtml(t('reviewFit'))}</span>
+          <textarea id="reviewFit" placeholder="适合什么样的学生？例如：自主性强的学生、需要手把手指导的学生、偏工程还是偏理论..."></textarea>
+        </label>
+        <button class="button primary" id="submitReview" type="button">${escapeHtml(t('submitReview'))}</button>
+        <p class="hint">${escapeHtml(t('mentorDisclaimer'))}</p>
+      </div>
+    `;
+    $('submitReview')?.addEventListener('click', async () => {
+      const publicAlias = $('reviewAlias').value.trim() || 'Verified Reviewer';
+      const relationshipType = $('reviewRelationship').value;
+      const strengthsText = $('reviewStrengths').value.trim();
+      const cautionsText = $('reviewCautions').value.trim();
+      const fitText = $('reviewFit').value.trim();
+      if (!strengthsText && !cautionsText && !fitText) return;
+      await api(`/api/authors/${encodeURIComponent(name)}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({ publicAlias, relationshipType, strengthsText, cautionsText, fitText, scores: {} })
+      });
+      await loadMentorProfile(name);
+    });
+  } catch (err) {
+    box.innerHTML = `<p class="hint">Review form failed: ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+function mentorText(zh, en) {
+  return state.language === 'zh' ? zh : en;
+}
+
+function mentorReviewsEmptyText() {
+  return state.language === 'zh' ? '暂无导师评价。' : 'No mentor reviews yet.';
+}
+
+function mentorInstitutionMatches(inst, query) {
+  const matchesQuery = !query || [
+    inst.name,
+    inst.qs?.name,
+    inst.qs?.region,
+    inst.qs?.qs_world_rank ? `qs ${inst.qs.qs_world_rank}` : ''
+  ].join(' ').toLowerCase().includes(query);
+  const matchesRegion = !state.mentorInstitutionRegion || (inst.qs?.region || 'Unknown') === state.mentorInstitutionRegion;
+  const matchesPapers = Number(inst.papers || 0) >= Number(state.mentorInstitutionMinPapers || 0);
+  const matchesQs = !state.mentorInstitutionQsOnly || Boolean(inst.qs?.qs_world_rank);
+  return matchesQuery && matchesRegion && matchesPapers && matchesQs;
+}
+
+function mentorInstitutionRegions(institutions) {
+  return [...new Set(institutions.map(inst => inst.qs?.region || 'Unknown'))]
+    .sort((a, b) => {
+      if (a === 'Unknown') return 1;
+      if (b === 'Unknown') return -1;
+      return a.localeCompare(b);
+    });
+}
+
+function scrollMentorPageTop(options = {}) {
+  if (options.preserveScroll) return;
+  requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0 }));
+}
+
+async function renderMentorInstitutions(options = {}) {
+  state.currentView = 'mentor-institutions';
+  document.body.classList.add('mentor-section');
+  if (options.history !== 'skip') writeRoute({ view: 'mentor-institutions' }, options.history || 'push');
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading institutions...</div>';
+  $('detail').innerHTML = `
+    <div class="empty detail-empty">
+      <strong>${escapeHtml(t('selectInstitution'))}</strong>
+    </div>`;
+  const reviewBox = $('reviewBox');
+  if (reviewBox) reviewBox.innerHTML = `<p class="hint">${escapeHtml(t('selectMentor'))}</p>`;
+
+  try {
+    if (!state.mentorInstitutionCache) {
+      state.mentorInstitutionCache = await api('/api/mentor/institutions');
+    }
+    const institutions = state.mentorInstitutionCache;
+    const query = String(state.mentorInstitutionQuery || '').trim().toLowerCase();
+    const regions = mentorInstitutionRegions(institutions);
+    const filtered = institutions.filter(inst => mentorInstitutionMatches(inst, query));
+    const visible = filtered.slice(0, state.mentorInstitutionLimit);
+
+    $('results').innerHTML = `
+      <section class="mentor-institutions-page">
+        <div class="ranking-head mentor-index-head">
+          <div>
+            <p class="profile-kicker">${escapeHtml(mentorText('导师与机构', 'Mentors and Institutions'))}</p>
+            <h2>${escapeHtml(mentorText('IC 导师机构索引', 'IC Mentor Institution Index'))}</h2>
+            <p>${escapeHtml(mentorText('按 IC 学术实力排序，支持地区、论文规模和 QS 覆盖筛选。首屏只渲染部分卡片，避免大库加载时卡住。', 'Sorted by IC research strength, with region, paper-volume, and QS coverage filters.'))}</p>
+          </div>
+        </div>
+        <div class="mentor-index-toolbar">
+          <label class="mentor-index-search">
+            <span>${escapeHtml(mentorText('搜索机构', 'Search institution'))}</span>
+            <input id="mentorInstitutionSearch" type="search" value="${escapeHtml(state.mentorInstitutionQuery)}" placeholder="MIT, Tsinghua, HKUST...">
+          </label>
+          <label class="mentor-index-filter">
+            <span>${escapeHtml(mentorText('地区', 'Region'))}</span>
+            <select id="mentorInstitutionRegion">
+              <option value="">${escapeHtml(mentorText('全部地区', 'All regions'))}</option>
+              ${regions.map(region => `<option value="${escapeHtml(region)}" ${region === state.mentorInstitutionRegion ? 'selected' : ''}>${escapeHtml(region)}</option>`).join('')}
+            </select>
+          </label>
+          <label class="mentor-index-filter">
+            <span>${escapeHtml(mentorText('最少论文', 'Min papers'))}</span>
+            <select id="mentorInstitutionMinPapers">
+              ${[2, 5, 10, 20, 50, 100].map(value => `<option value="${value}" ${Number(state.mentorInstitutionMinPapers) === value ? 'selected' : ''}>${value}+</option>`).join('')}
+            </select>
+          </label>
+          <label class="mentor-index-check">
+            <input id="mentorInstitutionQsOnly" type="checkbox" ${state.mentorInstitutionQsOnly ? 'checked' : ''}>
+            <span>${escapeHtml(mentorText('仅 QS 覆盖', 'QS only'))}</span>
+          </label>
+          <div class="mentor-index-count">${escapeHtml(mentorText(
+            `显示 ${fmt(visible.length)} / ${fmt(filtered.length)} 个机构，共 ${fmt(institutions.length)} 个`,
+            `Showing ${fmt(visible.length)} / ${fmt(filtered.length)} of ${fmt(institutions.length)}`
+          ))}</div>
+        </div>
+        <div class="institution-grid">
+          ${visible.map(renderMentorInstitutionCard).join('') || `<div class="empty">${escapeHtml(mentorText('没有匹配的机构。', 'No institutions matched.'))}</div>`}
+        </div>
+        <div class="mentor-index-actions">
+          ${filtered.length > visible.length ? `<button class="button" id="loadMoreMentorInstitutions" type="button">${escapeHtml(mentorText('再显示 80 个', 'Show 80 more'))}</button>` : ''}
+        </div>
+      </section>
+    `;
+
+    $('mentorInstitutionSearch')?.addEventListener('input', event => {
+      state.mentorInstitutionQuery = event.target.value;
+      state.mentorInstitutionLimit = 80;
+      renderMentorInstitutions({ history: 'skip' });
+    });
+    $('mentorInstitutionRegion')?.addEventListener('change', event => {
+      state.mentorInstitutionRegion = event.target.value;
+      state.mentorInstitutionLimit = 80;
+      renderMentorInstitutions({ history: 'skip' });
+    });
+    $('mentorInstitutionMinPapers')?.addEventListener('change', event => {
+      state.mentorInstitutionMinPapers = Number(event.target.value || 2);
+      state.mentorInstitutionLimit = 80;
+      renderMentorInstitutions({ history: 'skip' });
+    });
+    $('mentorInstitutionQsOnly')?.addEventListener('change', event => {
+      state.mentorInstitutionQsOnly = event.target.checked;
+      state.mentorInstitutionLimit = 80;
+      renderMentorInstitutions({ history: 'skip' });
+    });
+    $('loadMoreMentorInstitutions')?.addEventListener('click', () => {
+      state.mentorInstitutionLimit += 80;
+      renderMentorInstitutions({ history: 'skip', preserveScroll: true });
+    });
+    document.querySelectorAll('[data-institution]').forEach(el => {
+      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institution));
+    });
+    scrollMentorPageTop(options);
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load institutions: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderMentorInstitutionCard(inst) {
+  return `
+    <button class="institution-card" type="button" data-institution="${escapeHtml(inst.name)}">
+      <div class="institution-card-header">
+        <span class="institution-name">${escapeHtml(inst.name)}</span>
+        ${inst.qs ? `<span class="qs-badge" title="QS World ${inst.qs.qs_world_rank}">QS ${inst.qs.qs_world_rank}</span>` : ''}
+      </div>
+      <div class="institution-card-body">
+        <div class="metric"><span>${escapeHtml(t('institutionMentors'))}</span><strong>${fmt(inst.mentorCount)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('institutionPapers'))}</span><strong>${fmt(inst.papers)}</strong></div>
+        <div class="metric"><span>${escapeHtml(t('mentorScore'))}</span><strong>${escapeHtml(inst.institutionScore)}</strong></div>
+        ${inst.qs ? `<div class="metric"><span>${escapeHtml(t('institutionRegionRank'))}</span><strong>${escapeHtml(inst.qs.region)} ${inst.qs.qs_region_rank}</strong></div>` : ''}
+      </div>
+      <div class="institution-card-footer">
+        <span>S+ ${fmt(inst.sPlus)}</span> · <span>S ${fmt(inst.s)}</span> · <span>A ${fmt(inst.a)}</span>
+      </div>
+    </button>
+  `;
+}
+
+function mentorTrendLabel(trend) {
+  if (trend === 'rising') return mentorText('近年上升', 'Rising');
+  if (trend === 'cooling') return mentorText('近年放缓', 'Cooling');
+  return mentorText('稳定活跃', 'Stable');
+}
+
+function mentorRoleLabel(stage) {
+  if (stage === 'senior-or-leading-faculty') return mentorText('资深导师候选', 'Senior faculty candidate');
+  if (stage === 'faculty-candidate') return mentorText('导师候选', 'Faculty candidate');
+  return mentorText('可能学生/合作者', 'Likely student/collaborator');
+}
+
+async function renderMentorByInstitution(name, options = {}) {
+  if (!name) return;
+  state.currentView = 'mentor-institution';
+  document.body.classList.add('mentor-section');
+  if (options.history !== 'skip') writeRoute({ view: 'mentor-institution', name }, options.history || 'push');
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading mentors...</div>';
+  $('detail').innerHTML = `
+    <div class="empty detail-empty">
+      <strong>${escapeHtml(t('selectMentor'))}</strong>
+    </div>`;
+
+  try {
+    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}`);
+    $('results').innerHTML = `
+      <section class="mentor-list-page">
+        <div class="ranking-head mentor-index-head">
+          <div>
+            <p class="profile-kicker">${escapeHtml(mentorText('机构导师', 'Institution mentors'))}</p>
+            <h2>${escapeHtml(data.institution)}</h2>
+            <div class="institution-qs-bar">
+              ${data.qs ? `
+                <span class="qs-badge large">QS World ${escapeHtml(data.qs.qs_world_rank)}</span>
+                <span class="qs-badge">${escapeHtml(data.qs.region)} ${escapeHtml(data.qs.qs_region_rank)}</span>
+              ` : '<span class="qs-badge">QS N/A</span>'}
+              <span class="pill">${fmt(data.mentorCandidateCount ?? data.mentors.length)} ${escapeHtml(mentorText('导师候选', 'mentor candidates'))}</span>
+              <span class="pill">${escapeHtml(mentorText('已过滤可能学生作者', 'filtered likely students'))} ${fmt(data.excludedLikelyStudentCount || 0)}</span>
+            </div>
+          </div>
+          <button class="button" id="backToInstitutions" type="button">${escapeHtml(t('backToInstitutions'))}</button>
+        </div>
+        <div class="topic-subcategory-bar">
+          ${data.domains.slice(0, 10).map(d => `<span class="chip">${escapeHtml(d.key)} (${fmt(d.count)})</span>`).join('')}
+        </div>
+        <div class="ranking-list">
+          ${data.mentors.map((m, index) => `
+            <button class="ranking-card mentor-ranking-card" type="button" data-mentor="${escapeHtml(m.name)}">
+              <span class="rank-no">${index + 1}</span>
+              <span class="rank-avatar">${escapeHtml(initials(m.name))}</span>
+              <span class="rank-body">
+                <strong>${escapeHtml(m.name)}</strong>
+                <em>${escapeHtml(mentorRoleLabel(m.roleStage))} · ${fmt(m.papers)} ${escapeHtml(t('mentorPapers'))} · S+ ${fmt(m.sPlus)} · Score ${escapeHtml(m.authorScore)} · ${escapeHtml(mentorTrendLabel(m.trend))} · ${escapeHtml(mentorText('近五年', 'recent'))} ${fmt(m.recentPapers || 0)}</em>
+                <em>${escapeHtml(mentorText('推断单位', 'Inferred affiliation'))}: ${escapeHtml(m.primaryInstitution || data.institution)} · ${escapeHtml(mentorText('本机构论文', 'institution papers'))} ${fmt(m.institutionPapers || m.papers)} · ${Math.round(Number(m.institutionShare || 0) * 100)}%</em>
+                <span class="mentor-domain-strip">
+                  ${(m.topDomains || []).map(d => `<span>${escapeHtml(d.key)} · ${fmt(d.count)}</span>`).join('')}
+                </span>
+              </span>
+              <span class="rank-score">${escapeHtml(m.authorScore)}</span>
+            </button>
+          `).join('') || `<div class="empty">${escapeHtml(mentorText('这个机构暂时没有可显示的导师。', 'No mentors are available for this institution.'))}</div>`}
+        </div>
+      </section>
+    `;
+    $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
+    document.querySelectorAll('[data-mentor]').forEach(el => {
+      el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
+    });
+    scrollMentorPageTop(options);
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load mentors: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+async function loadMentorProfile(name, options = {}) {
+  if (!name) return;
+  state.currentView = 'mentor-profile';
+  document.body.classList.add('mentor-section');
+  if (options.history !== 'skip') writeRoute({ view: 'mentor-profile', name }, options.history || 'push');
+  state.detailCollapsed = false;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading mentor profile...</div>';
+
+  try {
+    const profile = await api(`/api/mentor/authors/${encodeURIComponent(name)}`);
+    const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : 0);
+    const strength = yearlySeriesFromPapers(profile.papers, 'score');
+    const activity = yearlySeriesFromPapers(profile.papers, 'count');
+    const domains = profile.byDomain?.slice(0, 8) || [];
+    const reviews = profile.reviews || [];
+    const reviewStats = profile.reviewStats || {};
+    const threshold = (reviewStats.total || 0) < 3 ? 'insufficient' : (reviewStats.total || 0) < 5 ? 'broad' : 'full';
+
+    $('results').innerHTML = `
+      <section class="scholar-profile mentor-profile-page">
+        <div class="profile-hero compact-profile-hero">
+          ${renderPhotoPlaceholder()}
+          <div class="profile-main">
+            <p class="profile-kicker">${escapeHtml(t('profileSummary'))}</p>
+            <h2>${escapeHtml(profile.name)}</h2>
+            <div class="profile-tags">
+              <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+              <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.authorScore)}</span>
+              ${profile.primaryInstitution ? `<span>${escapeHtml(profile.primaryInstitution)}</span>` : ''}
+              ${profile.qs ? `<span class="qs-badge">${escapeHtml(profile.qs?.name || profile.primaryInstitution)} QS ${escapeHtml(profile.qs?.qs_world_rank || 'N/A')}</span>` : ''}
+            </div>
+            <div class="actions">
+              <a class="primary" target="_blank" href="${escapeHtml(profile.external.googleScholar)}">Scholar</a>
+              <a target="_blank" href="${escapeHtml(profile.external.webSearch)}">Web search</a>
+              <button class="button primary" id="writeReviewBtn" type="button">${escapeHtml(t('writeReview'))}</button>
+            </div>
+          </div>
+        </div>
+        <div class="profile-domain-bar">
+          ${domains.map(d => `<span class="chip">${escapeHtml(d.key)} (${fmt(d.count)})</span>`).join('')}
+        </div>
+        ${renderProfileSummary(profile, paperCount)}
+        <div class="mentor-profile-grid">
+          ${renderSparkBars(strength, t('careerStrength'), 'line')}
+          ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
+          <section class="profile-side-panel">
+            <h3>${escapeHtml(t('rankDistribution'))}</h3>
+            ${renderRankDonut(profile.ranks)}
+          </section>
+          <section class="profile-side-panel">
+            <h3>${escapeHtml(t('collaboratorNetwork'))}</h3>
+            ${renderClickableMiniBars(profile.coauthors.slice(0, 16), 'papers', 'author')}
+          </section>
+        </div>
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('institutionHistory'))}</h3>
+          <div class="link-cloud">${tokenLinks(profile.institutions.map(x => x.key).join('; '), 'institution')}</div>
+        </section>
+        <section class="profile-side-panel mentor-review-panel">
+          <h3>${escapeHtml(t('mentorReviews'))}</h3>
+          <div class="review-stats">
+            <div class="metric"><span>Reviews</span><strong>${fmt(reviewStats.total || 0)}</strong></div>
+            <div class="metric"><span>Verified</span><strong>${fmt(reviewStats.verified || 0)}</strong></div>
+          </div>
+          ${threshold === 'insufficient' ? `<p class="hint">${escapeHtml(t('insufficientData'))}</p>` : ''}
+          ${threshold === 'broad' ? `<p class="hint">${escapeHtml(t('broadDistribution'))}</p>` : ''}
+          <div class="review-list">
+            ${reviews.map(renderMentorReview).join('') || `<p class="hint">${escapeHtml(mentorReviewsEmptyText())}</p>`}
+          </div>
+        </section>
+        <details class="profile-side-panel" open>
+          <summary><strong>${escapeHtml(t('recentPapers'))} (${fmt(paperCount)})</strong></summary>
+          <div style="margin-top:8px">${profilePapers(profile.papers)}</div>
+        </details>
+      </section>
+    `;
+    bindProfileLinks();
+    renderMentorReviewForm(name);
+    $('writeReviewBtn')?.addEventListener('click', () => {
+      const reviewPanel = $('reviewPanel');
+      if (reviewPanel) {
+        reviewPanel.open = true;
+        reviewPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+    scrollMentorPageTop(options);
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load mentor: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderMentorReview(review) {
+  return `
+    <div class="review-item">
+      <div class="review-meta">
+        <strong>${escapeHtml(review.public_alias || 'Reviewer')}</strong>
+        <span class="pill">${escapeHtml(review.relationship_type || 'Reviewer')}</span>
+        <em>${escapeHtml(review.created_at?.slice(0, 10) || '')}</em>
+      </div>
+      ${review.strengths_text ? `<p><strong>Strengths:</strong> ${escapeHtml(review.strengths_text)}</p>` : ''}
+      ${review.cautions_text ? `<p><strong>Cautions:</strong> ${escapeHtml(review.cautions_text)}</p>` : ''}
+      ${review.fit_text ? `<p><strong>Fit:</strong> ${escapeHtml(review.fit_text)}</p>` : ''}
+    </div>
+  `;
+}
+
+function renderMentorReviewForm(name) {
+  const box = $('reviewBox');
+  if (!box) return;
+  const relationshipTypes = ['Former Student', 'Current Student', 'Collaborator', 'External Reviewer'];
+  box.innerHTML = `
+    <div class="review-form" style="border-top:none;padding-top:0">
+      <h4 style="margin-bottom:10px;color:var(--accent)">${escapeHtml(t('writeReview'))}</h4>
+      <label class="field">
+        <span>${escapeHtml(t('reviewAlias'))}</span>
+        <input id="reviewAlias" type="text" placeholder="Verified Reviewer" value="Verified Reviewer">
+      </label>
+      <label class="field">
+        <span>${escapeHtml(t('reviewRelationship'))}</span>
+        <select id="reviewRelationship">
+          ${relationshipTypes.map(type => `<option>${escapeHtml(type)}</option>`).join('')}
+        </select>
+      </label>
+      <label class="field wide">
+        <span>${escapeHtml(t('reviewStrengths'))}</span>
+        <textarea id="reviewStrengths" placeholder="${escapeHtml(mentorText('导师的学术优势、指导风格亮点、资源支持等...', 'Academic strengths, advising style, resources...'))}"></textarea>
+      </label>
+      <label class="field wide">
+        <span>${escapeHtml(t('reviewCautions'))}</span>
+        <textarea id="reviewCautions" placeholder="${escapeHtml(mentorText('需要注意的地方，例如指导频率、毕业要求、沟通风格等...', 'Cautions such as advising frequency, graduation expectations, communication style...'))}"></textarea>
+      </label>
+      <label class="field wide">
+        <span>${escapeHtml(t('reviewFit'))}</span>
+        <textarea id="reviewFit" placeholder="${escapeHtml(mentorText('适合什么样的学生？', 'What kind of student is a good fit?'))}"></textarea>
+      </label>
+      <button class="button primary" id="submitReview" type="button">${escapeHtml(t('submitReview'))}</button>
+      <p class="hint">${escapeHtml(t('mentorDisclaimer'))}</p>
+    </div>
+  `;
+  $('submitReview')?.addEventListener('click', async () => {
+    const publicAlias = $('reviewAlias').value.trim() || 'Verified Reviewer';
+    const relationshipType = $('reviewRelationship').value;
+    const strengthsText = $('reviewStrengths').value.trim();
+    const cautionsText = $('reviewCautions').value.trim();
+    const fitText = $('reviewFit').value.trim();
+    if (!strengthsText && !cautionsText && !fitText) return;
+    await api(`/api/authors/${encodeURIComponent(name)}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ publicAlias, relationshipType, strengthsText, cautionsText, fitText, scores: {} })
+    });
+    await loadMentorProfile(name, { history: 'skip' });
+  });
+}

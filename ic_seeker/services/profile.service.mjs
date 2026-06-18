@@ -1,3 +1,15 @@
+function findQsRank(db, institutionName) {
+  const rows = db.prepare('SELECT name, aliases, qs_world_rank, qs_region_rank, region FROM qs_rankings').all();
+  const target = String(institutionName || '').trim().toLowerCase();
+  for (const r of rows) {
+    const names = [r.name, ...r.aliases.split(',')].map(s => s.trim().toLowerCase());
+    if (names.some(n => n === target || target.includes(n) || n.includes(target))) {
+      return { qs_world_rank: r.qs_world_rank, qs_region_rank: r.qs_region_rank, region: r.region };
+    }
+  }
+  return null;
+}
+
 function splitList(value) {
   return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
 }
@@ -106,6 +118,7 @@ export function createProfileService({ openDb }) {
         }
         for (const institution of splitList(row.affiliations)) institutions.set(institution, (institutions.get(institution) || 0) + 1);
       }
+      const primaryInstitution = [...institutions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
       const authorScore = scoreAuthor({
         scoreSum: summary.scoreSum,
         sPlus: summary.ranks.sPlus,
@@ -119,6 +132,8 @@ export function createProfileService({ openDb }) {
         ...summary,
         coauthors: [...coauthors.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 40),
         institutions: [...institutions.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 20),
+        primaryInstitution,
+        qs: findQsRank(db, primaryInstitution),
         external: {
           googleScholar: `https://scholar.google.com/scholar?q=${encodeURIComponent(name)}`,
           webSearch: `https://www.google.com/search?q=${encodeURIComponent(`${name} professor integrated circuits`)}`
@@ -185,7 +200,8 @@ export function createProfileService({ openDb }) {
         }),
         ...summary,
         authors: [...authors.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 50),
-        papers: paperListForProfile(rows)
+        papers: paperListForProfile(rows),
+        qs: findQsRank(db, name)
       };
     } finally {
       db.close();

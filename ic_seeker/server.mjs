@@ -9,6 +9,8 @@ import { createProfileService } from './services/profile.service.mjs';
 import { createSearchService } from './services/search.service.mjs';
 import { createTopicService } from './services/topic.service.mjs';
 import { createGeoService } from './services/geo.service.mjs';
+import { createDiscussionService } from './services/discussion.service.mjs';
+import { createReviewService } from './services/review.service.mjs';
 import { createSqliteRepository } from './repositories/sqlite.repository.mjs';
 import { createAuthRoutes } from './routes/auth.routes.mjs';
 import { createApiRoutes } from './routes/api.routes.mjs';
@@ -36,7 +38,9 @@ const services = {
   profile: createProfileService({ openDb }),
   search: createSearchService({ openDb }),
   geo: createGeoService({ openDb }),
-  topic: createTopicService({ openDb })
+  topic: createTopicService({ openDb }),
+  discussion: createDiscussionService({ openDb }),
+  review: createReviewService({ openDb })
 };
 
 const authRoutes = createAuthRoutes({
@@ -58,7 +62,7 @@ const handleRequest = createRequestHandler({
 const server = http.createServer(handleRequest);
 
 server.listen(config.port, config.bindHost, () => {
-  console.log(`IC Seeker running at http://${config.bindHost}:${config.port}`);
+  console.log(`SiliconScope running at http://${config.bindHost}:${config.port}`);
   console.log(`Database: ${config.dbPath}`);
   services.geo.prewarm();
 });

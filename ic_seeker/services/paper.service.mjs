@@ -202,5 +202,5 @@ export function createPaperService({ openDb }) {
     });
   }
 
-  return { allTags, importDoi, insertPaper, paper, upsertPaperState };
+  return { allTags, importDoi, insertPaper, paper, upsertPaperState, openDb };
 }

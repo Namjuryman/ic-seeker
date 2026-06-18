@@ -40,10 +40,10 @@ export async function createConfig(importMetaUrl) {
     pdfInboxPath: process.env.IC_SEEKER_PDF_INBOX || path.join(rootDir, 'ic_database', 'pdf_inbox'),
     port: Number(process.env.PORT || 8750),
     bindHost: process.env.HOST || '127.0.0.1',
-    appName: process.env.APP_NAME || 'IC Seeker Private',
+    appName: process.env.APP_NAME || 'SiliconScope',
     adminPassword,
     authEnabled: process.env.IC_SEEKER_REQUIRE_LOGIN === '1' || process.env.IC_SEEKER_AUTH === 'password',
-    cookieName: 'ic_seeker_session',
+    cookieName: 'siliconscope_session',
     cookieSecret: process.env.COOKIE_SECRET || crypto.createHash('sha256').update(`${adminPassword}:${dbPath}`).digest('hex')
   };
 }

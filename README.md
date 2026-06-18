@@ -216,6 +216,7 @@ The current city hotspot layer is a transition design. It is not yet a verified 
 - Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.
 - Author identity is currently name-based; serious professor ranking should add ORCID/institution disambiguation.
 - Institution names are raw affiliation strings and may need normalization.
+- Mentor/institution membership and mentor-vs-student status are currently inferred from local paper metadata. The mentor review page filters low-evidence authors as likely students/collaborators and treats the remaining entries as provisional mentor candidates. Future IEEE Xplore API enrichment and large-scale university/college/lab website crawlers should verify each professor's current affiliation, historical affiliation moves, lab homepage, title, department, research group, and faculty role before the platform treats mentor-school membership as factual.
 - Regional and city-level views are estimates until institution disambiguation and geocoding are connected.
 - Some venue-year counts differ from IEEE Xplore because of early access, front matter, corrections, duplicate indexing, or source-specific metadata policy.
 - `ESSCIRC 2020` was cancelled due to COVID-19; 2024+ European solid-state events may appear under `ESSERC`/combined naming.

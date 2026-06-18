@@ -235,6 +235,65 @@ For public SaaS operation:
 - Allow private user-uploaded PDFs for personal reading features only.
 - Keep API keys and paid-token usage server-side with per-job budgets.
 
+## Mentor Affiliation Verification
+
+The current mentor/institution review page should be treated as an inferred prototype, not a verified faculty directory.
+
+Current behavior:
+
+- Institution strength is ranked by local IC paper metadata.
+- Mentor membership is inferred from author names and affiliation strings in indexed papers.
+- Mentor-vs-student status is inferred from publication accumulation, S+ count, career span, and score; low-evidence authors are filtered as likely students/collaborators by default.
+- This is useful for navigation and early product testing, but it can confuse collaborators, visiting students, branch campuses, shared labs, renamed institutes, and historical affiliation moves.
+
+Future verification direction:
+
+- Use IEEE Xplore API records to improve paper-level author, affiliation, article number, DOI, abstract, venue, and year precision.
+- Crawl university, college, department, and lab homepages to confirm each professor's current institution, department, title, lab, homepage, research direction, and profile photo.
+- Add a historical affiliation table so professor moves can be shown as a career timeline instead of overwriting old institutions.
+- Confirm whether a person is faculty, postdoc, PhD student, visiting student, industry collaborator, or alumni before enabling mentor-style reviews.
+- Keep evidence provenance for every affiliation assertion, such as `paper metadata`, `IEEE author page`, `faculty homepage`, `lab homepage`, or `manual review`.
+- Separate `current faculty/mentor membership` from `collaborator appeared on papers with this institution`.
+- Add confidence scores and manual override files for high-impact professors and institutions.
+
+Suggested schema additions:
+
+```text
+author_profiles
+  id
+  display_name
+  normalized_name
+  current_institution_id
+  department
+  title
+  homepage
+  photo_url
+  profile_source
+  verification_status
+  updated_at
+
+author_affiliation_history
+  author_id
+  institution_id
+  role_or_title
+  start_year
+  end_year
+  evidence_url
+  evidence_source
+  confidence
+
+author_institution_evidence
+  author_id
+  institution_id
+  paper_id
+  source
+  raw_affiliation
+  evidence_url
+  confidence
+```
+
+Until that pipeline exists, UI text should keep using words such as `inferred`, `provisional`, or `metadata-based` for mentor-school membership.
+
 ## Regional And City Intelligence
 
 The current Geo Intelligence page is a product prototype:

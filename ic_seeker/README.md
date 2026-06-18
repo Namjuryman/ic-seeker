@@ -63,6 +63,11 @@ http://127.0.0.1:8750
   citation boost, and recency boost.
 - The regional map is metadata-only and infers country from affiliation strings;
   it should be upgraded with canonical institution identities later.
+- Mentor-school membership and mentor-vs-student status in the review page are
+  metadata-based and provisional. Low-evidence authors are filtered as likely
+  students/collaborators by default, but this should be verified later with IEEE
+  Xplore author/affiliation metadata plus university, college, department, and
+  lab homepage crawlers before being treated as a factual faculty directory.
 - Local PDF matching is available with:
 
 ```powershell
