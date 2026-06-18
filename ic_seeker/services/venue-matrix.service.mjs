@@ -61,7 +61,8 @@ export function createVenueMatrixService({ openDb }) {
       return [...byVenue.values()].sort((a, b) => {
         const rankScore = rank => {
           const scores = {
-            'S+': 100, 'S': 95,
+            'SSS': 125, 'SS+': 120,
+            'S+': 115, 'S': 110,
             'A+': 90, 'A': 85, 'A-': 80,
             'B+': 75, 'B': 70, 'B-': 65,
             'C+': 60, 'C': 55, 'C-': 50,

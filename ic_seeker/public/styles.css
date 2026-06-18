@@ -3532,6 +3532,24 @@ body.mentor-section .view-switch {
   font-weight: 700;
   letter-spacing: 0.3px;
   line-height: 1.4;
+  border: 1px solid transparent;
+}
+.tier-SSS {
+  background: linear-gradient(135deg, rgba(220,38,38,0.16), rgba(244,63,94,0.12));
+  color: #991b1b;
+  border-color: rgba(220,38,38,0.45);
+  box-shadow: 0 0 0 2px rgba(220,38,38,0.08);
+}
+.tier-SSplus,
+.tier-Splus {
+  background: rgba(239,68,68,0.12);
+  color: #b91c1c;
+  border-color: rgba(239,68,68,0.34);
+}
+.tier-S {
+  background: rgba(248,113,113,0.10);
+  color: #dc2626;
+  border-color: rgba(248,113,113,0.3);
 }
 .tier-Aplus  { background: rgba(16,185,129,0.12); color: #059669; }
 .tier-A      { background: rgba(16,185,129,0.10); color: #059669; }
