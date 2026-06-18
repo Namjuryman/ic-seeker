@@ -60,4 +60,5 @@ const server = http.createServer(handleRequest);
 server.listen(config.port, config.bindHost, () => {
   console.log(`IC Seeker running at http://${config.bindHost}:${config.port}`);
   console.log(`Database: ${config.dbPath}`);
+  services.geo.prewarm();
 });

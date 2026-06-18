@@ -1722,15 +1722,64 @@ body.detail-collapsed .detail-collapse {
 
 .compact-profile-hero {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  gap: 12px;
-  border: 0;
-  background: transparent;
-  padding: 0 0 12px;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
 }
 
 .compact-profile-hero .profile-score {
   display: none;
+}
+
+.author-profile-detail .profile-photo {
+  width: 88px;
+  height: 108px;
+  border-radius: 12px;
+}
+
+.author-profile-detail .empty-photo span {
+  max-width: 68px;
+}
+
+.author-profile-detail .profile-main {
+  min-width: 0;
+}
+
+.author-profile-detail .profile-main h2 {
+  margin: 4px 0 8px;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+  line-height: 1.14;
+}
+
+.author-profile-detail .profile-tags {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.author-profile-detail .profile-tags span {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.author-profile-detail .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.author-profile-detail .actions a {
+  min-height: 34px;
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .profile-side-panel,
@@ -1797,13 +1846,12 @@ body.detail-collapsed .detail-collapse {
 
 .geo-map-canvas {
   position: relative;
-  min-height: 440px;
+  min-height: 460px;
   border: 1px solid #d9e1ee;
   border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.9), rgba(248,250,253,.94)),
-    repeating-linear-gradient(0deg, transparent 0 39px, rgba(52,82,184,.05) 40px),
-    repeating-linear-gradient(90deg, transparent 0 39px, rgba(52,82,184,.05) 40px);
+    radial-gradient(circle at 18% 24%, rgba(52,82,184,.06), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,.9), rgba(248,250,253,.94));
   overflow: hidden;
 }
 
@@ -1815,12 +1863,53 @@ body.detail-collapsed .detail-collapse {
 }
 
 .geo-map-bg path {
-  fill: #e7edf5;
-  stroke: #d1dbe9;
-  stroke-width: .35;
+  vector-effect: non-scaling-stroke;
 }
 
-.geo-country {
+.geo-land {
+  fill: #e7edf5;
+  stroke: #ccd8e7;
+  stroke-width: .45;
+}
+
+.geo-country-layer {
+  cursor: pointer;
+}
+
+.geo-country-shape {
+  outline: none;
+  cursor: pointer;
+}
+
+.geo-country-shape path {
+  fill: rgba(52, 82, 184, calc(.22 + var(--geo-alpha) * .58));
+  stroke: rgba(38, 63, 146, .72);
+  stroke-width: .65;
+  transition: fill .16s ease, stroke .16s ease, transform .16s ease;
+}
+
+.geo-country-shape text {
+  pointer-events: none;
+  fill: #14203a;
+  font-size: 3px;
+  font-weight: 900;
+}
+
+.geo-country-shape .geo-value {
+  fill: #176244;
+  font-size: 2.5px;
+  font-weight: 800;
+}
+
+.geo-country-shape:hover path,
+.geo-country-shape:focus path,
+.geo-country-shape.active path {
+  fill: rgba(28, 138, 91, calc(.32 + var(--geo-alpha) * .55));
+  stroke: #163a78;
+  stroke-width: 1.05;
+}
+
+.geo-country-fallback {
   position: absolute;
   display: grid;
   place-items: center;
@@ -1834,22 +1923,22 @@ body.detail-collapsed .detail-collapse {
   transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 
-.geo-country span {
+.geo-country-fallback span {
   font-size: 11px;
   font-weight: 900;
   line-height: 1;
 }
 
-.geo-country i {
+.geo-country-fallback i {
   color: var(--green);
   font-size: 10px;
   font-style: normal;
   line-height: 1;
 }
 
-.geo-country:hover,
-.geo-country:focus,
-.geo-country.active {
+.geo-country-fallback:hover,
+.geo-country-fallback:focus,
+.geo-country-fallback.active {
   z-index: 2;
   border-color: #263f92;
   background: #eef3ff;
@@ -1910,7 +1999,13 @@ body.detail-collapsed .detail-collapse {
   gap: 8px;
 }
 
-.geo-country-row {
+.geo-institution-list {
+  display: grid;
+  gap: 8px;
+}
+
+.geo-country-row,
+.geo-institution-row {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   gap: 10px;
@@ -1925,23 +2020,27 @@ body.detail-collapsed .detail-collapse {
 }
 
 .geo-country-row:hover,
-.geo-country-row.active {
+.geo-country-row.active,
+.geo-institution-row:hover {
   border-color: #b8c7ec;
   background: #f7f9ff;
 }
 
-.geo-country-row span {
+.geo-country-row span,
+.geo-institution-row span {
   color: var(--accent);
   font-weight: 900;
 }
 
-.geo-country-row strong {
+.geo-country-row strong,
+.geo-institution-row strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.geo-country-row em {
+.geo-country-row em,
+.geo-institution-row em {
   color: var(--muted);
   font-size: 12px;
   font-style: normal;

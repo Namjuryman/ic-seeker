@@ -1,3 +1,5 @@
+import { geoShapes } from './js/geo-shapes.js';
+
 const state = {
   authenticated: false,
   authEnabled: false,
@@ -15,6 +17,7 @@ const state = {
   activeId: null,
   activePaper: null,
   resultMeta: null,
+  geoCache: new Map(),
   currentView: 'papers',
   restoringRoute: false,
   view: 'comfort',
@@ -1270,16 +1273,37 @@ function geoMetric(country, mode) {
 function renderGeoMap(countries, selectedCode, mode) {
   const max = Math.max(1, ...countries.map(country => geoMetric(country, mode)));
   return `<div class="geo-map-canvas" aria-label="${escapeHtml(t('geoIntelligence'))}">
-    <svg viewBox="0 0 100 64" aria-hidden="true" class="geo-map-bg">
-      <path d="M6 22 C14 10 30 9 39 18 C44 24 41 33 32 36 C23 39 11 35 6 28 Z"></path>
-      <path d="M44 18 C54 9 72 13 84 20 C94 26 93 40 82 45 C70 51 50 45 43 35 C39 29 39 23 44 18 Z"></path>
-      <path d="M60 47 C68 44 82 50 87 59 C76 62 65 60 58 55 Z"></path>
-      <path d="M28 41 C35 43 37 51 32 61 C25 58 22 48 28 41 Z"></path>
+    <svg viewBox="0 0 110 90" role="img" class="geo-map-bg">
+      <defs>
+        <linearGradient id="geoOcean" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f9fbff"></stop>
+          <stop offset="100%" stop-color="#eef4fb"></stop>
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="108" height="88" rx="7" fill="url(#geoOcean)"></rect>
+      <path class="geo-land" d="M7 18 C15 8 31 6 42 14 C50 20 50 31 42 38 C33 47 16 45 7 35 Z"></path>
+      <path class="geo-land" d="M40 19 C50 9 70 8 85 17 C102 27 104 47 90 60 C77 71 54 67 43 55 C33 44 31 28 40 19 Z"></path>
+      <path class="geo-land" d="M71 67 C82 61 98 67 105 78 C94 85 78 84 68 77 Z"></path>
+      <path class="geo-land" d="M28 49 C38 51 43 63 36 80 C27 76 22 61 28 49 Z"></path>
+      <g class="geo-country-layer">
+        ${countries.map(country => {
+          const value = geoMetric(country, mode);
+          const shape = geoShapes[country.code];
+          const intensity = Math.max(.18, Math.min(.92, value / max));
+          if (!shape) return '';
+          return `<g class="geo-country-shape ${country.code === selectedCode ? 'active' : ''}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}" style="--geo-alpha:${intensity.toFixed(3)}">
+            <path d="${shape.d}"></path>
+            <text x="${shape.lx}" y="${shape.ly}" text-anchor="middle">${escapeHtml(country.code)}</text>
+            <text class="geo-value" x="${shape.lx}" y="${shape.ly + 4}" text-anchor="middle">${escapeHtml(Math.round(value))}</text>
+          </g>`;
+        }).join('')}
+      </g>
     </svg>
     ${countries.map(country => {
       const value = geoMetric(country, mode);
-      const size = Math.max(18, Math.min(46, 14 + value / max * 34));
-      return `<button class="geo-country ${country.code === selectedCode ? 'active' : ''}" type="button"
+      if (geoShapes[country.code]) return '';
+      const size = Math.max(18, Math.min(38, 12 + value / max * 26));
+      return `<button class="geo-country-fallback ${country.code === selectedCode ? 'active' : ''}" type="button"
         data-geo-country="${escapeHtml(country.code)}"
         style="left:${country.x}%;top:${country.y}%;width:${size}px;height:${size}px">
         <span>${escapeHtml(country.code)}</span>
@@ -1295,6 +1319,7 @@ function renderGeoCountryDetail(country, mode) {
     key: row.year,
     count: mode === 'institutions' ? row.papers : Math.round(Number(row.score || 0))
   }));
+  const topInstitutions = country.topInstitutions || [];
   return `
     <section class="geo-country-detail">
       <div class="geo-detail-head">
@@ -1312,7 +1337,15 @@ function renderGeoCountryDetail(country, mode) {
       </div>
       ${renderSparkBars(trend, t('geoTrend'), 'line')}
       <section class="geo-detail-columns">
-        <div><h4>${escapeHtml(t('geoTopInstitutions'))}</h4>${renderMiniBars((country.topInstitutions || []).map(row => ({ key: row.name, count: row.count })), 'papers')}</div>
+        <div><h4>${escapeHtml(t('geoTopInstitutions'))}</h4>
+          <div class="geo-institution-list">
+            ${topInstitutions.length ? topInstitutions.map((row, index) => `<button class="geo-institution-row" type="button" data-institution-link="${escapeHtml(row.name)}">
+              <span>${index + 1}</span>
+              <strong>${escapeHtml(row.name)}</strong>
+              <em>${fmt(row.count)} papers</em>
+            </button>`).join('') : `<p class="hint">No matched institutions yet.</p>`}
+          </div>
+        </div>
         <div><h4>${escapeHtml(t('domain'))}</h4>${renderMiniBars(country.byField || [], 'papers')}</div>
       </section>
     </section>
@@ -1339,8 +1372,13 @@ function regionMomentum(regionTrends) {
 
 async function renderGeo(field = '', options = {}) {
   const mode = options.mode || routeFromLocation().mode || 'overall';
-  const query = field ? `?field=${encodeURIComponent(field)}` : '';
-  const data = await api(`/api/geo${query}`);
+  const cacheKey = field || '__all__';
+  let data = state.geoCache.get(cacheKey);
+  if (!data || options.refresh) {
+    const query = field ? `?field=${encodeURIComponent(field)}` : '';
+    data = await api(`/api/geo${query}`);
+    state.geoCache.set(cacheKey, data);
+  }
   const selectedCode = options.country || routeFromLocation().country || data.countries[0]?.code || '';
   const selectedCountry = data.countries.find(country => country.code === selectedCode) || data.countries[0];
   if (options.history !== 'skip') writeRoute({ view: 'geo', field: data.field || '', mode, country: selectedCountry?.code || '' });
@@ -1398,9 +1436,10 @@ async function renderGeo(field = '', options = {}) {
     if (!country) return;
     document.querySelectorAll('[data-geo-country]').forEach(item => item.classList.toggle('active', item.dataset.geoCountry === country.code));
     $('geoCountryDetail').innerHTML = renderGeoCountryDetail(country, mode);
+    bindProfileLinks();
     if (write) writeRoute({ view: 'geo', field: data.field || '', mode, country: country.code });
   };
-  document.querySelectorAll('.geo-country').forEach(button => {
+  document.querySelectorAll('.geo-country-shape, .geo-country-fallback').forEach(button => {
     button.addEventListener('mouseenter', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('focus', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
@@ -1412,6 +1451,7 @@ async function renderGeo(field = '', options = {}) {
     button.addEventListener('click', () => renderGeo(data.field || '', { mode: button.dataset.geoMode }));
   });
   $('geoFieldSelect')?.addEventListener('change', event => renderGeo(event.target.value, { mode: event.target.value ? 'topic' : mode }));
+  bindProfileLinks();
 }
 
 async function renderTopics(field = '', options = {}) {
@@ -1789,6 +1829,10 @@ async function bootApp() {
   applyFilterState();
   await loadStats();
   renderTopicChips();
+  setTimeout(() => {
+    api('/api/geo').then(data => state.geoCache.set('__all__', data)).catch(() => {});
+    api('/api/geo?field=Power%20Management').then(data => state.geoCache.set('Power Management', data)).catch(() => {});
+  }, 400);
   const doSearch = debounce(searchFirstPage);
   for (const id of ['q', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'hasPdf', 'favoriteOnly', 'semantic', 'statusFilter', 'tagFilter']) {
     $(id).addEventListener(id === 'q' ? 'input' : 'change', doSearch);

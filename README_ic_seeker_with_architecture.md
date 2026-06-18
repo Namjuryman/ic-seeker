@@ -267,6 +267,16 @@ Power-management classification has an additional weighted repair path for PMIC/
 node ./scripts/repair-power-management-domains.mjs
 ```
 
+The next classification milestone is to turn topic recognition into a testable subsystem:
+
+- Maintain weighted positive and negative phrase dictionaries per topic.
+- Split broad fields into subtopics such as `PMIC/DC-DC`, `ADC`, `PLL`, `Wireline`, `CIM`, `SRAM`, `Device`, and `EDA`.
+- Store classifier reason codes on each paper so the UI can explain why a paper was assigned to a topic.
+- Add manual override files for well-known papers, professors, and venues.
+- Use IEEE metadata as the high-trust source for venue, article number, DOI, abstract, and author list when an API key is available.
+- Add regression tests that lock examples such as DC-DC converters into `Power Management`.
+- Add optional embedding or LLM review as a second-pass suggestion, not as an opaque replacement for transparent rules.
+
 Example topic groups include:
 
 - Analog and mixed-signal

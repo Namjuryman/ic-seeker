@@ -189,6 +189,15 @@ PMIC/DC-DC classification now uses higher-weight phrase matching for terms such 
 node .\scripts\repair-power-management-domains.mjs
 ```
 
+Longer-term classification work should become a dedicated data-quality subsystem rather than a single keyword list:
+
+- weighted title/abstract/source/concept matching with positive and negative phrases
+- topic hierarchy, for example `Power Management > DC-DC`, `Analog > ADC`, `RF > PLL/Wireline`
+- manual override files for known representative papers and ambiguous titles
+- IEEE metadata verification for article number, venue, abstract, DOI, and author list
+- optional embedding/LLM-assisted review only as a second-pass classifier, with the rule-based reason kept visible
+- regression tests for examples that were previously misclassified
+
 ## Caveats
 
 - Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.

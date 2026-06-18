@@ -145,6 +145,9 @@ const countryPatterns = [
   }
 ];
 
+const cacheTtlMs = 10 * 60 * 1000;
+const affiliationCountryCache = new Map();
+
 function splitList(value) {
   return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
 }
@@ -159,8 +162,12 @@ function normalize(value) {
 }
 
 function countryForAffiliation(value) {
+  const cacheKey = normalize(value);
+  if (affiliationCountryCache.has(cacheKey)) return affiliationCountryCache.get(cacheKey);
   const hay = ` ${normalize(value)} `;
-  return countryPatterns.find(country => country.patterns.some(pattern => hay.includes(` ${normalize(pattern)} `) || hay.includes(normalize(pattern))));
+  const country = countryPatterns.find(item => item.patterns.some(pattern => hay.includes(` ${normalize(pattern)} `) || hay.includes(normalize(pattern)))) || null;
+  affiliationCountryCache.set(cacheKey, country);
+  return country;
 }
 
 function inferCountries(affiliations) {
@@ -253,8 +260,9 @@ function rowPreview(row) {
 }
 
 export function createGeoService({ openDb }) {
-  function geo(params) {
-    const requestedField = topicAlias(params.get('field') || '');
+  const cache = new Map();
+
+  function buildGeo(requestedField) {
     const recentCutoff = new Date().getFullYear() - 9;
     const db = openDb();
     try {
@@ -325,6 +333,7 @@ export function createGeoService({ openDb }) {
         .sort((a, b) => b.score - a.score || b.papers - a.papers);
 
       return {
+        generatedAt: new Date().toISOString(),
         field: requestedField,
         fields,
         skippedWithoutCountry: skipped,
@@ -340,5 +349,30 @@ export function createGeoService({ openDb }) {
     }
   }
 
-  return { geo };
+  function geo(params) {
+    const requestedField = topicAlias(params.get('field') || '');
+    const key = requestedField || '__all__';
+    const cached = cache.get(key);
+    if (cached && Date.now() - cached.createdAt < cacheTtlMs) {
+      return { ...cached.value, cached: true };
+    }
+    const value = buildGeo(requestedField);
+    cache.set(key, { createdAt: Date.now(), value });
+    return { ...value, cached: false };
+  }
+
+  function prewarm(fields = ['', 'Power Management']) {
+    setTimeout(() => {
+      for (const field of fields) {
+        try {
+          const key = topicAlias(field) || '__all__';
+          if (!cache.has(key)) cache.set(key, { createdAt: Date.now(), value: buildGeo(topicAlias(field)) });
+        } catch {
+          // Geo cache is a startup optimization; API requests will surface real errors.
+        }
+      }
+    }, 250);
+  }
+
+  return { geo, prewarm };
 }
