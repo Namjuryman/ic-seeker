@@ -71,6 +71,7 @@ const i18n = {
     tabGeo: 'Geo',
     tabAuthors: 'Authors',
     tabInstitutions: 'Institutions',
+    tabVenues: 'Venues',
     rows: 'Rows',
     table: 'Table',
     filters: 'Filters',
@@ -213,7 +214,16 @@ const i18n = {
     reviewFit: 'What kind of student fits?',
     mentorDisclaimer: 'Reviews are anonymous and moderated. Please be factual and avoid personal attacks.',
     insufficientData: 'Insufficient data',
-    broadDistribution: 'Broad distribution only'
+    broadDistribution: 'Broad distribution only',
+    venueMatrixTitle: 'Venue & Journal Matrix',
+    venueMatrixSubtitle: 'Paper counts by year and domain for each conference/journal',
+    venueMatrixTotal: 'Total Indexed',
+    venueMatrixEarlier: 'Earlier',
+    venueMatrixVenue: 'Venue',
+    venueMatrixTier: 'Tier',
+    venueMatrixDomain: 'Domain',
+    venueMatrixClickToSearch: 'Click to search papers from this venue/year',
+    venueMatrixYears: 'Year Distribution'
   },
   zh: {
     navSearch: '学术搜索',
@@ -241,6 +251,7 @@ const i18n = {
     tabTopics: '方向',
     tabAuthors: '专家',
     tabInstitutions: '机构',
+    tabVenues: '会议/期刊',
     rows: '列表',
     table: '紧凑',
     filters: '筛选',
@@ -362,6 +373,15 @@ const i18n = {
     reviewStrengths: '导师优点 / 闪光点',
     reviewCautions: '需要注意 / 不足',
     reviewFit: '适合什么样的学生？',
+    venueMatrixTitle: '会议与期刊矩阵',
+    venueMatrixSubtitle: '按年份和领域统计各会议/期刊的论文收录量',
+    venueMatrixTotal: '收录总量',
+    venueMatrixEarlier: '更早',
+    venueMatrixVenue: '会议/期刊',
+    venueMatrixTier: '等级',
+    venueMatrixDomain: '领域',
+    venueMatrixClickToSearch: '点击搜索该会议/年份的论文',
+    venueMatrixYears: '年份分布',
     principlesTitle: 'SiliconScope 产品原则',
     principle1: '构建情报，而非仅搜索。',
     principle2: '销售结构化洞察，而非八卦。',
@@ -449,6 +469,12 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   }[ch]));
+}
+
+function rankToClass(rank) {
+  const r = String(rank || '').trim();
+  if (!r || r === '-') return 'Unknown';
+  return r.replace('+', 'plus').replace('-', 'minus');
 }
 
 function cleanDisplayText(value) {
@@ -608,6 +634,7 @@ function routeUrl(route) {
     geo: new Set(['field', 'mode', 'country']),
     paper: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page', 'id']),
     papers: new Set(['q', 'scope', 'venue', 'field', 'rank', 'yearFrom', 'yearTo', 'sort', 'semantic', 'hasPdf', 'favoriteOnly', 'status', 'tag', 'page']),
+    venueMatrix: new Set([]),
     'mentor-institutions': new Set([]),
     'mentor-institution': new Set(['name']),
     'mentor-profile': new Set(['name'])
@@ -690,6 +717,8 @@ function openPanelTarget(target) {
     renderRankings('authors');
   } else if (target === 'institutions') {
     renderRankings('institutions');
+  } else if (target === 'venueMatrix') {
+    renderVenueMatrix();
   } else if (target === 'mentor-institutions') {
     switchSection('mentors');
   } else if (target === 'mentor-rankings') {
@@ -724,6 +753,9 @@ async function restoreRoute(route = history.state || routeFromLocation()) {
     } else if (view === 'geo') {
       setActivePanel('geo');
       await renderGeo(route.field || '', { history: 'skip', mode: route.mode || '', country: route.country || '' });
+    } else if (view === 'venueMatrix') {
+      setActivePanel('venueMatrix');
+      renderVenueMatrix({ history: 'skip' });
     } else if (view === 'mentor-institutions') {
       await switchSection('mentors', { history: 'skip' });
     } else if (view === 'mentor-institution' && route.name) {
@@ -3142,4 +3174,95 @@ function renderMentorReviewForm(name) {
     });
     await loadMentorProfile(name, { history: 'skip' });
   });
+}
+
+
+async function renderVenueMatrix(options = {}) {
+  if (options.history !== 'skip') writeRoute({ view: 'venueMatrix' });
+  state.currentView = 'venueMatrix';
+  state.detailCollapsed = true;
+  applyDetailState();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = '<div class="loading">Loading venue matrix...</div>';
+  try {
+    const data = await api('/api/venue-matrix');
+    const years = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
+    const totalAll = data.reduce((sum, v) => sum + v.total, 0);
+    $('results').innerHTML = `
+      <section class="venue-matrix-page">
+        <div class="venue-matrix-header">
+          <h2>${escapeHtml(t('venueMatrixTitle'))}</h2>
+          <p>${escapeHtml(t('venueMatrixSubtitle'))} · ${fmt(data.length)} venues · ${fmt(totalAll)} papers</p>
+        </div>
+        <div class="venue-matrix-table-wrap">
+          <table class="venue-matrix-table">
+            <thead>
+              <tr>
+                <th class="col-venue">${escapeHtml(t('venueMatrixVenue'))}</th>
+                <th class="col-tier">${escapeHtml(t('venueMatrixTier'))}</th>
+                <th class="col-domain">${escapeHtml(t('venueMatrixDomain'))}</th>
+                ${years.map(y => `<th class="col-year">${y}</th>`).join('')}
+                <th class="col-earlier">${escapeHtml(t('venueMatrixEarlier'))}</th>
+                <th class="col-total">${escapeHtml(t('venueMatrixTotal'))}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(venue => `
+                <tr class="venue-row" data-venue="${escapeHtml(venue.name)}">
+                  <td class="col-venue">
+                    <button class="venue-link" type="button" data-venue-search="${escapeHtml(venue.name)}">
+                      ${escapeHtml(venue.name)}
+                    </button>
+                  </td>
+                  <td class="col-tier">
+                    <span class="tier-badge tier-${rankToClass(venue.rank)}">${escapeHtml(venue.rank)}</span>
+                  </td>
+                  <td class="col-domain">
+                    <div class="domain-tags">
+                      ${venue.allDomains.slice(0, 3).map(d => `<span class="domain-chip">${escapeHtml(d)}</span>`).join('')}
+                    </div>
+                  </td>
+                  ${years.map(y => {
+                    const count = venue.yearCounts[y] || 0;
+                    return `<td class="col-year ${count ? 'has-count' : 'no-count'}">
+                      ${count ? `<button class="year-count" type="button" data-venue-year="${escapeHtml(venue.name)}" data-year="${y}">${fmt(count)}</button>` : '-'}
+                    </td>`;
+                  }).join('')}
+                  <td class="col-earlier ${venue.earlier ? 'has-count' : 'no-count'}">
+                    ${venue.earlier ? `<button class="year-count" type="button" data-venue-year="${escapeHtml(venue.name)}" data-year="earlier">${fmt(venue.earlier)}</button>` : '-'}
+                  </td>
+                  <td class="col-total"><strong>${fmt(venue.total)}</strong></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+    document.querySelectorAll('[data-venue-search]').forEach(el => {
+      el.addEventListener('click', () => {
+        $('venue').value = el.dataset.venueSearch;
+        searchFirstPage();
+      });
+    });
+    document.querySelectorAll('[data-venue-year]').forEach(el => {
+      el.addEventListener('click', () => {
+        const venue = el.dataset.venueYear;
+        const year = el.dataset.year;
+        $('venue').value = venue;
+        if (year !== 'earlier') {
+          $('yearFrom').value = year;
+          $('yearTo').value = year;
+        } else {
+          $('yearFrom').value = '2000';
+          $('yearTo').value = '2018';
+        }
+        searchFirstPage();
+      });
+    });
+  } catch (err) {
+    $('results').innerHTML = `<div class="empty">Failed to load venue matrix: ${escapeHtml(err.message)}</div>`;
+  }
 }

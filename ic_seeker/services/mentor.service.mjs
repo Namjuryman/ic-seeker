@@ -6,6 +6,10 @@ function scoreAuthor(item) {
   return Math.round((item.scoreSum + item.sPlus * 5 + item.s * 2 + item.citations / 50) * 10) / 10;
 }
 
+function isEliteRank(rank) {
+  return ['SSS', 'SS+', 'S+'].includes(String(rank || ''));
+}
+
 function normalizeInstitutionName(value) {
   return String(value || '')
     .toLowerCase()
@@ -120,7 +124,7 @@ export function createMentorService({ openDb }) {
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const rows = db.prepare("SELECT affiliations, authors, venue_rank, quality_score, citation_count FROM papers WHERE affiliations != ''").all();
+      const rows = db.prepare("SELECT affiliations, authors, venue_rank, quality_score, citation_count, year FROM papers WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
       const authorIndex = buildAuthorInstitutionIndex(rows);
       const authorStats = new Map();
       for (const row of rows) {
@@ -132,7 +136,7 @@ export function createMentorService({ openDb }) {
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
           item.years.set(Number(row.year || 0), (item.years.get(Number(row.year || 0)) || 0) + 1);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           authorStats.set(authorName, item);
         }
@@ -145,7 +149,7 @@ export function createMentorService({ openDb }) {
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
           for (const a of splitList(row.authors)) item.authors.add(a);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           byInstitution.set(name, item);
@@ -184,7 +188,7 @@ export function createMentorService({ openDb }) {
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const allRows = db.prepare("SELECT * FROM papers WHERE affiliations != ''").all();
+      const allRows = db.prepare("SELECT * FROM papers WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
       const authorIndex = buildAuthorInstitutionIndex(allRows);
       const rows = allRows
         .filter(row => splitList(row.affiliations).some(inst => inst.toLowerCase() === target));
@@ -218,7 +222,7 @@ export function createMentorService({ openDb }) {
           item.citations += Number(row.citation_count || 0);
           item.domains.set(String(row.domain || 'General IC'), (item.domains.get(String(row.domain || 'General IC')) || 0) + 1);
           item.years.set(Number(row.year || 0), (item.years.get(Number(row.year || 0)) || 0) + 1);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           byAuthor.set(authorName, item);
@@ -287,7 +291,7 @@ export function createMentorService({ openDb }) {
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const rows = db.prepare('SELECT * FROM papers WHERE authors LIKE ?').all(`%${name}%`)
+      const rows = db.prepare("SELECT * FROM papers WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
         .filter(row => splitList(row.authors).some(author => author.toLowerCase() === target));
       const summary = summarizeMentorRows(rows);
       const coauthors = new Map();
@@ -336,7 +340,7 @@ function summarizeMentorRows(rows) {
     domains.set(row.domain, (domains.get(row.domain) || 0) + 1);
     scoreSum += Number(row.quality_score || 0);
     citations += Number(row.citation_count || 0);
-    if (row.venue_rank === 'S+') ranks.sPlus += 1;
+    if (isEliteRank(row.venue_rank)) ranks.sPlus += 1;
     else if (row.venue_rank === 'S') ranks.s += 1;
     else if (String(row.venue_rank || '').startsWith('A')) ranks.a += 1;
     else ranks.other += 1;

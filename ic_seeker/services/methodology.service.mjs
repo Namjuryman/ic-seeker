@@ -1,7 +1,7 @@
 export function methodology() {
   return {
     scoring: {
-      formula: 'quality_score = venue_base + 10 * domain_keyword_hits + citation_boost + recency_boost',
+      formula: 'quality_score = venue_base + venue_policy_domain_boost + citation_boost + recency_boost',
       citationBoost: 'min(cited_by_count, 300) / 25',
       recencyBoost: `(publication_year - ${2016}) * 0.35, floored at 0`,
       venueBase: {
@@ -19,12 +19,29 @@ export function methodology() {
         'TCAS-I': 64,
         TVLSI: 62,
         'TCAS-II': 60,
-        ISCAS: 54
+        ISCAS: 54,
+        // IC-adjacent journals are intentionally conservative so materials/devices
+        // venues do not dominate IC institution or mentor rankings.
+        'Nature Electron.': 115,
+        'Nat. Electronics': 115,
+        'Nature': 125,
+        'Nat. Commun.': 0,
+        'IEEE T-MTT': 78,
+        'IEEE TED': 50,
+        'IEEE EDL': 46,
+        'IEEE Sensors J.': 40,
+        'Adv. Mater.': 38,
+        'Appl. Phys. Lett.': 34,
+        'Solid-State Electron.': 36,
+        'IEEE JMEMS': 42,
+        'IEEE T-Nano': 34,
+        'Microelectron. J.': 32
       }
     },
     classification: [
       'Each paper is scored against IC-domain keyword dictionaries using title, abstract, source name, and OpenAlex concepts.',
       'The domain with the most keyword hits wins; if no domain wins but IC terms are present, it falls back to General IC.',
+      'Broad IC-adjacent journals are visible as metadata but heavily downweighted; Nature Communications is currently hidden from default ranking/search surfaces until stricter validation is added.',
       'This is intentionally transparent and editable. It is not a learned model yet.'
     ],
     coverage: [

@@ -28,7 +28,12 @@ function venueRank(venue) {
     ['ISSCC', 'S+'], ['JSSC', 'S+'], ['VLSI Symposium', 'S'], ['CICC', 'S'],
     ['IEDM', 'S'], ['ASSCC', 'A'], ['ESSCIRC', 'A'], ['DAC', 'A'],
     ['ICCAD', 'A'], ['TCAD', 'A'], ['DATE', 'A'], ['TCAS-I', 'A'],
-    ['TCAS-II', 'A'], ['TVLSI', 'A'], ['ISCAS', 'B']
+    ['TCAS-II', 'A'], ['TVLSI', 'A'], ['ISCAS', 'B'],
+    ['Nature Electron.', 'SS+'], ['Nat. Electronics', 'SS+'], ['Nature', 'SSS'], ['Nat. Commun.', 'Hidden'],
+    ['IEEE T-MTT', 'A+'], ['IEEE TED', 'B+'], ['IEEE EDL', 'B'],
+    ['IEEE Sensors J.', 'B-'], ['Adv. Mater.', 'B-'], ['Appl. Phys. Lett.', 'C+'],
+    ['Solid-State Electron.', 'C+'], ['IEEE JMEMS', 'B-'], ['IEEE T-Nano', 'C+'],
+    ['Microelectron. J.', 'C']
   ]);
   return ranks.get(venue) || 'User';
 }

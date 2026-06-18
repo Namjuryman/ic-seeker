@@ -144,6 +144,51 @@ To merge checked databases:
 node .\scripts\merge-ic-databases.mjs --out=ic_database\ic_papers.sqlite ic_database_checks\isscc\ic_papers.sqlite ic_database_checks\jssc\ic_papers.sqlite
 ```
 
+To incrementally backfill the existing SQLite database for the core IC venues back to 2000 without rebuilding from scratch:
+
+```powershell
+npm run backfill:core -- --years=2000-2026
+```
+
+For a smaller controlled batch:
+
+```powershell
+npm run backfill:core -- --years=2000-2015 --venues="ISSCC,JSSC,VLSI Symposium" --max-pages-per-year=2
+```
+
+The backfill script resolves OpenAlex sources for each configured venue, imports metadata only, and skips existing rows by DOI, OpenAlex id, or title/year. It is designed to be rerun safely in batches while the future IEEE Xplore importer is being prepared.
+
+## Extend Journal Coverage
+
+Some IC-adjacent journals are too broad to import as a whole. Use the journal extension importer to query OpenAlex by source id plus IC-focused search terms, then run local relevance filtering before writing to SQLite:
+
+```powershell
+npm run import:journals -- --years=2000-2026 --venues="IEEE Sensors J.,Adv. Mater.,Appl. Phys. Lett.,Solid-State Electron.,IEEE JMEMS,IEEE T-Nano,Microelectron. J."
+```
+
+Useful options:
+
+- `--dry-run` previews insert/skip counts without changing the database.
+- `--search-mode=source-only` scans a source-year directly; this is slower and should be reserved for narrow journals.
+- `--max-pages=30` caps OpenAlex cursor pages per year and term.
+- `--term-limit=4` keeps focused imports short by using the first high-yield search terms; set `--term-limit=0` for a deeper sweep.
+- `--rebuild-fts` rebuilds the SQLite FTS index after manual database surgery.
+
+The current extension targets include Nature Electronics, Nature, Nature Communications, IEEE T-MTT, IEEE TED, IEEE EDL, IEEE Sensors Journal, Advanced Materials, Applied Physics Letters, Solid-State Electronics, IEEE JMEMS, IEEE T-Nano, and Microelectronics Journal. Future IEEE API integration should replace the heuristic importer for IEEE venues and add stronger venue/year completeness checks.
+
+Broad journal policy:
+
+- `Nature` is treated as `SSS`; `Nature Electronics` is treated as `SS+`.
+- `Nature Communications` is retained in SQLite but marked `Hidden`, so it does not affect default search, rankings, maps, topics, or mentor/institution scoring.
+- IEEE T-MTT is kept as a strong RF venue.
+- Broad materials/devices journals such as Advanced Materials and Applied Physics Letters are deliberately downweighted because keyword metadata can over-match non-IC work.
+
+After changing venue policy, reweight the existing database:
+
+```powershell
+npm run reweight:venues
+```
+
 ## IEEE Xplore API
 
 If you have IEEE Xplore API access, set an API key before rebuilding:

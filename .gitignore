@@ -5,6 +5,8 @@
 
 # Temporary / validation database builds
 ic_database_checks/
+ic_database/*backup*.sqlite
+ic_database/*.sqlite-journal
 
 # Local PDF storage. Keep the folders, not the PDFs.
 ic_database/pdfs/*

@@ -5,12 +5,16 @@ function splitList(value) {
 function rankCounts(rows) {
   const ranks = { sPlus: 0, s: 0, a: 0, other: 0 };
   for (const row of rows) {
-    if (row.venue_rank === 'S+') ranks.sPlus += 1;
+    if (isEliteRank(row.venue_rank)) ranks.sPlus += 1;
     else if (row.venue_rank === 'S') ranks.s += 1;
     else if (String(row.venue_rank || '').startsWith('A')) ranks.a += 1;
     else ranks.other += 1;
   }
   return ranks;
+}
+
+function isEliteRank(rank) {
+  return ['SSS', 'SS+', 'S+'].includes(String(rank || ''));
 }
 
 function scoreEntity(item) {
@@ -46,11 +50,12 @@ export function createTopicService({ openDb }) {
     try {
       const rows = db.prepare(`
         SELECT domain AS field, COUNT(*) AS papers, ROUND(AVG(quality_score), 1) AS avgScore,
-               SUM(CASE WHEN venue_rank = 'S+' THEN 1 ELSE 0 END) AS sPlus,
+               SUM(CASE WHEN venue_rank IN ('SSS', 'SS+', 'S+') THEN 1 ELSE 0 END) AS sPlus,
                SUM(CASE WHEN venue_rank = 'S' THEN 1 ELSE 0 END) AS s,
                SUM(CASE WHEN venue_rank LIKE 'A%' THEN 1 ELSE 0 END) AS a,
                MIN(year) AS firstYear, MAX(year) AS lastYear
         FROM papers
+        WHERE COALESCE(venue_rank, '') != 'Hidden'
         GROUP BY domain
         ORDER BY papers DESC, avgScore DESC
       `).all();
@@ -68,7 +73,7 @@ export function createTopicService({ openDb }) {
     if (!target) throw new Error('Topic field is required');
     const db = openDb();
     try {
-      const rows = db.prepare('SELECT * FROM papers WHERE domain = ? ORDER BY year DESC, quality_score DESC').all(target);
+      const rows = db.prepare("SELECT * FROM papers WHERE domain = ? AND COALESCE(venue_rank, '') != 'Hidden' ORDER BY year DESC, quality_score DESC").all(target);
       const byYear = new Map();
       const byVenue = new Map();
       const authors = new Map();
@@ -85,7 +90,7 @@ export function createTopicService({ openDb }) {
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           authors.set(name, item);
@@ -95,7 +100,7 @@ export function createTopicService({ openDb }) {
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           institutions.set(name, item);

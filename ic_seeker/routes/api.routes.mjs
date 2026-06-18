@@ -2,6 +2,7 @@ import { methodology } from '../services/methodology.service.mjs';
 import { createDiscussionService } from '../services/discussion.service.mjs';
 import { createReviewService } from '../services/review.service.mjs';
 import { createMentorService } from '../services/mentor.service.mjs';
+import { createVenueMatrixService } from '../services/venue-matrix.service.mjs';
 
 export function createApiRoutes({ services, http }) {
   const { bad, json, readJson } = http;
@@ -9,11 +10,13 @@ export function createApiRoutes({ services, http }) {
   const discussion = createDiscussionService({ openDb: services.paper.openDb });
   const review = createReviewService({ openDb: services.paper.openDb });
   const mentor = createMentorService({ openDb: services.paper.openDb });
+  const venueMatrix = createVenueMatrixService({ openDb: services.paper.openDb });
 
   async function handleApi(req, res, url) {
     if (url.pathname === '/api/stats') return json(res, admin.stats());
     if (url.pathname === '/api/methodology') return json(res, methodology());
     if (url.pathname === '/api/professors') return json(res, profile.professors(url.searchParams));
+    if (url.pathname === '/api/venue-matrix') return json(res, venueMatrix.venueMatrix());
     if (url.pathname === '/api/mentor/institutions') return json(res, mentor.institutionsWithMentors());
     if (url.pathname.startsWith('/api/mentor/institutions/')) {
       const name = decodeURIComponent(url.pathname.split('/').at(-1));

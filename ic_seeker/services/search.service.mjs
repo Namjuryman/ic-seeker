@@ -39,6 +39,9 @@ export function semanticText(input) {
 function whereClause(params) {
   const clauses = [];
   const args = [];
+  if (params.get('includeHidden') !== '1' && params.get('rank') !== 'Hidden') {
+    clauses.push("COALESCE(venue_rank, '') != 'Hidden'");
+  }
   const q = (params.get('q') || '').trim();
   if (q && params.get('_includeQ') !== '0') {
     clauses.push('(title LIKE ? OR abstract LIKE ? OR authors LIKE ? OR doi LIKE ?)');

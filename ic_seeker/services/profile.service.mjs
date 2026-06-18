@@ -14,6 +14,10 @@ function splitList(value) {
   return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
 }
 
+function isEliteRank(rank) {
+  return ['SSS', 'SS+', 'S+'].includes(String(rank || ''));
+}
+
 function scoreAuthor(item) {
   return Math.round((item.scoreSum + item.sPlus * 5 + item.s * 2 + item.citations / 50) * 10) / 10;
 }
@@ -31,7 +35,7 @@ function summarizePaperRows(rows) {
     domains.set(row.domain, (domains.get(row.domain) || 0) + 1);
     scoreSum += Number(row.quality_score || 0);
     citations += Number(row.citation_count || 0);
-    if (row.venue_rank === 'S+') ranks.sPlus += 1;
+    if (isEliteRank(row.venue_rank)) ranks.sPlus += 1;
     else if (row.venue_rank === 'S') ranks.s += 1;
     else if (String(row.venue_rank || '').startsWith('A')) ranks.a += 1;
     else ranks.other += 1;
@@ -73,7 +77,7 @@ export function createProfileService({ openDb }) {
     const limit = Math.min(Number(params.get('limit') || 80), 300);
     const db = openDb();
     try {
-      const rows = db.prepare("SELECT authors, venue_rank, quality_score, citation_count FROM papers WHERE authors != ''").all();
+      const rows = db.prepare("SELECT authors, venue_rank, quality_score, citation_count FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
       const byAuthor = new Map();
       for (const row of rows) {
         for (const rawName of String(row.authors || '').split(';')) {
@@ -83,7 +87,7 @@ export function createProfileService({ openDb }) {
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           byAuthor.set(name, item);
@@ -107,7 +111,7 @@ export function createProfileService({ openDb }) {
     const target = String(name || '').trim().toLowerCase();
     const db = openDb();
     try {
-      const rows = db.prepare('SELECT * FROM papers WHERE authors LIKE ?').all(`%${name}%`)
+      const rows = db.prepare("SELECT * FROM papers WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
         .filter(row => splitList(row.authors).some(author => author.toLowerCase() === target));
       const summary = summarizePaperRows(rows);
       const coauthors = new Map();
@@ -150,7 +154,7 @@ export function createProfileService({ openDb }) {
     const minPapers = Number(params.get('minPapers') || 2);
     const db = openDb();
     try {
-      const rows = db.prepare("SELECT affiliations, venue_rank, quality_score, citation_count FROM papers WHERE affiliations != ''").all();
+      const rows = db.prepare("SELECT affiliations, venue_rank, quality_score, citation_count FROM papers WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
       const byInstitution = new Map();
       for (const row of rows) {
         for (const name of splitList(row.affiliations)) {
@@ -158,7 +162,7 @@ export function createProfileService({ openDb }) {
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          if (row.venue_rank === 'S+') item.sPlus += 1;
+          if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
           byInstitution.set(name, item);
@@ -182,7 +186,7 @@ export function createProfileService({ openDb }) {
     const target = String(name || '').trim().toLowerCase();
     const db = openDb();
     try {
-      const rows = db.prepare('SELECT * FROM papers WHERE affiliations LIKE ?').all(`%${name}%`)
+      const rows = db.prepare("SELECT * FROM papers WHERE affiliations LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
         .filter(row => splitList(row.affiliations).some(institution => institution.toLowerCase() === target));
       const authors = new Map();
       for (const row of rows) {

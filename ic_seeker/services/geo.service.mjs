@@ -180,7 +180,7 @@ function inferCountries(affiliations) {
 }
 
 function rankIncrement(rank) {
-  if (rank === 'S+') return 'sPlus';
+  if (['SSS', 'SS+', 'S+'].includes(String(rank || ''))) return 'sPlus';
   if (rank === 'S') return 's';
   if (String(rank || '').startsWith('A')) return 'a';
   return 'other';
@@ -266,8 +266,8 @@ export function createGeoService({ openDb }) {
     const recentCutoff = new Date().getFullYear() - 9;
     const db = openDb();
     try {
-      const fields = db.prepare("SELECT DISTINCT domain FROM papers WHERE domain IS NOT NULL AND domain != '' ORDER BY domain").all().map(row => row.domain);
-      const where = requestedField ? 'WHERE domain = ?' : '';
+      const fields = db.prepare("SELECT DISTINCT domain FROM papers WHERE domain IS NOT NULL AND domain != '' AND COALESCE(venue_rank, '') != 'Hidden' ORDER BY domain").all().map(row => row.domain);
+      const where = requestedField ? "WHERE domain = ? AND COALESCE(venue_rank, '') != 'Hidden'" : "WHERE COALESCE(venue_rank, '') != 'Hidden'";
       const args = requestedField ? [requestedField] : [];
       const rows = db.prepare(`
         SELECT id, title, authors, affiliations, abstract, year, venue, venue_rank, domain, quality_score, citation_count, doi

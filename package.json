@@ -9,9 +9,12 @@
     "docker:up": "docker compose up --build",
     "build:database": "node ./scripts/build-ic-database.mjs --max-per-venue-year=700 --max-per-venue=12000",
     "build:database:fast": "node ./scripts/build-ic-database.mjs --max-per-venue-year=500 --max-per-venue=9000 --no-source-backfill",
+    "backfill:core": "node ./scripts/backfill-core-venues-to-2000.mjs",
     "import:aminer": "node ./scripts/import-aminer-venues.mjs --limit=100 --max-pages=100",
+    "import:journals": "node ./scripts/import-journal-extensions.mjs",
     "import:pdfs": "node ./scripts/import-local-pdfs.mjs",
-    "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite"
+    "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite",
+    "reweight:venues": "node ./scripts/reweight-venue-policy.mjs"
   },
   "engines": {
     "node": ">=22.5.0"
