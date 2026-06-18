@@ -65,8 +65,8 @@ const journals = [
     shortName: 'IEEE EDL',
     fullName: 'IEEE Electron Device Letters',
     sourceId: 'S19887683',
-    rank: 'B',
-    baseScore: 46,
+    rank: 'Hidden',
+    baseScore: 0,
     terms: ['cmos', 'finfet', 'transistor', 'semiconductor device', 'memory device', 'mosfet', 'nanosheet', 'gaa', 'integrated circuit']
   },
   {
@@ -351,7 +351,7 @@ function isRelevant(record) {
   if (negativeTerms.some(term => hay.includes(term))) return false;
   if (record.domainHits >= 2) return true;
   if (record.relevantScore >= 2) return true;
-  return record.venueRank === 'S+' && record.relevantScore >= 1;
+  return ['SSS', 'SS+', 'S+'].includes(record.venueRank) && record.relevantScore >= 1;
 }
 
 function relevanceScore(text) {

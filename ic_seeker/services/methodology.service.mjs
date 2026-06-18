@@ -28,7 +28,7 @@ export function methodology() {
         'Nat. Commun.': 0,
         'IEEE T-MTT': 78,
         'IEEE TED': 50,
-        'IEEE EDL': 46,
+        'IEEE EDL': 0,
         'IEEE Sensors J.': 40,
         'Adv. Mater.': 38,
         'Appl. Phys. Lett.': 34,
@@ -41,7 +41,7 @@ export function methodology() {
     classification: [
       'Each paper is scored against IC-domain keyword dictionaries using title, abstract, source name, and OpenAlex concepts.',
       'The domain with the most keyword hits wins; if no domain wins but IC terms are present, it falls back to General IC.',
-      'Broad IC-adjacent journals are visible as metadata but heavily downweighted; Nature Communications is currently hidden from default ranking/search surfaces until stricter validation is added.',
+      'Broad IC-adjacent journals are visible as metadata but heavily downweighted; Nature Communications and IEEE EDL are currently hidden from default ranking/search surfaces until stricter validation is added.',
       'This is intentionally transparent and editable. It is not a learned model yet.'
     ],
     coverage: [

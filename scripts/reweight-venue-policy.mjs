@@ -14,7 +14,7 @@ const policy = [
   ['Nat. Commun.', 'Hidden', 0],
   ['IEEE T-MTT', 'A+', 78],
   ['IEEE TED', 'B+', 50],
-  ['IEEE EDL', 'B', 46],
+  ['IEEE EDL', 'Hidden', 0],
   ['IEEE Sensors J.', 'B-', 40],
   ['Adv. Mater.', 'B-', 38],
   ['Appl. Phys. Lett.', 'C+', 34],

@@ -179,7 +179,7 @@ The current extension targets include Nature Electronics, Nature, Nature Communi
 Broad journal policy:
 
 - `Nature` is treated as `SSS`; `Nature Electronics` is treated as `SS+`.
-- `Nature Communications` is retained in SQLite but marked `Hidden`, so it does not affect default search, rankings, maps, topics, or mentor/institution scoring.
+- `Nature Communications` and `IEEE EDL` are retained in SQLite but marked `Hidden`, so they do not affect default search, rankings, maps, topics, or mentor/institution scoring.
 - IEEE T-MTT is kept as a strong RF venue.
 - Broad materials/devices journals such as Advanced Materials and Applied Physics Letters are deliberately downweighted because keyword metadata can over-match non-IC work.
 
