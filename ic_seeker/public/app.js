@@ -39,7 +39,8 @@ const state = {
   mentorInstitutionRegion: '',
   mentorInstitutionMinPapers: 2,
   mentorInstitutionQsOnly: false,
-  mentorInstitutionCache: null
+  mentorRecentOnly: localStorage.getItem('icSeekerMentorRecentOnly') === '1',
+  mentorInstitutionCache: new Map()
 };
 
 const i18n = {
@@ -2584,7 +2585,7 @@ async function renderMentorByInstitutionLegacy(name) {
       <strong>${escapeHtml(t('selectMentor'))}</strong>
     </div>`;
   try {
-    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}`);
+    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}${mentorRecentQuery()}`);
     $('results').innerHTML = `
       <section class="mentor-list-page">
         <div class="ranking-head">
@@ -2599,6 +2600,10 @@ async function renderMentorByInstitutionLegacy(name) {
           <div class="topic-subcategory-bar">
             ${data.domains.slice(0, 8).map(d => `<span class="chip">${escapeHtml(d.key)} (${d.count})</span>`).join('')}
           </div>
+          <label class="mentor-index-check inline">
+            <input id="mentorRecentOnly" type="checkbox" ${state.mentorRecentOnly ? 'checked' : ''}>
+            <span>${escapeHtml(mentorText('近8年', 'Recent 8 years'))}</span>
+          </label>
           <button class="button" id="backToInstitutions" type="button">${escapeHtml(t('backToInstitutions'))}</button>
         </div>
         <div class="ranking-list">
@@ -2616,6 +2621,7 @@ async function renderMentorByInstitutionLegacy(name) {
         </div>
       </section>
     `;
+    bindMentorRecentToggle(() => renderMentorByInstitution(name, { history: 'skip' }));
     $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
     document.querySelectorAll('[data-mentor]').forEach(el => {
       el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
@@ -2814,6 +2820,24 @@ function scrollMentorPageTop(options = {}) {
   requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0 }));
 }
 
+function mentorRecentQuery() {
+  return state.mentorRecentOnly ? '?recentYears=8' : '';
+}
+
+function mentorScopeLabel() {
+  return state.mentorRecentOnly ? mentorText('近8年', 'Recent 8 years') : mentorText('全部年份', 'All years');
+}
+
+function bindMentorRecentToggle(onChange) {
+  $('mentorRecentOnly')?.addEventListener('change', event => {
+    state.mentorRecentOnly = event.target.checked;
+    localStorage.setItem('icSeekerMentorRecentOnly', state.mentorRecentOnly ? '1' : '0');
+    state.mentorInstitutionCache = new Map();
+    state.mentorInstitutionLimit = 80;
+    onChange();
+  });
+}
+
 async function renderMentorInstitutions(options = {}) {
   state.currentView = 'mentor-institutions';
   document.body.classList.add('mentor-section');
@@ -2832,10 +2856,11 @@ async function renderMentorInstitutions(options = {}) {
   if (reviewBox) reviewBox.innerHTML = `<p class="hint">${escapeHtml(t('selectMentor'))}</p>`;
 
   try {
-    if (!state.mentorInstitutionCache) {
-      state.mentorInstitutionCache = await api('/api/mentor/institutions');
+    const cacheKey = state.mentorRecentOnly ? 'recent8' : 'all';
+    if (!state.mentorInstitutionCache.has(cacheKey)) {
+      state.mentorInstitutionCache.set(cacheKey, await api(`/api/mentor/institutions${mentorRecentQuery()}`));
     }
-    const institutions = state.mentorInstitutionCache;
+    const institutions = state.mentorInstitutionCache.get(cacheKey);
     const query = String(state.mentorInstitutionQuery || '').trim().toLowerCase();
     const regions = mentorInstitutionRegions(institutions);
     const filtered = institutions.filter(inst => mentorInstitutionMatches(inst, query));
@@ -2872,6 +2897,11 @@ async function renderMentorInstitutions(options = {}) {
             <input id="mentorInstitutionQsOnly" type="checkbox" ${state.mentorInstitutionQsOnly ? 'checked' : ''}>
             <span>${escapeHtml(mentorText('仅 QS 覆盖', 'QS only'))}</span>
           </label>
+          <label class="mentor-index-check">
+            <input id="mentorRecentOnly" type="checkbox" ${state.mentorRecentOnly ? 'checked' : ''}>
+            <span>${escapeHtml(mentorText('近8年', 'Recent 8 years'))}</span>
+          </label>
+          <span class="pill">${escapeHtml(mentorScopeLabel())}</span>
           <div class="mentor-index-count">${escapeHtml(mentorText(
             `显示 ${fmt(visible.length)} / ${fmt(filtered.length)} 个机构，共 ${fmt(institutions.length)} 个`,
             `Showing ${fmt(visible.length)} / ${fmt(filtered.length)} of ${fmt(institutions.length)}`
@@ -2906,6 +2936,7 @@ async function renderMentorInstitutions(options = {}) {
       state.mentorInstitutionLimit = 80;
       renderMentorInstitutions({ history: 'skip' });
     });
+    bindMentorRecentToggle(() => renderMentorInstitutions({ history: 'skip' }));
     $('loadMoreMentorInstitutions')?.addEventListener('click', () => {
       state.mentorInstitutionLimit += 80;
       renderMentorInstitutions({ history: 'skip', preserveScroll: true });
@@ -2968,7 +2999,7 @@ async function renderMentorByInstitution(name, options = {}) {
     </div>`;
 
   try {
-    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}`);
+    const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}${mentorRecentQuery()}`);
     $('results').innerHTML = `
       <section class="mentor-list-page">
         <div class="ranking-head mentor-index-head">
@@ -2984,6 +3015,10 @@ async function renderMentorByInstitution(name, options = {}) {
               <span class="pill">${escapeHtml(mentorText('已过滤可能学生作者', 'filtered likely students'))} ${fmt(data.excludedLikelyStudentCount || 0)}</span>
             </div>
           </div>
+          <label class="mentor-index-check inline">
+            <input id="mentorRecentOnly" type="checkbox" ${state.mentorRecentOnly ? 'checked' : ''}>
+            <span>${escapeHtml(mentorText('近8年', 'Recent 8 years'))}</span>
+          </label>
           <button class="button" id="backToInstitutions" type="button">${escapeHtml(t('backToInstitutions'))}</button>
         </div>
         <div class="topic-subcategory-bar">
@@ -3008,6 +3043,7 @@ async function renderMentorByInstitution(name, options = {}) {
         </div>
       </section>
     `;
+    bindMentorRecentToggle(() => renderMentorByInstitution(name, { history: 'skip' }));
     $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
     document.querySelectorAll('[data-mentor]').forEach(el => {
       el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
@@ -3031,7 +3067,7 @@ async function loadMentorProfile(name, options = {}) {
   $('results').innerHTML = '<div class="loading">Loading mentor profile...</div>';
 
   try {
-    const profile = await api(`/api/mentor/authors/${encodeURIComponent(name)}`);
+    const profile = await api(`/api/mentor/authors/${encodeURIComponent(name)}${mentorRecentQuery()}`);
     const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : 0);
     const strength = yearlySeriesFromPapers(profile.papers, 'score');
     const activity = yearlySeriesFromPapers(profile.papers, 'count');

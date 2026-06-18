@@ -2,6 +2,12 @@ function splitList(value) {
   return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
 }
 
+function recentCutoff(params) {
+  const years = Number(params?.get?.('recentYears') || 0);
+  if (!Number.isFinite(years) || years <= 0) return null;
+  return new Date().getFullYear() - years + 1;
+}
+
 function scoreAuthor(item) {
   return Math.round((item.scoreSum + item.sPlus * 5 + item.s * 2 + item.citations / 50) * 10) / 10;
 }
@@ -120,11 +126,17 @@ function inferMentorCandidate(summary) {
 }
 
 export function createMentorService({ openDb }) {
-  function institutionsWithMentors() {
+  function institutionsWithMentors(params = new URLSearchParams()) {
+    const cutoff = recentCutoff(params);
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const rows = db.prepare("SELECT affiliations, authors, venue_rank, quality_score, citation_count, year FROM papers WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
+      const rows = db.prepare(`
+        SELECT affiliations, authors, venue_rank, quality_score, citation_count, year
+        FROM papers
+        WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'
+          ${cutoff ? 'AND year >= ?' : ''}
+      `).all(...(cutoff ? [cutoff] : []));
       const authorIndex = buildAuthorInstitutionIndex(rows);
       const authorStats = new Map();
       for (const row of rows) {
@@ -183,12 +195,18 @@ export function createMentorService({ openDb }) {
     }
   }
 
-  function mentorsByInstitution(name) {
+  function mentorsByInstitution(name, params = new URLSearchParams()) {
     const target = String(name || '').trim().toLowerCase();
+    const cutoff = recentCutoff(params);
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const allRows = db.prepare("SELECT * FROM papers WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
+      const allRows = db.prepare(`
+        SELECT *
+        FROM papers
+        WHERE affiliations != '' AND COALESCE(venue_rank, '') != 'Hidden'
+          ${cutoff ? 'AND year >= ?' : ''}
+      `).all(...(cutoff ? [cutoff] : []));
       const authorIndex = buildAuthorInstitutionIndex(allRows);
       const rows = allRows
         .filter(row => splitList(row.affiliations).some(inst => inst.toLowerCase() === target));
@@ -275,6 +293,8 @@ export function createMentorService({ openDb }) {
       const qs = findQsRank(qsRows, name);
       return {
         institution: name,
+        recentYears: cutoff ? Number(params.get('recentYears')) : null,
+        cutoffYear: cutoff,
         qs,
         mentors: mentors.slice(0, 100),
         mentorCandidateCount: mentors.length,
@@ -286,12 +306,18 @@ export function createMentorService({ openDb }) {
     }
   }
 
-  function mentorProfile(name) {
+  function mentorProfile(name, params = new URLSearchParams()) {
     const target = String(name || '').trim().toLowerCase();
+    const cutoff = recentCutoff(params);
     const db = openDb();
     try {
       const qsRows = loadQsRows(db);
-      const rows = db.prepare("SELECT * FROM papers WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
+      const rows = db.prepare(`
+        SELECT *
+        FROM papers
+        WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'
+          ${cutoff ? 'AND year >= ?' : ''}
+      `).all(...(cutoff ? [`%${name}%`, cutoff] : [`%${name}%`]))
         .filter(row => splitList(row.authors).some(author => author.toLowerCase() === target));
       const summary = summarizeMentorRows(rows);
       const coauthors = new Map();
@@ -306,6 +332,8 @@ export function createMentorService({ openDb }) {
       const authorScore = scoreAuthor({ scoreSum: summary.scoreSum, sPlus: summary.ranks.sPlus, s: summary.ranks.s, citations: summary.citations });
       return {
         name,
+        recentYears: cutoff ? Number(params.get('recentYears')) : null,
+        cutoffYear: cutoff,
         paperCount: summary.papers,
         authorScore,
         ...summary,

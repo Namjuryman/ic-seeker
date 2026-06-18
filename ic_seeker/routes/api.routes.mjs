@@ -17,14 +17,14 @@ export function createApiRoutes({ services, http }) {
     if (url.pathname === '/api/methodology') return json(res, methodology());
     if (url.pathname === '/api/professors') return json(res, profile.professors(url.searchParams));
     if (url.pathname === '/api/venue-matrix') return json(res, venueMatrix.venueMatrix());
-    if (url.pathname === '/api/mentor/institutions') return json(res, mentor.institutionsWithMentors());
+    if (url.pathname === '/api/mentor/institutions') return json(res, mentor.institutionsWithMentors(url.searchParams));
     if (url.pathname.startsWith('/api/mentor/institutions/')) {
       const name = decodeURIComponent(url.pathname.split('/').at(-1));
-      return json(res, mentor.mentorsByInstitution(name));
+      return json(res, mentor.mentorsByInstitution(name, url.searchParams));
     }
     if (url.pathname.startsWith('/api/mentor/authors/')) {
       const name = decodeURIComponent(url.pathname.split('/').at(-1));
-      const profileData = mentor.mentorProfile(name);
+      const profileData = mentor.mentorProfile(name, url.searchParams);
       const reviews = review.listReviews(name);
       const stats = review.reviewStats(name);
       return json(res, { ...profileData, reviews, reviewStats: stats });
