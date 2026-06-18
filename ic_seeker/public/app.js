@@ -3280,7 +3280,7 @@ async function renderVenueMatrix(options = {}) {
     document.querySelectorAll('[data-venue-search]').forEach(el => {
       el.addEventListener('click', () => {
         $('venue').value = el.dataset.venueSearch;
-        searchFirstPage();
+        searchFirstPage({ history: 'push' });
       });
     });
     document.querySelectorAll('[data-venue-year]').forEach(el => {
@@ -3295,7 +3295,7 @@ async function renderVenueMatrix(options = {}) {
           $('yearFrom').value = '2000';
           $('yearTo').value = '2018';
         }
-        searchFirstPage();
+        searchFirstPage({ history: 'push' });
       });
     });
   } catch (err) {
