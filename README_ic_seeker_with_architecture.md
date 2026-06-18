@@ -75,6 +75,7 @@ Publisher PDFs are **not** included.
 - Institution profile pages with yearly output, venues, fields, authors, and representative papers
 - Topic intelligence pages with field trends, leaders, institutions, venues, and representative papers
 - Regional intelligence map with hoverable countries, all-field strength, institution view, single-topic strength such as PMIC, and regional strength-change summaries
+- Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
 - CSV export for ChipSeeker-like workflows
 
 ### Deployment

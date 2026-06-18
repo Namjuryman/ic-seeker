@@ -1,5 +1,3 @@
-import { geoShapes } from './js/geo-shapes.js';
-
 const state = {
   authenticated: false,
   authEnabled: false,
@@ -18,6 +16,8 @@ const state = {
   activePaper: null,
   resultMeta: null,
   geoCache: new Map(),
+  geoWorldMap: null,
+  geoWorldMapPromise: null,
   currentView: 'papers',
   restoringRoute: false,
   view: 'comfort',
@@ -1270,46 +1270,111 @@ function geoMetric(country, mode) {
   return Number(country.recentScore || country.score || 0);
 }
 
-function renderGeoMap(countries, selectedCode, mode) {
+function featureCode(feature) {
+  const props = feature?.properties || {};
+  if (props.ADM0_A3 === 'TWN' || props.ISO_A3 === 'TWN') return 'TW';
+  return props.ISO_A2 || props.WB_A2 || props.POSTAL || props.ADM0_A3 || '';
+}
+
+function countryFeatureCode(code) {
+  if (code === 'UK') return 'GB';
+  if (code === 'TW') return 'TW';
+  return code;
+}
+
+function projectWorldPoint(lon, lat) {
+  const clampedLat = Math.max(-58, Math.min(83, Number(lat || 0)));
+  return {
+    x: ((Number(lon || 0) + 180) / 360) * 110,
+    y: ((83 - clampedLat) / 141) * 62 + 2
+  };
+}
+
+function ringPath(ring) {
+  return ring.map((point, index) => {
+    const projected = projectWorldPoint(point[0], point[1]);
+    return `${index ? 'L' : 'M'}${projected.x.toFixed(2)} ${projected.y.toFixed(2)}`;
+  }).join(' ') + ' Z';
+}
+
+function geometryPath(geometry) {
+  if (!geometry) return '';
+  if (geometry.type === 'Polygon') return geometry.coordinates.map(ringPath).join(' ');
+  if (geometry.type === 'MultiPolygon') return geometry.coordinates.flatMap(poly => poly.map(ringPath)).join(' ');
+  return '';
+}
+
+function prepareWorldMap(geojson) {
+  const features = (geojson?.features || [])
+    .filter(feature => featureCode(feature) !== 'AQ')
+    .map(feature => ({
+      code: featureCode(feature),
+      name: feature.properties?.NAME || feature.properties?.ADMIN || featureCode(feature),
+      path: geometryPath(feature.geometry)
+    }))
+    .filter(feature => feature.code && feature.path);
+  return {
+    features,
+    byCode: new Map(features.map(feature => [feature.code, feature]))
+  };
+}
+
+async function loadWorldMap() {
+  if (state.geoWorldMap) return state.geoWorldMap;
+  if (!state.geoWorldMapPromise) {
+    state.geoWorldMapPromise = fetch('/data/world-countries-110m.geojson', { credentials: 'same-origin' })
+      .then(res => {
+        if (!res.ok) throw new Error(`World map failed: ${res.status}`);
+        return res.json();
+      })
+      .then(prepareWorldMap);
+  }
+  state.geoWorldMap = await state.geoWorldMapPromise;
+  return state.geoWorldMap;
+}
+
+function renderGeoMap(countries, selectedCode, mode, worldMap) {
   const max = Math.max(1, ...countries.map(country => geoMetric(country, mode)));
+  const countryByFeature = new Map(countries.map(country => [countryFeatureCode(country.code), country]));
+  const renderedFeatureCodes = new Set();
   return `<div class="geo-map-canvas" aria-label="${escapeHtml(t('geoIntelligence'))}">
-    <svg viewBox="0 0 110 90" role="img" class="geo-map-bg">
+    <svg viewBox="0 0 110 66" role="img" class="geo-map-bg">
       <defs>
         <linearGradient id="geoOcean" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#f9fbff"></stop>
           <stop offset="100%" stop-color="#eef4fb"></stop>
         </linearGradient>
       </defs>
-      <rect x="1" y="1" width="108" height="88" rx="7" fill="url(#geoOcean)"></rect>
-      <path class="geo-land" d="M7 18 C15 8 31 6 42 14 C50 20 50 31 42 38 C33 47 16 45 7 35 Z"></path>
-      <path class="geo-land" d="M40 19 C50 9 70 8 85 17 C102 27 104 47 90 60 C77 71 54 67 43 55 C33 44 31 28 40 19 Z"></path>
-      <path class="geo-land" d="M71 67 C82 61 98 67 105 78 C94 85 78 84 68 77 Z"></path>
-      <path class="geo-land" d="M28 49 C38 51 43 63 36 80 C27 76 22 61 28 49 Z"></path>
+      <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)"></rect>
+      <g class="geo-world-layer">
+        ${(worldMap?.features || []).map(feature => {
+          const country = countryByFeature.get(feature.code);
+          const selected = country?.code === selectedCode;
+          const value = country ? geoMetric(country, mode) : 0;
+          const intensity = country ? Math.max(.18, Math.min(.95, value / max)) : 0;
+          if (country) renderedFeatureCodes.add(feature.code);
+          return `<path class="geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}"
+            ${country ? `role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}"` : ''}
+            style="--geo-alpha:${intensity.toFixed(3)}"
+            d="${feature.path}">
+            <title>${escapeHtml(country ? `${country.name}: ${Math.round(value)}` : feature.name)}</title>
+          </path>`;
+        }).join('')}
+      </g>
       <g class="geo-country-layer">
         ${countries.map(country => {
           const value = geoMetric(country, mode);
-          const shape = geoShapes[country.code];
-          const intensity = Math.max(.18, Math.min(.92, value / max));
-          if (!shape) return '';
-          return `<g class="geo-country-shape ${country.code === selectedCode ? 'active' : ''}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}" style="--geo-alpha:${intensity.toFixed(3)}">
-            <path d="${shape.d}"></path>
-            <text x="${shape.lx}" y="${shape.ly}" text-anchor="middle">${escapeHtml(country.code)}</text>
-            <text class="geo-value" x="${shape.lx}" y="${shape.ly + 4}" text-anchor="middle">${escapeHtml(Math.round(value))}</text>
+          const featureCode = countryFeatureCode(country.code);
+          const isPathBacked = renderedFeatureCodes.has(featureCode);
+          const projected = projectWorldPoint(country.x / 100 * 360 - 180, 83 - (country.y / 100) * 141);
+          return `<g class="geo-label ${country.code === selectedCode ? 'active' : ''} ${isPathBacked ? '' : 'marker-label'}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}">
+            ${isPathBacked ? '' : `<circle cx="${projected.x.toFixed(2)}" cy="${projected.y.toFixed(2)}" r="1.8"></circle>`}
+            <text x="${projected.x.toFixed(2)}" y="${projected.y.toFixed(2)}" text-anchor="middle">${escapeHtml(country.code)}</text>
+            <text class="geo-value" x="${projected.x.toFixed(2)}" y="${(projected.y + 3.4).toFixed(2)}" text-anchor="middle">${escapeHtml(Math.round(value))}</text>
           </g>`;
         }).join('')}
       </g>
     </svg>
-    ${countries.map(country => {
-      const value = geoMetric(country, mode);
-      if (geoShapes[country.code]) return '';
-      const size = Math.max(18, Math.min(38, 12 + value / max * 26));
-      return `<button class="geo-country-fallback ${country.code === selectedCode ? 'active' : ''}" type="button"
-        data-geo-country="${escapeHtml(country.code)}"
-        style="left:${country.x}%;top:${country.y}%;width:${size}px;height:${size}px">
-        <span>${escapeHtml(country.code)}</span>
-        <i>${escapeHtml(Math.round(value))}</i>
-      </button>`;
-    }).join('')}
   </div>`;
 }
 
@@ -1373,12 +1438,14 @@ function regionMomentum(regionTrends) {
 async function renderGeo(field = '', options = {}) {
   const mode = options.mode || routeFromLocation().mode || 'overall';
   const cacheKey = field || '__all__';
-  let data = state.geoCache.get(cacheKey);
-  if (!data || options.refresh) {
-    const query = field ? `?field=${encodeURIComponent(field)}` : '';
-    data = await api(`/api/geo${query}`);
-    state.geoCache.set(cacheKey, data);
-  }
+  const query = field ? `?field=${encodeURIComponent(field)}` : '';
+  const dataPromise = (!options.refresh && state.geoCache.get(cacheKey))
+    ? Promise.resolve(state.geoCache.get(cacheKey))
+    : api(`/api/geo${query}`).then(value => {
+      state.geoCache.set(cacheKey, value);
+      return value;
+    });
+  const [data, worldMap] = await Promise.all([dataPromise, loadWorldMap()]);
   const selectedCode = options.country || routeFromLocation().country || data.countries[0]?.code || '';
   const selectedCountry = data.countries.find(country => country.code === selectedCode) || data.countries[0];
   if (options.history !== 'skip') writeRoute({ view: 'geo', field: data.field || '', mode, country: selectedCountry?.code || '' });
@@ -1410,7 +1477,7 @@ async function renderGeo(field = '', options = {}) {
       </div>
       <div class="geo-grid">
         <section class="geo-map-panel">
-          ${renderGeoMap(data.countries, selectedCountry?.code || '', mode)}
+          ${renderGeoMap(data.countries, selectedCountry?.code || '', mode, worldMap)}
           <p class="hint">${escapeHtml(t('geoHoverHint'))}</p>
         </section>
         <aside class="geo-side" id="geoCountryDetail">${renderGeoCountryDetail(selectedCountry, mode)}</aside>
@@ -1439,10 +1506,16 @@ async function renderGeo(field = '', options = {}) {
     bindProfileLinks();
     if (write) writeRoute({ view: 'geo', field: data.field || '', mode, country: country.code });
   };
-  document.querySelectorAll('.geo-country-shape, .geo-country-fallback').forEach(button => {
+  document.querySelectorAll('.geo-world-country.has-data, .geo-label').forEach(button => {
     button.addEventListener('mouseenter', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('focus', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
+    button.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        updateCountry(button.dataset.geoCountry, true);
+      }
+    });
   });
   document.querySelectorAll('.geo-country-row').forEach(button => {
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
@@ -1830,6 +1903,7 @@ async function bootApp() {
   await loadStats();
   renderTopicChips();
   setTimeout(() => {
+    loadWorldMap().catch(() => {});
     api('/api/geo').then(data => state.geoCache.set('__all__', data)).catch(() => {});
     api('/api/geo?field=Power%20Management').then(data => state.geoCache.set('Power Management', data)).catch(() => {});
   }, 400);

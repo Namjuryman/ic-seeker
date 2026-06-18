@@ -39,6 +39,7 @@ Publisher PDFs are not included.
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
 - Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
+- Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
 - Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
 - CSV export compatible with ChipSeeker-like workflows
 - Mobile-friendly web layout
@@ -239,3 +240,5 @@ Future product ideas are collected in [docs/ROADMAP.md](docs/ROADMAP.md), includ
 ## Data Policy
 
 This project stores metadata and local user-provided PDFs. It does not bypass paywalls and does not bulk-download publisher PDFs.
+
+The regional map basemap uses Natural Earth Admin-0 country boundaries, which are public-domain map data. The GeoJSON is stored locally under `ic_seeker/public/data/` so the web app does not depend on an external map CDN at runtime.
