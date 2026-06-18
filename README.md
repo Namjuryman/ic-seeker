@@ -199,11 +199,23 @@ Longer-term classification work should become a dedicated data-quality subsystem
 - optional embedding/LLM-assisted review only as a second-pass classifier, with the rule-based reason kept visible
 - regression tests for examples that were previously misclassified
 
+## Regional Map Notes
+
+The Geo Intelligence page now separates spatial reading from numeric reading:
+
+- the map layer uses Natural Earth country boundaries
+- country color is kept subdued so dense regions stay readable
+- city-level rays are schematic IC hotspots, used to show intra-country density such as US West/East Coast and East Asia clusters
+- exact numbers are moved into the country share chart, country ranking, and country detail panel
+
+The current city hotspot layer is a transition design. It is not yet a verified city-level database. The next data milestone is institution normalization plus geocoding, so affiliations such as Hong Kong, Macau, university branches, corporate labs, and renamed institutes can be disambiguated before city-level scoring is treated as factual.
+
 ## Caveats
 
 - Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.
 - Author identity is currently name-based; serious professor ranking should add ORCID/institution disambiguation.
 - Institution names are raw affiliation strings and may need normalization.
+- Regional and city-level views are estimates until institution disambiguation and geocoding are connected.
 - Some venue-year counts differ from IEEE Xplore because of early access, front matter, corrections, duplicate indexing, or source-specific metadata policy.
 - `ESSCIRC 2020` was cancelled due to COVID-19; 2024+ European solid-state events may appear under `ESSERC`/combined naming.
 

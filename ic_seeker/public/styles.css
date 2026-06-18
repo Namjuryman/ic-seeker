@@ -1879,18 +1879,54 @@ body.detail-collapsed .detail-collapse {
 
 .geo-world-country.has-data {
   cursor: pointer;
-  fill: rgba(52, 82, 184, calc(.14 + var(--geo-alpha) * .58));
-  stroke: rgba(54, 75, 136, .64);
-  stroke-width: .28;
+  fill: rgba(81, 105, 179, calc(.08 + var(--geo-alpha) * .34));
+  stroke: rgba(64, 84, 132, .46);
+  stroke-width: .22;
 }
 
 .geo-world-country.has-data:hover,
 .geo-world-country.has-data:focus,
 .geo-world-country.has-data.active {
-  fill: rgba(28, 138, 91, calc(.22 + var(--geo-alpha) * .62));
-  stroke: #173f82;
-  stroke-width: .55;
+  fill: rgba(30, 145, 104, calc(.16 + var(--geo-alpha) * .36));
+  stroke: #153f86;
+  stroke-width: .42;
   outline: none;
+}
+
+.geo-hotspot {
+  cursor: pointer;
+  outline: none;
+}
+
+.geo-hotspot line {
+  stroke: rgba(28, 111, 148, calc(.25 + var(--geo-hot-alpha) * .55));
+  stroke-width: .22;
+  stroke-linecap: round;
+}
+
+.geo-hotspot circle {
+  fill: rgba(36, 157, 116, calc(.16 + var(--geo-hot-alpha) * .45));
+  stroke: rgba(12, 74, 92, .35);
+  stroke-width: .18;
+}
+
+.geo-hotspot .geo-hot-tip {
+  fill: rgba(255, 255, 255, .92);
+  stroke: rgba(18, 93, 129, .7);
+}
+
+.geo-hotspot:hover line,
+.geo-hotspot:focus line,
+.geo-hotspot.active line {
+  stroke: rgba(36, 76, 194, .82);
+  stroke-width: .34;
+}
+
+.geo-hotspot:hover circle,
+.geo-hotspot:focus circle,
+.geo-hotspot.active circle {
+  fill: rgba(45, 176, 124, .62);
+  stroke: #244cc2;
 }
 
 .geo-label {
@@ -1900,16 +1936,10 @@ body.detail-collapsed .detail-collapse {
 .geo-label text {
   pointer-events: none;
   paint-order: stroke;
-  stroke: rgba(255, 255, 255, .88);
-  stroke-width: .95px;
+  stroke: rgba(255, 255, 255, .94);
+  stroke-width: .75px;
   fill: #15213a;
-  font-size: 2.35px;
-  font-weight: 900;
-}
-
-.geo-label .geo-value {
-  fill: #176244;
-  font-size: 2.15px;
+  font-size: 1.95px;
   font-weight: 900;
 }
 
@@ -1969,7 +1999,7 @@ body.detail-collapsed .detail-collapse {
 
 .geo-lower {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 14px;
 }
@@ -2030,6 +2060,66 @@ body.detail-collapsed .detail-collapse {
   color: var(--muted);
   font-size: 12px;
   font-style: normal;
+}
+
+.geo-share {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.geo-pie {
+  width: 118px;
+  height: 118px;
+  border: 1px solid #dfe6f1;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 24px #fff, 0 12px 28px rgba(25, 41, 77, .08);
+}
+
+.geo-pie-legend {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.geo-pie-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) 38px;
+  gap: 8px;
+  align-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 5px 6px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.geo-pie-row:hover,
+.geo-pie-row.active {
+  background: #f3f6ff;
+}
+
+.geo-pie-row i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.geo-pie-row span {
+  overflow: hidden;
+  color: #43506a;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.geo-pie-row strong {
+  color: #17213a;
+  font-size: 12px;
+  text-align: right;
 }
 
 .topic-page {

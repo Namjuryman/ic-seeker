@@ -1273,14 +1273,90 @@ function geoMetric(country, mode) {
 function featureCode(feature) {
   const props = feature?.properties || {};
   if (props.ADM0_A3 === 'TWN' || props.ISO_A3 === 'TWN') return 'TW';
-  return props.ISO_A2 || props.WB_A2 || props.POSTAL || props.ADM0_A3 || '';
+  return [props.ISO_A2, props.WB_A2, props.POSTAL, props.ADM0_A3].find(code => code && code !== '-99') || '';
 }
 
 function countryFeatureCode(code) {
   if (code === 'UK') return 'GB';
   if (code === 'TW') return 'TW';
+  if (code === 'FR') return 'FRA';
   return code;
 }
+
+const geoHotspotProfiles = {
+  US: [
+    { lon: -122.2, lat: 37.4, weight: .28 },
+    { lon: -118.2, lat: 34.0, weight: .12 },
+    { lon: -97.7, lat: 30.3, weight: .15 },
+    { lon: -71.1, lat: 42.4, weight: .22 },
+    { lon: -84.4, lat: 33.8, weight: .08 }
+  ],
+  CN: [
+    { lon: 116.4, lat: 39.9, weight: .24 },
+    { lon: 121.5, lat: 31.2, weight: .22 },
+    { lon: 120.2, lat: 30.3, weight: .12 },
+    { lon: 113.3, lat: 23.1, weight: .16 },
+    { lon: 118.8, lat: 32.1, weight: .10 }
+  ],
+  TW: [
+    { lon: 121.0, lat: 24.8, weight: .55 },
+    { lon: 120.7, lat: 24.1, weight: .22 },
+    { lon: 121.5, lat: 25.0, weight: .18 }
+  ],
+  HK: [{ lon: 114.2, lat: 22.3, weight: 1 }],
+  MO: [{ lon: 113.5, lat: 22.2, weight: 1 }],
+  KR: [
+    { lon: 127.0, lat: 37.5, weight: .45 },
+    { lon: 127.4, lat: 36.4, weight: .34 },
+    { lon: 129.1, lat: 35.2, weight: .14 }
+  ],
+  JP: [
+    { lon: 139.7, lat: 35.7, weight: .42 },
+    { lon: 135.5, lat: 34.7, weight: .22 },
+    { lon: 140.9, lat: 38.3, weight: .18 }
+  ],
+  SG: [{ lon: 103.8, lat: 1.35, weight: 1 }],
+  IN: [
+    { lon: 77.6, lat: 12.9, weight: .34 },
+    { lon: 77.2, lat: 28.6, weight: .22 },
+    { lon: 72.9, lat: 19.1, weight: .16 },
+    { lon: 88.4, lat: 22.6, weight: .14 }
+  ],
+  CA: [
+    { lon: -79.4, lat: 43.7, weight: .42 },
+    { lon: -123.1, lat: 49.3, weight: .24 },
+    { lon: -73.6, lat: 45.5, weight: .18 }
+  ],
+  UK: [
+    { lon: -0.1, lat: 51.5, weight: .38 },
+    { lon: .1, lat: 52.2, weight: .32 },
+    { lon: -1.3, lat: 51.8, weight: .18 }
+  ],
+  DE: [
+    { lon: 11.6, lat: 48.1, weight: .28 },
+    { lon: 8.7, lat: 49.0, weight: .18 },
+    { lon: 13.4, lat: 52.5, weight: .14 },
+    { lon: 6.1, lat: 50.8, weight: .16 }
+  ],
+  NL: [
+    { lon: 4.4, lat: 52.0, weight: .38 },
+    { lon: 5.5, lat: 51.4, weight: .36 },
+    { lon: 6.9, lat: 52.2, weight: .16 }
+  ],
+  BE: [{ lon: 4.7, lat: 50.9, weight: .68 }, { lon: 4.4, lat: 50.8, weight: .2 }],
+  CH: [{ lon: 8.5, lat: 47.4, weight: .45 }, { lon: 6.6, lat: 46.5, weight: .36 }],
+  FR: [{ lon: 2.3, lat: 48.9, weight: .26 }, { lon: 5.7, lat: 45.2, weight: .46 }],
+  IT: [{ lon: 9.2, lat: 45.5, weight: .46 }, { lon: 11.3, lat: 44.5, weight: .22 }, { lon: 12.5, lat: 41.9, weight: .14 }],
+  AU: [{ lon: 151.2, lat: -33.9, weight: .34 }, { lon: 144.9, lat: -37.8, weight: .26 }, { lon: 115.9, lat: -31.9, weight: .16 }]
+};
+
+const geoLabelOffsets = {
+  US: { dx: -3, dy: 4 }, CA: { dx: -2, dy: -2 }, CN: { dx: -4, dy: 2 }, KR: { dx: 3, dy: -1 },
+  JP: { dx: 4, dy: 1 }, TW: { dx: 3, dy: 4 }, HK: { dx: -4, dy: 4 }, MO: { dx: -5, dy: 6 },
+  SG: { dx: 1, dy: 4 }, IN: { dx: -4, dy: 2 }, UK: { dx: -4, dy: -3 }, NL: { dx: -3, dy: -5 },
+  BE: { dx: -4, dy: 0 }, DE: { dx: 3, dy: -4 }, FR: { dx: -5, dy: 2 }, CH: { dx: 3, dy: 3 },
+  IT: { dx: 2, dy: 4 }, AU: { dx: 2, dy: 3 }
+};
 
 function projectWorldPoint(lon, lat) {
   const clampedLat = Math.max(-58, Math.min(83, Number(lat || 0)));
@@ -1333,10 +1409,28 @@ async function loadWorldMap() {
   return state.geoWorldMap;
 }
 
+function geoHotspots(country, max, mode) {
+  const metric = geoMetric(country, mode);
+  const scale = Math.sqrt(Math.max(.04, metric / Math.max(1, max)));
+  const profile = geoHotspotProfiles[country.code] || [{
+    lon: country.x / 100 * 360 - 180,
+    lat: 83 - (country.y / 100) * 141,
+    weight: 1
+  }];
+  return profile.map((spot, index) => {
+    const projected = projectWorldPoint(spot.lon, spot.lat);
+    const height = Math.max(.9, Math.min(8.2, scale * (2.3 + spot.weight * 8.8)));
+    const radius = Math.max(.55, Math.min(2.25, scale * (1 + spot.weight * 2.4)));
+    return { ...spot, index, x: projected.x, y: projected.y, height, radius, alpha: Math.max(.34, Math.min(.92, scale * (.42 + spot.weight))) };
+  });
+}
+
 function renderGeoMap(countries, selectedCode, mode, worldMap) {
   const max = Math.max(1, ...countries.map(country => geoMetric(country, mode)));
   const countryByFeature = new Map(countries.map(country => [countryFeatureCode(country.code), country]));
   const renderedFeatureCodes = new Set();
+  const labelled = new Set(countries.slice(0, 9).map(country => country.code));
+  if (selectedCode) labelled.add(selectedCode);
   return `<div class="geo-map-canvas" aria-label="${escapeHtml(t('geoIntelligence'))}">
     <svg viewBox="0 0 110 66" role="img" class="geo-map-bg">
       <defs>
@@ -1344,6 +1438,10 @@ function renderGeoMap(countries, selectedCode, mode, worldMap) {
           <stop offset="0%" stop-color="#f9fbff"></stop>
           <stop offset="100%" stop-color="#eef4fb"></stop>
         </linearGradient>
+        <filter id="geoGlow" x="-30%" y="-70%" width="160%" height="220%">
+          <feGaussianBlur stdDeviation=".95" result="blur"></feGaussianBlur>
+          <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+        </filter>
       </defs>
       <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)"></rect>
       <g class="geo-world-layer">
@@ -1361,20 +1459,63 @@ function renderGeoMap(countries, selectedCode, mode, worldMap) {
           </path>`;
         }).join('')}
       </g>
+      <g class="geo-hotspot-layer" filter="url(#geoGlow)">
+        ${countries.flatMap(country => geoHotspots(country, max, mode).map(spot => {
+          const isActive = country.code === selectedCode;
+          return `<g class="geo-hotspot ${isActive ? 'active' : ''}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}" style="--geo-hot-alpha:${spot.alpha.toFixed(3)}">
+            <line x1="${spot.x.toFixed(2)}" y1="${spot.y.toFixed(2)}" x2="${spot.x.toFixed(2)}" y2="${(spot.y - spot.height).toFixed(2)}"></line>
+            <circle cx="${spot.x.toFixed(2)}" cy="${spot.y.toFixed(2)}" r="${spot.radius.toFixed(2)}"></circle>
+            <circle class="geo-hot-tip" cx="${spot.x.toFixed(2)}" cy="${(spot.y - spot.height).toFixed(2)}" r="${Math.max(.32, spot.radius * .34).toFixed(2)}"></circle>
+            <title>${escapeHtml(country.name)} hotspot: ${Math.round(geoMetric(country, mode))}</title>
+          </g>`;
+        })).join('')}
+      </g>
       <g class="geo-country-layer">
         ${countries.map(country => {
-          const value = geoMetric(country, mode);
           const featureCode = countryFeatureCode(country.code);
           const isPathBacked = renderedFeatureCodes.has(featureCode);
           const projected = projectWorldPoint(country.x / 100 * 360 - 180, 83 - (country.y / 100) * 141);
+          const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 };
+          const shouldLabel = labelled.has(country.code) || !isPathBacked;
+          if (!shouldLabel) return '';
           return `<g class="geo-label ${country.code === selectedCode ? 'active' : ''} ${isPathBacked ? '' : 'marker-label'}" role="button" tabindex="0" data-geo-country="${escapeHtml(country.code)}">
             ${isPathBacked ? '' : `<circle cx="${projected.x.toFixed(2)}" cy="${projected.y.toFixed(2)}" r="1.8"></circle>`}
-            <text x="${projected.x.toFixed(2)}" y="${projected.y.toFixed(2)}" text-anchor="middle">${escapeHtml(country.code)}</text>
-            <text class="geo-value" x="${projected.x.toFixed(2)}" y="${(projected.y + 3.4).toFixed(2)}" text-anchor="middle">${escapeHtml(Math.round(value))}</text>
+            <text x="${(projected.x + offset.dx).toFixed(2)}" y="${(projected.y + offset.dy).toFixed(2)}" text-anchor="middle">${escapeHtml(country.code)}</text>
           </g>`;
         }).join('')}
       </g>
     </svg>
+  </div>`;
+}
+
+function renderGeoSharePie(countries, mode) {
+  const rows = countries.slice(0, 7).map(country => ({
+    key: country.code,
+    name: country.name,
+    count: Math.round(geoMetric(country, mode))
+  }));
+  const other = countries.slice(7).reduce((sum, country) => sum + geoMetric(country, mode), 0);
+  if (other > 0) rows.push({ key: 'Other', name: 'Other', count: Math.round(other) });
+  const total = Math.max(1, rows.reduce((sum, row) => sum + Number(row.count || 0), 0));
+  let cursor = 0;
+  const colors = ['#3654c8', '#1f9d73', '#6f7fb8', '#d18b2c', '#40a0c4', '#825ec9', '#cb5b7b', '#aab6c8'];
+  const gradient = rows.map((row, index) => {
+    const start = cursor / total * 100;
+    cursor += Number(row.count || 0);
+    const end = cursor / total * 100;
+    return `${colors[index % colors.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+  }).join(', ');
+  return `<div class="geo-share">
+    <div class="geo-pie" style="background: conic-gradient(${gradient});" role="img" aria-label="Country share"></div>
+    <div class="geo-pie-legend">
+      ${rows.map((row, index) => {
+        const inner = `<i style="background:${colors[index % colors.length]}"></i>
+          <span>${escapeHtml(row.name)}</span>
+          <strong>${Math.round(Number(row.count || 0) / total * 100)}%</strong>`;
+        if (row.key === 'Other') return `<div class="geo-pie-row muted">${inner}</div>`;
+        return `<button class="geo-pie-row" type="button" data-geo-country="${escapeHtml(row.key)}">${inner}</button>`;
+      }).join('')}
+    </div>
   </div>`;
 }
 
@@ -1479,6 +1620,7 @@ async function renderGeo(field = '', options = {}) {
         <section class="geo-map-panel">
           ${renderGeoMap(data.countries, selectedCountry?.code || '', mode, worldMap)}
           <p class="hint">${escapeHtml(t('geoHoverHint'))}</p>
+          <p class="hint">City-level rays are schematic hotspots until institution geocoding is connected.</p>
         </section>
         <aside class="geo-side" id="geoCountryDetail">${renderGeoCountryDetail(selectedCountry, mode)}</aside>
       </div>
@@ -1486,6 +1628,10 @@ async function renderGeo(field = '', options = {}) {
         <div class="geo-card">
           <h3>${escapeHtml(t('geoTrend'))}</h3>
           ${renderMiniBars(momentum.map(row => ({ key: row.region, count: Math.round(row.recent) })), 'strength')}
+        </div>
+        <div class="geo-card">
+          <h3>Country share</h3>
+          ${renderGeoSharePie(data.countries, mode)}
         </div>
         <div class="geo-card">
           <h3>${escapeHtml(t('geoTopCountries'))}</h3>
@@ -1506,7 +1652,7 @@ async function renderGeo(field = '', options = {}) {
     bindProfileLinks();
     if (write) writeRoute({ view: 'geo', field: data.field || '', mode, country: country.code });
   };
-  document.querySelectorAll('.geo-world-country.has-data, .geo-label').forEach(button => {
+  document.querySelectorAll('.geo-world-country.has-data, .geo-label, .geo-hotspot').forEach(button => {
     button.addEventListener('mouseenter', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('focus', () => updateCountry(button.dataset.geoCountry, false));
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
@@ -1517,7 +1663,7 @@ async function renderGeo(field = '', options = {}) {
       }
     });
   });
-  document.querySelectorAll('.geo-country-row').forEach(button => {
+  document.querySelectorAll('.geo-country-row, .geo-pie-row[data-geo-country]').forEach(button => {
     button.addEventListener('click', () => updateCountry(button.dataset.geoCountry, true));
   });
   document.querySelectorAll('[data-geo-mode]').forEach(button => {

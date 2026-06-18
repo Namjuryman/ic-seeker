@@ -358,6 +358,21 @@ Planned improvements:
 - Preserve source provenance for each merged record
 - Keep conflict logs for manual inspection
 
+### Regional Intelligence and Map Data
+
+The regional intelligence page uses a local Natural Earth Admin-0 GeoJSON basemap and a lightweight SVG renderer. Numeric values are intentionally kept out of the map labels; the map is for spatial distribution, while exact values live in the country share chart, ranking list, and country detail panel.
+
+The current city-level visual layer is a schematic hotspot overlay. It provides useful product feedback for patterns such as US West Coast versus East Coast or East Asia clustering, but it is not a verified city geocoding layer yet.
+
+Planned upgrades:
+
+- normalize affiliation strings into canonical institutions
+- map institutions to stable city, region, and country identifiers
+- merge or flag ambiguous Hong Kong, Macau, branch-campus, and corporate-lab records
+- store city coordinates and confidence scores in the database
+- expose city-level aggregation through the geo service rather than hard-coded frontend hotspot profiles
+- keep a QA list for suspicious country/city counts before showing them as factual rankings
+
 ---
 
 ## Project Structure
