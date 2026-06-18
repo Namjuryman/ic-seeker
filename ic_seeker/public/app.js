@@ -1059,12 +1059,37 @@ function renderTopicChips() {
   });
 }
 
-function tokenLinks(value, type) {
-  const attr = type === 'author' ? 'data-author-link' : 'data-institution-link';
-  return String(value || '')
+function cleanProfileAuthorName(value) {
+  let name = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!name) return '';
+  if (name.endsWith(')') && !name.includes('(')) return '';
+  name = name.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+  if (!name) return '';
+  if (/\b(university|institute|academy|laborator(?:y|ies)|labs?|center|centre|school|college|department|faculty|hospital|corporation|company|technologies|technology|ltd|inc|research center|engineering research|state key|national engineering)\b/i.test(name)) return '';
+  if (name.length > 80) return '';
+  return name;
+}
+
+function splitProfileList(value, type = 'generic') {
+  const raw = String(value || '')
     .split(';')
     .map(item => item.trim())
-    .filter(Boolean)
+    .filter(Boolean);
+  if (type !== 'author') return raw;
+  const seen = new Set();
+  return raw
+    .map(cleanProfileAuthorName)
+    .filter(item => {
+      const key = item.toLowerCase();
+      if (!item || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function tokenLinks(value, type) {
+  const attr = type === 'author' ? 'data-author-link' : 'data-institution-link';
+  return splitProfileList(value, type)
     .map(item => `<button class="text-link" ${attr}="${escapeHtml(item)}">${escapeHtml(item)}</button>`)
     .join('<span class="sep">;</span> ') || '-';
 }
@@ -1169,13 +1194,6 @@ function renderClickableMiniBars(rows, label = 'count', type = 'author') {
       </div>
     `).join('')}
   </div>`;
-}
-
-function splitProfileList(value) {
-  return String(value || '')
-    .split(';')
-    .map(item => item.trim())
-    .filter(Boolean);
 }
 
 function careerStageText(profile, paperCount) {
@@ -1438,6 +1456,9 @@ async function loadInstitution(name, options = {}) {
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
   const strength = yearlySeriesFromPapers(profile.papers, 'score');
+  const ambiguousNote = state.lang === 'zh'
+    ? '这个名称更像二级院系/研究中心，不是唯一学校实体。当前先隐藏导师画像，下面列出可能的上级机构；后续接入 IEEE 作者-单位映射后再精确合并。'
+    : 'This looks like a subunit rather than a unique institution entity. Scholar portraits are hidden for now; possible parent institutions are listed below until author-affiliation mapping is connected.';
   state.detailCollapsed = true;
   applyDetailState();
   $('summary').innerHTML = '';
@@ -1468,8 +1489,13 @@ async function loadInstitution(name, options = {}) {
         ${renderSparkBars(activity, t('yearlyActivity'), 'bar')}
         <div class="spark-panel"><h3>${escapeHtml(t('rankDistribution'))}</h3>${renderRankDonut(profile.ranks)}</div>
       </section>
+      ${profile.ambiguousSubunit ? `<section class="profile-side-panel ambiguous-node">
+        <h3>${state.lang === 'zh' ? '需要归并的二级机构' : 'Subunit needs merging'}</h3>
+        <p class="hint">${escapeHtml(ambiguousNote)}</p>
+        <div class="link-cloud">${tokenLinks((profile.parentInstitutions || []).map(x => x.key).join('; '), 'institution')}</div>
+      </section>` : ''}
       <section class="profile-columns">
-        <div><h3>${escapeHtml(t('navAuthors'))}</h3>${renderClickableMiniBars(profile.authors, 'papers', 'author')}</div>
+        <div><h3>${escapeHtml(t('navAuthors'))}</h3>${profile.ambiguousSubunit ? `<p class="hint">${escapeHtml(state.lang === 'zh' ? '该节点暂不生成导师画像，避免把不同学校的同名院系混在一起。' : 'Scholar portrait is disabled for this ambiguous subunit.')}</p>` : renderClickableMiniBars(profile.authors, 'papers', 'author')}</div>
         <div><h3>${escapeHtml(t('venue'))}</h3>${renderMiniBars(profile.byVenue, 'papers')}</div>
       </section>
       <h3>${escapeHtml(t('recentPapers'))}</h3>
@@ -2030,7 +2056,7 @@ function renderResults(engine = '') {
 }
 
 function citationAuthorList(authors, style = 'ieee') {
-  const names = splitProfileList(authors);
+  const names = splitProfileList(authors, 'author');
   if (!names.length) return 'Unknown';
   if (style === 'apa') {
     if (names.length > 6) return `${names.slice(0, 6).join(', ')}, et al.`;
@@ -2047,11 +2073,11 @@ function citationFormats(paper) {
   const venue = paper.publication_title || paper.venue || '';
   const year = paper.year || '';
   const doi = paper.doi ? ` doi: ${paper.doi}` : '';
-  const key = `${splitProfileList(paper.authors)[0] || 'paper'}${year}`.replace(/[^a-z0-9]+/gi, '').slice(0, 28) || `paper${paper.id}`;
+  const key = `${splitProfileList(paper.authors, 'author')[0] || 'paper'}${year}`.replace(/[^a-z0-9]+/gi, '').slice(0, 28) || `paper${paper.id}`;
   return {
     ieee: `${authorsIeee}, "${title}," ${venue}, ${year}.${doi}`,
     apa: `${authorsApa}. (${year}). ${title}. ${venue}.${paper.doi ? ` https://doi.org/${paper.doi}` : ''}`,
-    bibtex: `@article{${key},\n  title = {${title}},\n  author = {${splitProfileList(paper.authors).join(' and ')}},\n  journal = {${venue}},\n  year = {${year}},\n  doi = {${paper.doi || ''}}\n}`
+    bibtex: `@article{${key},\n  title = {${title}},\n  author = {${splitProfileList(paper.authors, 'author').join(' and ')}},\n  journal = {${venue}},\n  year = {${year}},\n  doi = {${paper.doi || ''}}\n}`
   };
 }
 

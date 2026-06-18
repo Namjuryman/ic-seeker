@@ -1,6 +1,4 @@
-function splitList(value) {
-  return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
-}
+import { splitAuthors, splitList } from '../lib/identity.mjs';
 
 function rankCounts(rows) {
   const ranks = { sPlus: 0, s: 0, a: 0, other: 0 };
@@ -85,7 +83,7 @@ export function createTopicService({ openDb }) {
         byVenue.set(row.venue, (byVenue.get(row.venue) || 0) + 1);
         scoreSum += Number(row.quality_score || 0);
         citations += Number(row.citation_count || 0);
-        for (const name of splitList(row.authors)) {
+        for (const name of splitAuthors(row.authors)) {
           const item = authors.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0 };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);

@@ -1,3 +1,11 @@
+import {
+  authorsForInstitution,
+  isLikelySubunitInstitution,
+  parentInstitutionsForRow,
+  splitAuthors,
+  splitList
+} from '../lib/identity.mjs';
+
 function findQsRank(db, institutionName) {
   const rows = db.prepare('SELECT name, aliases, qs_world_rank, qs_region_rank, region FROM qs_rankings').all();
   const target = String(institutionName || '').trim().toLowerCase();
@@ -8,10 +16,6 @@ function findQsRank(db, institutionName) {
     }
   }
   return null;
-}
-
-function splitList(value) {
-  return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
 }
 
 function isEliteRank(rank) {
@@ -80,9 +84,7 @@ export function createProfileService({ openDb }) {
       const rows = db.prepare("SELECT authors, venue_rank, quality_score, citation_count FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
       const byAuthor = new Map();
       for (const row of rows) {
-        for (const rawName of String(row.authors || '').split(';')) {
-          const name = rawName.trim();
-          if (!name) continue;
+        for (const name of splitAuthors(row.authors)) {
           const item = byAuthor.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0 };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
@@ -112,12 +114,12 @@ export function createProfileService({ openDb }) {
     const db = openDb();
     try {
       const rows = db.prepare("SELECT * FROM papers WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
-        .filter(row => splitList(row.authors).some(author => author.toLowerCase() === target));
+        .filter(row => splitAuthors(row.authors).some(author => author.toLowerCase() === target));
       const summary = summarizePaperRows(rows);
       const coauthors = new Map();
       const institutions = new Map();
       for (const row of rows) {
-        for (const author of splitList(row.authors)) {
+        for (const author of splitAuthors(row.authors)) {
           if (author.toLowerCase() !== target) coauthors.set(author, (coauthors.get(author) || 0) + 1);
         }
         for (const institution of splitList(row.affiliations)) institutions.set(institution, (institutions.get(institution) || 0) + 1);
@@ -158,6 +160,7 @@ export function createProfileService({ openDb }) {
       const byInstitution = new Map();
       for (const row of rows) {
         for (const name of splitList(row.affiliations)) {
+          if (isLikelySubunitInstitution(name)) continue;
           const item = byInstitution.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0 };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
@@ -188,13 +191,22 @@ export function createProfileService({ openDb }) {
     try {
       const rows = db.prepare("SELECT * FROM papers WHERE affiliations LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
         .filter(row => splitList(row.affiliations).some(institution => institution.toLowerCase() === target));
+      const ambiguousSubunit = isLikelySubunitInstitution(name);
       const authors = new Map();
+      const parentInstitutions = new Map();
       for (const row of rows) {
-        for (const author of splitList(row.authors)) authors.set(author, (authors.get(author) || 0) + 1);
+        if (ambiguousSubunit) {
+          for (const parent of parentInstitutionsForRow(row, name)) {
+            parentInstitutions.set(parent, (parentInstitutions.get(parent) || 0) + 1);
+          }
+          continue;
+        }
+        for (const author of authorsForInstitution(row, name)) authors.set(author, (authors.get(author) || 0) + 1);
       }
       const summary = summarizePaperRows(rows);
       return {
         name,
+        ambiguousSubunit,
         paperCount: summary.papers,
         institutionScore: scoreAuthor({
           scoreSum: summary.scoreSum,
@@ -203,6 +215,10 @@ export function createProfileService({ openDb }) {
           citations: summary.citations
         }),
         ...summary,
+        parentInstitutions: [...parentInstitutions.entries()]
+          .map(([key, count]) => ({ key, count }))
+          .sort((a, b) => b.count - a.count || String(a.key).localeCompare(String(b.key)))
+          .slice(0, 12),
         authors: [...authors.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 50),
         papers: paperListForProfile(rows),
         qs: findQsRank(db, name)
