@@ -454,9 +454,10 @@ ic_seeker/public/
   app.js
   styles.css
   js/bootstrap.js
+  js/geo-utils.js
 ```
 
-This is acceptable for the current private MVP, but long-term development will become harder if all frontend state, routing, rendering, maps, citation tools, profiles, and search interactions remain in one large JavaScript file.
+This is acceptable for the current private MVP, but long-term development will become harder if all frontend state, routing, rendering, maps, citation tools, profiles, and search interactions remain in one large JavaScript file. The Geo projection, basemap preparation, hotspot profiles, and country-code helpers have started moving into `js/geo-utils.js`; search, paper detail, profile, citation, and dashboard helpers should follow the same modular pattern.
 
 The main risk is not that the app cannot run. The main risk is that future features will become difficult to maintain.
 
@@ -553,6 +554,7 @@ ic_seeker/public/
     api.js
     state.js
     router.js
+    geo-utils.js
     render/
       paperList.js
       paperDetail.js

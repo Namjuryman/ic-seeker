@@ -38,6 +38,7 @@ Publisher PDFs are not included.
 - Institution leaderboard for school/lab strength
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
 - Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
+- Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
 - Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
