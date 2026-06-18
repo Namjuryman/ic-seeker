@@ -235,6 +235,78 @@ For public SaaS operation:
 - Allow private user-uploaded PDFs for personal reading features only.
 - Keep API keys and paid-token usage server-side with per-job budgets.
 
+## Regional And City Intelligence
+
+The current Geo Intelligence page is a product prototype:
+
+- country boundaries come from the local Natural Earth basemap
+- map labels show country codes only
+- exact numeric values are moved to country share, ranking, and detail panels
+- city-level rays are schematic hotspots, not verified city-level statistics yet
+
+The long-term goal is a real IC geography database, not just country-level ranking. The map should eventually show regional density inside large countries, such as US West Coast vs East Coast, Texas, Beijing/Shanghai/Yangtze River Delta/Pearl River Delta, Hsinchu/Taipei, Seoul/Daejeon, Tokyo/Osaka/Sendai, Leuven/Eindhoven/Delft, and other IC clusters.
+
+Required data upgrades:
+
+- Canonicalize institution names, including abbreviations, university branches, corporate labs, and translated names.
+- Add institution aliases, for example `UM`, `University of Macau`, `Universidade de Macau`, and lab-specific variants.
+- Add institution-to-city, city-to-region, and city-to-country mappings.
+- Store geocoding confidence scores so uncertain affiliations do not become hard rankings.
+- Distinguish author affiliation, publisher address, sponsor/company mention, and paper text mentions.
+- Keep Hong Kong, Macau, Taiwan, Singapore, and branch-campus records auditable because small-region counts are easy to inflate.
+- Add QA reports for suspicious jumps, for example a small region suddenly receiving hundreds of papers from affiliation-string false positives.
+
+Suggested schema additions:
+
+```text
+institution_aliases
+  alias
+  institution_id
+  confidence
+  source
+
+institutions
+  id
+  canonical_name
+  homepage
+  country_code
+  region_name
+  city_name
+  latitude
+  longitude
+  geocode_confidence
+
+paper_institutions
+  paper_id
+  institution_id
+  raw_affiliation
+  confidence
+```
+
+Suggested Geo pipeline:
+
+```text
+raw affiliations
+-> institution alias matching
+-> canonical institution
+-> city/region/country geocoding
+-> confidence filtering
+-> city-level aggregation
+-> country-level aggregation
+-> anomaly report
+-> Geo Intelligence API
+```
+
+UI roadmap:
+
+- Keep the world map clean: no large numbers directly on dense regions.
+- Use city dots, vertical rays, or heat contours for intra-country density.
+- Show exact values in side panels and charts, not on top of the map.
+- Let users switch between country, city, institution, and topic heatmap modes.
+- Clicking a country should show top institutions, top cities, yearly trend, and topic mix.
+- Clicking an institution should open the institution profile.
+- Add a data-quality badge when a country's city split is estimated rather than verified.
+
 ## Author And Institution Profiles
 
 The professor profile can take inspiration from AMiner-style pages, but stay IC-focused.
