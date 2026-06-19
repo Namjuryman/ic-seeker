@@ -30,6 +30,7 @@ const state = {
   currentView: 'papers',
   restoringRoute: false,
   commandStripListenerBound: false,
+  detailRailSyncBound: false,
   view: 'comfort',
   page: 1,
   limit: 30,
@@ -2904,10 +2905,38 @@ function setFloatingDetailMode(kind = 'profile', options = {}) {
   const className = kind === 'paper' ? 'paper-detail-active' : 'profile-detail-active';
   document.body.classList.remove('paper-detail-active', 'profile-detail-active');
   document.body.classList.add(className);
-  const anchorTop = Number.isFinite(options.anchorY)
-    ? Math.max(12, Math.min(Math.round(options.anchorY - 28), Math.max(12, window.innerHeight - 420)))
-    : 12;
-  document.documentElement.style.setProperty('--detail-rail-top', `${anchorTop}px`);
+  syncFloatingDetailRail();
+  bindFloatingDetailRailSync();
+}
+
+function floatingDetailTop() {
+  const minTop = 12;
+  const commandStrip = $('commandStrip');
+  const commandBottom = commandStrip ? commandStrip.getBoundingClientRect().bottom : 0;
+  return commandBottom > minTop ? Math.ceil(commandBottom + 14) : minTop;
+}
+
+function syncFloatingDetailRail() {
+  const isFloating = document.body.classList.contains('paper-detail-active')
+    || document.body.classList.contains('profile-detail-active');
+  if (!isFloating) return;
+  document.documentElement.style.setProperty('--detail-rail-top', `${floatingDetailTop()}px`);
+}
+
+function bindFloatingDetailRailSync() {
+  if (state.detailRailSyncBound) return;
+  let pending = false;
+  const schedule = () => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      syncFloatingDetailRail();
+    });
+  };
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  state.detailRailSyncBound = true;
 }
 
 function renderProfileLoading(label, detailLabel = label) {
