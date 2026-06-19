@@ -785,6 +785,8 @@ function renderEmptyDetail() {
   state.activeId = null;
   state.activePaper = null;
   state.detailCollapsed = true;
+  document.body.classList.remove('paper-detail-active');
+  document.documentElement.style.removeProperty('--detail-rail-top');
   const isZh = state.language === 'zh';
   $('detail').innerHTML = `
     <div class="empty detail-empty">
@@ -1347,7 +1349,7 @@ function profilePapers(papers, title = t('recentPapers')) {
 function bindProfileLinks() {
   document.querySelectorAll('[data-author-link]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.authorLink)));
   document.querySelectorAll('[data-institution-link]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.institutionLink)));
-  document.querySelectorAll('.profile-paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
+  document.querySelectorAll('.profile-paper').forEach(el => el.addEventListener('click', event => loadPaper(Number(el.dataset.id), { anchorY: event.clientY })));
   let activeFilter = { type: 'all', value: '' };
   const applyProfilePaperFilters = () => {
     const query = ($('profilePaperSearch')?.value || '').trim().toLowerCase();
@@ -2054,7 +2056,7 @@ function renderResults(engine = '') {
       </div>
     `).join('')}
   `;
-  document.querySelectorAll('.paper').forEach(el => el.addEventListener('click', () => loadPaper(Number(el.dataset.id))));
+  document.querySelectorAll('.paper').forEach(el => el.addEventListener('click', event => loadPaper(Number(el.dataset.id), { anchorY: event.clientY })));
 }
 
 function citationAuthorList(authors, style = 'ieee') {
@@ -2121,6 +2123,11 @@ async function loadPaper(id, options = {}) {
   if (options.history !== 'skip') writeRoute({ ...currentSearchRoute(), view: 'paper', id: String(id) });
   state.activeId = id;
   state.detailCollapsed = false;
+  document.body.classList.add('paper-detail-active');
+  const anchorTop = Number.isFinite(options.anchorY)
+    ? Math.max(12, Math.min(Math.round(options.anchorY - 28), Math.max(12, window.innerHeight - 420)))
+    : 12;
+  document.documentElement.style.setProperty('--detail-rail-top', `${anchorTop}px`);
   applyDetailState();
   if (state.currentView === 'papers') renderResults(state.resultMeta?.engine || '');
   const paper = await api(`/api/papers/${id}`);

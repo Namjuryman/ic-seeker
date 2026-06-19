@@ -816,14 +816,23 @@ body.filters-collapsed .sidebar > * {
 
 .right-rail {
   position: sticky;
-  top: 88px;
+  top: var(--detail-rail-top, 12px);
   align-self: start;
-  max-height: calc(100vh - 104px);
+  max-height: calc(100vh - var(--detail-rail-top, 12px) - 12px);
   overflow-y: auto;
   scrollbar-gutter: stable;
   border-left: 0;
-  padding: 18px 0 18px 16px;
+  padding: 0 0 18px 16px;
   transition: opacity .2s ease, padding .2s ease;
+}
+
+body.paper-detail-active:not(.detail-collapsed) .right-rail {
+  position: fixed;
+  top: var(--detail-rail-top, 12px);
+  right: 28px;
+  width: clamp(360px, 31vw, 560px);
+  max-height: calc(100vh - var(--detail-rail-top, 12px) - 12px);
+  z-index: 6;
 }
 
 body.detail-collapsed .right-rail {
@@ -2962,6 +2971,11 @@ body.detail-collapsed .detail-collapse {
     border-left: 1px solid var(--line);
     border-top: 0;
   }
+
+  body.paper-detail-active:not(.detail-collapsed) .right-rail {
+    right: 28px;
+    width: clamp(300px, 33vw, 440px);
+  }
 }
 
 @media (max-width: 860px) {
@@ -3022,6 +3036,12 @@ body.detail-collapsed .detail-collapse {
     max-height: none;
     overflow: visible;
     scrollbar-gutter: auto;
+  }
+
+  body.paper-detail-active:not(.detail-collapsed) .right-rail {
+    position: static;
+    width: auto;
+    max-height: none;
   }
 
   body.filters-collapsed .app-layout,
