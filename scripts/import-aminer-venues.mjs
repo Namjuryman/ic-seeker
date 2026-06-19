@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import { classifyText, scorePaper as policyScorePaper, venueRank } from '../ic_seeker/services/classification.service.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 await loadEnv(path.join(root, '.env'));
@@ -195,19 +196,8 @@ function affiliationsOf(paper) {
 
 function domainOf(paper) {
   const hay = clean([paper.title, paper.title_zh, paper.abstract, paper.abstract_slice, paper.keywords].join(' ')).toLowerCase();
-  const domains = [
-    ['Analog & Mixed-Signal', ['adc', 'dac', 'pll', 'ldo', 'bandgap', 'delta-sigma', 'sar', 'amplifier', 'sensor', 'converter']],
-    ['RF/mmWave & Wireline', ['rf', 'mmwave', 'millimeter', 'transceiver', 'receiver', 'serdes', 'pam-4', 'wireline', 'antenna']],
-    ['Power Management', ['dc-dc', 'dcdc', 'converter', 'regulator', 'power management', 'buck', 'boost']],
-    ['EDA, CAD & Verification', ['eda', 'placement', 'routing', 'verification', 'synthesis', 'timing', 'layout']],
-    ['Digital, Memory & Architecture', ['sram', 'dram', 'memory', 'processor', 'accelerator', 'risc-v', 'cache']]
-  ];
-  let best = ['General IC', 0];
-  for (const [name, terms] of domains) {
-    const hits = terms.filter(term => hay.includes(term)).length;
-    if (hits > best[1]) best = [name, hits];
-  }
-  return best;
+  const result = classifyText(hay);
+  return [result.domain, result.hits];
 }
 
 function insertPaper(db, venue, paper) {
@@ -219,7 +209,12 @@ function insertPaper(db, venue, paper) {
   if (exists) return 'exists';
   const [domain, hits] = domainOf(paper);
   const abstract = clean(paper.abstract || paper.abstract_slice || paper.abstract_zh);
-  const score = Math.round((venue.score + hits * 10) * 10) / 10;
+  const score = policyScorePaper({
+    venue: venue.key,
+    year,
+    citations: Number(paper.n_citation || paper.n_citation_bucket || 0) || 0,
+    domainHits: hits
+  });
   if (dryRun) return 'dry';
   const semanticText = clean([title, authorsOf(paper), abstract, domain, venue.key, paper.doi].join(' '));
   const result = db.prepare(`
@@ -236,7 +231,7 @@ function insertPaper(db, venue, paper) {
     year,
     venue.key,
     clean(paper.raw || paper.venue?.name || paper.venue?.name_en || venue.aminerName || venue.key),
-    venue.rank,
+    venueRank(venue.key),
     domain,
     hits,
     score,

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { classifyText, countDomainHits, scorePaper as policyScorePaper } from '../ic_seeker/services/classification.service.mjs';
 
 const outRootArg = process.argv.find(a => a.startsWith('--out-root='));
 const outRoot = outRootArg ? outRootArg.split('=').slice(1).join('=') : 'ic_database';
@@ -159,21 +160,11 @@ function text(work) {
 }
 
 function countHits(hay, words, domain = '') {
-  let hits = 0;
-  for (const word of words) {
-    if (!hay.includes(word)) continue;
-    if (domain === 'Power Management' && /dc-dc|dcdc|buck|boost|pmic|ldo|switched-capacitor|charge pump|voltage regulator|dual-path hybrid|continuous-current-input|power converter/.test(word)) hits += 3;
-    else hits += 1;
-  }
-  if (domain === 'Power Management' && /\bdc\s*-?\s*dc\b/.test(hay)) hits += 3;
-  return hits;
+  return countDomainHits(hay, words, domain);
 }
 
 function classify(work) {
-  const hay = text(work);
-  const scores = domains.map(([domain, words]) => ({ domain, hits: countHits(hay, words, domain) }));
-  scores.sort((a, b) => b.hits - a.hits);
-  return scores[0].hits ? scores[0] : { domain: 'General IC', hits: countHits(hay, generalIcTerms) };
+  return classifyText(text(work));
 }
 
 function venueMatches(work, venue) {
@@ -195,9 +186,12 @@ function worthKeeping(work, venue) {
 
 function quality(work, venue, domainInfo = classify(work)) {
   const year = Number(work.publication_year || sinceYear);
-  const citationBoost = Math.min(Number(work.cited_by_count || 0), 300) / 25;
-  const recencyBoost = Math.max(0, year - sinceYear) * 0.35;
-  return Math.round((venue.score + domainInfo.hits * 10 + citationBoost + recencyBoost) * 10) / 10;
+  return policyScorePaper({
+    venue: venue.key,
+    year,
+    citations: work.cited_by_count,
+    domainHits: domainInfo.hits
+  });
 }
 
 function doi(work) {

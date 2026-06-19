@@ -122,7 +122,7 @@ export function createPaperService({ openDb }) {
         String(input.publication_title || venue),
         classification.venueRank,
         domain,
-        0,
+        classification.domainHits,
         classification.qualityScore,
         doi,
         String(input.pdf_link || ''),

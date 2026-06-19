@@ -2,6 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { openDb } from '../ic_seeker/db/connection.mjs';
+import { classifyText, scorePaper as policyScorePaper } from '../ic_seeker/services/classification.service.mjs';
 import { semanticText } from '../ic_seeker/services/search.service.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -364,23 +365,16 @@ function relevanceScore(text) {
 }
 
 function classify(text) {
-  const hay = String(text || '').toLowerCase();
-  let best = { domain: 'General IC', hits: 0 };
-  for (const [domain, terms] of domains) {
-    const hits = terms.reduce((sum, term) => sum + (hay.includes(term) ? 1 : 0), 0);
-    if (hits > best.hits) best = { domain, hits };
-  }
-  if (best.domain === 'RF/Wireless' && /dc-?dc|dcdc|buck|boost|pmic|regulator|switched-capacitor|charge pump/i.test(hay)) {
-    return { domain: 'Power Management', hits: Math.max(best.hits, 3) };
-  }
-  return best;
+  return classifyText(text);
 }
 
 function scorePaper(journal, year, citations, domainHits) {
-  const citationBoost = Math.min(Number(citations || 0), 300) / 25;
-  const recencyBoost = Math.max(0, Number(year || 2016) - 2016) * 0.35;
-  const domainBoost = Math.min(Number(domainHits || 0), 8) * 1.25;
-  return Math.round((journal.baseScore + citationBoost + recencyBoost + domainBoost) * 10) / 10;
+  return policyScorePaper({
+    venue: journal.shortName,
+    year,
+    citations,
+    domainHits
+  });
 }
 
 function alreadyExists(record) {

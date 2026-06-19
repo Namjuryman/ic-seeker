@@ -538,10 +538,11 @@ Completed backend structure work:
 - Add `db/schema.sql` for startup tables used by the private MVP
 - Add `db/migrations.mjs` for idempotent compatibility migrations against existing SQLite databases
 - Add `classification.service.mjs` as the shared runtime entry for manual/DOI import topic classification, venue rank, and quality-score calculation
+- Move the main database builder, core venue backfill, journal extension importer, and AMiner importer onto the shared classification/scoring policy
 
 Remaining backend work:
 
-- Move database-builder and backfill scripts onto the shared classification policy, then add tests around representative IC examples
+- Add regression tests around representative IC examples, venue ranks, hidden broad journals, and known misclassified papers
 - Add canonical venue, author, and institution repositories
 - Add manual override files for important professors and schools
 - Add request logging, API-rate limiting, and production error handling before public deployment
@@ -652,7 +653,7 @@ Backend step 1 has already been completed. Continue with this order:
 
 ```text
 1. Add db/schema.sql and migrations - completed for current startup schema
-2. Move scoring/topic classification into dedicated services - started for runtime paper imports
+2. Move scoring/topic classification into dedicated services - shared by runtime imports and metadata import scripts
 3. Split frontend API, state, router, rendering, and utilities
 4. Improve paper deduplication and venue canonical mapping
 5. Improve institution normalization
