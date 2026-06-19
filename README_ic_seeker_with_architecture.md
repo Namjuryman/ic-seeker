@@ -428,6 +428,8 @@ ic_seeker/
   server.mjs
   config/env.mjs
   db/connection.mjs
+  db/migrations.mjs
+  db/schema.sql
   lib/auth.mjs
   lib/http.mjs
   routes/
@@ -531,10 +533,15 @@ lib           shared utilities
 
 This separation is especially important for IC Seeker because the project's core value is not just displaying papers. The core value is the data-recognition layer: author identity, institution normalization, venue mapping, topic classification, scoring, and paper deduplication.
 
+Completed backend structure work:
+
+- Add `db/schema.sql` for startup tables used by the private MVP
+- Add `db/migrations.mjs` for idempotent compatibility migrations against existing SQLite databases
+- Add `classification.service.mjs` as the shared runtime entry for manual/DOI import topic classification, venue rank, and quality-score calculation
+
 Remaining backend work:
 
-- Add `db/schema.sql` and migration handling
-- Move scoring/topic keyword dictionaries into a dedicated `scoring.service.mjs` or `classification.service.mjs`
+- Move database-builder and backfill scripts onto the shared classification policy, then add tests around representative IC examples
 - Add canonical venue, author, and institution repositories
 - Add manual override files for important professors and schools
 - Add request logging, API-rate limiting, and production error handling before public deployment
@@ -644,8 +651,8 @@ Which venues matter for this topic?
 Backend step 1 has already been completed. Continue with this order:
 
 ```text
-1. Add db/schema.sql and migrations
-2. Move scoring/topic classification into dedicated services
+1. Add db/schema.sql and migrations - completed for current startup schema
+2. Move scoring/topic classification into dedicated services - started for runtime paper imports
 3. Split frontend API, state, router, rendering, and utilities
 4. Improve paper deduplication and venue canonical mapping
 5. Improve institution normalization

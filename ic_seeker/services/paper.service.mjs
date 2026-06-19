@@ -1,46 +1,9 @@
-import { methodology } from './methodology.service.mjs';
+import { classifyPaper } from './classification.service.mjs';
 import { rowsWithUserState, semanticText } from './search.service.mjs';
 
 function normalizeTags(tags) {
   const raw = Array.isArray(tags) ? tags : String(tags || '').split(',');
   return [...new Set(raw.map(tag => String(tag).trim()).filter(Boolean).slice(0, 12))];
-}
-
-function inferDomain(text) {
-  const hay = String(text || '').toLowerCase();
-  const rules = [
-    ['Data Converters', ['adc', 'dac', 'converter', 'sar', 'pipeline', 'delta-sigma', 'delta sigma']],
-    ['Frequency Generation', ['pll', 'oscillator', 'clock', 'jitter', 'synthesizer']],
-    ['Power Management', ['ldo', 'buck', 'boost', 'regulator', 'dc-dc', 'power management']],
-    ['RF/Wireless', ['rf', 'wireless', 'mixer', 'lna', 'pa', 'transceiver']],
-    ['Wireline', ['serdes', 'wireline', 'cdr', 'equalizer']],
-    ['Memory/Compute', ['sram', 'dram', 'memory', 'compute-in-memory', 'accelerator']],
-    ['EDA/Digital', ['placement', 'routing', 'verification', 'fpga', 'digital']]
-  ];
-  for (const [domain, keys] of rules) {
-    if (keys.some(key => hay.includes(key))) return domain;
-  }
-  return 'General IC';
-}
-
-function venueRank(venue) {
-  const ranks = new Map([
-    ['ISSCC', 'S+'], ['JSSC', 'S+'], ['VLSI Symposium', 'S'], ['CICC', 'S'],
-    ['IEDM', 'S'], ['ASSCC', 'A'], ['ESSCIRC', 'A'], ['DAC', 'A'],
-    ['ICCAD', 'A'], ['TCAD', 'A'], ['DATE', 'A'], ['TCAS-I', 'A'],
-    ['TCAS-II', 'A'], ['TVLSI', 'A'], ['ISCAS', 'B'],
-    ['Nature Electron.', 'SS+'], ['Nat. Electronics', 'SS+'], ['Nature', 'SSS'], ['Nat. Commun.', 'Hidden'],
-    ['IEEE T-MTT', 'A+'], ['IEEE TED', 'B+'], ['IEEE EDL', 'Hidden'],
-    ['IEEE Sensors J.', 'B-'], ['Adv. Mater.', 'Hidden'], ['Appl. Phys. Lett.', 'Hidden'],
-    ['Solid-State Electron.', 'C+'], ['IEEE JMEMS', 'B-'], ['IEEE T-Nano', 'C+'],
-    ['Microelectron. J.', 'C']
-  ]);
-  return ranks.get(venue) || 'User';
-}
-
-function baseScore(venue, year, citations = 0) {
-  const base = methodology().scoring.venueBase[venue] || 50;
-  return Math.round((base + Math.min(Number(citations || 0), 300) / 25 + Math.max(0, Number(year || 2016) - 2016) * 0.35) * 10) / 10;
 }
 
 export function createPaperService({ openDb }) {
@@ -132,8 +95,9 @@ export function createPaperService({ openDb }) {
     const abstract = String(input.abstract || '');
     const venue = String(input.venue || input.publication_title || 'User Import').trim();
     const year = Number(input.year || new Date().getFullYear());
-    const domain = String(input.domain || inferDomain(`${title} ${abstract} ${venue}`));
     const citations = Number(input.citation_count || input.citations || 0);
+    const classification = classifyPaper({ ...input, title, abstract, venue, year, citation_count: citations });
+    const domain = classification.domain;
     const sourceUrl = String(input.source_url || (doi ? `https://doi.org/${doi}` : ''));
     const db = openDb();
     try {
@@ -156,10 +120,10 @@ export function createPaperService({ openDb }) {
         year,
         venue,
         String(input.publication_title || venue),
-        venueRank(venue),
+        classification.venueRank,
         domain,
         0,
-        baseScore(venue, year, citations),
+        classification.qualityScore,
         doi,
         String(input.pdf_link || ''),
         sourceUrl,
