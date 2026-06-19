@@ -2612,6 +2612,10 @@ async function renderMentorByInstitutionLegacy(name) {
     </div>`;
   try {
     const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}${mentorRecentQuery()}`);
+    const ambiguousMentorNote = mentorText(
+      '这个名称更像二级院系/研究中心，不是唯一学校实体。当前先隐藏导师候选，下面列出可能的上级机构；后续接入 IEEE 作者-单位映射后再精确归并。',
+      'This looks like a subunit rather than a unique institution entity. Mentor candidates are hidden for now; possible parent institutions are listed below until author-affiliation mapping is connected.'
+    );
     $('results').innerHTML = `
       <section class="mentor-list-page">
         <div class="ranking-head">
@@ -3026,6 +3030,10 @@ async function renderMentorByInstitution(name, options = {}) {
 
   try {
     const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}${mentorRecentQuery()}`);
+    const ambiguousMentorNote = mentorText(
+      '这个名称更像二级院系/研究中心，不是唯一学校实体。当前先隐藏导师候选，下面列出可能的上级机构；后续接入 IEEE 作者-单位映射后再精确归并。',
+      'This looks like a subunit rather than a unique institution entity. Mentor candidates are hidden for now; possible parent institutions are listed below until author-affiliation mapping is connected.'
+    );
     $('results').innerHTML = `
       <section class="mentor-list-page">
         <div class="ranking-head mentor-index-head">
@@ -3050,6 +3058,11 @@ async function renderMentorByInstitution(name, options = {}) {
         <div class="topic-subcategory-bar">
           ${data.domains.slice(0, 10).map(d => `<span class="chip">${escapeHtml(d.key)} (${fmt(d.count)})</span>`).join('')}
         </div>
+        ${data.ambiguousSubunit ? `<section class="profile-side-panel ambiguous-node">
+          <h3>${escapeHtml(mentorText('需要归并的二级机构', 'Subunit needs merging'))}</h3>
+          <p class="hint">${escapeHtml(ambiguousMentorNote)}</p>
+          <div class="link-cloud">${tokenLinks((data.parentInstitutions || []).map(x => x.key).join('; '), 'institution')}</div>
+        </section>` : ''}
         <div class="ranking-list">
           ${data.mentors.map((m, index) => `
             <button class="ranking-card mentor-ranking-card" type="button" data-mentor="${escapeHtml(m.name)}">
@@ -3071,6 +3084,9 @@ async function renderMentorByInstitution(name, options = {}) {
     `;
     bindMentorRecentToggle(() => renderMentorByInstitution(name, { history: 'skip' }));
     $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
+    document.querySelectorAll('[data-institution-link]').forEach(el => {
+      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institutionLink));
+    });
     document.querySelectorAll('[data-mentor]').forEach(el => {
       el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
     });

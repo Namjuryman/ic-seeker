@@ -1,6 +1,11 @@
-function splitList(value) {
-  return String(value || '').split(';').map(item => item.trim()).filter(Boolean);
-}
+import {
+  authorAffiliationPairs,
+  authorsForInstitution,
+  isLikelySubunitInstitution,
+  parentInstitutionsForRow,
+  splitAuthors,
+  splitList
+} from '../lib/identity.mjs';
 
 function recentCutoff(params) {
   const years = Number(params?.get?.('recentYears') || 0);
@@ -70,11 +75,10 @@ function findQsRank(qsRows, institutionName) {
 function buildAuthorInstitutionIndex(rows) {
   const index = new Map();
   for (const row of rows) {
-    const institutions = splitList(row.affiliations);
-    if (!institutions.length) continue;
-    for (const author of splitList(row.authors)) {
-      const authorName = author.trim();
-      if (!authorName) continue;
+    for (const pair of authorAffiliationPairs(row)) {
+      const authorName = pair.name;
+      const institutions = pair.affiliations.length ? pair.affiliations : splitList(row.affiliations);
+      if (!authorName || !institutions.length) continue;
       const item = index.get(authorName) || { total: 0, institutions: new Map() };
       item.total += 1;
       for (const institution of institutions) {
@@ -140,9 +144,7 @@ export function createMentorService({ openDb }) {
       const authorIndex = buildAuthorInstitutionIndex(rows);
       const authorStats = new Map();
       for (const row of rows) {
-        for (const author of splitList(row.authors)) {
-          const authorName = author.trim();
-          if (!authorName) continue;
+        for (const authorName of splitAuthors(row.authors)) {
           const item = authorStats.get(authorName) || { papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, years: new Map() };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
@@ -156,11 +158,12 @@ export function createMentorService({ openDb }) {
       const byInstitution = new Map();
       for (const row of rows) {
         for (const name of splitList(row.affiliations)) {
+          if (isLikelySubunitInstitution(name)) continue;
           const item = byInstitution.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0, authors: new Set() };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          for (const a of splitList(row.authors)) item.authors.add(a);
+          for (const a of splitAuthors(row.authors)) item.authors.add(a);
           if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
@@ -210,13 +213,38 @@ export function createMentorService({ openDb }) {
       const authorIndex = buildAuthorInstitutionIndex(allRows);
       const rows = allRows
         .filter(row => splitList(row.affiliations).some(inst => inst.toLowerCase() === target));
+      const ambiguousSubunit = isLikelySubunitInstitution(name);
+      if (ambiguousSubunit) {
+        const parentInstitutions = new Map();
+        const domains = new Map();
+        for (const row of rows) {
+          for (const parent of parentInstitutionsForRow(row, name)) {
+            parentInstitutions.set(parent, (parentInstitutions.get(parent) || 0) + 1);
+          }
+          const d = String(row.domain || 'General IC');
+          domains.set(d, (domains.get(d) || 0) + 1);
+        }
+        return {
+          institution: name,
+          ambiguousSubunit: true,
+          parentInstitutions: [...parentInstitutions.entries()]
+            .map(([key, count]) => ({ key, count }))
+            .sort((a, b) => b.count - a.count || String(a.key).localeCompare(String(b.key)))
+            .slice(0, 12),
+          recentYears: cutoff ? Number(params.get('recentYears')) : null,
+          cutoffYear: cutoff,
+          qs: findQsRank(qsRows, name),
+          mentors: [],
+          mentorCandidateCount: 0,
+          excludedLikelyStudentCount: 0,
+          domains: [...domains.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count)
+        };
+      }
       const byAuthor = new Map();
       const domains = new Map();
       const currentYear = new Date().getFullYear();
       for (const row of rows) {
-        for (const rawName of splitList(row.authors)) {
-          const authorName = rawName.trim();
-          if (!authorName) continue;
+        for (const authorName of authorsForInstitution(row, name)) {
           const affiliation = inferAuthorInstitution(authorIndex, authorName, name);
           if (!affiliation.isLikelyMember) continue;
           const item = byAuthor.get(authorName) || {
@@ -318,12 +346,12 @@ export function createMentorService({ openDb }) {
         WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'
           ${cutoff ? 'AND year >= ?' : ''}
       `).all(...(cutoff ? [`%${name}%`, cutoff] : [`%${name}%`]))
-        .filter(row => splitList(row.authors).some(author => author.toLowerCase() === target));
+        .filter(row => splitAuthors(row.authors).some(author => author.toLowerCase() === target));
       const summary = summarizeMentorRows(rows);
       const coauthors = new Map();
       const institutions = new Map();
       for (const row of rows) {
-        for (const author of splitList(row.authors)) {
+        for (const author of splitAuthors(row.authors)) {
           if (author.toLowerCase() !== target) coauthors.set(author, (coauthors.get(author) || 0) + 1);
         }
         for (const institution of splitList(row.affiliations)) institutions.set(institution, (institutions.get(institution) || 0) + 1);
