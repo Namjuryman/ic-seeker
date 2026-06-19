@@ -826,7 +826,8 @@ body.filters-collapsed .sidebar > * {
   transition: opacity .2s ease, padding .2s ease;
 }
 
-body.paper-detail-active:not(.detail-collapsed) .right-rail {
+body.paper-detail-active:not(.detail-collapsed) .right-rail,
+body.profile-detail-active:not(.detail-collapsed) .right-rail {
   position: fixed;
   top: var(--detail-rail-top, 12px);
   right: 28px;
@@ -2972,7 +2973,8 @@ body.detail-collapsed .detail-collapse {
     border-top: 0;
   }
 
-  body.paper-detail-active:not(.detail-collapsed) .right-rail {
+  body.paper-detail-active:not(.detail-collapsed) .right-rail,
+  body.profile-detail-active:not(.detail-collapsed) .right-rail {
     right: 28px;
     width: clamp(300px, 33vw, 440px);
   }
@@ -3038,7 +3040,8 @@ body.detail-collapsed .detail-collapse {
     scrollbar-gutter: auto;
   }
 
-  body.paper-detail-active:not(.detail-collapsed) .right-rail {
+  body.paper-detail-active:not(.detail-collapsed) .right-rail,
+  body.profile-detail-active:not(.detail-collapsed) .right-rail {
     position: static;
     width: auto;
     max-height: none;

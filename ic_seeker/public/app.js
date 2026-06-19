@@ -787,7 +787,7 @@ function renderEmptyDetail() {
   state.activeId = null;
   state.activePaper = null;
   state.detailCollapsed = true;
-  document.body.classList.remove('paper-detail-active');
+  document.body.classList.remove('paper-detail-active', 'profile-detail-active');
   document.documentElement.style.removeProperty('--detail-rail-top');
   const isZh = state.language === 'zh';
   $('detail').innerHTML = `
@@ -1030,7 +1030,7 @@ function renderProfessors() {
     </div>
     <p class="hint">Name-based for now; institution or ORCID disambiguation is the next serious step.</p>
   `;
-  document.querySelectorAll('[data-author]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.author)));
+  document.querySelectorAll('[data-author]').forEach(el => el.addEventListener('click', event => loadAuthor(el.dataset.author, { anchorY: event.clientY })));
 }
 
 function renderInstitutions() {
@@ -1047,7 +1047,7 @@ function renderInstitutions() {
     </div>
     <p class="hint">Affiliation strings are source-dependent; school strength gets better with cleaned institution identities.</p>
   `;
-  document.querySelectorAll('[data-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.institution)));
+  document.querySelectorAll('[data-institution]').forEach(el => el.addEventListener('click', event => loadInstitution(el.dataset.institution, { anchorY: event.clientY })));
 }
 
 function renderTopicChips() {
@@ -1349,8 +1349,8 @@ function profilePapers(papers, title = t('recentPapers')) {
 }
 
 function bindProfileLinks() {
-  document.querySelectorAll('[data-author-link]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.authorLink)));
-  document.querySelectorAll('[data-institution-link]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.institutionLink)));
+  document.querySelectorAll('[data-author-link]').forEach(el => el.addEventListener('click', event => loadAuthor(el.dataset.authorLink, { anchorY: event.clientY })));
+  document.querySelectorAll('[data-institution-link]').forEach(el => el.addEventListener('click', event => loadInstitution(el.dataset.institutionLink, { anchorY: event.clientY })));
   document.querySelectorAll('.profile-paper').forEach(el => el.addEventListener('click', event => loadPaper(Number(el.dataset.id), { anchorY: event.clientY })));
   let activeFilter = { type: 'all', value: '' };
   const applyProfilePaperFilters = () => {
@@ -1376,6 +1376,7 @@ async function loadAuthor(name, options = {}) {
   state.currentView = 'author';
   document.body.classList.remove('mentor-section');
   state.detailCollapsed = false;
+  setFloatingDetailMode('profile', options);
   applyDetailState();
   scrollPageTop(options);
   renderProfileLoading(`Loading scholar profile: ${name}...`, 'Preparing scholar detail...');
@@ -1460,7 +1461,8 @@ async function loadInstitution(name, options = {}) {
   if (options.history !== 'skip') writeRoute({ view: 'institution', name });
   state.currentView = 'institution';
   document.body.classList.remove('mentor-section');
-  state.detailCollapsed = true;
+  state.detailCollapsed = false;
+  setFloatingDetailMode('profile', options);
   applyDetailState();
   scrollPageTop(options);
   renderProfileLoading(`Loading institution profile: ${name}...`, 'Institution detail will appear after loading.');
@@ -1512,6 +1514,30 @@ async function loadInstitution(name, options = {}) {
       ${profilePapers(profile.papers)}
     </section>
   `;
+  $('detail').innerHTML = `
+    <section class="author-profile-detail">
+      <div class="profile-hero institution-hero">
+        <div class="profile-photo institution-photo">${escapeHtml(initials(profile.name))}</div>
+        <div class="profile-main">
+          <p class="profile-kicker">${escapeHtml(t('navInstitutions'))}</p>
+          <h2>${escapeHtml(profile.name)}</h2>
+          <div class="profile-tags">
+            <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+            <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.institutionScore)}</span>
+            ${profile.qs ? `<span class="qs-badge">QS World ${escapeHtml(profile.qs.qs_world_rank)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <section class="profile-side-panel">
+        <h3>${escapeHtml(t('rankDistribution'))}</h3>
+        ${renderRankDonut(profile.ranks)}
+      </section>
+      <section class="profile-side-panel">
+        <h3>${escapeHtml(t('summaryTopField'))}</h3>
+        ${renderMiniBars((profile.byDomain || []).slice(0, 8), 'papers')}
+      </section>
+    </section>
+  `;
   bindProfileLinks();
 }
 
@@ -1543,8 +1569,8 @@ function renderRankings(kind, options = {}) {
       </div>
     </section>
   `;
-  document.querySelectorAll('[data-rank-author]').forEach(el => el.addEventListener('click', () => loadAuthor(el.dataset.rankAuthor)));
-  document.querySelectorAll('[data-rank-institution]').forEach(el => el.addEventListener('click', () => loadInstitution(el.dataset.rankInstitution)));
+  document.querySelectorAll('[data-rank-author]').forEach(el => el.addEventListener('click', event => loadAuthor(el.dataset.rankAuthor, { anchorY: event.clientY })));
+  document.querySelectorAll('[data-rank-institution]').forEach(el => el.addEventListener('click', event => loadInstitution(el.dataset.rankInstitution, { anchorY: event.clientY })));
 }
 
 function renderTopicEntityList(rows, type) {
@@ -2131,11 +2157,7 @@ async function loadPaper(id, options = {}) {
   if (options.history !== 'skip') writeRoute({ ...currentSearchRoute(), view: 'paper', id: String(id) });
   state.activeId = id;
   state.detailCollapsed = false;
-  document.body.classList.add('paper-detail-active');
-  const anchorTop = Number.isFinite(options.anchorY)
-    ? Math.max(12, Math.min(Math.round(options.anchorY - 28), Math.max(12, window.innerHeight - 420)))
-    : 12;
-  document.documentElement.style.setProperty('--detail-rail-top', `${anchorTop}px`);
+  setFloatingDetailMode('paper', options);
   applyDetailState();
   if (state.currentView === 'papers') renderResults(state.resultMeta?.engine || '');
   const paper = await api(`/api/papers/${id}`);
@@ -2607,7 +2629,7 @@ async function renderMentorInstitutionsLegacy(options = {}) {
       </section>
     `;
     document.querySelectorAll('[data-institution]').forEach(el => {
-      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institution));
+      el.addEventListener('click', event => renderMentorByInstitution(el.dataset.institution, { anchorY: event.clientY }));
     });
   } catch (err) {
     $('results').innerHTML = `<div class="empty">Failed to load institutions: ${escapeHtml(err.message)}</div>`;
@@ -2874,12 +2896,21 @@ function scrollPageTop(options = {}) {
 }
 
 function exitPaperDetailMode() {
-  document.body.classList.remove('paper-detail-active');
+  document.body.classList.remove('paper-detail-active', 'profile-detail-active');
   document.documentElement.style.removeProperty('--detail-rail-top');
 }
 
+function setFloatingDetailMode(kind = 'profile', options = {}) {
+  const className = kind === 'paper' ? 'paper-detail-active' : 'profile-detail-active';
+  document.body.classList.remove('paper-detail-active', 'profile-detail-active');
+  document.body.classList.add(className);
+  const anchorTop = Number.isFinite(options.anchorY)
+    ? Math.max(12, Math.min(Math.round(options.anchorY - 28), Math.max(12, window.innerHeight - 420)))
+    : 12;
+  document.documentElement.style.setProperty('--detail-rail-top', `${anchorTop}px`);
+}
+
 function renderProfileLoading(label, detailLabel = label) {
-  exitPaperDetailMode();
   $('summary').innerHTML = '';
   $('pagination').innerHTML = '';
   $('results').classList.remove('compact');
@@ -3009,7 +3040,7 @@ async function renderMentorInstitutions(options = {}) {
       renderMentorInstitutions({ history: 'skip', preserveScroll: true });
     });
     document.querySelectorAll('[data-institution]').forEach(el => {
-      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institution));
+      el.addEventListener('click', event => renderMentorByInstitution(el.dataset.institution, { anchorY: event.clientY }));
     });
     scrollMentorPageTop(options);
   } catch (err) {
@@ -3054,16 +3085,15 @@ async function renderMentorByInstitution(name, options = {}) {
   state.currentView = 'mentor-institution';
   document.body.classList.add('mentor-section');
   if (options.history !== 'skip') writeRoute({ view: 'mentor-institution', name }, options.history || 'push');
-  state.detailCollapsed = true;
+  state.detailCollapsed = false;
+  setFloatingDetailMode('profile', options);
   applyDetailState();
   $('summary').innerHTML = '';
   $('pagination').innerHTML = '';
   $('results').classList.remove('compact');
   $('results').innerHTML = '<div class="loading">Loading mentors...</div>';
   $('detail').innerHTML = `
-    <div class="empty detail-empty">
-      <strong>${escapeHtml(t('selectMentor'))}</strong>
-    </div>`;
+    <div class="loading">Loading mentor institution: ${escapeHtml(name)}...</div>`;
 
   try {
     const data = await api(`/api/mentor/institutions/${encodeURIComponent(name)}${mentorRecentQuery()}`);
@@ -3121,11 +3151,31 @@ async function renderMentorByInstitution(name, options = {}) {
     `;
     bindMentorRecentToggle(() => renderMentorByInstitution(name, { history: 'skip' }));
     $('backToInstitutions')?.addEventListener('click', () => renderMentorInstitutions());
+    $('detail').innerHTML = `
+      <section class="author-profile-detail">
+        <div class="profile-hero institution-hero">
+          <div class="profile-photo institution-photo">${escapeHtml(initials(data.institution))}</div>
+          <div class="profile-main">
+            <p class="profile-kicker">${escapeHtml(mentorText('机构导师', 'Institution mentors'))}</p>
+            <h2>${escapeHtml(data.institution)}</h2>
+            <div class="profile-tags">
+              <span>${fmt(data.mentorCandidateCount ?? data.mentors.length)} ${escapeHtml(mentorText('导师候选', 'mentor candidates'))}</span>
+              ${data.qs ? `<span class="qs-badge">QS World ${escapeHtml(data.qs.qs_world_rank)}</span>` : '<span class="qs-badge">QS N/A</span>'}
+            </div>
+          </div>
+        </div>
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('mentorDomains'))}</h3>
+          ${renderMiniBars((data.domains || []).slice(0, 8), 'papers')}
+        </section>
+        <p class="hint">${escapeHtml(mentorText('点击中间列表里的导师可查看个人画像与评价。', 'Click a mentor in the middle list to inspect profile and reviews.'))}</p>
+      </section>
+    `;
     document.querySelectorAll('[data-institution-link]').forEach(el => {
-      el.addEventListener('click', () => renderMentorByInstitution(el.dataset.institutionLink));
+      el.addEventListener('click', event => renderMentorByInstitution(el.dataset.institutionLink, { anchorY: event.clientY }));
     });
     document.querySelectorAll('[data-mentor]').forEach(el => {
-      el.addEventListener('click', () => loadMentorProfile(el.dataset.mentor));
+      el.addEventListener('click', event => loadMentorProfile(el.dataset.mentor, { anchorY: event.clientY }));
     });
     scrollMentorPageTop(options);
   } catch (err) {
@@ -3139,6 +3189,7 @@ async function loadMentorProfile(name, options = {}) {
   document.body.classList.add('mentor-section');
   if (options.history !== 'skip') writeRoute({ view: 'mentor-profile', name }, options.history || 'push');
   state.detailCollapsed = false;
+  setFloatingDetailMode('profile', options);
   applyDetailState();
   scrollMentorPageTop(options);
   renderProfileLoading(`Loading mentor profile: ${name}...`, 'Preparing mentor reviews...');
