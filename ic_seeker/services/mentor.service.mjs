@@ -234,12 +234,15 @@ export function createMentorService({ openDb }) {
       if (ambiguousSubunit) {
         const parentInstitutions = new Map();
         const domains = new Map();
+        const venues = new Map();
         for (const row of rows) {
           for (const parent of parentInstitutionsForRow(row, name)) {
             parentInstitutions.set(parent, (parentInstitutions.get(parent) || 0) + 1);
           }
           const d = String(row.domain || 'General IC');
           domains.set(d, (domains.get(d) || 0) + 1);
+          const venue = String(row.venue || 'Unknown venue');
+          venues.set(venue, (venues.get(venue) || 0) + 1);
         }
         return {
           institution: name,
@@ -254,11 +257,13 @@ export function createMentorService({ openDb }) {
           mentors: [],
           mentorCandidateCount: 0,
           excludedLikelyStudentCount: 0,
-          domains: [...domains.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count)
+          domains: [...domains.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count),
+          venues: [...venues.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count)
         };
       }
       const byAuthor = new Map();
       const domains = new Map();
+      const venues = new Map();
       const currentYear = new Date().getFullYear();
       for (const row of rows) {
         for (const authorName of authorsForInstitution(row, name, resolveAuthor)) {
@@ -292,6 +297,8 @@ export function createMentorService({ openDb }) {
         }
         const d = String(row.domain || 'General IC');
         domains.set(d, (domains.get(d) || 0) + 1);
+        const venue = String(row.venue || 'Unknown venue');
+        venues.set(venue, (venues.get(venue) || 0) + 1);
       }
       const mentors = [...byAuthor.values()]
         .map(item => {
@@ -344,7 +351,8 @@ export function createMentorService({ openDb }) {
         mentors: mentors.slice(0, 100),
         mentorCandidateCount: mentors.length,
         excludedLikelyStudentCount: [...byAuthor.values()].length - mentors.length,
-        domains: [...domains.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count)
+        domains: [...domains.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count),
+        venues: [...venues.entries()].map(([k, v]) => ({ key: k, count: v })).sort((a, b) => b.count - a.count)
       };
     } finally {
       db.close();

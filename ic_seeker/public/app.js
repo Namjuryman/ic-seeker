@@ -3197,6 +3197,10 @@ async function renderMentorByInstitution(name, options = {}) {
           <h3>${escapeHtml(t('mentorDomains'))}</h3>
           ${renderMiniBars((data.domains || []).slice(0, 8), 'papers')}
         </section>
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('venue'))}${escapeHtml(mentorText('统计', ' stats'))}</h3>
+          ${renderMiniBars((data.venues || []).slice(0, 8), 'papers')}
+        </section>
         <p class="hint">${escapeHtml(mentorText('点击中间列表里的导师可查看个人画像与评价。', 'Click a mentor in the middle list to inspect profile and reviews.'))}</p>
       </section>
     `;
