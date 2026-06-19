@@ -1,4 +1,5 @@
 import {
+  authorAliasResolverForRows,
   authorsForInstitution,
   isLikelySubunitInstitution,
   parentInstitutionsForRow,
@@ -82,9 +83,11 @@ export function createProfileService({ openDb }) {
     const db = openDb();
     try {
       const rows = db.prepare("SELECT authors, venue_rank, quality_score, citation_count FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
+      const resolveAuthor = authorAliasResolverForRows(rows);
       const byAuthor = new Map();
       for (const row of rows) {
-        for (const name of splitAuthors(row.authors)) {
+        for (const rawName of splitAuthors(row.authors)) {
+          const name = resolveAuthor(rawName);
           const item = byAuthor.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0 };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
@@ -113,14 +116,19 @@ export function createProfileService({ openDb }) {
     const target = String(name || '').trim().toLowerCase();
     const db = openDb();
     try {
-      const rows = db.prepare("SELECT * FROM papers WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
-        .filter(row => splitAuthors(row.authors).some(author => author.toLowerCase() === target));
-      const summary = summarizePaperRows(rows);
+      const rows = db.prepare("SELECT * FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
+      const allRows = rows;
+      const resolveAuthor = authorAliasResolverForRows(allRows);
+      const canonicalTarget = resolveAuthor(name).toLowerCase();
+      const matchedRows = rows
+        .filter(row => splitAuthors(row.authors).map(resolveAuthor).some(author => author.toLowerCase() === canonicalTarget));
+      const summary = summarizePaperRows(matchedRows);
       const coauthors = new Map();
       const institutions = new Map();
-      for (const row of rows) {
-        for (const author of splitAuthors(row.authors)) {
-          if (author.toLowerCase() !== target) coauthors.set(author, (coauthors.get(author) || 0) + 1);
+      for (const row of matchedRows) {
+        for (const rawAuthor of splitAuthors(row.authors)) {
+          const author = resolveAuthor(rawAuthor);
+          if (author.toLowerCase() !== canonicalTarget) coauthors.set(author, (coauthors.get(author) || 0) + 1);
         }
         for (const institution of splitList(row.affiliations)) institutions.set(institution, (institutions.get(institution) || 0) + 1);
       }
@@ -132,7 +140,7 @@ export function createProfileService({ openDb }) {
         citations: summary.citations
       });
       return {
-        name,
+        name: resolveAuthor(name),
         paperCount: summary.papers,
         authorScore,
         ...summary,
@@ -144,7 +152,7 @@ export function createProfileService({ openDb }) {
           googleScholar: `https://scholar.google.com/scholar?q=${encodeURIComponent(name)}`,
           webSearch: `https://www.google.com/search?q=${encodeURIComponent(`${name} professor integrated circuits`)}`
         },
-        papers: paperListForProfile(rows)
+        papers: paperListForProfile(matchedRows)
       };
     } finally {
       db.close();
@@ -191,6 +199,7 @@ export function createProfileService({ openDb }) {
     try {
       const rows = db.prepare("SELECT * FROM papers WHERE affiliations LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'").all(`%${name}%`)
         .filter(row => splitList(row.affiliations).some(institution => institution.toLowerCase() === target));
+      const resolveAuthor = authorAliasResolverForRows(db.prepare("SELECT authors FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all());
       const ambiguousSubunit = isLikelySubunitInstitution(name);
       const authors = new Map();
       const parentInstitutions = new Map();
@@ -201,7 +210,7 @@ export function createProfileService({ openDb }) {
           }
           continue;
         }
-        for (const author of authorsForInstitution(row, name)) authors.set(author, (authors.get(author) || 0) + 1);
+        for (const author of authorsForInstitution(row, name, resolveAuthor)) authors.set(author, (authors.get(author) || 0) + 1);
       }
       const summary = summarizePaperRows(rows);
       return {

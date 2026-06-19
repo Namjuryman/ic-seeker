@@ -1,4 +1,5 @@
 import {
+  authorAliasResolverForRows,
   authorAffiliationPairs,
   authorsForInstitution,
   isLikelySubunitInstitution,
@@ -72,11 +73,11 @@ function findQsRank(qsRows, institutionName) {
   return null;
 }
 
-function buildAuthorInstitutionIndex(rows) {
+function buildAuthorInstitutionIndex(rows, resolveAuthor = name => name) {
   const index = new Map();
   for (const row of rows) {
     for (const pair of authorAffiliationPairs(row)) {
-      const authorName = pair.name;
+      const authorName = resolveAuthor(pair.name);
       const institutions = pair.affiliations.length ? pair.affiliations : splitList(row.affiliations);
       if (!authorName || !institutions.length) continue;
       const item = index.get(authorName) || { total: 0, institutions: new Map() };
@@ -111,11 +112,11 @@ function inferAuthorInstitution(authorIndex, authorName, institutionName) {
   };
 }
 
-function institutionsForRow(row, authorIndex) {
+function institutionsForRow(row, authorIndex, resolveAuthor = name => name) {
   const direct = splitList(row.affiliations).filter(name => !isLikelySubunitInstitution(name));
   if (direct.length) return [...new Set(direct)];
   const inferred = new Set();
-  for (const authorName of splitAuthors(row.authors)) {
+  for (const authorName of splitAuthors(row.authors).map(resolveAuthor)) {
     const item = authorIndex.get(authorName);
     if (!item) continue;
     const [primaryInstitution, count] = [...item.institutions.entries()]
@@ -156,10 +157,11 @@ export function createMentorService({ openDb }) {
         WHERE (affiliations != '' OR authors != '') AND COALESCE(venue_rank, '') != 'Hidden'
           ${cutoff ? 'AND year >= ?' : ''}
       `).all(...(cutoff ? [cutoff] : []));
-      const authorIndex = buildAuthorInstitutionIndex(rows);
+      const resolveAuthor = authorAliasResolverForRows(rows);
+      const authorIndex = buildAuthorInstitutionIndex(rows, resolveAuthor);
       const authorStats = new Map();
       for (const row of rows) {
-        for (const authorName of splitAuthors(row.authors)) {
+        for (const authorName of splitAuthors(row.authors).map(resolveAuthor)) {
           const item = authorStats.get(authorName) || { papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, years: new Map() };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
@@ -172,12 +174,12 @@ export function createMentorService({ openDb }) {
       }
       const byInstitution = new Map();
       for (const row of rows) {
-        for (const name of institutionsForRow(row, authorIndex)) {
+        for (const name of institutionsForRow(row, authorIndex, resolveAuthor)) {
           const item = byInstitution.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0, authors: new Set() };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
           item.citations += Number(row.citation_count || 0);
-          for (const a of splitAuthors(row.authors)) item.authors.add(a);
+          for (const a of splitAuthors(row.authors).map(resolveAuthor)) item.authors.add(a);
           if (isEliteRank(row.venue_rank)) item.sPlus += 1;
           else if (row.venue_rank === 'S') item.s += 1;
           else if (String(row.venue_rank || '').startsWith('A')) item.a += 1;
@@ -224,9 +226,10 @@ export function createMentorService({ openDb }) {
         WHERE (affiliations != '' OR authors != '') AND COALESCE(venue_rank, '') != 'Hidden'
           ${cutoff ? 'AND year >= ?' : ''}
       `).all(...(cutoff ? [cutoff] : []));
-      const authorIndex = buildAuthorInstitutionIndex(allRows);
+      const resolveAuthor = authorAliasResolverForRows(allRows);
+      const authorIndex = buildAuthorInstitutionIndex(allRows, resolveAuthor);
       const rows = allRows
-        .filter(row => institutionsForRow(row, authorIndex).some(inst => inst.toLowerCase() === target));
+        .filter(row => institutionsForRow(row, authorIndex, resolveAuthor).some(inst => inst.toLowerCase() === target));
       const ambiguousSubunit = isLikelySubunitInstitution(name);
       if (ambiguousSubunit) {
         const parentInstitutions = new Map();
@@ -258,7 +261,7 @@ export function createMentorService({ openDb }) {
       const domains = new Map();
       const currentYear = new Date().getFullYear();
       for (const row of rows) {
-        for (const authorName of authorsForInstitution(row, name)) {
+        for (const authorName of authorsForInstitution(row, name, resolveAuthor)) {
           const affiliation = inferAuthorInstitution(authorIndex, authorName, name);
           if (!affiliation.isLikelyMember) continue;
           const item = byAuthor.get(authorName) || {
@@ -357,23 +360,28 @@ export function createMentorService({ openDb }) {
       const rows = db.prepare(`
         SELECT *
         FROM papers
-        WHERE authors LIKE ? AND COALESCE(venue_rank, '') != 'Hidden'
+        WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'
           ${cutoff ? 'AND year >= ?' : ''}
-      `).all(...(cutoff ? [`%${name}%`, cutoff] : [`%${name}%`]))
-        .filter(row => splitAuthors(row.authors).some(author => author.toLowerCase() === target));
-      const summary = summarizeMentorRows(rows);
+      `).all(...(cutoff ? [cutoff] : []));
+      const allRows = db.prepare("SELECT authors FROM papers WHERE authors != '' AND COALESCE(venue_rank, '') != 'Hidden'").all();
+      const resolveAuthor = authorAliasResolverForRows(allRows);
+      const canonicalTarget = resolveAuthor(name).toLowerCase();
+      const matchedRows = rows
+        .filter(row => splitAuthors(row.authors).map(resolveAuthor).some(author => author.toLowerCase() === canonicalTarget));
+      const summary = summarizeMentorRows(matchedRows);
       const coauthors = new Map();
       const institutions = new Map();
-      for (const row of rows) {
-        for (const author of splitAuthors(row.authors)) {
-          if (author.toLowerCase() !== target) coauthors.set(author, (coauthors.get(author) || 0) + 1);
+      for (const row of matchedRows) {
+        for (const rawAuthor of splitAuthors(row.authors)) {
+          const author = resolveAuthor(rawAuthor);
+          if (author.toLowerCase() !== canonicalTarget) coauthors.set(author, (coauthors.get(author) || 0) + 1);
         }
         for (const institution of splitList(row.affiliations)) institutions.set(institution, (institutions.get(institution) || 0) + 1);
       }
       const primaryInstitution = [...institutions.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
       const authorScore = scoreAuthor({ scoreSum: summary.scoreSum, sPlus: summary.ranks.sPlus, s: summary.ranks.s, citations: summary.citations });
       return {
-        name,
+        name: resolveAuthor(name),
         recentYears: cutoff ? Number(params.get('recentYears')) : null,
         cutoffYear: cutoff,
         paperCount: summary.papers,
@@ -387,7 +395,7 @@ export function createMentorService({ openDb }) {
           googleScholar: `https://scholar.google.com/scholar?q=${encodeURIComponent(name)}`,
           webSearch: `https://www.google.com/search?q=${encodeURIComponent(`${name} professor integrated circuits`)}`
         },
-        papers: paperListForMentor(rows)
+        papers: paperListForMentor(matchedRows)
       };
     } finally {
       db.close();
