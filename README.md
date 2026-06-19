@@ -1,63 +1,66 @@
-# IC Seeker
+# SiliconScope
 
-IC Seeker is a private, ChipSeeker-style paper search and reading-management tool for integrated-circuit research.
+SiliconScope is a local-first IC paper search, reading-management, and academic-intelligence web app.
 
-It builds a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current web app is designed as a private MVP, not a public multi-user SaaS.
+The project started as a ChipSeeker-style private tool and is moving toward an IC-focused platform for papers, professors, institutions, topics, regional strength, and eventually daily circuit learning.
 
-## Current Dataset
+The current version is still a private MVP. It is useful for exploration, but author identity, institution membership, mentor status, and city-level geography are metadata-based estimates until the future IEEE/API/homepage verification pipeline is added.
 
-The repository includes a ready-to-use local database:
+## Current Status
 
-- `ic_database/ic_papers.sqlite`
-- `ic_database/ic_chipseeker.csv`
-- `ic_database/summary.json`
+### Already Built
+
+- Local Node.js web app at `http://127.0.0.1:8750`
+- SQLite database with FTS5 search
+- Search over title, abstract, authors, venue, domain, DOI, and source metadata
+- Lightweight semantic expansion for IC terms such as ADC, PLL, LDO, PMIC, DC-DC, RF, SerDes, memory, and Chinese aliases
+- Paper detail rail with DOI, official link, PDF status, abstract, affiliations, score, tags, notes, and reading status
+- Quick citation copy in IEEE, APA, and BibTeX formats
+- Favorites, notes, reading status, and tags
+- DOI import through Crossref
+- Manual paper import
+- Local PDF inbox matching by DOI or IEEE article number
+- Author/professor rankings and profile pages
+- Institution rankings and profile pages
+- Mentor/institution prototype page with provisional mentor candidates and reviews
+- Topic intelligence page
+- Venue/journal matrix page
+- Regional intelligence map with country interaction and institution links
+- Chinese/English UI toggle
+- Docker deployment files
+- Backend structure split into config, db, lib, routes, services, and repositories
+- `db/schema.sql` and startup migrations
+- Shared classification/scoring policy used by runtime imports and metadata import scripts
+
+### Current Dataset
+
+The repository includes a ready-to-use database under:
+
+```text
+ic_database/ic_papers.sqlite
+ic_database/ic_chipseeker.csv
+ic_database/summary.json
+```
 
 Current snapshot:
 
-- Years: `2016-2026`
-- Papers: about `38k`
-- Venues: `ISSCC`, `JSSC`, `VLSI Symposium`, `CICC`, `ASSCC`, `ESSCIRC`, `ESSERC`, `IEDM`, `DAC`, `ICCAD`, `DATE`, `TCAD`, `TCAS-I`, `TCAS-II`, `TVLSI`, `ISCAS`
+- Years: `2000-2026` in the active app filters
+- Indexed papers: about `48k`
+- Core venues include ISSCC, JSSC, VLSI Symposium, CICC, ASSCC, ESSCIRC, ESSERC, IEDM, DAC, ICCAD, DATE, TCAD, TCAS-I, TCAS-II, TVLSI, and ISCAS
+- Extension venues include Nature, Nature Electronics, IEEE T-MTT, IEEE TED, and several broad IC-adjacent journals
 
-Publisher PDFs are not included.
+Publisher PDFs are not included. The app stores metadata and user-provided local PDFs only.
 
-## Features
-
-- Local SQLite + FTS5 search over title, abstract, authors, venue, domain, and DOI
-- Private admin login with a signed HTTP-only cookie
-- Lightweight semantic search through IC-domain alias expansion
-- Venue, domain, rank, year, local-PDF, and sort filters
-- Paper detail view with DOI, source link, PDF link status, score, affiliations, and collection method
-- Quick citation copy from the paper detail panel in IEEE, APA, and BibTeX formats
-- Paper import by DOI through Crossref metadata
-- Manual paper import for missing records
-- Favorites, reading status, private notes, and tags
-- Backend API-key storage with masked display
-- Author/professor leaderboard
-- Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
-- AMiner-style author page layout: author papers stay in the main area while the right rail shows the professor profile, inferred career stage, yearly activity, collaborators, and institutions
-- Institution leaderboard for school/lab strength
-- Clickable institution profile with yearly output, venues, fields, authors, and papers
-- Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
-- Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
-- Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
-- Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
-- Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
-- CSV export compatible with ChipSeeker-like workflows
-- Mobile-friendly web layout
-- Docker deployment
-
-## Quick Start
+## Run Locally
 
 Requirements:
 
 - Node.js `>=22.5.0`
 - Windows PowerShell, macOS shell, or Linux shell
 
-Run:
+Start the app:
 
 ```powershell
-copy .env.example .env
-notepad .env
 npm start
 ```
 
@@ -73,231 +76,393 @@ Open:
 http://127.0.0.1:8750
 ```
 
-Log in with `ADMIN_PASSWORD` from `.env`. Change the default password and `COOKIE_SECRET` before exposing the site outside your own machine.
+If login is enabled in `.env`, use `ADMIN_PASSWORD`.
 
-On Windows, you can also double-click:
+Before exposing the app publicly, set:
 
-```text
-Start_IC_Seeker.bat
+```env
+IC_SEEKER_REQUIRE_LOGIN=1
+ADMIN_PASSWORD=replace-with-a-long-password
+COOKIE_SECRET=replace-with-a-long-random-string
+HOST=0.0.0.0
+PORT=8750
 ```
 
 ## Docker
 
-Create `.env` first, then run:
-
 ```powershell
+copy .env.example .env
+notepad .env
 npm run docker:up
 ```
 
-The Compose setup mounts `./ic_database` into the container so your SQLite database, PDF inbox, notes, tags, and imports persist locally.
+The Compose setup mounts `./ic_database` into the container, so SQLite data, PDF inbox, notes, tags, and imports persist locally.
 
-For server deployment, put the app behind an HTTPS reverse proxy and keep `HOST=0.0.0.0` only inside Docker or trusted server environments.
+For a public server, put the app behind HTTPS with Cloudflare Tunnel, Caddy, Nginx Proxy Manager, or another reverse proxy.
 
-## Public Deployment Plan
+## Database Commands
 
-Recommended first public setup:
-
-- Rent a small VPS with Docker support.
-- Point your domain to Cloudflare DNS.
-- Run IC Seeker with `docker compose up -d` on the VPS.
-- Put Caddy, Nginx Proxy Manager, or Cloudflare Tunnel in front of port `8750` for HTTPS.
-- Keep `ADMIN_PASSWORD`, `COOKIE_SECRET`, and future IEEE/OpenAI keys in `.env`, never in Git.
-- Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/` regularly.
-- For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
-- When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
-
-Vercel is useful for a future static/Next.js frontend, but the current app is a Node server plus SQLite file, so a Docker VPS or Cloudflare Tunnel is the cleanest deployment path.
-
-## Private MVP Workflow
-
-- Search papers with the main search bar. Keep `Semantic` enabled to expand common IC terms such as PLL, ADC, LDO, and their Chinese equivalents.
-- Open a paper detail page to save favorite status, reading status, tags, and notes.
-- Import missing papers by DOI from the sidebar. This stores metadata only and links to the DOI/source.
-- Use manual import for papers that are missing from public metadata.
-- Store optional service keys from the API-key panel. Values are masked in the UI.
-
-More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).
-
-## Rebuild The Database
-
-The default rebuild uses public metadata sources and writes into `ic_database/`:
+Build the database from metadata sources:
 
 ```powershell
 npm run build:database
 ```
 
-Equivalent command:
+Fast rebuild:
 
 ```powershell
-node .\scripts\build-ic-database.mjs --years=2016-2026 --max-per-venue-year=500 --max-per-venue=6000 --no-source-backfill
+npm run build:database:fast
 ```
 
-To build one venue into an isolated directory:
-
-```powershell
-node .\scripts\build-ic-database.mjs --out-root=ic_database_checks\isscc --years=2016-2026 --max-per-venue-year=500 --no-source-backfill --venues=ISSCC
-```
-
-To merge checked databases:
-
-```powershell
-node .\scripts\merge-ic-databases.mjs --out=ic_database\ic_papers.sqlite ic_database_checks\isscc\ic_papers.sqlite ic_database_checks\jssc\ic_papers.sqlite
-```
-
-To incrementally backfill the existing SQLite database for the core IC venues back to 2000 without rebuilding from scratch:
+Backfill core venues to 2000:
 
 ```powershell
 npm run backfill:core -- --years=2000-2026
 ```
 
-For a smaller controlled batch:
+Import broad journal extensions with relevance filtering:
 
 ```powershell
-npm run backfill:core -- --years=2000-2015 --venues="ISSCC,JSSC,VLSI Symposium" --max-pages-per-year=2
+npm run import:journals -- --years=2000-2026
 ```
 
-The backfill script resolves OpenAlex sources for each configured venue, imports metadata only, and skips existing rows by DOI, OpenAlex id, or title/year. It is designed to be rerun safely in batches while the future IEEE Xplore importer is being prepared.
-
-## Extend Journal Coverage
-
-Some IC-adjacent journals are too broad to import as a whole. Use the journal extension importer to query OpenAlex by source id plus IC-focused search terms, then run local relevance filtering before writing to SQLite:
-
-```powershell
-npm run import:journals -- --years=2000-2026 --venues="IEEE Sensors J.,Adv. Mater.,Appl. Phys. Lett.,Solid-State Electron.,IEEE JMEMS,IEEE T-Nano,Microelectron. J."
-```
-
-Useful options:
-
-- `--dry-run` previews insert/skip counts without changing the database.
-- `--search-mode=source-only` scans a source-year directly; this is slower and should be reserved for narrow journals.
-- `--max-pages=30` caps OpenAlex cursor pages per year and term.
-- `--term-limit=4` keeps focused imports short by using the first high-yield search terms; set `--term-limit=0` for a deeper sweep.
-- `--rebuild-fts` rebuilds the SQLite FTS index after manual database surgery.
-
-The current extension targets include Nature Electronics, Nature, Nature Communications, IEEE T-MTT, IEEE TED, IEEE EDL, IEEE Sensors Journal, Advanced Materials, Applied Physics Letters, Solid-State Electronics, IEEE JMEMS, IEEE T-Nano, and Microelectronics Journal. Future IEEE API integration should replace the heuristic importer for IEEE venues and add stronger venue/year completeness checks.
-
-Broad journal policy:
-
-- `Nature` is treated as `SSS`; `Nature Electronics` is treated as `SS+`.
-- `Nature Communications`, `IEEE EDL`, `Advanced Materials`, and `Applied Physics Letters` are retained in SQLite but marked `Hidden`, so they do not affect default search, rankings, maps, topics, or mentor/institution scoring.
-- IEEE T-MTT is kept as a strong RF venue.
-- Broad materials/devices journals such as Advanced Materials and Applied Physics Letters are deliberately downweighted because keyword metadata can over-match non-IC work.
-
-After changing venue policy, reweight the existing database:
+Reweight existing rows after venue policy changes:
 
 ```powershell
 npm run reweight:venues
 ```
 
-## IEEE Xplore API
-
-If you have IEEE Xplore API access, set an API key before rebuilding:
-
-```powershell
-$env:IEEE_API_KEY="your_ieee_xplore_api_key"
-npm run build:database
-```
-
-With `IEEE_API_KEY`, IEEE metadata is queried first. Without it, the builder falls back to OpenAlex and Crossref. The tool does not mass-download IEEE PDFs.
-
-## Local PDF Workflow
-
-Put local PDF files into:
-
-```text
-ic_database/pdf_inbox/
-```
-
-If the filename contains a DOI or IEEE article number, run:
+Attach local PDFs:
 
 ```powershell
 npm run import:pdfs
 ```
 
-Matched files are moved under `ic_database/pdfs/` and attached to database rows.
-
-## Scoring
-
-Paper score is intentionally transparent:
+Put PDFs in:
 
 ```text
-quality_score = venue_base + 10 * domain_keyword_hits + citation_boost + recency_boost
+ic_database/pdf_inbox/
 ```
 
-- `citation_boost = min(cited_by_count, 300) / 25`
-- `recency_boost = max(0, publication_year - 2016) * 0.35`
-- Venue base examples: `ISSCC/JSSC = 100`, `VLSI = 92`, `CICC = 86`, `IEDM = 84`, `ASSCC = 78`, `ESSCIRC/ESSERC = 76`, `DAC/ICCAD = 74`, `TCAD = 70`
+Matched files are moved under:
 
-Classification uses keyword dictionaries over title, abstract, source name, and concepts. The domain with the most keyword hits wins; otherwise papers fall back to `General IC`.
-
-PMIC/DC-DC classification now uses higher-weight phrase matching for terms such as `dc-dc`, `dcdc`, `buck`, `boost`, `ldo`, `pmic`, `switched-capacitor`, `charge pump`, `dual-path hybrid`, and `continuous-current-input`. To repair an existing database after imports, run:
-
-```powershell
-node .\scripts\repair-power-management-domains.mjs
+```text
+ic_database/pdfs/
 ```
 
-Longer-term classification work should become a dedicated data-quality subsystem rather than a single keyword list:
+## Data Sources
 
-- weighted title/abstract/source/concept matching with positive and negative phrases
-- topic hierarchy, for example `Power Management > DC-DC`, `Analog > ADC`, `RF > PLL/Wireline`
-- manual override files for known representative papers and ambiguous titles
-- IEEE metadata verification for article number, venue, abstract, DOI, and author list
-- optional embedding/LLM-assisted review only as a second-pass classifier, with the rule-based reason kept visible
-- regression tests for examples that were previously misclassified
+Preferred long-term metadata order:
 
-## Regional Map Notes
+1. IEEE Xplore API for IC venue precision when an API key is available
+2. OpenAlex for broad low-cost metadata
+3. Crossref for DOI and publisher metadata
+4. DBLP for EDA/CAD and architecture-adjacent venues
+5. Semantic Scholar for citation/recommendation enrichment
+6. AMiner only for targeted author/institution enrichment or selected missing gaps
 
-The Geo Intelligence page now separates spatial reading from numeric reading:
+Google Scholar should remain an outbound/manual search link. Do not scrape it.
 
-- the map layer uses Natural Earth country boundaries
-- country color is kept subdued so dense regions stay readable
-- city-level rays are schematic IC hotspots, used to show intra-country density such as US West/East Coast and East Asia clusters
-- exact numbers are moved into the country share chart, country ranking, and country detail panel
+The project does not mass-download IEEE PDFs and does not bypass paywalls.
 
-The current city hotspot layer is a transition design. It is not yet a verified city-level database. The next data milestone is institution normalization plus geocoding, so affiliations such as Hong Kong, Macau, university branches, corporate labs, and renamed institutes can be disambiguated before city-level scoring is treated as factual.
+## Scoring And Classification
 
-## Caveats
+Paper scoring is intentionally transparent:
 
-- Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.
-- Author identity is currently name-based; serious professor ranking should add ORCID/institution disambiguation.
-- Institution names are raw affiliation strings and may need normalization.
-- Mentor/institution membership and mentor-vs-student status are currently inferred from local paper metadata. The mentor review page filters low-evidence authors as likely students/collaborators and treats the remaining entries as provisional mentor candidates. Future IEEE Xplore API enrichment and large-scale university/college/lab website crawlers should verify each professor's current affiliation, historical affiliation moves, lab homepage, title, department, research group, and faculty role before the platform treats mentor-school membership as factual.
-- Regional and city-level views are estimates until institution disambiguation and geocoding are connected.
-- Some venue-year counts differ from IEEE Xplore because of early access, front matter, corrections, duplicate indexing, or source-specific metadata policy.
-- `ESSCIRC 2020` was cancelled due to COVID-19; 2024+ European solid-state events may appear under `ESSERC`/combined naming.
+```text
+quality_score = venue_base + domain_boost + citation_boost + recency_boost
+```
+
+Current shared policy lives in:
+
+```text
+ic_seeker/services/classification.service.mjs
+```
+
+Important current policy choices:
+
+- ISSCC and JSSC are `S+`
+- VLSI Symposium, CICC, and IEDM are `S`
+- Nature is `SSS`
+- Nature Electronics is `SS+`
+- Nature Communications, IEEE EDL, Advanced Materials, and Applied Physics Letters are retained in SQLite but marked `Hidden`
+- PMIC/DC-DC classification has weighted phrase matching for terms such as `dc-dc`, `dcdc`, `buck`, `boost`, `ldo`, `pmic`, `switched-capacitor`, `charge pump`, `dual-path hybrid`, and `continuous-current-input`
+
+Classification is still rule-based. It is explainable and editable, but imperfect.
+
+## Architecture
+
+Current backend structure:
+
+```text
+ic_seeker/
+  server.mjs
+  config/env.mjs
+  db/connection.mjs
+  db/migrations.mjs
+  db/schema.sql
+  lib/auth.mjs
+  lib/http.mjs
+  lib/identity.mjs
+  routes/
+  services/
+  repositories/
+  public/
+```
+
+Current frontend structure:
+
+```text
+ic_seeker/public/
+  index.html
+  app.js
+  styles.css
+  js/bootstrap.js
+  js/geo-utils.js
+  data/
+```
+
+The backend is partially modularized. The frontend is still mostly one large vanilla JavaScript app and should be split next.
+
+## Current Limitations
+
+### Data Coverage
+
+- The current dataset is good enough for product iteration, but not a verified full IEEE-grade corpus.
+- Some venue-year counts differ from IEEE Xplore because public metadata can include early access, corrections, front matter, duplicated records, or missing proceedings years.
+- Future IEEE Xplore integration should verify title, authors, affiliations, year, venue, DOI, abstract, and IEEE article number.
+
+### Author Recognition
+
+- Current author aggregation is mostly name-based.
+- Same-name authors can merge.
+- One person can split across different name spellings.
+- ORCID/OpenAlex/DBLP IDs and manual merge/split overrides are still needed.
+
+### Mentor/Institution Pages
+
+- Mentor candidates are inferred from local metadata.
+- Student, postdoc, visiting collaborator, alumni, and faculty roles are not reliably separated yet.
+- Current institution membership is inferred from publication metadata, not verified faculty rosters.
+- Future versions should crawl faculty/lab/homepage pages and keep evidence provenance.
+
+### Institution Recognition
+
+- Institution names are raw or lightly normalized affiliation strings.
+- Branch campuses, labs, corporate teams, translated names, and historical moves can still confuse rankings.
+- Canonical institution IDs, aliases, and paper-institution join tables are still needed.
+
+### Regional Map
+
+- Country-level map is useful for exploration.
+- City-level rays/hotspots are schematic until institution geocoding is connected.
+- Hong Kong, Macau, Taiwan, Singapore, corporate labs, and branch campuses need auditable normalization before city-level counts are treated as factual.
+
+### Frontend Maintainability
+
+- The app works, but `public/app.js` is still too large.
+- Router, API client, state, paper rendering, profile rendering, geo rendering, and utility functions should be split into modules.
+
+## Not Done Yet
+
+Near-term engineering work:
+
+- Split frontend into modules:
+  - `api.js`
+  - `state.js`
+  - `router.js`
+  - `render/paperList.js`
+  - `render/paperDetail.js`
+  - `render/authorProfile.js`
+  - `render/institutionProfile.js`
+  - `utils/format.js`
+- Add regression tests later for:
+  - DC-DC/PMIC classification
+  - venue ranks
+  - hidden broad journals
+  - known misclassified papers
+- Add canonical venue mapping and venue IDs
+- Improve paper deduplication by DOI, IEEE article number, title/year/first-author fuzzy matching
+- Add canonical institution and author repositories
+- Add manual override files:
+  - `profiles/authors.json`
+  - `profiles/institutions.json`
+  - `profiles/venues.json`
+- Add request logging, production error handling, and rate limiting
+- Add backup scripts for SQLite and PDF folders
+
+Near-term data work:
+
+- IEEE Xplore metadata sync
+- DBLP supplement for DAC/ICCAD/DATE and EDA/CAD records
+- Better 2000-current completeness checks per venue/year
+- Venue-year anomaly reports
+- Institution alias normalization
+- Author disambiguation
+- Faculty homepage crawler for mentor verification
+- Institution geocoding for real city-level maps
+
+Near-term product work:
+
+- Cleaner paper search layout
+- Better institution and author profile pages
+- Professor comparison
+- Institution comparison
+- Topic trend pages
+- Venue profile pages
+- Saved searches and followed topics
+- Daily/weekly new-paper digest
+- Local PDF text extraction and private full-text search
+
+## Future Roadmap
+
+### Local Edition
+
+Keep a strong private/local version:
+
+- Local SQLite database
+- Private notes and tags
+- Local PDF library
+- Private full-text PDF search
+- Optional AI paper reading over user-provided PDFs
+- No redistribution of publisher PDFs
+
+### Web SaaS Edition
+
+Possible public website modules:
+
+- Paper search and DOI redirects
+- Paper detail pages
+- Professor profiles
+- Institution profiles
+- Venue profiles
+- Topic profiles
+- Regional intelligence
+- Rising-star ranking
+- School strength ranking
+- New-paper monitoring
+- Weekly IC research digest
+- Paid API access later
+
+Recommended public data policy:
+
+```text
+SiliconScope provides bibliographic metadata, discovery, analytics, and links to official publisher pages.
+It does not host or redistribute copyrighted publisher PDFs.
+User-uploaded PDFs are for private reading and personal research management only.
+```
+
+### Mobile/PWA Edition
+
+Core idea:
+
+```text
+Learn one circuit every day.
+```
+
+Daily lesson examples:
+
+- SAR ADC
+- Bandgap reference
+- Charge-pump PLL
+- LDO
+- Mixer
+- Sense amplifier
+- Current mirror
+- SerDes CDR
+- SRAM bitcell
+- Switched-capacitor converter
+
+Each lesson can connect to:
+
+- representative papers
+- active professors
+- strong institutions
+- key equations
+- practical design pitfalls
+- small quiz and review cards
+
+### Future Public Architecture
+
+When SQLite becomes too limiting:
+
+```text
+Frontend: Next.js or static PWA
+Backend: FastAPI, NestJS, or Next.js API routes
+Database: PostgreSQL
+Search: Meilisearch or Typesense
+Vector search: pgvector or Qdrant
+Storage: Cloudflare R2, S3, or MinIO
+Jobs: Redis + BullMQ or Celery
+Auth: Auth.js, Clerk, or custom JWT
+Payments: Stripe or another payment provider
+```
+
+Suggested normalized data model:
+
+```text
+papers
+authors
+institutions
+venues
+topics
+paper_authors
+paper_institutions
+author_aliases
+institution_aliases
+author_affiliation_history
+paper_sources
+pdf_assets
+daily_lessons
+daily_digests
+subscriptions
+user_libraries
+user_notes
+api_keys
+update_jobs
+```
+
+## Public Deployment Notes
+
+Recommended first deployment:
+
+1. Rent a small VPS with Docker support.
+2. Point a domain to Cloudflare.
+3. Run `docker compose up -d --build`.
+4. Put Cloudflare Tunnel, Caddy, Nginx, or Nginx Proxy Manager in front of port `8750`.
+5. Keep `.env` private.
+6. Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/`.
+
+Vercel is not a good target for the current app because it needs a persistent SQLite file and a long-running Node process. Vercel or Cloudflare Pages becomes reasonable after the frontend and backend are split and metadata is moved to hosted Postgres.
 
 ## Project Structure
 
 ```text
 ic_seeker/                 Web app and local API server
+ic_seeker/config/          Environment config
+ic_seeker/db/              SQLite schema, migrations, connection, QS seed data
+ic_seeker/lib/             Auth, HTTP, identity helpers
 ic_seeker/routes/          HTTP route modules
-ic_seeker/services/        Search, paper, profile, topic, geo, and admin logic
+ic_seeker/services/        Search, paper, profile, topic, geo, mentor, classification services
 ic_seeker/repositories/    SQLite repository wrapper
-ic_seeker/config/          Environment and path config
-ic_seeker/db/              SQLite connection helper
-ic_database/               Ready-to-use SQLite, CSV, summary, and PDF folders
-scripts/build-ic-database.mjs
-scripts/merge-ic-databases.mjs
-scripts/import-local-pdfs.mjs
-scripts/repair-power-management-domains.mjs
-Start_IC_Seeker.bat
-Build_IC_Database.bat
+ic_seeker/public/          Frontend files
+ic_database/               SQLite database, CSV export, PDF folders
+scripts/                   Database build/import/repair utilities
 ```
-
-## Roadmap
-
-Future product ideas are collected in [docs/ROADMAP.md](docs/ROADMAP.md), including:
-
-- Web SaaS and API layer
-- Daily circuit learning for mobile/PWA
-- New-paper monitoring
-- Author and institution profile upgrades
-- Chinese interface
-- Local PDF library and private paper reading
-- Monetization and deployment notes
 
 ## Data Policy
 
-This project stores metadata and local user-provided PDFs. It does not bypass paywalls and does not bulk-download publisher PDFs.
+SiliconScope stores and displays scholarly metadata for discovery and analysis.
 
-The regional map basemap uses Natural Earth Admin-0 country boundaries, which are public-domain map data. The GeoJSON is stored locally under `ic_seeker/public/data/` so the web app does not depend on an external map CDN at runtime.
+It does not:
+
+- bypass paywalls
+- redistribute publisher PDFs
+- mass-download copyrighted papers
+- expose private user-uploaded PDFs publicly
+
+Users may attach local PDFs only for private personal reading and research management.
+
+## License
+
+No open-source license has been selected yet. Treat the project as private unless a license is added.
