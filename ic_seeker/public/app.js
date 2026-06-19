@@ -40,7 +40,9 @@ const state = {
   mentorInstitutionMinPapers: 2,
   mentorInstitutionQsOnly: false,
   mentorRecentOnly: localStorage.getItem('icSeekerMentorRecentOnly') === '1',
-  mentorInstitutionCache: new Map()
+  mentorInstitutionCache: new Map(),
+  authorProfileCache: new Map(),
+  institutionProfileCache: new Map()
 };
 
 const i18n = {
@@ -1372,15 +1374,18 @@ function bindProfileLinks() {
 async function loadAuthor(name, options = {}) {
   if (options.history !== 'skip') writeRoute({ view: 'author', name });
   state.currentView = 'author';
-  const profile = await api(`/api/authors/${encodeURIComponent(name)}`);
+  document.body.classList.remove('mentor-section');
+  state.detailCollapsed = false;
+  applyDetailState();
+  scrollPageTop(options);
+  renderProfileLoading(`Loading scholar profile: ${name}...`, 'Preparing scholar detail...');
+  const profileKey = name.toLowerCase();
+  const profile = state.authorProfileCache.get(profileKey)
+    || await api(`/api/authors/${encodeURIComponent(name)}`);
+  state.authorProfileCache.set(profileKey, profile);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
   const strength = yearlySeriesFromPapers(profile.papers, 'score');
-  state.detailCollapsed = false;
-  applyDetailState();
-  $('summary').innerHTML = '';
-  $('pagination').innerHTML = '';
-  $('results').classList.remove('compact');
   $('results').innerHTML = `
     <section class="author-paper-page">
       <div class="profile-results-head">
@@ -1454,18 +1459,21 @@ async function loadAuthor(name, options = {}) {
 async function loadInstitution(name, options = {}) {
   if (options.history !== 'skip') writeRoute({ view: 'institution', name });
   state.currentView = 'institution';
-  const profile = await api(`/api/institutions/${encodeURIComponent(name)}`);
+  document.body.classList.remove('mentor-section');
+  state.detailCollapsed = true;
+  applyDetailState();
+  scrollPageTop(options);
+  renderProfileLoading(`Loading institution profile: ${name}...`, 'Institution detail will appear after loading.');
+  const profileKey = name.toLowerCase();
+  const profile = state.institutionProfileCache.get(profileKey)
+    || await api(`/api/institutions/${encodeURIComponent(name)}`);
+  state.institutionProfileCache.set(profileKey, profile);
   const paperCount = profile.paperCount ?? (Array.isArray(profile.papers) ? profile.papers.length : profile.papers);
   const activity = yearlySeriesFromPapers(profile.papers, 'count');
   const strength = yearlySeriesFromPapers(profile.papers, 'score');
   const ambiguousNote = state.lang === 'zh'
     ? '这个名称更像二级院系/研究中心，不是唯一学校实体。当前先隐藏导师画像，下面列出可能的上级机构；后续接入 IEEE 作者-单位映射后再精确合并。'
     : 'This looks like a subunit rather than a unique institution entity. Scholar portraits are hidden for now; possible parent institutions are listed below until author-affiliation mapping is connected.';
-  state.detailCollapsed = true;
-  applyDetailState();
-  $('summary').innerHTML = '';
-  $('pagination').innerHTML = '';
-  $('results').classList.remove('compact');
   $('results').innerHTML = `
     <section class="scholar-profile">
       <div class="profile-hero institution-hero">
@@ -2859,6 +2867,26 @@ function scrollMentorPageTop(options = {}) {
   requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0 }));
 }
 
+function scrollPageTop(options = {}) {
+  if (options.preserveScroll) return;
+  window.scrollTo({ top: 0, left: 0 });
+  requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0 }));
+}
+
+function exitPaperDetailMode() {
+  document.body.classList.remove('paper-detail-active');
+  document.documentElement.style.removeProperty('--detail-rail-top');
+}
+
+function renderProfileLoading(label, detailLabel = label) {
+  exitPaperDetailMode();
+  $('summary').innerHTML = '';
+  $('pagination').innerHTML = '';
+  $('results').classList.remove('compact');
+  $('results').innerHTML = `<div class="loading">${escapeHtml(label)}</div>`;
+  $('detail').innerHTML = `<div class="loading">${escapeHtml(detailLabel)}</div>`;
+}
+
 function mentorRecentQuery() {
   return state.mentorRecentOnly ? '?recentYears=8' : '';
 }
@@ -3112,10 +3140,8 @@ async function loadMentorProfile(name, options = {}) {
   if (options.history !== 'skip') writeRoute({ view: 'mentor-profile', name }, options.history || 'push');
   state.detailCollapsed = false;
   applyDetailState();
-  $('summary').innerHTML = '';
-  $('pagination').innerHTML = '';
-  $('results').classList.remove('compact');
-  $('results').innerHTML = '<div class="loading">Loading mentor profile...</div>';
+  scrollMentorPageTop(options);
+  renderProfileLoading(`Loading mentor profile: ${name}...`, 'Preparing mentor reviews...');
 
   try {
     const profile = await api(`/api/mentor/authors/${encodeURIComponent(name)}${mentorRecentQuery()}`);
@@ -3183,6 +3209,32 @@ async function loadMentorProfile(name, options = {}) {
           <summary><strong>${escapeHtml(t('recentPapers'))} (${fmt(paperCount)})</strong></summary>
           <div style="margin-top:8px">${profilePapers(profile.papers)}</div>
         </details>
+      </section>
+    `;
+    $('detail').innerHTML = `
+      <section class="author-profile-detail">
+        <div class="profile-hero compact-profile-hero">
+          ${renderPhotoPlaceholder()}
+          <div class="profile-main">
+            <p class="profile-kicker">${escapeHtml(t('profileSummary'))}</p>
+            <h2>${escapeHtml(profile.name)}</h2>
+            <div class="profile-tags">
+              <span>${fmt(paperCount)} ${escapeHtml(t('summaryPapers'))}</span>
+              <span>${escapeHtml(t('sortScore'))} ${escapeHtml(profile.authorScore)}</span>
+              ${profile.primaryInstitution ? `<span>${escapeHtml(profile.primaryInstitution)}</span>` : ''}
+              ${profile.qs ? `<span class="qs-badge">${escapeHtml(profile.qs?.name || profile.primaryInstitution)} QS ${escapeHtml(profile.qs?.qs_world_rank || 'N/A')}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${renderProfileSummary(profile, paperCount)}
+        <section class="profile-side-panel">
+          <h3>${escapeHtml(t('mentorReviews'))}</h3>
+          <div class="review-stats">
+            <div class="metric"><span>Reviews</span><strong>${fmt(reviewStats.total || 0)}</strong></div>
+            <div class="metric"><span>Verified</span><strong>${fmt(reviewStats.verified || 0)}</strong></div>
+          </div>
+          <p class="hint">${escapeHtml(t('mentorDisclaimer'))}</p>
+        </section>
       </section>
     `;
     bindProfileLinks();
