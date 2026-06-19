@@ -815,6 +815,12 @@ body.filters-collapsed .sidebar > * {
 }
 
 .right-rail {
+  position: sticky;
+  top: 88px;
+  align-self: start;
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   border-left: 0;
   padding: 18px 0 18px 16px;
   transition: opacity .2s ease, padding .2s ease;
@@ -3009,6 +3015,13 @@ body.detail-collapsed .detail-collapse {
   .app-layout,
   .right-rail {
     grid-template-columns: 1fr;
+  }
+
+  .right-rail {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    scrollbar-gutter: auto;
   }
 
   body.filters-collapsed .app-layout,
