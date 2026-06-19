@@ -174,7 +174,7 @@ export function createMentorService({ openDb }) {
       }
       const byInstitution = new Map();
       for (const row of rows) {
-        for (const name of institutionsForRow(row, authorIndex, resolveAuthor)) {
+        for (const name of splitList(row.affiliations).filter(value => !isLikelySubunitInstitution(value))) {
           const item = byInstitution.get(name) || { name, papers: 0, scoreSum: 0, citations: 0, sPlus: 0, s: 0, a: 0, authors: new Set() };
           item.papers += 1;
           item.scoreSum += Number(row.quality_score || 0);
