@@ -2303,7 +2303,7 @@ body.detail-collapsed .detail-collapse {
 
 .geo-grid {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) minmax(320px, 34%);
+  grid-template-columns: minmax(520px, 1fr) minmax(420px, 38%);
   gap: 14px;
   align-items: start;
 }
@@ -2333,8 +2333,8 @@ body.detail-collapsed .detail-collapse {
 .geo-side {
   position: sticky;
   top: 88px;
-  max-height: calc(100vh - 112px);
-  overflow: auto;
+  align-self: start;
+  overflow: visible;
 }
 
 .geo-map-bg {
