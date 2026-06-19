@@ -2310,12 +2310,31 @@ body.detail-collapsed .detail-collapse {
 
 .geo-map-canvas {
   position: relative;
-  min-height: 520px;
+  min-height: 500px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--panel) 0%, var(--bg-elevated) 100%);
   overflow: hidden;
   box-shadow: var(--shadow-md);
+}
+
+.geo-map-insights {
+  display: grid;
+  grid-template-columns: minmax(280px, .95fr) minmax(320px, 1.05fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.geo-map-insights .geo-card {
+  box-shadow: none;
+  background: linear-gradient(180deg, #fff 0%, rgba(246, 249, 253, .86) 100%);
+}
+
+.geo-side {
+  position: sticky;
+  top: 88px;
+  max-height: calc(100vh - 112px);
+  overflow: auto;
 }
 
 .geo-map-bg {
@@ -2550,7 +2569,7 @@ body.detail-collapsed .detail-collapse {
 
 .geo-lower {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(320px, 1fr);
   gap: 14px;
   margin-top: 14px;
 }
@@ -3045,6 +3064,7 @@ body.detail-collapsed .detail-collapse {
   .detail-grid,
   .mini-row,
   .geo-grid,
+  .geo-map-insights,
   .geo-lower,
   .geo-detail-columns {
     grid-template-columns: 1fr;

@@ -1818,18 +1818,20 @@ async function renderGeo(field = '', options = {}) {
           ${renderGeoMap(data.countries, selectedCountry?.code || '', mode, worldMap)}
           <p class="hint">${escapeHtml(t('geoHoverHint'))}</p>
           <p class="hint">City-level rays are schematic hotspots until institution geocoding is connected.</p>
+          <section class="geo-map-insights">
+            <div class="geo-card">
+              <h3>${escapeHtml(t('geoTrend'))}</h3>
+              ${renderMiniBars(momentum.map(row => ({ key: row.region, count: Math.round(row.recent) })), 'strength')}
+            </div>
+            <div class="geo-card">
+              <h3>Country share</h3>
+              ${renderGeoSharePie(data.countries, mode)}
+            </div>
+          </section>
         </section>
         <aside class="geo-side" id="geoCountryDetail">${renderGeoCountryDetail(selectedCountry, mode)}</aside>
       </div>
       <section class="geo-lower">
-        <div class="geo-card">
-          <h3>${escapeHtml(t('geoTrend'))}</h3>
-          ${renderMiniBars(momentum.map(row => ({ key: row.region, count: Math.round(row.recent) })), 'strength')}
-        </div>
-        <div class="geo-card">
-          <h3>Country share</h3>
-          ${renderGeoSharePie(data.countries, mode)}
-        </div>
         <div class="geo-card">
           <h3>${escapeHtml(t('geoTopCountries'))}</h3>
           <div class="geo-country-list">
