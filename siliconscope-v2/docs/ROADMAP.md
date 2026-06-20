@@ -12,6 +12,29 @@ Core positioning:
 An IC scholar intelligence platform for papers, professors, institutions, topics, trends, and daily circuit learning.
 ```
 
+## Current v2 Status
+
+SiliconScope v2 is now the canonical branch of the product. The old single-process prototype is retained only as historical context.
+
+Implemented in v2:
+
+- frontend/backend separated app with Express API and React/Vite frontend
+- local SQLite metadata search and paper detail workflow
+- paper, author, institution, topic, venue, geo, and mentor/institution pages
+- right-rail paper detail interaction model
+- local PDF inbox matching workflow
+- venue policy and hidden/downweighted broad-journal handling
+- learning workspace with `/learning`, roadmap detail pages, today's circuit, lesson pages, and related-paper suggestions
+- learning seed catalog for analog, PMIC, ADC/DAC, PLL, RF/mmWave, SerDes, memory/CIM, EDA/CAD/AI, and digital/accelerator routes
+
+Still provisional:
+
+- author identity disambiguation is mostly name-based
+- mentor-vs-student filtering is heuristic
+- institution affiliation membership is inferred from metadata and needs verification
+- city-level geo hotspots are illustrative until institution geocoding is connected
+- learning lessons are structured placeholders, not polished course content
+
 The product can have three editions:
 
 - Local edition: personal database, local search, local PDF library, private notes.
@@ -155,6 +178,22 @@ Daily topic: SAR ADC
 -> institutions strong in SAR ADC
 -> suggested keywords
 ```
+
+Current v2 implementation:
+
+- `/learning` shows the route library and today's circuit entry.
+- `/learning/roadmaps/:slug` shows route stages, prerequisites, practice projects, linked SiliconScope searches, and related local papers.
+- `/learning/today` chooses a deterministic daily lesson from the local seed catalog.
+- `/learning/lessons/:lessonId` shows a structured lesson shell and related papers.
+
+Next learning milestones:
+
+- Move learning seed data from TypeScript files into editable database tables.
+- Add user progress, review queue, saved route plans, and lesson completion state.
+- Add manually authored circuit diagrams and short Chinese/English explanations.
+- Add quizzes and design-check prompts.
+- Connect weekly database refreshes so each route can recommend newly indexed papers.
+- Keep Fudan-specific content from external guides out of the default SiliconScope route pages.
 
 ## New Paper Monitoring
 
@@ -539,13 +578,15 @@ API/data:
 
 ## Suggested MVP Order
 
-1. Split local code into a cleaner API and frontend structure.
-2. Add automatic database download/update, so users do not need to pull large database files through Git.
-3. Add local PDF library with text extraction and private full-text search.
-4. Add daily circuit lesson data model and mobile-friendly page.
-5. Add topic/venue/professor/institution follow system.
-6. Add scheduled metadata update jobs.
-7. Add Chinese/English UI.
-8. Add author and institution profile overrides with photos/logos/homepages.
-9. Deploy web SaaS to a server and domain.
-10. Build PWA first, then consider native mobile apps.
+1. Done: split local code into a cleaner API and frontend structure.
+2. Done: add a first learning roadmap and daily-circuit workspace.
+3. Next: add automatic database download/update, so users do not need to pull large database files through Git.
+4. Next: precompute heavy rankings, mentor/institution cards, venue matrices, and geo aggregates during weekly refresh jobs.
+5. Next: add local PDF library with text extraction and private full-text search.
+6. Next: move learning roadmaps and lessons into editable database tables.
+7. Next: add topic/venue/professor/institution follow system.
+8. Next: add scheduled metadata update jobs.
+9. Next: add Chinese/English UI coverage for every v2 page.
+10. Next: add author and institution profile overrides with photos/logos/homepages.
+11. Next: deploy web SaaS to a server and domain.
+12. Next: build PWA first, then consider native mobile apps.

@@ -8,6 +8,9 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const PaperDetailPage = lazy(() => import('./pages/PaperDetailPage'))
 const TopicsPage = lazy(() => import('./pages/TopicsPage'))
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'))
+const LearningDashboardPage = lazy(() => import('./pages/LearningDashboardPage'))
+const RoadmapDetailPage = lazy(() => import('./pages/RoadmapDetailPage'))
+const DailyLessonPage = lazy(() => import('./pages/DailyLessonPage'))
 const GeoPage = lazy(() => import('./pages/GeoPage'))
 const AuthorsPage = lazy(() => import('./pages/AuthorsPage'))
 const InstitutionsPage = lazy(() => import('./pages/InstitutionsPage'))
@@ -24,7 +27,8 @@ const queryClient = new QueryClient({
 
 const navItems = [
   { to: '/', label: '学术搜索', icon: 'S', section: '探索' },
-  { to: '/learning-path', label: 'IC 学习路线', icon: 'L', section: '探索' },
+  { to: '/learning', label: '每日电路', icon: 'D', section: '探索' },
+  { to: '/learning-path', label: '路线库', icon: 'L', section: '探索' },
   { to: '/topics', label: '方向洞察', icon: 'T', section: '探索' },
   { to: '/geo', label: '区域地图', icon: 'G', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
@@ -152,6 +156,10 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/papers/:id" element={<PaperDetailPage />} />
+                <Route path="/learning" element={<LearningDashboardPage />} />
+                <Route path="/learning/roadmaps/:slug" element={<RoadmapDetailPage />} />
+                <Route path="/learning/today" element={<DailyLessonPage today />} />
+                <Route path="/learning/lessons/:lessonId" element={<DailyLessonPage />} />
                 <Route path="/learning-path" element={<LearningPathPage />} />
                 <Route path="/topics" element={<TopicsPage />} />
                 <Route path="/geo" element={<GeoPage />} />

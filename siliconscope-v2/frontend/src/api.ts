@@ -24,6 +24,9 @@ import type {
   JournalFilterEvaluation,
   IdentityAliasInput,
   IdentityAliasRow,
+  LearningDashboard,
+  LearningRoadmap,
+  DailyLesson,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -91,6 +94,46 @@ export const api = {
 
   async venueMatrix() {
     const res = await axios.get<VenueMatrixItem[]>('/api/venue-matrix')
+    return res.data
+  },
+
+  async learningDashboard() {
+    const res = await axios.get<LearningDashboard>('/api/learning')
+    return res.data
+  },
+
+  async learningRoadmaps() {
+    const res = await axios.get<LearningRoadmap[]>('/api/learning/roadmaps')
+    return res.data
+  },
+
+  async learningRoadmap(slug: string) {
+    const res = await axios.get<LearningRoadmap>(`/api/learning/roadmaps/${encodeURIComponent(slug)}`)
+    return res.data
+  },
+
+  async roadmapRelatedPapers(slug: string, limit = 8) {
+    const res = await axios.get<SearchResult>(`/api/learning/roadmaps/${encodeURIComponent(slug)}/related-papers`, { params: { limit } })
+    return res.data
+  },
+
+  async dailyLessons(params?: { roadmapSlug?: string }) {
+    const res = await axios.get<DailyLesson[]>('/api/learning/lessons', { params })
+    return res.data
+  },
+
+  async todayLesson() {
+    const res = await axios.get<DailyLesson | null>('/api/learning/today')
+    return res.data
+  },
+
+  async dailyLesson(lessonId: string) {
+    const res = await axios.get<DailyLesson>(`/api/learning/lessons/${encodeURIComponent(lessonId)}`)
+    return res.data
+  },
+
+  async lessonRelatedPapers(lessonId: string, limit = 8) {
+    const res = await axios.get<SearchResult>(`/api/learning/lessons/${encodeURIComponent(lessonId)}/related-papers`, { params: { limit } })
     return res.data
   },
 

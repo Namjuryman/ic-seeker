@@ -38,3 +38,19 @@ export function mentorPath(name: string, kind: 'institution' | 'author' = 'autho
 export function venuePath(venue: string, extras: SearchParamsInput = {}) {
   return searchPath({ ...extras, venue })
 }
+
+export function learningPath() {
+  return "/learning"
+}
+
+export function roadmapPath(slug: string) {
+  return `/learning/roadmaps/${encodeURIComponent(slug)}`
+}
+
+export function lessonPath(id: string) {
+  return `/learning/lessons/${encodeURIComponent(id)}`
+}
+
+export function todayLessonPath() {
+  return "/learning/today"
+}

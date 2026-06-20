@@ -363,3 +363,65 @@ export interface JournalFilterEvaluation {
   hits: Record<string, string[]>;
   reason: string;
 }
+
+export type RoadmapLevel = 'foundation' | 'intermediate' | 'advanced' | 'research';
+export type LessonLevel = 'starter' | 'core' | 'advanced' | 'paper-reading' | 'research-frontier';
+
+export interface RoadmapModule {
+  id: string;
+  title: string;
+  purpose: string;
+  lessonPlaceholders: string[];
+  relatedKeywords: string[];
+  relatedPaperQueries: string[];
+}
+
+export interface RoadmapStage {
+  id: string;
+  title: string;
+  goal: string;
+  modules: RoadmapModule[];
+}
+
+export interface LearningRoadmap {
+  slug: string;
+  title: string;
+  shortTitle: string;
+  domain: string;
+  level: RoadmapLevel;
+  description: string;
+  targetUsers: string[];
+  prerequisites: string[];
+  stages: RoadmapStage[];
+  relatedTopics: string[];
+  relatedVenues: string[];
+  relatedSearchQueries: string[];
+  caveat: string;
+  stageCount?: number;
+  moduleCount?: number;
+  lessonCount?: number;
+  lessons?: DailyLesson[];
+}
+
+export interface DailyLesson {
+  id: string;
+  title: string;
+  roadmapSlug: string;
+  moduleId: string;
+  level: LessonLevel;
+  estimatedMinutes: number;
+  sectionPlaceholders: Record<string, string>;
+  relatedTopics: string[];
+  relatedSearchQueries: string[];
+  relatedVenues: string[];
+  roadmap?: Pick<LearningRoadmap, 'slug' | 'title' | 'shortTitle' | 'domain'> | null;
+}
+
+export interface LearningDashboard {
+  generatedAt: string;
+  caveats: { roadmap: string; lesson: string; intelligence: string };
+  summary: { roadmaps: number; dailyLessons: number; linkedTopics: number; linkedVenues: number };
+  featuredRoadmap: LearningRoadmap;
+  today: DailyLesson | null;
+  roadmaps: LearningRoadmap[];
+}

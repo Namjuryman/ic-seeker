@@ -42,6 +42,8 @@ Publisher PDFs are not included.
 - Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
 - IC learning-roadmap workspace covering circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary tracks
 - Learning foundations, route-specific prerequisites, staged goals, resources, practice projects, and paper-search links
+- Daily circuit learning workspace with route pages, lesson pages, today's circuit, and related SiliconScope paper-search links
+- Learning API endpoints for roadmaps, daily lessons, and related paper suggestions
 - Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
@@ -152,6 +154,37 @@ curated SiliconScope summary rather than a verbatim mirror:
 - Each track includes common foundations, route-specific prerequisites, staged learning goals, representative resources, paper-search links, and small practice projects.
 - External books, courses, tools, and guide links keep their original source attribution.
 - Future work: turn the static roadmap into a local editable database, connect each roadmap node to curated reading lists and local PDF folders, add user progress tracking, and let weekly database refreshes recommend new papers for each route.
+
+## Learning And Daily Circuit Workspace
+
+The v2 app now has a dedicated learning workspace:
+
+```text
+/learning                         Learning dashboard
+/learning/roadmaps/:slug          Route-specific roadmap
+/learning/today                   Today's circuit lesson
+/learning/lessons/:lessonId       Lesson detail page
+```
+
+Backend endpoints:
+
+```text
+GET /api/learning
+GET /api/learning/roadmaps
+GET /api/learning/roadmaps/:slug
+GET /api/learning/roadmaps/:slug/related-papers
+GET /api/learning/lessons
+GET /api/learning/today
+GET /api/learning/lessons/:lessonId
+GET /api/learning/lessons/:lessonId/related-papers
+```
+
+Current scope:
+
+- Roadmaps and daily lessons are curated seed data, not generated long-form course chapters.
+- Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
+- Related papers are pulled from the local SiliconScope search service through metadata queries.
+- Future work should move learning content into editable database tables, add reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
 
 ## Rebuild The Database
 
@@ -304,19 +337,18 @@ The current city hotspot layer is a transition design. It is not yet a verified 
 ## Project Structure
 
 ```text
-ic_seeker/                 Web app and local API server
-ic_seeker/routes/          HTTP route modules
-ic_seeker/services/        Search, paper, profile, topic, geo, and admin logic
-ic_seeker/repositories/    SQLite repository wrapper
-ic_seeker/config/          Environment and path config
-ic_seeker/db/              SQLite connection helper
-ic_database/               Ready-to-use SQLite, CSV, summary, and PDF folders
-scripts/build-ic-database.mjs
-scripts/merge-ic-databases.mjs
-scripts/import-local-pdfs.mjs
-scripts/repair-power-management-domains.mjs
-Start_IC_Seeker.bat
-Build_IC_Database.bat
+backend/                  Express API server, services, repositories, and seed data
+backend/src/routes/       HTTP route modules
+backend/src/services/     Search, paper, profile, topic, geo, mentor, and learning logic
+backend/src/repositories/ SQLite repository wrappers
+backend/src/data/         Local seed catalogs such as learning roadmaps
+frontend/                 React + Vite frontend
+frontend/src/pages/       Search, paper, profile, geo, mentor, venue, and learning pages
+frontend/src/components/  Shared UI and entity-link components
+frontend/src/utils/       Route helpers and formatting utilities
+ic_database/              Ready-to-use SQLite, CSV, summary, and PDF folders
+docs/                     Product roadmap, deployment, methodology, and MVP notes
+legacy-public/            Public demo/legacy materials retained for context
 ```
 
 ## Roadmap

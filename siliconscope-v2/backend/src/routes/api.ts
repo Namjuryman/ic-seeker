@@ -16,6 +16,7 @@ import { journalFilterService } from "../services/journal-filter.service.js";
 import { identityAdminService } from "../services/identity-admin.service.js";
 import { clearCache, memoCache, memoCacheAsync } from "../services/cache.service.js";
 import { snapshotService } from "../services/snapshot.service.js";
+import { learningService } from "../services/learning.service.js";
 
 const router = Router();
 
@@ -115,6 +116,58 @@ router.get("/geo", requireAuth, async (req, res) => {
 
 router.get("/venue-matrix", requireAuth, async (_req, res) => {
   res.json(snapshotService.getVenueMatrix());
+});
+
+router.get("/learning", requireAuth, async (_req, res) => {
+  res.json(learningService.getDashboard());
+});
+
+router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
+  res.json(learningService.listRoadmaps());
+});
+
+router.get("/learning/roadmaps/:slug", requireAuth, async (req, res) => {
+  const roadmap = learningService.getRoadmap(req.params.slug);
+  if (!roadmap) {
+    res.status(404).json({ error: "Roadmap not found" });
+    return;
+  }
+  res.json(roadmap);
+});
+
+router.get("/learning/roadmaps/:slug/related-papers", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const result = learningService.relatedPapersForRoadmap(req.params.slug, req.user?.userId ?? 0, Number(req.query.limit || 8));
+  if (!result) {
+    res.status(404).json({ error: "Roadmap not found" });
+    return;
+  }
+  res.json(result);
+});
+
+router.get("/learning/lessons", requireAuth, async (req, res) => {
+  res.json(learningService.listLessons(req.query as Record<string, string>));
+});
+
+router.get("/learning/today", requireAuth, async (_req, res) => {
+  res.json(learningService.getTodayLesson());
+});
+
+router.get("/learning/lessons/:lessonId", requireAuth, async (req, res) => {
+  const lesson = learningService.getLesson(req.params.lessonId);
+  if (!lesson) {
+    res.status(404).json({ error: "Lesson not found" });
+    return;
+  }
+  res.json(lesson);
+});
+
+router.get("/learning/lessons/:lessonId/related-papers", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const result = learningService.relatedPapersForLesson(req.params.lessonId, req.user?.userId ?? 0, Number(req.query.limit || 8));
+  if (!result) {
+    res.status(404).json({ error: "Lesson not found" });
+    return;
+  }
+  res.json(result);
 });
 
 router.get("/mentor/institutions", requireAuth, async (req, res) => {
