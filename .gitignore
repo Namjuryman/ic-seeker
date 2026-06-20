@@ -3,10 +3,17 @@
 *.err.log
 .env
 
+# Separate public demo working copy; it is published to Namjuryman/SiliconScope.
+SiliconScope-public/
+
 # Temporary / validation database builds
 ic_database_checks/
 ic_database/*backup*.sqlite
 ic_database/*.sqlite-journal
+ic_database/*.sqlite-shm
+ic_database/*.sqlite-wal
+siliconscope-v2/ic_database/*.sqlite-shm
+siliconscope-v2/ic_database/*.sqlite-wal
 
 # Local PDF storage. Keep the folders, not the PDFs.
 ic_database/pdfs/*
@@ -25,3 +32,14 @@ scripts/setup-zotero.ps1
 Thumbs.db
 .vscode/
 .idea/
+
+# Frontend/backend generated artifacts
+node_modules/
+dist/
+*.tsbuildinfo
+siliconscope-v2/**/node_modules/
+siliconscope-v2/**/dist/
+siliconscope-v2/**/*.tsbuildinfo
+siliconscope-v2/ic_database/*backup*.sqlite
+ic_seeker/scripts/*log*.txt
+*.tmp

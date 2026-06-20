@@ -1,0 +1,26 @@
+export function toPaperRow(row: Record<string, any>) {
+  return {
+    id: row.id,
+    title: row.title || "",
+    authors: row.authors || "",
+    affiliations: row.affiliations || "",
+    abstract: row.abstract || "",
+    year: Number(row.year || 0),
+    venue: row.venue || "",
+    publicationTitle: row.publicationTitle || row.publication_title || "",
+    rank: row.rank ?? row.venueRank ?? row.venue_rank ?? "",
+    field: row.field ?? row.domain ?? "General IC",
+    score: Number(row.score ?? row.qualityScore ?? row.quality_score ?? 0),
+    doi: row.doi || "",
+    pdfLink: row.pdfLink ?? row.pdf_link ?? "",
+    sourceUrl: row.sourceUrl ?? row.source_url ?? "",
+    openalexId: row.openalexId ?? row.openalex_id ?? "",
+    ieeeArticleNumber: row.ieeeArticleNumber ?? row.ieee_article_number ?? "",
+    localPdf: row.localPdf ?? row.local_pdf ?? "",
+    downloadStatus: row.downloadStatus ?? row.download_status ?? "",
+    citationCount: Number(row.citationCount ?? row.citation_count ?? 0),
+    verificationStatus: row.verificationStatus ?? row.verification_status ?? "",
+    collectionMethod: row.collectionMethod ?? row.collection_method ?? "",
+    searchRank: row.searchRank,
+  };
+}

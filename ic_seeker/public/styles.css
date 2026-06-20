@@ -824,6 +824,13 @@ body.filters-collapsed .sidebar > * {
   border-left: 0;
   padding: 0 0 18px 16px;
   transition: opacity .2s ease, padding .2s ease;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 body.paper-detail-active:not(.detail-collapsed) .right-rail,
@@ -3427,6 +3434,9 @@ body.mentor-section .main {
 
 body.mentor-section .right-rail {
   grid-column: 2;
+  position: static;
+  max-height: none;
+  overflow-y: visible;
 }
 
 @media (max-width: 860px) {

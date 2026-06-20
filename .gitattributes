@@ -1,1 +1,2 @@
 ic_database/ic_papers.sqlite filter=lfs diff=lfs merge=lfs -text
+siliconscope-v2/ic_database/ic_papers.sqlite filter=lfs diff=lfs merge=lfs -text

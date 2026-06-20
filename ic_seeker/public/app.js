@@ -2209,6 +2209,9 @@ async function loadPaper(id, options = {}) {
   bindCitationCopy(paper);
   bindProfileLinks();
   renderPaperDiscussion(id);
+  // Reset right-rail scroll to top so detail panel starts from the top
+  const rightRail = document.querySelector('.right-rail');
+  if (rightRail) rightRail.scrollTop = 0;
 }
 
 async function savePaperState() {
