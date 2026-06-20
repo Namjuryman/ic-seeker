@@ -4218,3 +4218,27 @@
   background: #fff;
   color: #24406f;
 }
+
+/* Sidebar collapse must reclaim the grid column, not only translate the nav away. */
+@media (min-width: 921px) {
+  .ss-shell.ss-shell-collapsed {
+    grid-template-columns: 0 minmax(0, 1fr);
+  }
+
+  .ss-shell.ss-shell-collapsed .ss-sidebar {
+    width: 238px;
+    min-width: 238px;
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+
+  .ss-shell.ss-shell-collapsed .ss-workspace,
+  .ss-shell.ss-shell-collapsed .ss-main {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .ss-shell.ss-shell-collapsed .ss-collapse {
+    left: 0;
+  }
+}
