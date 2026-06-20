@@ -38,8 +38,8 @@ Publisher PDFs are not included.
 - Institution leaderboard for school/lab strength
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
 - Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
-- IC learning-roadmap workspace with analog/mixed-signal, RF/mmWave, digital ASIC/SoC, EDA, and device/process tracks
-- Learning resources and practice projects linked back to the local paper search workflow
+- IC learning-roadmap workspace covering circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary tracks
+- Learning foundations, route-specific prerequisites, staged goals, resources, practice projects, and paper-search links
 - Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
@@ -128,8 +128,11 @@ curated SiliconScope summary rather than a verbatim mirror:
 
 - General IC learning-map structure and research-direction framing are referenced.
 - Fudan-specific course tables, FDU course pages, and Fudan-specific mentor lists are intentionally excluded.
+- The page now organizes IC study into route families: circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary directions.
+- Current tracks include analog/mixed-signal, RF/mmWave, power management, biomedical/sensor interfaces, digital ASIC/SoC, verification/DFT, computer architecture accelerators, FPGA, devices/process, power devices, advanced packaging, EDA tools, hardware security, memory/CIM, silicon photonics, and quantum/neuromorphic IC.
+- Each track includes common foundations, route-specific prerequisites, staged learning goals, representative resources, paper-search links, and small practice projects.
 - External books, courses, tools, and guide links keep their original source attribution.
-- Future work: turn the static roadmap into a local editable database, connect each roadmap node to reading lists, and support user progress tracking.
+- Future work: turn the static roadmap into a local editable database, connect each roadmap node to curated reading lists and local PDF folders, add user progress tracking, and let weekly database refreshes recommend new papers for each route.
 
 ## Rebuild The Database
 
