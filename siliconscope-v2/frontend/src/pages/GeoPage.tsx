@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { PaperLink } from '../components/PaperLink'
+import { searchPath } from '../utils/routes'
 import type { GeoResult, GeoCountry, PaperRow } from '../types'
 import {
   countryFeatureCode,
@@ -19,7 +22,7 @@ function metric(country: GeoCountry, mode: GeoMode) {
   return Number(country.recentScore || country.score || 0)
 }
 
-function MiniBars({ rows, label = 'papers' }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string }) {
+function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
   const normalized = rows.map((row) => ({
     key: String(row.key ?? row.year ?? '-'),
     count: Number(row.count ?? row.papers ?? row.score ?? 0),
@@ -29,7 +32,11 @@ function MiniBars({ rows, label = 'papers' }: { rows: Array<{ key?: string; year
   return (
     <div className="mini-bars">
       {normalized.map((row) => (
-        <div key={row.key} className="mini-bar-row">
+        <div
+          key={row.key}
+          className={`mini-bar-row ${onRowClick ? 'cursor-pointer hover:bg-surface-elevated' : ''}`}
+          onClick={() => onRowClick?.(row.key)}
+        >
           <span>{row.key}</span>
           <div><i style={{ width: `${Math.max(3, row.count / max * 100)}%` }} /></div>
           <strong>{Math.round(row.count)}</strong>
@@ -167,7 +174,7 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             <div className="geo-inset-grid">
               {group.countries.map((country) => (
                 <button key={country.code} className={`geo-region-button ${country.code === selectedCode ? 'active' : ''}`} onClick={() => onSelect(country)}>
-                  <span>{country.code}</span><em>{country.papers}</em>
+                  <span>{country.code}</span><em>{country.papers ?? 0}</em>
                 </button>
               ))}
             </div>
@@ -179,18 +186,48 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
 }
 
 function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: GeoMode }) {
+  const navigate = useNavigate()
   if (!country) return <div className="empty">Hover or click a country to inspect strength, institutions, and yearly trend.</div>
   return (
     <section className="geo-country-detail">
       <div className="geo-detail-head">
-        <div><p className="profile-kicker">{country.region}</p><h3>{country.name}</h3></div>
-        <strong>{country.code}</strong>
+        <div>
+          <p className="profile-kicker">{country.region}</p>
+          <h3
+            className="cursor-pointer hover:text-brand-600"
+            onClick={() => navigate(searchPath({ country: country.code }))}
+          >
+            {country.name}
+          </h3>
+        </div>
+        <strong
+          className="cursor-pointer hover:text-brand-600"
+          onClick={() => navigate(searchPath({ country: country.code }))}
+        >
+          {country.code}
+        </strong>
       </div>
       <div className="profile-grid geo-metrics">
-        <div className="metric"><span>Papers</span><strong>{country.papers}</strong></div>
-        <div className="metric"><span>Score</span><strong>{country.score}</strong></div>
-        <div className="metric"><span>Top field</span><strong>{country.topField}</strong></div>
-        <div className="metric"><span>S+ / S / A</span><strong>{country.ranks.sPlus} / {country.ranks.s} / {country.ranks.a}</strong></div>
+        <div className="metric">
+          <span>Papers</span>
+          <strong
+            className="cursor-pointer hover:text-brand-600"
+            onClick={() => navigate(searchPath({ country: country.code }))}
+          >
+            {country.papers ?? 0}
+          </strong>
+        </div>
+        <div className="metric"><span>Score</span><strong>{country.score ?? 0}</strong></div>
+        <div className="metric">
+          <span>Top field</span>
+          <strong
+            className="cursor-pointer hover:text-brand-600"
+            onClick={() => country.topField && navigate(searchPath({ field: country.topField }))}
+          >
+            {country.topField || '-'}
+          </strong>
+        </div>
+        <div className="metric"><span>S+ / S / A</span><strong>{country.ranks?.sPlus ?? 0} / {country.ranks?.s ?? 0} / {country.ranks?.a ?? 0}</strong></div>
       </div>
       <MiniBars rows={country.byYear || []} label={mode === 'institutions' ? 'papers' : 'strength'} />
       <section className="geo-detail-columns">
@@ -198,11 +235,26 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
           <h4>Top institutions</h4>
           <div className="geo-institution-list">
             {country.topInstitutions?.length ? country.topInstitutions.slice(0, 8).map((row, index) => (
-              <div className="geo-institution-row" key={row.name}><span>{index + 1}</span><strong>{row.name}</strong><em>{row.count} papers</em></div>
+              <div className="geo-institution-row" key={row.name}>
+                <span>{index + 1}</span>
+                <strong
+                  className="cursor-pointer hover:text-brand-600"
+                  onClick={() => navigate(`/institutions/${encodeURIComponent(row.name)}`)}
+                >
+                  {row.name}
+                </strong>
+                <em>{row.count ?? 0} papers</em>
+              </div>
             )) : <p className="text-xs text-ink-muted">No matched institutions yet.</p>}
           </div>
         </div>
-        <div><h4>Domains</h4><MiniBars rows={country.byField || []} /></div>
+        <div>
+          <h4>Domains</h4>
+          <MiniBars
+            rows={country.byField || []}
+            onRowClick={(field) => navigate(searchPath({ field, country: country.code }))}
+          />
+        </div>
       </section>
     </section>
   )
@@ -213,11 +265,13 @@ function PaperList({ papers }: { papers: PaperRow[] }) {
     <div className="space-y-2">
       {papers.slice(0, 6).map((p) => (
         <div key={p.id} className="border-b border-line-subtle last:border-0 pb-2 last:pb-0">
-          <div className="text-xs text-ink-text font-medium">{p.title}</div>
+          <div className="text-xs text-ink-text font-medium">
+            <PaperLink id={p.id} title={p.title ?? 'Untitled'} />
+          </div>
           <div className="flex gap-1 mt-1 text-xs flex-wrap">
-            <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.venue}</span>
-            <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.year}</span>
-            <span className="px-1 py-0.5 rounded bg-brand-50 text-brand-700">{p.rank}</span>
+            <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.venue ?? '-'}</span>
+            <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.year ?? '-'}</span>
+            <span className="px-1 py-0.5 rounded bg-brand-50 text-brand-700">{p.rank ?? '-'}</span>
           </div>
         </div>
       ))}
@@ -231,6 +285,8 @@ export default function GeoPage() {
   const [mode, setMode] = useState<GeoMode>('overall')
   const [field, setField] = useState('')
   const [worldMap, setWorldMap] = useState<PreparedWorldMap | null>(null)
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetch('/data/world-countries-110m.geojson')
@@ -240,10 +296,13 @@ export default function GeoPage() {
   }, [])
 
   useEffect(() => {
+    setError('')
     const params = mode === 'topic' && field ? { field } : undefined
     api.geo(params).then((next) => {
       setData(next)
       setSelected((prev) => next.countries.find((country) => country.code === prev?.code) || next.countries[0] || null)
+    }).catch((err) => {
+      setError(err instanceof Error ? err.message : '加载地理数据失败')
     })
   }, [mode, field])
 
@@ -256,6 +315,7 @@ export default function GeoPage() {
     return [...totals.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count).slice(0, 8)
   }, [data])
 
+  if (error) return <div className="ss-empty-state">{error}</div>
   if (!data) return <div className="text-ink-muted">加载中...</div>
 
   return (
@@ -277,11 +337,16 @@ export default function GeoPage() {
         </div>
       </section>
 
+      <div className="mb-4 rounded-lg border border-line bg-surface-panel px-3 py-2 text-xs text-ink-muted">
+        Geo analysis depends on affiliation metadata and institution normalization. Treat it as a directional signal.
+      </div>
+
       <div className="geo-grid">
         <section className="geo-map-panel">
           <h3>Global IC activity map</h3>
           <p className="hint">Hover/click a country to inspect strength, institutions, and yearly trend.</p>
           <p className="hint">City-level rays are schematic hotspots until institution geocoding is connected.</p>
+          <p className="hint">Country filtering is based on affiliation text and institution normalization. Treat it as a directional signal.</p>
           <GeoMap countries={countries} selectedCode={selectedCountry?.code} mode={mode} worldMap={worldMap} onSelect={setSelected} />
         </section>
         <aside className="geo-side"><CountryDetail country={selectedCountry} mode={mode} /></aside>
@@ -298,7 +363,17 @@ export default function GeoPage() {
         <div className="geo-country-list">
           {countries.slice(0, 14).map((country, index) => (
             <button key={country.code} className={`geo-country-row ${country.code === selectedCountry?.code ? 'active' : ''}`} onClick={() => setSelected(country)}>
-              <span>{index + 1}</span><strong>{country.name}</strong><em>{country.papers} papers / {country.score}</em>
+              <span>{index + 1}</span>
+              <strong
+                className="cursor-pointer hover:text-brand-600"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(searchPath({ country: country.code }))
+                }}
+              >
+                {country.name}
+              </strong>
+              <em>{country.papers ?? 0} papers / {country.score ?? 0}</em>
             </button>
           ))}
         </div>

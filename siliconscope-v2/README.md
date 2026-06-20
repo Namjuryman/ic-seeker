@@ -13,14 +13,22 @@ The repository includes a ready-to-use local database:
 - `ic_database/ic_papers.sqlite`
 - `ic_database/ic_chipseeker.csv`
 - `ic_database/summary.json`
-
-Current snapshot:
+Current snapshot:
 
 - Years: `2016-2026`
 - Papers: about `38k`
 - Venues: `ISSCC`, `JSSC`, `VLSI Symposium`, `CICC`, `ASSCC`, `ESSCIRC`, `ESSERC`, `IEDM`, `DAC`, `ICCAD`, `DATE`, `TCAD`, `TCAS-I`, `TCAS-II`, `TVLSI`, `ISCAS`
 
 Publisher PDFs are not included.
+
+### Git LFS
+
+The SQLite database is tracked by Git LFS. If the file is only about 134 bytes and contains a pointer like `version https://git-lfs.github.com/spec/v1`, you have the LFS pointer, not the real database.
+
+```bash
+git lfs install
+git lfs pull
+```
 
 ## Features
 
@@ -53,6 +61,13 @@ Publisher PDFs are not included.
 - Docker deployment
 
 ## Quick Start
+
+**Important notes:**
+
+- **SiliconScope v2 is the canonical React + backend edition.** Legacy `ic_seeker` is kept only for reference.
+- **Learning catalog canonical source is `backend/src/data/learning-catalog.ts`.**
+- **Journal Ingestion is disabled until background jobs are implemented.**
+- **Data Quality analysis is manual-run only.** Open the Data Quality page and click "Run analysis" when needed.
 
 Requirements:
 
@@ -285,6 +300,8 @@ npm run import:pdfs
 Matched files are moved under `ic_database/pdfs/` and attached to database rows.
 
 ## Scoring
+
+> **Disclaimer:** Metadata score, rank, and topic classification are heuristic indicators, not final academic judgment.
 
 Paper score is intentionally transparent:
 

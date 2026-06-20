@@ -215,3 +215,14 @@ export const papersFts = sqliteTable("papers_fts", {
   domain: text("domain").notNull().default(""),
   doi: text("doi").notNull().default(""),
 });
+
+// Coming soon: lightweight user learning progress (reserved table; no backend logic yet)
+export const learningProgress = sqliteTable("learning_progress", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  lessonId: text("lesson_id").notNull(),
+  status: text("status").notNull().default("not_started"), // not_started | reading | completed | review_later
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

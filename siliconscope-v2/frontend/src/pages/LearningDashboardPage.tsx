@@ -111,7 +111,54 @@ export default function LearningDashboardPage() {
             </Link>
           ))}
         </div>
+        <div className="learning-progress-actions" style={{ marginTop: '1rem' }}>
+          <Link to="/learning-path">View full route library →</Link>
+        </div>
       </section>
+
+      {(data.routeFamilies?.length ?? 0) > 0 && (
+        <section className="learning-section">
+          <div className="learning-section-head">
+            <div>
+              <span>Route families</span>
+              <h3>IC 方向大类</h3>
+            </div>
+          </div>
+          <div className="learning-family-grid">
+            {data.routeFamilies?.map((family) => (
+              <Link className="learning-family-card" key={family.id} to="/learning-path">
+                <span>{family.routeIds.length} 条路线</span>
+                <strong>{family.title}</strong>
+                <p>{family.description}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(data.commonFoundations?.length ?? 0) > 0 && (
+        <section className="learning-section">
+          <div className="learning-section-head">
+            <div>
+              <span>Common foundations</span>
+              <h3>公共前置知识</h3>
+            </div>
+          </div>
+          <div className="learning-foundation-grid">
+            {data.commonFoundations?.map((group) => (
+              <article className="learning-foundation-card" key={group.title}>
+                <h4>{group.title}</h4>
+                <p>{group.note}</p>
+                <div>
+                  {group.items.map((item) => (
+                    <span key={item}>{item}</span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="learning-section">
         <div className="learning-section-head">

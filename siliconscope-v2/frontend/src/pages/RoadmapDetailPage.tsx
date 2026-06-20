@@ -17,21 +17,22 @@ export default function RoadmapDetailPage() {
 
   return (
     <div className="learning-page learning-workbench">
-      <section className="learning-overview learning-detail-hero">
+      <section className="learning-overview learning-detail-hero" style={{ borderLeftColor: data.accent || undefined }}>
         <div>
-          <span>{data.domain}</span>
-          <h2>{data.title}</h2>
+          <span>{data.domain}{data.level ? ` · ${data.level}` : ''}{data.family ? ` · ${data.family}` : ''}</span>
+          <h2 style={{ color: data.accent || undefined }}>{data.title}</h2>
+          {data.subtitle && <p className="learning-muted" style={{ fontStyle: 'italic' }}>{data.subtitle}</p>}
           <p>{data.description}</p>
           <div className="learning-outcome-list">
-            {data.targetUsers.map((user) => <span key={user}>{user}</span>)}
+            {data.targetUsers?.map((user) => <span key={user}>{user}</span>) ?? <span>—</span>}
             <Link to="/learning">Daily Circuit workspace</Link>
             <Link to="/learning-path">Full route library</Link>
           </div>
         </div>
         <div className="learning-venue-strip">
-          {data.relatedVenues.map((venue) => (
+          {data.relatedVenues?.map((venue) => (
             <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
-          ))}
+          )) ?? <span>—</span>}
         </div>
       </section>
 
@@ -59,22 +60,70 @@ export default function RoadmapDetailPage() {
             </div>
           </div>
           <div className="learning-chip-row">
-            {data.prerequisites.map((item) => <span key={item}>{item}</span>)}
+            {data.prerequisites?.map((item) => <span key={item}>{item}</span>) ?? <span>—</span>}
           </div>
+          {data.prerequisitesGroups && data.prerequisitesGroups.length > 0 && (
+            <div className="learning-prereq-grid">
+              {data.prerequisitesGroups.map((group) => (
+                <article className="learning-prereq-card" key={group.title}>
+                  <h4>{group.title}</h4>
+                  <p>{group.note}</p>
+                  <ul>
+                    {group.items.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
+            </div>
+          )}
+          {data.outcomes && data.outcomes.length > 0 && (
+            <div className="learning-outcome-list">
+              {data.outcomes.map((outcome) => (
+                <span key={outcome}>{outcome}</span>
+              ))}
+            </div>
+          )}
         </article>
         <article className="learning-section">
           <div className="learning-section-head">
             <div>
               <span>SiliconScope links</span>
-              <h3>Search entry points</h3>
+              <h3>Research entry points</h3>
             </div>
             <Link to={todayLessonPath()}>Today</Link>
           </div>
-          <div className="learning-query-grid">
-            {data.relatedSearchQueries.map((query) => (
-              <Link key={query} to={searchPath({ q: query, field: data.relatedTopics[0], semantic: 1 })}>{query}</Link>
-            ))}
-          </div>
+          {data.paperQuery && (
+            <div className="learning-progress-actions">
+              <Link className="button" to={searchPath({ q: data.paperQuery, scope: 'all', semantic: 1 })}>
+                Search: {data.paperQuery}
+              </Link>
+            </div>
+          )}
+          {data.venues && data.venues.length > 0 && (
+            <div className="learning-venue-strip">
+              {data.venues.map((venue) => (
+                <EntityLink key={venue} kind="venue" value={venue} params={{ q: data.paperQuery }}>{venue}</EntityLink>
+              ))}
+            </div>
+          )}
+          {data.relatedTopics && data.relatedTopics.length > 0 && (
+            <div className="learning-chip-row">
+              {data.relatedTopics.map((topic) => (
+                <EntityLink key={topic} kind="topic" value={topic}>{topic}</EntityLink>
+              ))}
+            </div>
+          )}
+          {data.relatedSearchQueries && data.relatedSearchQueries.length > 0 && (
+            <div className="learning-query-grid">
+              {data.relatedSearchQueries.slice(0, 8).map((query) => (
+                <Link key={query} to={searchPath({ q: query, field: data.relatedTopics?.[0], semantic: 1 })}>{query}</Link>
+              ))}
+            </div>
+          )}
+          {!data.paperQuery && (!data.venues || data.venues.length === 0) && (!data.relatedTopics || data.relatedTopics.length === 0) && (!data.relatedSearchQueries || data.relatedSearchQueries.length === 0) && (
+            <p className="learning-muted">No research links available.</p>
+          )}
         </article>
       </section>
 
@@ -87,28 +136,66 @@ export default function RoadmapDetailPage() {
           <p>{data.caveat}</p>
         </div>
         <div className="learning-stage-list">
-          {data.stages.map((stage, index) => (
+          {data.stages?.map((stage, index) => (
             <article key={stage.id} className="learning-stage-row">
               <div className="learning-stage-index">{index + 1}</div>
               <div>
                 <h3>{stage.title}</h3>
                 <p>{stage.goal}</p>
+                {stage.checkpoints && stage.checkpoints.length > 0 && (
+                  <ul>
+                    {stage.checkpoints.map((checkpoint) => (
+                      <li key={checkpoint}>{checkpoint}</li>
+                    ))}
+                  </ul>
+                )}
+                {stage.resources && stage.resources.length > 0 && (
+                  <div className="learning-resource-grid">
+                    {stage.resources.map((resource) => (
+                      <a key={resource.title} className="learning-resource" href={resource.url} target="_blank" rel="noreferrer">
+                        <span>{resource.kind}</span>
+                        <strong>{resource.title}</strong>
+                        <em>{resource.provider}</em>
+                        <p>{resource.note}</p>
+                      </a>
+                    ))}
+                  </div>
+                )}
                 <div className="learning-module-grid">
-                  {stage.modules.map((module) => (
+                  {stage.modules?.map((module) => (
                     <div key={module.id} className="learning-module-card">
                       <strong>{module.title}</strong>
                       <p>{module.purpose}</p>
                       <div>
-                        {module.lessonPlaceholders.map((lesson) => <span key={lesson}>{lesson}</span>)}
+                        {module.lessonPlaceholders?.map((lesson) => <span key={lesson}>{lesson}</span>)}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </article>
-          ))}
+          )) ?? <p className="learning-muted">No stages defined.</p>}
         </div>
       </section>
+
+      {data.projectIdeas && data.projectIdeas.length > 0 && (
+        <section className="learning-section learning-projects">
+          <div className="learning-section-head">
+            <div>
+              <span>Practice</span>
+              <h3>可做的小项目</h3>
+            </div>
+          </div>
+          <div className="learning-project-list">
+            {data.projectIdeas.slice(0, 8).map((idea, index) => (
+              <div key={idea}>
+                <span>{index + 1}</span>
+                <p>{idea}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="learning-two-column">
         <article className="learning-section">
@@ -119,12 +206,13 @@ export default function RoadmapDetailPage() {
             </div>
           </div>
           <div className="learning-link-list">
-            {(data.lessons ?? []).map((lesson) => (
+            {(data.lessons ?? []).slice(0, 12).map((lesson) => (
               <Link key={lesson.id} to={lessonPath(lesson.id)}>
                 <strong>{lesson.title}</strong>
                 <span>{lesson.estimatedMinutes} min</span>
               </Link>
             ))}
+            {(data.lessons ?? []).length === 0 && <p className="learning-muted">No lessons available.</p>}
           </div>
         </article>
 
@@ -139,7 +227,7 @@ export default function RoadmapDetailPage() {
             {related.data?.rows?.slice(0, 6).map((paper) => (
               <div key={paper.id}>
                 <PaperLink id={paper.id} title={paper.title} />
-                <span>{paper.venue} · {paper.year} · {paper.rank}</span>
+                <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
               </div>
             )) ?? <p className="learning-muted">Loading related papers...</p>}
           </div>

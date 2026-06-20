@@ -47,6 +47,7 @@ docs/LEGACY_V1_ARCHIVE.md
 - Mentor/institution prototype with provisional IC mentor candidates and review workflow
 - Venue matrix, data-quality pages, journal ingestion controls, and identity maintenance tools
 - IC learning-roadmap page covering circuit design, digital systems, device/manufacturing, EDA/security, and frontier IC directions
+- Learning catalog canonical source is `backend/src/data/learning-catalog.ts`
 - Local PDF attachment workflow planned around user-provided private PDFs
 - Docker-oriented deployment path for private/self-hosted use
 

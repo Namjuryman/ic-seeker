@@ -407,6 +407,7 @@ export default function HomePage() {
   const [results, setResults] = useState<SearchResult | null>(null)
   const [stats, setStats] = useState<StatsData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const page = Math.max(1, Number(searchParams.get('page') || 1))
@@ -418,6 +419,7 @@ export default function HomePage() {
 
   const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1) => {
     setLoading(true)
+    setError('')
     try {
       const res = await api.search({
         ...nextControls,
@@ -430,6 +432,7 @@ export default function HomePage() {
       setResults(res)
       setSelectedId((current) => (current && res.rows.some((row) => row.id === current) ? current : res.rows[0]?.id ?? null))
     } catch (err) {
+      setError(err instanceof Error ? err.message : '搜索失败')
       console.error(err)
     } finally {
       setLoading(false)
@@ -437,7 +440,10 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    api.stats().then(setStats).catch(console.error)
+    api.stats().then(setStats).catch((err) => {
+      console.error(err)
+      setError(err instanceof Error ? err.message : '统计数据加载失败')
+    })
   }, [])
 
   useEffect(() => {
@@ -550,6 +556,7 @@ export default function HomePage() {
         </aside>
 
         <main className="ss-result-panel">
+          {error && <div className="rounded-xl border p-3 text-sm bg-red-50 text-red-700 border-red-100 mb-3">{error}</div>}
           <div className="ss-result-head">
             <div>
               <strong>{formatNumber(results?.total)} 条结果</strong>

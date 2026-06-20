@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { searchPath } from '../utils/routes'
 import type { AuthorProfile, PaperRow } from '../types'
 
 interface AuthorListItem {
@@ -24,7 +25,7 @@ function initials(name: string) {
 }
 
 function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
-  return `S+ ${item.sPlus || 0} / S ${item.s || 0} / A ${item.a || 0}`
+  return `S+ ${item.sPlus ?? 0} / S ${item.s ?? 0} / A ${item.a ?? 0}`
 }
 
 function MiniPaper({ paper }: { paper: PaperRow }) {
@@ -48,6 +49,7 @@ export default function AuthorsPage() {
   const [detail, setDetail] = useState<AuthorProfile | null>(null)
   const [loadingList, setLoadingList] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const params = useParams()
   const navigate = useNavigate()
@@ -55,8 +57,10 @@ export default function AuthorsPage() {
 
   useEffect(() => {
     setLoadingList(true)
+    setError('')
     api.professors({ limit: 80, minPapers: 2 })
       .then((data) => setList(data as AuthorListItem[]))
+      .catch((err) => setError(err instanceof Error ? err.message : '加载学者列表失败'))
       .finally(() => setLoadingList(false))
   }, [])
 
@@ -66,7 +70,8 @@ export default function AuthorsPage() {
       return
     }
     setLoadingDetail(true)
-    api.authorProfile(name).then(setDetail).finally(() => setLoadingDetail(false))
+    setError('')
+    api.authorProfile(name).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载学者画像失败')).finally(() => setLoadingDetail(false))
   }, [name])
 
   const filtered = useMemo(() => {
@@ -77,6 +82,10 @@ export default function AuthorsPage() {
 
   if (name && loadingDetail) {
     return <div className="ss-skeleton-page"><div /><p>正在加载学者画像...</p></div>
+  }
+
+  if (name && error) {
+    return <div className="ss-empty-state">{error}</div>
   }
 
   if (name && detail) {
@@ -90,8 +99,8 @@ export default function AuthorsPage() {
             <p className="ss-kicker">Author profile</p>
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
-              <span>{detail.paperCount} papers</span>
-              <span>Score {detail.authorScore}</span>
+              <span>{detail.paperCount ?? 0} papers</span>
+              <span>Score {detail.authorScore ?? 0}</span>
               <span>{rankLine(detail.ranks)}</span>
               {detail.primaryInstitution && <span>{detail.primaryInstitution}</span>}
               {detail.qs?.qs_world_rank && <span>QS {detail.qs.qs_world_rank}</span>}
@@ -105,6 +114,9 @@ export default function AuthorsPage() {
 
         <section className="ss-caveat">
           作者归一化仍依赖论文元数据和 alias 表。这里显示的是本地数据库画像，不等同于最终学术评价；未来接入 IEEE API、ORCID 和主页爬虫后会继续校准。
+        </section>
+        <section className="ss-caveat">
+          Author profiles may merge or split people incorrectly when metadata is ambiguous. Use alias tools for manual correction.
         </section>
 
         <div className="ss-profile-grid">
@@ -128,14 +140,56 @@ export default function AuthorsPage() {
               <div className="ss-panel-head compact"><h2>方向分布</h2></div>
               <div className="ss-bar-list">
                 {detail.byDomain.slice(0, 8).map((item) => (
-                  <div key={item.key}>
+                  <div
+                    key={item.key}
+                    className="cursor-pointer hover:bg-surface-elevated"
+                    onClick={() => navigate(searchPath({ field: item.key }))}
+                  >
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                     <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byDomain[0]?.count || 1)) * 100)}%` }} />
                   </div>
                 ))}
               </div>
             </section>
+
+            {detail.byVenue && detail.byVenue.length > 0 && (
+              <section className="ss-panel">
+                <div className="ss-panel-head compact"><h2>发表 venues</h2></div>
+                <div className="ss-bar-list">
+                  {detail.byVenue.slice(0, 8).map((item) => (
+                    <div
+                      key={item.key}
+                      className="cursor-pointer hover:bg-surface-elevated"
+                      onClick={() => navigate(searchPath({ venue: item.key }))}
+                    >
+                      <span>{item.key}</span>
+                      <strong>{item.count ?? 0}</strong>
+                      <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byVenue[0]?.count || 1)) * 100)}%` }} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {detail.byYear && detail.byYear.length > 0 && (
+              <section className="ss-panel">
+                <div className="ss-panel-head compact"><h2>年度趋势</h2></div>
+                <div className="ss-bar-list">
+                  {detail.byYear.slice(0, 8).map((item) => (
+                    <div
+                      key={item.key}
+                      className="cursor-pointer hover:bg-surface-elevated"
+                      onClick={() => navigate(searchPath({ yearFrom: item.key, yearTo: item.key }))}
+                    >
+                      <span>{item.key}</span>
+                      <strong>{item.count ?? 0}</strong>
+                      <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byYear[0]?.count || 1)) * 100)}%` }} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="ss-panel">
               <div className="ss-panel-head compact"><h2>合作者</h2></div>
@@ -143,7 +197,7 @@ export default function AuthorsPage() {
                 {detail.coauthors.slice(0, 12).map((item) => (
                   <button key={item.key} onClick={() => navigate(`/authors/${encodeURIComponent(item.key)}`)}>
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
               </div>
@@ -155,7 +209,7 @@ export default function AuthorsPage() {
                 {detail.institutions.slice(0, 8).map((item) => (
                   <button key={item.key} onClick={() => navigate(`/institutions/${encodeURIComponent(item.key)}`)}>
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
               </div>
@@ -180,6 +234,8 @@ export default function AuthorsPage() {
         </div>
       </section>
 
+      {error && <div className="ss-empty-state">{error}</div>}
+
       <section className="ss-rank-table">
         <header>
           <span>Rank</span>
@@ -198,10 +254,10 @@ export default function AuthorsPage() {
               <strong>{author.name}</strong>
               <em>{rankLine(author)}</em>
             </span>
-            <span>{author.papers}</span>
-            <span>{author.sPlus}</span>
-            <span>{author.citations}</span>
-            <span>{author.authorScore}</span>
+            <span>{author.papers ?? 0}</span>
+            <span>{author.sPlus ?? 0}</span>
+            <span>{author.citations ?? 0}</span>
+            <span>{author.authorScore ?? 0}</span>
           </button>
         ))}
       </section>

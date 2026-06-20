@@ -21,27 +21,59 @@ function normalizeAction(action: string) {
 }
 
 export const moderationService = {
-  getQueue(options: { limit?: number; offset?: number } = {}) {
+  getQueue(options: { limit?: number; offset?: number; status?: string } = {}) {
     const limit = Math.min(Math.max(Number(options.limit || 25), 1), 100);
     const offset = Math.max(Number(options.offset || 0), 0);
-    const comments = db.all(sql`
-      SELECT c.id, c.paper_id, c.user_id, c.comment_type, c.body, c.moderation_status, c.created_at,
-             p.title AS paper_title,
-             u.nickname, u.verification_status
-      FROM paper_comments c
-      LEFT JOIN papers p ON p.id = c.paper_id
-      LEFT JOIN users u ON u.id = c.user_id
-      WHERE c.moderation_status = 'pending'
-      ORDER BY c.created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `);
+    const rawStatus = String(options.status || "pending").trim().toLowerCase();
+    const allowedStatuses = new Set(["pending", "reported", "visible", "hidden", "removed"]);
+    const status = allowedStatuses.has(rawStatus) ? rawStatus : "pending";
 
+    const statusMap: Record<string, "pending" | "approved" | "rejected"> = {
+      pending: "pending",
+      visible: "approved",
+      hidden: "rejected",
+      removed: "rejected",
+      reported: "approved",
+    };
+
+    const commentStatus = statusMap[status] || "pending";
+    const isReported = status === "reported";
+
+    let comments;
+    if (isReported) {
+      comments = db.all(sql`
+        SELECT c.id, c.paper_id, c.user_id, c.comment_type, c.body, c.moderation_status, c.created_at,
+               p.title AS paper_title,
+               u.nickname, u.verification_status
+        FROM paper_comments c
+        LEFT JOIN papers p ON p.id = c.paper_id
+        LEFT JOIN users u ON u.id = c.user_id
+        INNER JOIN content_reports r ON r.target_type = 'paper_comment' AND r.target_id = c.id AND r.status = 'open'
+        WHERE c.moderation_status = 'approved'
+        ORDER BY c.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+    } else {
+      comments = db.all(sql`
+        SELECT c.id, c.paper_id, c.user_id, c.comment_type, c.body, c.moderation_status, c.created_at,
+               p.title AS paper_title,
+               u.nickname, u.verification_status
+        FROM paper_comments c
+        LEFT JOIN papers p ON p.id = c.paper_id
+        LEFT JOIN users u ON u.id = c.user_id
+        WHERE c.moderation_status = ${commentStatus}
+        ORDER BY c.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+    }
+
+    const reviewStatus = statusMap[status] || "pending";
     const reviews = db.all(sql`
       SELECT r.id, r.professor_id, r.user_id, r.public_alias, r.is_verified_review,
              r.relationship_type, r.structured_scores_json, r.strengths_text, r.cautions_text,
              r.fit_text, r.moderation_status, r.created_at
       FROM mentor_reviews r
-      WHERE r.moderation_status = 'pending'
+      WHERE r.moderation_status = ${reviewStatus}
       ORDER BY r.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `);
@@ -61,9 +93,13 @@ export const moderationService = {
       LIMIT ${Math.min(limit, 50)} OFFSET ${offset}
     `);
 
+    const commentCount = isReported
+      ? db.get<{ n: number }>(sql`SELECT COUNT(DISTINCT c.id) AS n FROM paper_comments c INNER JOIN content_reports r ON r.target_type = 'paper_comment' AND r.target_id = c.id AND r.status = 'open' WHERE c.moderation_status = 'approved'`)?.n ?? 0
+      : db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM paper_comments WHERE moderation_status = ${commentStatus}`)?.n ?? 0;
+
     const totals = {
-      comments: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM paper_comments WHERE moderation_status = 'pending'`)?.n ?? 0,
-      reviews: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM mentor_reviews WHERE moderation_status = 'pending'`)?.n ?? 0,
+      comments: commentCount,
+      reviews: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM mentor_reviews WHERE moderation_status = ${reviewStatus}`)?.n ?? 0,
       reports: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM content_reports WHERE status = 'open'`)?.n ?? 0,
       logs: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM moderation_logs`)?.n ?? 0,
     };

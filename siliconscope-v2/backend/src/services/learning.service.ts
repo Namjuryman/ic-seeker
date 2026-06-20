@@ -1,6 +1,19 @@
-import { dailyLessons, learningRoadmaps } from "../data/learning-catalog.js";
+import { dailyLessons, learningRoadmaps, routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 import type { DailyLessonSeed, LearningRoadmapSeed } from "../data/learning-catalog.js";
 import { searchService } from "./search.service.js";
+
+const slugAliases: Record<string, string> = {
+  "analog-foundations": "analog-mixed-signal",
+  "data-converters": "analog-mixed-signal",
+  "pll-clocking": "analog-mixed-signal",
+  "wireline-serdes": "analog-mixed-signal",
+  "digital-soc-accelerator": "digital-asic",
+  "eda-cad-ai": "eda-tools",
+};
+
+function resolveSlug(slug: string): string {
+  return slugAliases[slug] || slug;
+}
 
 function summarizeRoadmap(roadmap: LearningRoadmapSeed) {
   return {
@@ -20,9 +33,110 @@ function lessonWithRoadmap(lesson: DailyLessonSeed) {
       title: roadmap.title,
       shortTitle: roadmap.shortTitle,
       domain: roadmap.domain,
+      family: roadmap.family,
+      foundation: roadmap.foundation,
     } : null,
   };
 }
+
+
+function validateLearningCatalog() {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const allSlugs = new Set(learningRoadmaps.map((r) => r.slug));
+
+  // 0. slug duplicate check (fatal)
+  const slugCounts = new Map<string, number>();
+  for (const roadmap of learningRoadmaps) {
+    slugCounts.set(roadmap.slug, (slugCounts.get(roadmap.slug) || 0) + 1);
+  }
+  for (const [slug, count] of slugCounts) {
+    if (count > 1) {
+      throw new Error(`[validateLearningCatalog] Fatal: duplicate roadmap slug "${slug}" appears ${count} times`);
+    }
+  }
+
+  // 1. title / slug / stages non-empty; relatedVenues/relatedTopics/lessonPlaceholders warnings
+  for (const roadmap of learningRoadmaps) {
+    if (!roadmap.title || !roadmap.title.trim()) {
+      errors.push(`Roadmap "${roadmap.slug}" has no title`);
+    }
+    if (!roadmap.slug || !roadmap.slug.trim()) {
+      errors.push(`Roadmap has no slug (title: "${roadmap.title || "unknown"}")`);
+    }
+    if (!roadmap.stages || roadmap.stages.length === 0) {
+      errors.push(`Roadmap "${roadmap.slug}" has no stages`);
+    }
+    if (!roadmap.relatedVenues || roadmap.relatedVenues.length === 0) {
+      warnings.push(`Roadmap "${roadmap.slug}" has no relatedVenues`);
+    }
+    if (!roadmap.relatedTopics || roadmap.relatedTopics.length === 0) {
+      warnings.push(`Roadmap "${roadmap.slug}" has no relatedTopics`);
+    }
+    for (const stage of roadmap.stages || []) {
+      for (const mod of stage.modules || []) {
+        if (!mod.lessonPlaceholders || mod.lessonPlaceholders.length === 0) {
+          warnings.push(`Roadmap "${roadmap.slug}" module "${mod.id}" has no lessonPlaceholders`);
+        }
+      }
+    }
+  }
+
+  // 2. routeFamilies reference valid route slugs
+  for (const family of routeFamilies) {
+    for (const routeId of family.routeIds) {
+      if (!allSlugs.has(routeId)) {
+        errors.push(`Route family "${family.id}" references unknown slug: "${routeId}"`);
+      }
+    }
+  }
+
+  // 3. dailyLessons reference valid roadmap slugs
+  for (const lesson of dailyLessons) {
+    if (!allSlugs.has(lesson.roadmapSlug)) {
+      errors.push(`Daily lesson "${lesson.id}" references unknown roadmapSlug: "${lesson.roadmapSlug}"`);
+    }
+  }
+
+  // 4. roadmap stage/module ids unique
+  for (const roadmap of learningRoadmaps) {
+    const ids = new Set<string>();
+    for (const stage of roadmap.stages) {
+      if (ids.has(stage.id)) {
+        errors.push(`Roadmap "${roadmap.slug}" has duplicate stage id: "${stage.id}"`);
+      }
+      ids.add(stage.id);
+      for (const mod of stage.modules) {
+        if (ids.has(mod.id)) {
+          errors.push(`Roadmap "${roadmap.slug}" has duplicate module id: "${mod.id}"`);
+        }
+        ids.add(mod.id);
+      }
+    }
+  }
+
+  // 5. paperQuery fallback (warning only — title is used as fallback in relatedPapersForRoadmap)
+  for (const roadmap of learningRoadmaps) {
+    if (!roadmap.paperQuery && !roadmap.relatedSearchQueries?.length) {
+      warnings.push(`Roadmap "${roadmap.slug}" has no paperQuery and no relatedSearchQueries (will use title as fallback)`);
+    }
+  }
+
+  if (warnings.length > 0) {
+    console.warn("[validateLearningCatalog] Warnings found:", warnings.length);
+    for (const w of warnings) console.warn("  -", w);
+  }
+  if (errors.length > 0) {
+    console.error("[validateLearningCatalog] Errors found:", errors.length);
+    for (const err of errors) console.error("  -", err);
+  } else if (warnings.length === 0) {
+    console.log("[validateLearningCatalog] OK — no issues found.");
+  }
+  return errors;
+}
+
+// Run validation at startup
+validateLearningCatalog();
 
 export const learningService = {
   getDashboard() {
@@ -43,6 +157,8 @@ export const learningService = {
       featuredRoadmap: summarizeRoadmap(learningRoadmaps.find((roadmap) => roadmap.slug === "pmic") ?? learningRoadmaps[0]),
       today,
       roadmaps: learningRoadmaps.map(summarizeRoadmap),
+      routeFamilies,
+      commonFoundations,
     };
   },
 
@@ -51,11 +167,13 @@ export const learningService = {
   },
 
   getRoadmap(slug: string) {
-    const roadmap = learningRoadmaps.find((item) => item.slug === slug);
+    const resolved = resolveSlug(slug);
+    const roadmap = learningRoadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
     return {
       ...summarizeRoadmap(roadmap),
-      lessons: dailyLessons.filter((lesson) => lesson.roadmapSlug === slug).map(lessonWithRoadmap),
+      canonicalSlug: roadmap.slug,
+      lessons: dailyLessons.filter((lesson) => lesson.roadmapSlug === resolved).map(lessonWithRoadmap),
     };
   },
 
@@ -79,9 +197,10 @@ export const learningService = {
   },
 
   relatedPapersForRoadmap(slug: string, userId = 0, limit = 8) {
-    const roadmap = learningRoadmaps.find((item) => item.slug === slug);
+    const resolved = resolveSlug(slug);
+    const roadmap = learningRoadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
-    const q = roadmap.relatedSearchQueries[0] || roadmap.title;
+    const q = roadmap.paperQuery || roadmap.relatedSearchQueries[0] || roadmap.title;
     return searchService.search({ q, field: roadmap.relatedTopics[0], semantic: "1", limit: String(limit), sort: "relevance" }, userId);
   },
 

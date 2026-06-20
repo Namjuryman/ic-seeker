@@ -54,6 +54,18 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
             <Link to="/learning-path">Full route library</Link>
           </div>
         </div>
+        {lesson.roadmap?.family && (
+          <div className="learning-chip-row">
+            <span>Family: {lesson.roadmap.family}</span>
+          </div>
+        )}
+        {lesson.roadmap?.foundation && lesson.roadmap.foundation.length > 0 && (
+          <div className="learning-chip-row">
+            {lesson.roadmap.foundation.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        )}
         <div className="learning-venue-strip">
           {lesson.relatedVenues.map((venue) => (
             <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
@@ -102,15 +114,25 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
               <h3>Jump back to SiliconScope</h3>
             </div>
           </div>
+          {lesson.roadmap?.paperQuery && (
+            <div className="learning-progress-actions" style={{ marginBottom: '0.75rem' }}>
+              <Link to={searchPath({ q: lesson.roadmap.paperQuery, scope: 'all', semantic: 1 })}>
+                Search: {lesson.roadmap.paperQuery}
+              </Link>
+            </div>
+          )}
           <div className="learning-chip-row vertical">
-            {lesson.relatedTopics.map((topic) => <EntityLink key={topic} kind="topic" value={topic}>{topic}</EntityLink>)}
-            {lesson.relatedVenues.map((venue) => <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>)}
+            {lesson.relatedTopics?.slice(0, 8).map((topic) => <EntityLink key={topic} kind="topic" value={topic}>{topic}</EntityLink>)}
+            {lesson.relatedVenues?.slice(0, 8).map((venue) => <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>)}
           </div>
           <div className="learning-query-grid">
-            {lesson.relatedSearchQueries.map((query) => (
-              <Link key={query} to={searchPath({ q: query, field: lesson.relatedTopics[0], semantic: 1 })}>{query}</Link>
+            {lesson.relatedSearchQueries?.slice(0, 8).map((query) => (
+              <Link key={query} to={searchPath({ q: query, field: lesson.relatedTopics?.[0], semantic: 1 })}>{query}</Link>
             ))}
           </div>
+          {(!lesson.relatedTopics || lesson.relatedTopics.length === 0) && (!lesson.relatedVenues || lesson.relatedVenues.length === 0) && (!lesson.relatedSearchQueries || lesson.relatedSearchQueries.length === 0) && !lesson.roadmap?.paperQuery && (
+            <p className="learning-muted">No research links available.</p>
+          )}
         </aside>
       </section>
 
@@ -126,10 +148,12 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
           {related.data?.rows?.slice(0, 8).map((paper) => (
             <article key={paper.id}>
               <PaperLink id={paper.id} title={paper.title} />
-              <span>{paper.venue} · {paper.year} · {paper.rank}</span>
+              <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
               <p>{paper.abstract || 'No abstract available.'}</p>
             </article>
           )) ?? <p className="learning-muted">Loading related papers...</p>}
+          {related.isError && <p className="learning-muted">Failed to load related papers.</p>}
+          {related.data?.rows?.length === 0 && <p className="learning-muted">No related papers found.</p>}
         </div>
       </section>
     </div>

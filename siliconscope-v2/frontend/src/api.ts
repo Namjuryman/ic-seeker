@@ -31,6 +31,8 @@ import type {
   LearningDashboard,
   LearningRoadmap,
   DailyLesson,
+  RouteFamily,
+  FoundationGroup,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -141,6 +143,16 @@ export const api = {
     return res.data
   },
 
+  async learningRouteFamilies() {
+    const res = await axios.get<RouteFamily[]>('/api/learning/route-families')
+    return res.data
+  },
+
+  async learningFoundations() {
+    const res = await axios.get<FoundationGroup[]>('/api/learning/foundations')
+    return res.data
+  },
+
   async mentorInstitutions() {
     const res = await axios.get<MentorInstitution[]>('/api/mentor/institutions')
     return res.data
@@ -245,7 +257,7 @@ export const api = {
     return res.data
   },
 
-  async moderationQueue(params?: { limit?: number; offset?: number }) {
+  async moderationQueue(params?: { limit?: number; offset?: number; status?: string }) {
     const res = await axios.get<ModerationQueue>('/api/admin/moderation', { params })
     return res.data
   },

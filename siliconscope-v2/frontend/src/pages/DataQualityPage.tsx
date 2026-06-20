@@ -86,7 +86,7 @@ export default function DataQualityPage() {
         {report && <span className="text-xs text-ink-muted">Latest: {report.generatedAt} · scanned {report.scannedRows ?? '-'} rows</span>}
       </section>
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {error && <div className="rounded-xl border p-3 text-sm bg-red-50 text-red-700 border-red-100">{error}</div>}
       {!report && !loading && !error && <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">尚未运行分析。先点 Run analysis，避免打开页面时卡住浏览器和本地数据库。</div>}
       {loading && <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">Analyzing database... large datasets may take a few seconds.</div>}
 

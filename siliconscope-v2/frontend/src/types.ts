@@ -404,6 +404,22 @@ export interface RoadmapStage {
   title: string;
   goal: string;
   modules: RoadmapModule[];
+  checkpoints?: string[];
+  resources?: LearningResource[];
+}
+
+export interface LearningResource {
+  title: string;
+  kind: 'course' | 'book' | 'tool' | 'paper' | 'guide';
+  provider: string;
+  url: string;
+  note: string;
+}
+
+export interface PrerequisitesGroup {
+  title: string;
+  note: string;
+  items: string[];
 }
 
 export interface LearningRoadmap {
@@ -424,6 +440,29 @@ export interface LearningRoadmap {
   moduleCount?: number;
   lessonCount?: number;
   lessons?: DailyLesson[];
+  family?: string;
+  accent?: string;
+  subtitle?: string;
+  paperQuery?: string;
+  venues?: string[];
+  canonicalSlug?: string;
+  foundation?: string[];
+  prerequisitesGroups?: PrerequisitesGroup[];
+  outcomes?: string[];
+  projectIdeas?: string[];
+}
+
+export interface RouteFamily {
+  id: string;
+  title: string;
+  description: string;
+  routeIds: string[];
+}
+
+export interface FoundationGroup {
+  title: string;
+  note: string;
+  items: string[];
 }
 
 export interface DailyLesson {
@@ -437,7 +476,7 @@ export interface DailyLesson {
   relatedTopics: string[];
   relatedSearchQueries: string[];
   relatedVenues: string[];
-  roadmap?: Pick<LearningRoadmap, 'slug' | 'title' | 'shortTitle' | 'domain'> | null;
+  roadmap?: Pick<LearningRoadmap, 'slug' | 'title' | 'shortTitle' | 'domain' | 'family' | 'foundation' | 'paperQuery'> | null;
 }
 
 export type LearningProgressAction = 'mark_completed' | 'review_later' | 'add_related_papers_to_queue';
@@ -457,4 +496,6 @@ export interface LearningDashboard {
   featuredRoadmap: LearningRoadmap;
   today: DailyLesson | null;
   roadmaps: LearningRoadmap[];
+  routeFamilies?: RouteFamily[];
+  commonFoundations?: FoundationGroup[];
 }

@@ -1,3 +1,8 @@
+// ⚠️ DEPRECATED: This file is no longer the canonical source for learning roadmaps.
+// The canonical source is now backend/src/data/learning-catalog.ts.
+// LearningPathPage now fetches from the backend API.
+// Keep this file only for the learningSource export and as a historical reference.
+
 export type LearningResource = {
   title: string
   kind: 'course' | 'book' | 'tool' | 'paper' | 'guide'

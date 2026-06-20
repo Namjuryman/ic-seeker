@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { searchPath } from '../utils/routes'
 import type { InstitutionProfile, PaperRow } from '../types'
 
 interface InstitutionListItem {
@@ -40,7 +41,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
 }
 
 function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
-  return `S+ ${item.sPlus || 0} / S ${item.s || 0} / A ${item.a || 0}`
+  return `S+ ${item.sPlus ?? 0} / S ${item.s ?? 0} / A ${item.a ?? 0}`
 }
 
 export default function InstitutionsPage() {
@@ -48,6 +49,7 @@ export default function InstitutionsPage() {
   const [detail, setDetail] = useState<InstitutionProfile | null>(null)
   const [loadingList, setLoadingList] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const params = useParams()
   const navigate = useNavigate()
@@ -55,8 +57,10 @@ export default function InstitutionsPage() {
 
   useEffect(() => {
     setLoadingList(true)
+    setError('')
     api.institutions({ limit: 80, minPapers: 2 })
       .then((data) => setList(data as InstitutionListItem[]))
+      .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
       .finally(() => setLoadingList(false))
   }, [])
 
@@ -66,7 +70,8 @@ export default function InstitutionsPage() {
       return
     }
     setLoadingDetail(true)
-    api.institutionProfile(name).then(setDetail).finally(() => setLoadingDetail(false))
+    setError('')
+    api.institutionProfile(name).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载机构画像失败')).finally(() => setLoadingDetail(false))
   }, [name])
 
   const filtered = useMemo(() => {
@@ -77,6 +82,10 @@ export default function InstitutionsPage() {
 
   if (name && loadingDetail) {
     return <div className="ss-skeleton-page"><div /><p>正在加载机构画像...</p></div>
+  }
+
+  if (name && error) {
+    return <div className="ss-empty-state">{error}</div>
   }
 
   if (name && detail) {
@@ -90,10 +99,17 @@ export default function InstitutionsPage() {
             <p className="ss-kicker">Institution profile</p>
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
-              <span>{detail.paperCount} papers</span>
-              <span>Score {detail.institutionScore}</span>
+              <span>{detail.paperCount ?? 0} papers</span>
+              <span>Score {detail.institutionScore ?? 0}</span>
               <span>{rankLine(detail.ranks)}</span>
-              {detail.identity?.countryName && <span>{detail.identity.countryName}</span>}
+              {detail.identity?.countryName && (
+                <span
+                  className="cursor-pointer hover:text-brand-600"
+                  onClick={() => navigate(searchPath({ country: detail.identity?.countryCode || detail.identity?.countryName }))}
+                >
+                  {detail.identity.countryName}
+                </span>
+              )}
               {detail.qs?.qs_world_rank && <span>QS {detail.qs.qs_world_rank}</span>}
             </div>
           </div>
@@ -101,6 +117,9 @@ export default function InstitutionsPage() {
 
         <section className="ss-caveat">
           机构归一化仍会受到分校、实验室、企业团队和历史名称影响。当前结果用于探索，不作为最终排名；未来会结合 IEEE affiliation、机构官网和人工 alias 审核。
+        </section>
+        <section className="ss-caveat">
+          Institution profiles depend on affiliation parsing and alias normalization. Verify names before using for decisions.
         </section>
 
         <div className="ss-profile-grid">
@@ -126,7 +145,7 @@ export default function InstitutionsPage() {
                 {detail.authors.slice(0, 12).map((item) => (
                   <button key={item.key} onClick={() => navigate(`/authors/${encodeURIComponent(item.key)}`)}>
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
               </div>
@@ -136,14 +155,37 @@ export default function InstitutionsPage() {
               <div className="ss-panel-head compact"><h2>方向分布</h2></div>
               <div className="ss-bar-list">
                 {detail.byDomain.slice(0, 8).map((item) => (
-                  <div key={item.key}>
+                  <div
+                    key={item.key}
+                    className="cursor-pointer hover:bg-surface-elevated"
+                    onClick={() => navigate(searchPath({ institution: detail.name, field: item.key }))}
+                  >
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                     <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byDomain[0]?.count || 1)) * 100)}%` }} />
                   </div>
                 ))}
               </div>
             </section>
+
+            {detail.byYear && detail.byYear.length > 0 && (
+              <section className="ss-panel">
+                <div className="ss-panel-head compact"><h2>年度趋势</h2></div>
+                <div className="ss-bar-list">
+                  {detail.byYear.slice(0, 8).map((item) => (
+                    <div
+                      key={item.key}
+                      className="cursor-pointer hover:bg-surface-elevated"
+                      onClick={() => navigate(searchPath({ yearFrom: item.key, yearTo: item.key, institution: detail.name }))}
+                    >
+                      <span>{item.key}</span>
+                      <strong>{item.count ?? 0}</strong>
+                      <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byYear[0]?.count || 1)) * 100)}%` }} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="ss-panel">
               <div className="ss-panel-head compact"><h2>会议/期刊</h2></div>
@@ -151,7 +193,7 @@ export default function InstitutionsPage() {
                 {detail.byVenue.slice(0, 10).map((item) => (
                   <button key={item.key} onClick={() => navigate(`/?venue=${encodeURIComponent(item.key)}`)}>
                     <span>{item.key}</span>
-                    <strong>{item.count}</strong>
+                    <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
               </div>
@@ -176,6 +218,8 @@ export default function InstitutionsPage() {
         </div>
       </section>
 
+      {error && <div className="ss-empty-state">{error}</div>}
+
       <section className="ss-rank-table">
         <header>
           <span>Rank</span>
@@ -194,10 +238,10 @@ export default function InstitutionsPage() {
               <strong>{institution.name}</strong>
               <em>{rankLine(institution)}</em>
             </span>
-            <span>{institution.papers}</span>
-            <span>{institution.sPlus}</span>
-            <span>{institution.citations}</span>
-            <span>{institution.institutionScore}</span>
+            <span>{institution.papers ?? 0}</span>
+            <span>{institution.sPlus ?? 0}</span>
+            <span>{institution.citations ?? 0}</span>
+            <span>{institution.institutionScore ?? 0}</span>
           </button>
         ))}
       </section>

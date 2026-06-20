@@ -17,6 +17,7 @@ import { identityAdminService } from "../services/identity-admin.service.js";
 import { clearCache, memoCache, memoCacheAsync } from "../services/cache.service.js";
 import { snapshotService } from "../services/snapshot.service.js";
 import { learningService } from "../services/learning.service.js";
+import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
 
@@ -122,6 +123,14 @@ router.get("/learning", requireAuth, async (_req, res) => {
   res.json(learningService.getDashboard());
 });
 
+router.get("/learning/route-families", requireAuth, async (_req, res) => {
+  res.json(routeFamilies);
+});
+
+router.get("/learning/foundations", requireAuth, async (_req, res) => {
+  res.json(commonFoundations);
+});
+
 router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
   res.json(learningService.listRoadmaps());
 });
@@ -129,7 +138,7 @@ router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
 router.get("/learning/roadmaps/:slug", requireAuth, async (req, res) => {
   const roadmap = learningService.getRoadmap(req.params.slug);
   if (!roadmap) {
-    res.status(404).json({ error: "Roadmap not found" });
+    res.status(404).json({ error: "Roadmap not found", requested: req.params.slug });
     return;
   }
   res.json(roadmap);
@@ -252,6 +261,7 @@ router.get("/admin/moderation", requireAuth, async (req, res) => {
   res.json(moderationService.getQueue({
     limit: Number(req.query.limit || 25),
     offset: Number(req.query.offset || 0),
+    status: req.query.status as string,
   }));
 });
 

@@ -9,6 +9,27 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
 
+function getFreshness(updatedAt: string | undefined) {
+  if (!updatedAt) return 'Unknown'
+  const date = new Date(updatedAt)
+  if (Number.isNaN(date.getTime())) return 'Unknown'
+  const now = new Date()
+  const diffHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+  if (diffHours <= 24) return 'Fresh'
+  return 'Stale'
+}
+
+function FreshnessBadge({ updatedAt }: { updatedAt: string | undefined }) {
+  const status = getFreshness(updatedAt)
+  const cls =
+    status === 'Fresh'
+      ? 'bg-green-50 text-green-700 border-green-100'
+      : status === 'Stale'
+        ? 'bg-amber-50 text-amber-700 border-amber-100'
+        : 'bg-surface-elevated text-ink-muted border-line-subtle'
+  return <span className={`px-1.5 py-0.5 rounded border text-xs ${cls}`}>{status}</span>
+}
+
 export default function SnapshotAdminPage() {
   const [rows, setRows] = useState<SnapshotRow[]>([])
   const [query, setQuery] = useState('')
@@ -84,6 +105,9 @@ export default function SnapshotAdminPage() {
             <h1 className="text-2xl font-bold text-ink-text">Snapshot Admin</h1>
             <p className="text-sm text-ink-muted mt-1">
               Manage computed_snapshots used by heavy profile, geo, venue, topic, and mentor pages.
+            </p>
+            <p className="text-sm text-ink-subtle mt-1">
+              Snapshots are precomputed intelligence caches. Refresh them after alias edits, imports, or metadata corrections.
             </p>
           </div>
           <button onClick={load} disabled={loading} className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm disabled:opacity-50">
@@ -171,8 +195,9 @@ export default function SnapshotAdminPage() {
         <div className="space-y-2 max-h-[620px] overflow-auto">
           {!filtered.length && <p className="text-sm text-ink-muted">No snapshots found.</p>}
           {filtered.map((row) => (
-            <div key={row.key} className="grid md:grid-cols-[1fr_170px_110px_auto] gap-2 items-center border border-line rounded-lg p-3 text-sm">
+            <div key={row.key} className="grid md:grid-cols-[1fr_90px_170px_110px_auto] gap-2 items-center border border-line rounded-lg p-3 text-sm">
               <span className="font-mono break-all">{row.key}</span>
+              <FreshnessBadge updatedAt={row.updatedAt || row.updated_at} />
               <span className="text-ink-muted">{row.updatedAt || row.updated_at || '-'}</span>
               <span>{formatBytes(Number(row.bytes || 0))}</span>
               <button onClick={() => clear('key', row.key)} disabled={loading} className="px-2 py-1 rounded-lg bg-surface-elevated border border-line text-xs disabled:opacity-50">

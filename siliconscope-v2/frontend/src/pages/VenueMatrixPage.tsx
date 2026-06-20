@@ -19,9 +19,15 @@ export default function VenueMatrixPage() {
   const [rows, setRows] = useState<VenueMatrixItem[]>([])
   const [query, setQuery] = useState('')
   const [rankFilter, setRankFilter] = useState('All')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    api.venueMatrix().then(setRows).catch(console.error)
+    setLoading(true)
+    setError('')
+    api.venueMatrix().then(setRows).catch((err) => {
+      setError(err instanceof Error ? err.message : '加载 venue 矩阵失败')
+    }).finally(() => setLoading(false))
   }, [])
 
   const ranks = useMemo(() => {
@@ -66,6 +72,11 @@ export default function VenueMatrixPage() {
         </div>
       </section>
 
+      {loading && <div className="ss-skeleton-page"><div /><p>Loading venue matrix...</p></div>}
+      {error && <div className="ss-empty-state">{error}</div>}
+
+      {!loading && !error && (
+      <>
       <section className="bg-surface-panel border border-line rounded-xl p-4 shadow-sm space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,1fr)_auto] gap-3 items-center">
           <input
@@ -145,6 +156,8 @@ export default function VenueMatrixPage() {
           </tbody>
         </table>
       </div>
+      </>
+      )}
     </div>
   )
 }

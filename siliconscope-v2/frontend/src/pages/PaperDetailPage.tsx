@@ -5,6 +5,15 @@ import type { PaperComment, PaperRow } from '../types'
 
 const COMMENTS_PAGE_SIZE = 20
 
+const REPORT_REASONS = [
+  'off-topic',
+  'personal attack',
+  'spam',
+  'misleading',
+  'copyright concern',
+  'other',
+]
+
 function splitAuthors(authors: string) {
   return String(authors || '').split(';').map((author) => author.trim()).filter(Boolean)
 }
@@ -38,14 +47,22 @@ export default function PaperDetailPage() {
   const [commentBody, setCommentBody] = useState('')
   const [commentType, setCommentType] = useState('Technical Note')
   const [message, setMessage] = useState('')
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
+  const [activeReportId, setActiveReportId] = useState<number | null>(null)
 
   const authors = useMemo(() => splitAuthors(paper?.authors || ''), [paper?.authors])
 
   async function loadComments(nextOffset = 0, append = false) {
-    const rows = await api.paperComments(paperId, { limit: COMMENTS_PAGE_SIZE, offset: nextOffset })
-    setComments((prev) => append ? [...prev, ...rows] : rows)
-    setCommentOffset(nextOffset)
-    setHasMoreComments(rows.length === COMMENTS_PAGE_SIZE)
+    setLoadingComments(true)
+    try {
+      const rows = await api.paperComments(paperId, { limit: COMMENTS_PAGE_SIZE, offset: nextOffset })
+      setComments((prev) => append ? [...prev, ...rows] : rows)
+      setCommentOffset(nextOffset)
+      setHasMoreComments(rows.length === COMMENTS_PAGE_SIZE)
+    } finally {
+      setLoadingComments(false)
+    }
   }
 
   useEffect(() => {
@@ -89,6 +106,19 @@ export default function PaperDetailPage() {
     await loadComments(0, false)
     setMessage('评论已提交，敏感内容会进入审核')
     setTimeout(() => setMessage(''), 1800)
+  }
+
+  async function reportComment(commentId: number, reason: string) {
+    try {
+      await api.reportContent('paper_comment', commentId, reason)
+      setReportedIds((prev) => new Set(prev).add(commentId))
+      setActiveReportId(null)
+      setMessage('已举报')
+      setTimeout(() => setMessage(''), 1600)
+    } catch (err: any) {
+      setMessage(err?.response?.data?.error || err?.message || '举报失败')
+      setTimeout(() => setMessage(''), 1800)
+    }
   }
 
   if (!paper) {
@@ -136,20 +166,57 @@ export default function PaperDetailPage() {
               <span>{comments.length} comments</span>
             </div>
             <div className="ss-comment-list">
-              {comments.length === 0 ? <p>暂无评论。适合记录技术问题、复现笔记和相关工作补充。</p> : comments.map((comment) => (
-                <div key={comment.id}>
-                  <strong>{comment.displayName || comment.nickname || 'User'}</strong>
-                  <span>{comment.comment_type || comment.commentType || 'Comment'}</span>
-                  <p>{comment.body}</p>
-                </div>
-              ))}
+              {loadingComments && comments.length === 0 ? (
+                <div className="ss-skeleton-page"><p>评论加载中...</p></div>
+              ) : comments.length === 0 ? (
+                <p>暂无评论。适合记录技术问题、复现笔记和相关工作补充。</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="ss-comment-item">
+                    <div className="ss-comment-header">
+                      <strong>{comment.displayName || comment.nickname || 'User'}</strong>
+                      <span>{comment.comment_type || comment.commentType || 'Comment'}</span>
+                    </div>
+                    <p>{comment.body}</p>
+                    <div className="ss-comment-actions">
+                      {activeReportId === comment.id ? (
+                        <div className="ss-report-reasons">
+                          {REPORT_REASONS.map((reason) => (
+                            <button
+                              key={reason}
+                              className="ss-report-reason"
+                              onClick={() => reportComment(comment.id, reason)}
+                              disabled={reportedIds.has(comment.id)}
+                            >
+                              {reason}
+                            </button>
+                          ))}
+                          <button className="ss-report-cancel" onClick={() => setActiveReportId(null)}>取消</button>
+                        </div>
+                      ) : (
+                        <button
+                          className="ss-comment-report"
+                          onClick={() => setActiveReportId(comment.id)}
+                          disabled={reportedIds.has(comment.id)}
+                        >
+                          {reportedIds.has(comment.id) ? '已举报' : 'Report'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            {hasMoreComments && (
+            {hasMoreComments && !loadingComments && (
               <button className="ss-comment-submit subtle" onClick={() => loadComments(commentOffset + COMMENTS_PAGE_SIZE, true)}>
                 加载更多评论
               </button>
             )}
+            {loadingComments && comments.length > 0 && <p className="ss-comment-loading">加载中...</p>}
             <div className="ss-comment-editor">
+              <p className="ss-comment-hint">
+                Discuss the paper, methods, circuits, experiments, and reproducibility. Do not attack authors personally.
+              </p>
               <select value={commentType} onChange={(event) => setCommentType(event.target.value)}>
                 <option>Question</option>
                 <option>Technical Note</option>
