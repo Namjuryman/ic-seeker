@@ -1,0 +1,22 @@
+{
+  "name": "siliconscope-v2",
+  "version": "0.2.0",
+  "private": true,
+  "description": "SiliconScope v2 frontend/backend separated IC research platform.",
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
+    "build": "npm --workspace siliconscope-v2-backend run build && npm --workspace siliconscope-v2-frontend run build",
+    "build:backend": "npm --workspace siliconscope-v2-backend run build",
+    "build:frontend": "npm --workspace siliconscope-v2-frontend run build",
+    "start": "npm --workspace siliconscope-v2-backend run start",
+    "test": "npm --workspace siliconscope-v2-backend run test"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

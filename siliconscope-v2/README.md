@@ -1,8 +1,10 @@
-# IC Seeker
+# SiliconScope v2
 
-IC Seeker is a private, ChipSeeker-style paper search and reading-management tool for integrated-circuit research.
+SiliconScope v2 is the active frontend/backend separated edition of the IC paper search, reading-management, and academic-intelligence platform.
 
-It builds a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current web app is designed as a private MVP, not a public multi-user SaaS.
+It builds on the original ChipSeeker-style private prototype, but v2 is now the canonical product path. New product work should happen in this folder rather than the archived `ic_seeker/` v1 app.
+
+It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current web app is designed as a private MVP, not a public multi-user SaaS.
 
 ## Current Dataset
 
@@ -55,32 +57,49 @@ Requirements:
 - Node.js `>=22.5.0`
 - Windows PowerShell, macOS shell, or Linux shell
 
-Run:
+Run both v2 services from this folder:
+
+```powershell
+.\start-dev.ps1
+```
+
+Or run the production-style build from this folder:
+
+```powershell
+npm start
+```
+
+For manual development, run backend and frontend separately:
+
+```powershell
+cd backend
+npm run dev
+```
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open the development frontend:
+
+```text
+http://localhost:5173
+```
+
+The backend API runs at:
+
+```text
+http://127.0.0.1:8751
+```
+
+For Docker or production-style serving, the backend serves `frontend/dist` after `npm run build`.
+
+Create `.env` from the example before exposing the site outside your own machine:
 
 ```powershell
 copy .env.example .env
 notepad .env
-npm start
-```
-
-Or:
-
-```powershell
-node .\ic_seeker\server.mjs
-```
-
-Open:
-
-```text
-http://127.0.0.1:8750
-```
-
-Log in with `ADMIN_PASSWORD` from `.env`. Change the default password and `COOKIE_SECRET` before exposing the site outside your own machine.
-
-On Windows, you can also double-click:
-
-```text
-Start_IC_Seeker.bat
 ```
 
 ## Docker
@@ -88,7 +107,7 @@ Start_IC_Seeker.bat
 Create `.env` first, then run:
 
 ```powershell
-npm run docker:up
+docker compose up --build
 ```
 
 The Compose setup mounts `./ic_database` into the container so your SQLite database, PDF inbox, notes, tags, and imports persist locally.
