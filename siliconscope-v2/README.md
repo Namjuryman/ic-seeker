@@ -38,6 +38,8 @@ Publisher PDFs are not included.
 - Institution leaderboard for school/lab strength
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
 - Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
+- IC learning-roadmap workspace with analog/mixed-signal, RF/mmWave, digital ASIC/SoC, EDA, and device/process tracks
+- Learning resources and practice projects linked back to the local paper search workflow
 - Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
@@ -117,6 +119,17 @@ Vercel is useful for a future static/Next.js frontend, but the current app is a 
 - Store optional service keys from the API-key panel. Values are masked in the UI.
 
 More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).
+
+## Learning Roadmap Source
+
+The `siliconscope-v2` frontend includes an IC learning-roadmap page inspired by the public
+[Crys-Chen/ic-guide](https://github.com/Crys-Chen/ic-guide) project. The integrated content is a
+curated SiliconScope summary rather than a verbatim mirror:
+
+- General IC learning-map structure and research-direction framing are referenced.
+- Fudan-specific course tables, FDU course pages, and Fudan-specific mentor lists are intentionally excluded.
+- External books, courses, tools, and guide links keep their original source attribution.
+- Future work: turn the static roadmap into a local editable database, connect each roadmap node to reading lists, and support user progress tracking.
 
 ## Rebuild The Database
 

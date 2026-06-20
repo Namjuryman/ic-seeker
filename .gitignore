@@ -43,3 +43,4 @@ siliconscope-v2/**/*.tsbuildinfo
 siliconscope-v2/ic_database/*backup*.sqlite
 ic_seeker/scripts/*log*.txt
 *.tmp
+_tmp*/

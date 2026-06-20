@@ -7,6 +7,7 @@ import type { AuthStatus } from './types'
 const HomePage = lazy(() => import('./pages/HomePage'))
 const PaperDetailPage = lazy(() => import('./pages/PaperDetailPage'))
 const TopicsPage = lazy(() => import('./pages/TopicsPage'))
+const LearningPathPage = lazy(() => import('./pages/LearningPathPage'))
 const GeoPage = lazy(() => import('./pages/GeoPage'))
 const AuthorsPage = lazy(() => import('./pages/AuthorsPage'))
 const InstitutionsPage = lazy(() => import('./pages/InstitutionsPage'))
@@ -22,16 +23,17 @@ const queryClient = new QueryClient({
 })
 
 const navItems = [
-  { to: '/', label: '学术搜索', icon: '⌕' },
-  { to: '/topics', label: '方向洞察', icon: '◌' },
-  { to: '/geo', label: '区域地图', icon: '◇' },
-  { to: '/authors', label: '学者画像', icon: '◎' },
-  { to: '/institutions', label: '机构实力', icon: '▣' },
-  { to: '/mentors', label: '导师/机构', icon: '♙' },
-  { to: '/venue-matrix', label: '会议/期刊', icon: '▤' },
-  { to: '/identity', label: '别名管理', icon: '≋' },
-  { to: '/data-quality', label: '数据质量', icon: '✓' },
-  { to: '/moderation', label: '审核中心', icon: '!' },
+  { to: '/', label: '学术搜索', icon: 'S', section: '探索' },
+  { to: '/learning-path', label: 'IC 学习路线', icon: 'L', section: '探索' },
+  { to: '/topics', label: '方向洞察', icon: 'T', section: '探索' },
+  { to: '/geo', label: '区域地图', icon: 'G', section: '探索' },
+  { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
+  { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
+  { to: '/mentors', label: '导师/机构', icon: 'M', section: '画像' },
+  { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
+  { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
+  { to: '/data-quality', label: '数据质量', icon: 'Q', section: '数据' },
+  { to: '/moderation', label: '审核中心', icon: '!', section: '数据' },
 ]
 
 function LoginGate({ children }: { children: React.ReactNode }) {
@@ -89,6 +91,11 @@ function LoginGate({ children }: { children: React.ReactNode }) {
 
 function Layout({ children }: { children: React.ReactNode }) {
   const [navOpen, setNavOpen] = useState(true)
+  const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
+    acc[item.section] = acc[item.section] || []
+    acc[item.section].push(item)
+    return acc
+  }, {})
 
   return (
     <div className={`ss-shell ${navOpen ? '' : 'ss-shell-collapsed'}`}>
@@ -101,16 +108,21 @@ function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <nav className="ss-nav" aria-label="Primary navigation">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => `ss-nav-item ${isActive ? 'active' : ''}`}
-            >
-              <i aria-hidden="true">{item.icon}</i>
-              <span>{item.label}</span>
-            </NavLink>
+          {Object.entries(grouped).map(([section, items]) => (
+            <div className="ss-nav-group" key={section}>
+              <em>{section}</em>
+              {items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) => `ss-nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <i aria-hidden="true">{item.icon}</i>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="ss-sidebar-foot">
@@ -140,6 +152,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/papers/:id" element={<PaperDetailPage />} />
+                <Route path="/learning-path" element={<LearningPathPage />} />
                 <Route path="/topics" element={<TopicsPage />} />
                 <Route path="/geo" element={<GeoPage />} />
                 <Route path="/authors" element={<AuthorsPage />} />
