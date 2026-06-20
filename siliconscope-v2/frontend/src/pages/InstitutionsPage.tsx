@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
+import { PaperLink } from '../components/PaperLink'
 import type { InstitutionProfile, PaperRow } from '../types'
 
 interface InstitutionListItem {
@@ -26,7 +27,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
   return (
     <article className="ss-mini-paper">
       <div>
-        <h4>{paper.title}</h4>
+        <h4><PaperLink id={paper.id} title={paper.title} /></h4>
         <p>{paper.authors || '-'}</p>
       </div>
       <div className="ss-mini-meta">
@@ -148,7 +149,7 @@ export default function InstitutionsPage() {
               <div className="ss-panel-head compact"><h2>会议/期刊</h2></div>
               <div className="ss-link-list">
                 {detail.byVenue.slice(0, 10).map((item) => (
-                  <button key={item.key}>
+                  <button key={item.key} onClick={() => navigate(`/?venue=${encodeURIComponent(item.key)}`)}>
                     <span>{item.key}</span>
                     <strong>{item.count}</strong>
                   </button>

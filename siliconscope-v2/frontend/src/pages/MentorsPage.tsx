@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
+import { PaperLink } from '../components/PaperLink'
 import type { MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, PaperRow } from '../types'
 
 const scoreFields = [
@@ -38,7 +39,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
   return (
     <article className="ss-mini-paper">
       <div>
-        <h4>{paper.title}</h4>
+        <h4><PaperLink id={paper.id} title={paper.title} /></h4>
         <p>{paper.authors || '-'}</p>
       </div>
       <div className="ss-mini-meta">

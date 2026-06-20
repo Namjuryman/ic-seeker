@@ -20,6 +20,7 @@ const DataQualityPage = lazy(() => import('./pages/DataQualityPage'))
 const JournalIngestionPage = lazy(() => import('./pages/JournalIngestionPage'))
 const ModerationPage = lazy(() => import('./pages/ModerationPage'))
 const IdentityPage = lazy(() => import('./pages/IdentityPage'))
+const SnapshotAdminPage = lazy(() => import('./pages/SnapshotAdminPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -36,6 +37,7 @@ const navItems = [
   { to: '/mentors', label: '导师/机构', icon: 'M', section: '画像' },
   { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
   { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
+  { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据' },
   { to: '/data-quality', label: '数据质量', icon: 'Q', section: '数据' },
   { to: '/moderation', label: '审核中心', icon: '!', section: '数据' },
 ]
@@ -171,6 +173,7 @@ function App() {
                 <Route path="/mentors/*" element={<MentorsPage />} />
                 <Route path="/venue-matrix" element={<VenueMatrixPage />} />
                 <Route path="/identity" element={<IdentityPage />} />
+                <Route path="/snapshots" element={<SnapshotAdminPage />} />
                 <Route path="/journal-ingestion" element={<JournalIngestionPage />} />
                 <Route path="/data-quality" element={<DataQualityPage />} />
                 <Route path="/moderation" element={<ModerationPage />} />

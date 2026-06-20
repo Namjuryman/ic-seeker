@@ -3,7 +3,22 @@ import { db } from "../db/connection.js";
 import { contentReports, moderationLogs, mentorReviews, paperComments } from "../db/schema.js";
 
 const allowedTargets = new Set(["paper_comment", "mentor_review"]);
-const allowedActions = new Set(["approved", "rejected", "pending"]);
+const actionToStatus: Record<string, "approved" | "rejected" | "pending"> = {
+  restore: "approved",
+  hide: "rejected",
+  remove: "rejected",
+  keep_pending: "pending",
+  approved: "approved",
+  rejected: "rejected",
+  pending: "pending",
+};
+
+function normalizeAction(action: string) {
+  const clean = String(action || "").trim();
+  const status = actionToStatus[clean];
+  if (!status) throw new Error("Invalid action");
+  return { action: clean, status };
+}
 
 export const moderationService = {
   getQueue(options: { limit?: number; offset?: number } = {}) {
@@ -73,20 +88,20 @@ export const moderationService = {
 
   moderate(targetType: string, targetId: number, action: string, moderatorId: number | null, reason = "") {
     if (!allowedTargets.has(targetType)) throw new Error("Invalid target type");
-    if (!allowedActions.has(action)) throw new Error("Invalid action");
+    const normalized = normalizeAction(action);
     if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("Invalid target id");
 
     if (targetType === "paper_comment") {
-      db.update(paperComments).set({ moderationStatus: action }).where(eq(paperComments.id, targetId)).run();
+      db.update(paperComments).set({ moderationStatus: normalized.status }).where(eq(paperComments.id, targetId)).run();
     } else if (targetType === "mentor_review") {
-      db.update(mentorReviews).set({ moderationStatus: action }).where(eq(mentorReviews.id, targetId)).run();
+      db.update(mentorReviews).set({ moderationStatus: normalized.status }).where(eq(mentorReviews.id, targetId)).run();
     }
 
     db.insert(moderationLogs).values({
       targetType,
       targetId,
       moderatorId,
-      action,
+      action: normalized.action,
       reason: String(reason || "").slice(0, 1000),
     }).run();
 
@@ -94,6 +109,6 @@ export const moderationService = {
       .where(and(eq(contentReports.targetType, targetType), eq(contentReports.targetId, targetId)))
       .run();
 
-    return { targetType, targetId, action };
+    return { targetType, targetId, action: normalized.action, mappedStatus: normalized.status };
   }
 };

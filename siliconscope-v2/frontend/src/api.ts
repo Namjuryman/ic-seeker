@@ -20,6 +20,10 @@ import type {
   AuthStatus,
   DataQualityReport,
   ModerationQueue,
+  ModerationAction,
+  SnapshotRow,
+  SnapshotRefreshResult,
+  SnapshotClearResult,
   JournalFilterConfig,
   JournalFilterEvaluation,
   IdentityAliasInput,
@@ -246,8 +250,23 @@ export const api = {
     return res.data
   },
 
-  async moderate(targetType: string, targetId: number, action: 'approved' | 'rejected' | 'pending', reason?: string) {
+  async moderate(targetType: string, targetId: number, action: ModerationAction, reason?: string) {
     const res = await axios.post(`/api/admin/moderation/${encodeURIComponent(targetType)}/${targetId}`, { action, reason })
+    return res.data
+  },
+
+  async snapshots() {
+    const res = await axios.get<SnapshotRow[]>('/api/admin/snapshots')
+    return res.data
+  },
+
+  async refreshSnapshots(body: { key?: string; keys?: string[] } = { key: 'all' }) {
+    const res = await axios.post<SnapshotRefreshResult[]>('/api/admin/snapshots/refresh', body)
+    return res.data
+  },
+
+  async clearSnapshots(body: { key?: string; prefix?: string } = {}) {
+    const res = await axios.post<SnapshotClearResult>('/api/admin/snapshots/clear', body)
     return res.data
   },
 

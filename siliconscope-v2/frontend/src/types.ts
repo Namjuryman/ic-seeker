@@ -308,6 +308,29 @@ export interface ModerationQueue {
   offset?: number;
 }
 
+export type ModerationAction = 'hide' | 'remove' | 'restore' | 'keep_pending';
+
+export interface SnapshotRow {
+  key: string;
+  updatedAt?: string;
+  updated_at?: string;
+  bytes: number;
+}
+
+export interface SnapshotRefreshResult {
+  key: string;
+  ok: boolean;
+  ms: number;
+  error?: string;
+}
+
+export interface SnapshotClearResult {
+  mode: 'key' | 'prefix' | 'all';
+  key?: string;
+  prefix?: string;
+  deleted: number;
+}
+
 
 export interface IdentityAliasRow {
   alias: string;
@@ -415,6 +438,16 @@ export interface DailyLesson {
   relatedSearchQueries: string[];
   relatedVenues: string[];
   roadmap?: Pick<LearningRoadmap, 'slug' | 'title' | 'shortTitle' | 'domain'> | null;
+}
+
+export type LearningProgressAction = 'mark_completed' | 'review_later' | 'add_related_papers_to_queue';
+
+export interface LearningProgressPlaceholder {
+  targetType: 'roadmap' | 'lesson';
+  targetId: string;
+  action: LearningProgressAction;
+  enabled: false;
+  note: string;
 }
 
 export interface LearningDashboard {

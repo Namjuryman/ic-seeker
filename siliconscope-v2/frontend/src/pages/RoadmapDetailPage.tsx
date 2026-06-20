@@ -19,17 +19,34 @@ export default function RoadmapDetailPage() {
     <div className="learning-page learning-workbench">
       <section className="learning-overview learning-detail-hero">
         <div>
-          <span>{data.domain} · {data.level}</span>
+          <span>{data.domain}</span>
           <h2>{data.title}</h2>
           <p>{data.description}</p>
           <div className="learning-outcome-list">
             {data.targetUsers.map((user) => <span key={user}>{user}</span>)}
+            <Link to="/learning">Daily Circuit workspace</Link>
+            <Link to="/learning-path">Full route library</Link>
           </div>
         </div>
         <div className="learning-venue-strip">
           {data.relatedVenues.map((venue) => (
             <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
           ))}
+        </div>
+      </section>
+
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Progress placeholders</span>
+            <h3>Route planning actions</h3>
+          </div>
+          <p>Reserved for future user progress, review reminders, and paper reading queues.</p>
+        </div>
+        <div className="learning-progress-actions">
+          <button type="button">Mark route started</button>
+          <button type="button">Review later</button>
+          <button type="button">Add related papers to reading queue</button>
         </div>
       </section>
 
@@ -105,7 +122,7 @@ export default function RoadmapDetailPage() {
             {(data.lessons ?? []).map((lesson) => (
               <Link key={lesson.id} to={lessonPath(lesson.id)}>
                 <strong>{lesson.title}</strong>
-                <span>{lesson.level} · {lesson.estimatedMinutes} min</span>
+                <span>{lesson.estimatedMinutes} min</span>
               </Link>
             ))}
           </div>

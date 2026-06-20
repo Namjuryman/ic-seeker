@@ -23,13 +23,14 @@ export default function LearningDashboardPage() {
           </p>
           <div className="learning-hero-actions">
             <Link to={todayLessonPath()}>Today&apos;s circuit</Link>
+            <Link to="/learning-path">Full IC route library</Link>
             <Link to={roadmapPath(data.featuredRoadmap.slug)}>Featured roadmap</Link>
           </div>
         </div>
         <aside>
           <span>Learning caveat</span>
           <strong>Metadata-linked guide</strong>
-          <p>{data.caveats.roadmap}</p>
+          <p>/learning is the Daily Circuit workspace. Use /learning-path for the broader IC route library and external guide-style resources.</p>
         </aside>
       </section>
 
@@ -72,7 +73,7 @@ export default function LearningDashboardPage() {
           </div>
           {data.today ? (
             <>
-              <p className="learning-muted">{data.today.estimatedMinutes} min · {data.today.level} · {data.today.roadmap?.shortTitle}</p>
+              <p className="learning-muted">{data.today.estimatedMinutes} min · {data.today.roadmap?.shortTitle}</p>
               <div className="learning-chip-row">
                 {data.today.relatedVenues.map((venue) => (
                   <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
@@ -109,6 +110,21 @@ export default function LearningDashboardPage() {
               </footer>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Progress placeholders</span>
+            <h3>Personal learning actions</h3>
+          </div>
+          <p>UI only for now; these controls reserve space for a future user progress table and reading queue.</p>
+        </div>
+        <div className="learning-progress-actions">
+          <button type="button">Mark completed</button>
+          <button type="button">Review later</button>
+          <button type="button">Add related papers to reading queue</button>
         </div>
       </section>
     </div>

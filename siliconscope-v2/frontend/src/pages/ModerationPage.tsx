@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import type { ModerationQueue } from '../types'
+import type { ModerationAction, ModerationQueue } from '../types'
 
 const PAGE_SIZE = 25
 
@@ -30,7 +30,7 @@ function ModerationCard({
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const act = async (action: 'approved' | 'rejected' | 'pending') => {
+  const act = async (action: ModerationAction) => {
     setLoading(true)
     try {
       await api.moderate(targetType, targetId, action, reason)
@@ -49,9 +49,10 @@ function ModerationCard({
       <div className="text-sm text-ink-secondary whitespace-pre-wrap bg-surface-soft rounded-lg p-3 max-h-64 overflow-auto">{body}</div>
       <input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-line text-sm" placeholder="Moderation reason optional" />
       <div className="flex gap-2">
-        <button disabled={loading} onClick={() => act('approved')} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs">Approve</button>
-        <button disabled={loading} onClick={() => act('rejected')} className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs">Reject</button>
-        <button disabled={loading} onClick={() => act('pending')} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-line text-xs">Keep pending</button>
+        <button disabled={loading} onClick={() => act('restore')} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs">Restore</button>
+        <button disabled={loading} onClick={() => act('hide')} className="px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs">Hide</button>
+        <button disabled={loading} onClick={() => act('remove')} className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs">Remove</button>
+        <button disabled={loading} onClick={() => act('keep_pending')} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-line text-xs">Keep pending</button>
       </div>
     </article>
   )
@@ -113,7 +114,7 @@ export default function ModerationPage() {
       {loading && <div className="text-sm text-ink-muted">Loading page...</div>}
 
       <section className="space-y-3">
-        <h2 className="font-semibold text-ink-text">Pending paper comments</h2>
+        <h2 className="font-semibold text-ink-text">Paper comments needing visibility decision</h2>
         {!queue.comments.length && <p className="text-sm text-ink-muted">No pending comments on this page.</p>}
         {queue.comments.map((c: any) => (
           <ModerationCard
@@ -129,7 +130,7 @@ export default function ModerationPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="font-semibold text-ink-text">Pending mentor/group reviews</h2>
+        <h2 className="font-semibold text-ink-text">Mentor/group reviews needing visibility decision</h2>
         {!queue.reviews.length && <p className="text-sm text-ink-muted">No pending mentor reviews on this page.</p>}
         {queue.reviews.map((r: any) => (
           <ModerationCard
@@ -164,7 +165,7 @@ export default function ModerationPage() {
           <div className="space-y-2 text-sm max-h-[460px] overflow-auto">
             {queue.logs.map((log: any) => (
               <div key={log.id} className="flex gap-2 flex-wrap border-b border-line-subtle pb-2 last:border-0">
-                <StatusBadge tone={log.action === 'approved' ? 'green' : log.action === 'rejected' ? 'red' : 'amber'}>{log.action}</StatusBadge>
+                <StatusBadge tone={log.action === 'restore' || log.action === 'approved' ? 'green' : log.action === 'hide' || log.action === 'remove' || log.action === 'rejected' ? 'red' : 'amber'}>{log.action}</StatusBadge>
                 <span>{log.target_type} #{log.target_id}</span>
                 <span className="text-ink-muted">{log.reason || '-'}</span>
                 <span className="text-ink-subtle ml-auto">{log.created_at}</span>

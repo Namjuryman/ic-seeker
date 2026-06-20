@@ -46,7 +46,7 @@ export const discussionService = {
              u.nickname, u.verification_status
       FROM paper_comments c
       LEFT JOIN users u ON u.id = c.user_id
-      WHERE c.paper_id = ${paperId} AND c.moderation_status IN ('approved', 'pending')
+      WHERE c.paper_id = ${paperId} AND c.moderation_status = 'approved'
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     `);

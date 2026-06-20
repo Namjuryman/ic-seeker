@@ -41,7 +41,7 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
     <div className="learning-page learning-workbench">
       <section className="learning-overview learning-detail-hero">
         <div>
-          <span>{lesson.roadmap?.shortTitle ?? lesson.roadmapSlug} · {lesson.level}</span>
+          <span>{lesson.roadmap?.shortTitle ?? lesson.roadmapSlug}</span>
           <h2>{lesson.title}</h2>
           <p>
             This is a structured lesson placeholder. The final derivations, equations, examples, and paper interpretation
@@ -51,12 +51,28 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
             <span>{lesson.estimatedMinutes} min</span>
             <span>{lesson.moduleId}</span>
             {lesson.roadmap && <Link to={roadmapPath(lesson.roadmap.slug)}>Open roadmap</Link>}
+            <Link to="/learning-path">Full route library</Link>
           </div>
         </div>
         <div className="learning-venue-strip">
           {lesson.relatedVenues.map((venue) => (
             <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
           ))}
+        </div>
+      </section>
+
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Progress placeholders</span>
+            <h3>Review actions</h3>
+          </div>
+          <p>These buttons are UI placeholders for a future progress, review, and reading-queue model.</p>
+        </div>
+        <div className="learning-progress-actions">
+          <button type="button">Mark completed</button>
+          <button type="button">Review later</button>
+          <button type="button">Add related papers to reading queue</button>
         </div>
       </section>
 

@@ -44,6 +44,24 @@ function writeSnapshot(key: string, value: unknown) {
   `).run(key, stableJson(value));
 }
 
+function invalidateSnapshot(key: string) {
+  sqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" = ?`).run(key);
+  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  return { deleted: row.n };
+}
+
+function invalidateSnapshotsByPrefix(prefix: string) {
+  sqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" LIKE ?`).run(`${prefix}%`);
+  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  return { deleted: row.n };
+}
+
+function invalidateAllSnapshots() {
+  sqlite.prepare(`DELETE FROM computed_snapshots`).run();
+  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  return { deleted: row.n };
+}
+
 function getOrBuild<T>(key: string, builder: () => T): T {
   const hit = readSnapshot<T>(key);
   if (hit) return hit;
@@ -79,6 +97,9 @@ function buildOne(key: string, builder: () => unknown) {
 export const snapshotService = {
   read: readSnapshot,
   write: writeSnapshot,
+  invalidateSnapshot,
+  invalidateSnapshotsByPrefix,
+  invalidateAllSnapshots,
 
   getOrBuild,
 

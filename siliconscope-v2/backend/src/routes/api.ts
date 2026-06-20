@@ -268,6 +268,31 @@ router.post("/admin/moderation/:targetType/:id", requireAuth, async (req: Authen
   }
 });
 
+router.get("/admin/snapshots", requireAuth, async (_req, res) => {
+  res.json(snapshotService.list());
+});
+
+router.post("/admin/snapshots/refresh", requireAuth, async (req, res) => {
+  const keys = Array.isArray(req.body?.keys)
+    ? req.body.keys.map(String)
+    : String(req.body?.key || "all").split(",").map((key) => key.trim()).filter(Boolean);
+  res.json(snapshotService.refresh(keys.length ? keys : ["all"]));
+});
+
+router.post("/admin/snapshots/clear", requireAuth, async (req, res) => {
+  const key = typeof req.body?.key === "string" ? req.body.key.trim() : "";
+  const prefix = typeof req.body?.prefix === "string" ? req.body.prefix.trim() : "";
+  if (key) {
+    res.json({ mode: "key", key, ...snapshotService.invalidateSnapshot(key) });
+    return;
+  }
+  if (prefix) {
+    res.json({ mode: "prefix", prefix, ...snapshotService.invalidateSnapshotsByPrefix(prefix) });
+    return;
+  }
+  res.json({ mode: "all", ...snapshotService.invalidateAllSnapshots() });
+});
+
 router.post("/reports", requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const { targetType, targetId, reason } = req.body;
@@ -296,6 +321,7 @@ router.put("/admin/identity/aliases/:type", requireAuth, async (req, res) => {
   try {
     const result = identityAdminService.upsertAlias(req.params.type, req.body);
     clearCache();
+    snapshotService.invalidateAllSnapshots();
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -306,6 +332,7 @@ router.delete("/admin/identity/aliases/:type/:alias", requireAuth, async (req, r
   try {
     const result = identityAdminService.deleteAlias(req.params.type, decodeURIComponent(req.params.alias));
     clearCache();
+    snapshotService.invalidateAllSnapshots();
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

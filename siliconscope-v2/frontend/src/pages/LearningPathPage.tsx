@@ -138,6 +138,9 @@ export default function LearningPathPage() {
             阅读清单、课程笔记和本地 PDF 库。
           </p>
           <div className="learning-hero-actions">
+            <Link to="/learning">
+              Daily Circuit workspace
+            </Link>
             <Link to={`/?q=${encodeURIComponent(active.paperQuery)}&scope=all&semantic=1`}>
               搜索当前方向论文
             </Link>
@@ -199,7 +202,7 @@ export default function LearningPathPage() {
             >
               <span />
               <strong>{roadmap.title}</strong>
-              <em>{roadmap.level} · {roadmap.venues.slice(0, 3).join(' / ')}</em>
+              <em>{roadmap.venues.slice(0, 3).join(' / ')}</em>
             </button>
           ))}
         </aside>
@@ -207,7 +210,7 @@ export default function LearningPathPage() {
         <main className="learning-main">
           <section className="learning-overview" style={{ '--learning-accent': active.accent } as CSSProperties}>
             <div>
-              <span>{activeFamily?.title ?? '当前路线'} · {active.level}</span>
+              <span>{activeFamily?.title ?? '当前路线'}</span>
               <h2>{active.title}</h2>
               <p>{active.subtitle}</p>
               <div className="learning-outcome-list">
