@@ -156,6 +156,16 @@ export default function LearningPathPage() {
         </aside>
       </section>
 
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Common base</span>
+            <h3>所有 IC 路线的公共前置知识</h3>
+          </div>
+        </div>
+        <FoundationCards groups={commonFoundations} />
+      </section>
+
       <section className="learning-section learning-family-section">
         <div className="learning-section-head">
           <div>
@@ -174,16 +184,6 @@ export default function LearningPathPage() {
             />
           ))}
         </div>
-      </section>
-
-      <section className="learning-section">
-        <div className="learning-section-head">
-          <div>
-            <span>Common base</span>
-            <h3>所有 IC 路线的公共前置知识</h3>
-          </div>
-        </div>
-        <FoundationCards groups={commonFoundations} />
       </section>
 
       <div className="learning-layout">
