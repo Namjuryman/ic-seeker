@@ -1,14 +1,40 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { AutocompleteInput } from '../components/AutocompleteInput'
 import type { InstitutionCompareResult } from '../types'
 import { institutionPath } from '../utils/routes'
+
+interface InstitutionListItem {
+  name: string
+  papers: number
+  institutionScore: number
+  sPlus: number
+  s: number
+  a: number
+  citations: number
+}
 
 export default function InstitutionComparePage() {
   const [names, setNames] = useState<string[]>([''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<InstitutionCompareResult | null>(null)
+  const [institutions, setInstitutions] = useState<InstitutionListItem[]>([])
+
+  useEffect(() => {
+    api.institutions({ limit: 500, minPapers: 2 })
+      .then((data) => setInstitutions(data as InstitutionListItem[]))
+      .catch(() => { /* silently fail, user can still type manually */ })
+  }, [])
+
+  const autocompleteOptions = useMemo(() => {
+    return institutions.map((i) => ({
+      label: i.name,
+      value: i.name,
+      subtitle: `${i.papers} papers · Score ${i.institutionScore}`,
+    }))
+  }, [institutions])
 
   const canAdd = names.length < 4 && names[names.length - 1]?.trim()
   const canCompare = names.filter((n) => n.trim()).length >= 2
@@ -71,12 +97,12 @@ export default function InstitutionComparePage() {
         <div className="space-y-3">
           {names.map((name, index) => (
             <div key={index} className="flex gap-2">
-              <input
-                type="text"
+              <AutocompleteInput
                 value={name}
-                onChange={(e) => updateName(index, e.target.value)}
+                onChange={(val) => updateName(index, val)}
+                onSelect={(val) => updateName(index, val)}
+                options={autocompleteOptions}
                 placeholder={`Institution name ${index + 1}`}
-                className="flex-1 px-3 py-2 rounded-lg border border-line bg-surface-elevated text-sm text-ink-text focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300"
               />
               {names.length > 1 && (
                 <button

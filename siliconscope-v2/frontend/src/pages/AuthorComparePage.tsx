@@ -1,14 +1,40 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { AutocompleteInput } from '../components/AutocompleteInput'
 import type { AuthorCompareResult } from '../types'
 import { authorPath } from '../utils/routes'
+
+interface AuthorListItem {
+  name: string
+  papers: number
+  authorScore: number
+  sPlus: number
+  s: number
+  a: number
+  citations: number
+}
 
 export default function AuthorComparePage() {
   const [names, setNames] = useState<string[]>([''])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<AuthorCompareResult | null>(null)
+  const [authors, setAuthors] = useState<AuthorListItem[]>([])
+
+  useEffect(() => {
+    api.professors({ limit: 500, minPapers: 2 })
+      .then((data) => setAuthors(data as AuthorListItem[]))
+      .catch(() => { /* silently fail */ })
+  }, [])
+
+  const autocompleteOptions = useMemo(() => {
+    return authors.map((a) => ({
+      label: a.name,
+      value: a.name,
+      subtitle: `${a.papers} papers · Score ${a.authorScore} · S+ ${a.sPlus}`,
+    }))
+  }, [authors])
 
   const canAdd = names.length < 4 && names[names.length - 1]?.trim()
   const canCompare = names.filter((n) => n.trim()).length >= 2
@@ -71,12 +97,12 @@ export default function AuthorComparePage() {
         <div className="space-y-3">
           {names.map((name, index) => (
             <div key={index} className="flex gap-2">
-              <input
-                type="text"
+              <AutocompleteInput
                 value={name}
-                onChange={(e) => updateName(index, e.target.value)}
+                onChange={(val) => updateName(index, val)}
+                onSelect={(val) => updateName(index, val)}
+                options={autocompleteOptions}
                 placeholder={`Author name ${index + 1}`}
-                className="flex-1 px-3 py-2 rounded-lg border border-line bg-surface-elevated text-sm text-ink-text focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300"
               />
               {names.length > 1 && (
                 <button
