@@ -39,6 +39,10 @@ import type {
   WatchlistItem,
   WatchlistByType,
   ReadingQueueGroup,
+  InstitutionCompareResult,
+  AuthorCompareResult,
+  MentorCompareResult,
+  TopicReport,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -325,6 +329,26 @@ export const api = {
 
   async compareCompanies(ids: string[]) {
     const res = await axios.get<CompanyCompareResult>('/api/compare/companies', { params: { ids: ids.join(',') } })
+    return res.data
+  },
+
+  async compareInstitutions(names: string[]) {
+    const res = await axios.get<InstitutionCompareResult>('/api/compare/institutions', { params: { names: names.join(',') } })
+    return res.data
+  },
+
+  async compareAuthors(names: string[]) {
+    const res = await axios.get<AuthorCompareResult>('/api/compare/authors', { params: { names: names.join(',') } })
+    return res.data
+  },
+
+  async compareMentors(names: string[]) {
+    const res = await axios.get<MentorCompareResult>('/api/compare/mentors', { params: { names: names.join(',') } })
+    return res.data
+  },
+
+  async topicReport(field: string) {
+    const res = await axios.get<TopicReport>(`/api/reports/topics/${encodeURIComponent(field)}`)
     return res.data
   },
 

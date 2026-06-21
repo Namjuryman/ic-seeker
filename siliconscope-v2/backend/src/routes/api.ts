@@ -21,6 +21,10 @@ import { companyService } from "../services/company.service.js";
 import { watchlistService } from "../services/watchlist.service.js";
 import { readingQueueService } from "../services/reading-queue.service.js";
 import { WATCHLIST_VALID_TYPES } from "../services/watchlist.service.js";
+import { institutionCompareService } from "../services/institution-compare.service.js";
+import { authorCompareService } from "../services/author-compare.service.js";
+import { mentorCompareService } from "../services/mentor-compare.service.js";
+import { topicReportService } from "../services/topic-report.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -280,6 +284,58 @@ router.get("/compare/companies", requireAuth, async (req, res) => {
       return;
     }
     res.json(companyService.compareCompanies(ids));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/compare/institutions", requireAuth, async (req, res) => {
+  try {
+    const names = String(req.query.names || "").split(",").map((n) => n.trim()).filter(Boolean);
+    if (names.length < 2) {
+      res.status(400).json({ error: "At least 2 institution names are required" });
+      return;
+    }
+    res.json(institutionCompareService.compare(names));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/compare/authors", requireAuth, async (req, res) => {
+  try {
+    const names = String(req.query.names || "").split(",").map((n) => n.trim()).filter(Boolean);
+    if (names.length < 2) {
+      res.status(400).json({ error: "At least 2 author names are required" });
+      return;
+    }
+    res.json(authorCompareService.compare(names));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/compare/mentors", requireAuth, async (req, res) => {
+  try {
+    const names = String(req.query.names || "").split(",").map((n) => n.trim()).filter(Boolean);
+    if (names.length < 2) {
+      res.status(400).json({ error: "At least 2 mentor names are required" });
+      return;
+    }
+    res.json(mentorCompareService.compare(names));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/reports/topics/:field", requireAuth, async (req, res) => {
+  try {
+    const field = String(req.params.field || "").trim();
+    if (!field) {
+      res.status(400).json({ error: "Topic field is required" });
+      return;
+    }
+    res.json(topicReportService.getReport(field));
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

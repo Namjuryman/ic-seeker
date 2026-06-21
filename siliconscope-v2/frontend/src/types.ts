@@ -600,6 +600,101 @@ export interface ReadingQueueGroup {
   papers: Array<{ paper: PaperRow; status: string; updatedAt: string | null }>
 }
 
+export interface InstitutionCompareItem {
+  name: string
+  requestedName: string
+  canonicalName?: string
+  country?: string
+  city?: string
+  totalPapers: number
+  recentPapers: number
+  avgScore: number
+  citations: number
+  yearlyTrend: Array<{ year: number; count: number }>
+  topFields: Array<{ key: string; count: number }>
+  topVenues: Array<{ key: string; count: number }>
+  venueRankDistribution: Array<{ key: string; count: number }>
+  activeAuthors: Array<{ name: string; count: number }>
+  representativePapers: PaperRow[]
+  qs: { qsWorldRank: number | null; qsRegionRank: number | null; region: string | null } | null
+  metadataConfidence: number
+  normalizationCaveat: string
+}
+
+export interface InstitutionCompareResult {
+  institutions: InstitutionCompareItem[]
+  caveat: string
+}
+
+export interface AuthorCompareItem {
+  name: string
+  requestedName: string
+  canonicalName?: string
+  aliases: string[]
+  totalPapers: number
+  recentPapers: number
+  avgScore: number
+  citations: number
+  yearlyTrend: Array<{ year: number; count: number }>
+  topFields: Array<{ key: string; count: number }>
+  topVenues: Array<{ key: string; count: number }>
+  venueRankDistribution: Array<{ key: string; count: number }>
+  institutions: Array<{ name: string; count: number }>
+  coauthors: Array<{ name: string; count: number }>
+  representativePapers: PaperRow[]
+  metadataConfidence: number
+  normalizationCaveat: string
+}
+
+export interface AuthorCompareResult {
+  authors: AuthorCompareItem[]
+  caveat: string
+}
+
+export interface MentorCompareAggregate {
+  overall: number | null
+  researchFit: number | null
+  mentoringStyle: number | null
+  workload: number | null
+  communication: number | null
+  _raw: Record<string, number>
+}
+
+export interface MentorCompareItem {
+  name: string
+  requestedName: string
+  approvedCount: number
+  visibilityLevel: 'insufficient' | 'aggregate' | 'summary' | 'curated'
+  aggregate: MentorCompareAggregate | null
+  summary: string | null
+  curatedComments: Array<{ publicAlias: string; text: string }>
+  publicationProfileLink: string
+  caveat: string
+}
+
+export interface MentorCompareResult {
+  mentors: MentorCompareItem[]
+  caveat: string
+}
+
+export interface TopicReport {
+  field: string
+  overview: {
+    totalPapers: number
+    recentPapers: number
+    yearRange?: string
+  }
+  trend: Array<{ year: number; count: number }>
+  topVenues: Array<{ key: string; count: number }>
+  representativePapers: PaperRow[]
+  activeAuthors: Array<{ name: string; papers: number; scoreSum: number; citations: number }>
+  strongInstitutions: Array<{ name: string; papers: number; scoreSum: number; citations: number }>
+  relatedCompanies: Array<{ id: string; name: string; domains: string[]; confidence: number | null }>
+  relatedRoadmaps: Array<{ slug: string; title: string }>
+  suggestedSearches: Array<{ label: string; params: Record<string, string> }>
+  caveat: string
+}
+
 export type CompanyJobSignal = {
   id: string;
   companyId: string;

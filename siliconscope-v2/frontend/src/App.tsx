@@ -27,6 +27,11 @@ const CompanyComparePage = lazy(() => import('./pages/CompanyComparePage'))
 const CompanyAdminPage = lazy(() => import('./pages/CompanyAdminPage'))
 const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
 const ReadingQueuePage = lazy(() => import('./pages/ReadingQueuePage'))
+const ComparePage = lazy(() => import('./pages/ComparePage'))
+const InstitutionComparePage = lazy(() => import('./pages/InstitutionComparePage'))
+const AuthorComparePage = lazy(() => import('./pages/AuthorComparePage'))
+const MentorComparePage = lazy(() => import('./pages/MentorComparePage'))
+const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -41,6 +46,8 @@ const navItems = [
   { to: '/companies', label: '企业情报', icon: 'C', section: '探索' },
   { to: '/watchlist', label: '关注列表', icon: 'W', section: '探索' },
   { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
+  { to: '/compare', label: '对比中心', icon: '≡', section: '探索' },
+  { to: '/reports', label: '报告中心', icon: '¶', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师/机构', icon: 'M', section: '画像' },
@@ -191,6 +198,12 @@ function App() {
                 <Route path="/watchlist" element={<WatchlistPage />} />
                 <Route path="/reading-queue" element={<ReadingQueuePage />} />
                 <Route path="/compare/companies" element={<CompanyComparePage />} />
+                <Route path="/compare" element={<ComparePage />} />
+                <Route path="/compare/institutions" element={<InstitutionComparePage />} />
+                <Route path="/compare/authors" element={<AuthorComparePage />} />
+                <Route path="/compare/mentors" element={<MentorComparePage />} />
+                <Route path="/reports" element={<TopicReportPage />} />
+                <Route path="/reports/topics/:field" element={<TopicReportPage />} />
                 <Route path="/admin/companies" element={<CompanyAdminPage />} />
               </Routes>
             </Suspense>
