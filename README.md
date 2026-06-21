@@ -2,7 +2,7 @@
 
 SiliconScope is an IC paper search, reading-management, and academic-intelligence platform for integrated-circuit research.
 
-The project has moved to **SiliconScope v2**. The old single-process prototype is no longer the default product path; it remains in the repository only as a historical implementation and migration reference.
+The project has moved to **SiliconScope v2**. The canonical v2 product lives in `siliconscope-v2/`. The old single-process prototype is no longer the default product path; it remains in the repository only as a historical implementation and migration reference.
 
 ## Current Version
 
