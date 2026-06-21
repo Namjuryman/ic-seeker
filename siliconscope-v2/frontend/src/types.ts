@@ -499,3 +499,81 @@ export interface LearningDashboard {
   routeFamilies?: RouteFamily[];
   commonFoundations?: FoundationGroup[];
 }
+
+export interface CompanyRow {
+  id: string;
+  name: string;
+  legalName?: string;
+  aliases?: string[];
+  country?: string;
+  city?: string;
+  website?: string;
+  companyType?: string;
+  status?: string;
+  foundedYear?: number;
+  registeredCapital?: string;
+  employeeCount?: string;
+  employeeCountRange?: string;
+  stockTicker?: string;
+  exchange?: string;
+  description?: string;
+  productLines?: string[];
+  domains?: string[];
+  technologyKeywords?: string[];
+  applicationMarkets?: string[];
+  careerRoles?: string[];
+  hiringSignals?: string[];
+  dataConfidence?: number;
+  lastEnrichedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  sources?: CompanySource[];
+  fieldFacts?: CompanyFieldFact[];
+}
+
+export interface CompanySource {
+  id: string;
+  sourceType: string;
+  sourceName: string;
+  sourceUrl?: string;
+  fetchedAt?: string;
+  confidence: number;
+  notes?: string;
+}
+
+export interface CompanyFieldFact {
+  id: string;
+  fieldName: string;
+  fieldValue: string;
+  confidence: number;
+  fetchedAt?: string;
+}
+
+export interface CompanyListResult {
+  rows: CompanyRow[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CompanyCompareResult {
+  companies: CompanyRow[];
+  sharedDomains: string[];
+  sharedCompanyTypes: string[];
+  sharedCountries: string[];
+  sharedProductLines: string[];
+  fitMatching: Record<string, string[]>;
+  caveat: string;
+}
+
+export type CompanyJobSignal = {
+  id: string;
+  companyId: string;
+  roleTitle: string;
+  roleCategory?: string;
+  location?: string;
+  sourceUrl?: string;
+  fetchedAt?: string;
+  status?: 'active' | 'expired' | 'unknown';
+  keywords?: string[];
+}

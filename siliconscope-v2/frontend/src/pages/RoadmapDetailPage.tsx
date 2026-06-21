@@ -5,6 +5,35 @@ import { EntityLink } from '../components/EntityLink'
 import { PaperLink } from '../components/PaperLink'
 import { lessonPath, searchPath, todayLessonPath } from '../utils/routes'
 
+function getSuitableCompanyTypes(domain: string): string[] {
+  const d = domain.toLowerCase()
+  const matches = new Set<string>()
+  const map: [string[], string[]][] = [
+    [['power', 'pmic', 'dc-dc', 'ldo', 'voltage'], ['Power Semiconductor', 'Analog / Mixed-Signal']],
+    [['analog', 'mixed-signal', 'adc', 'dac', 'bandgap'], ['Analog / Mixed-Signal', 'Fabless IC Design']],
+    [['rf', 'wireless', 'mmwave', 'mm-wave', 'transceiver'], ['RF / Wireless Semiconductor', 'Fabless IC Design', 'Telecom Equipment']],
+    [['digital', 'processor', 'cpu', 'gpu', 'soc', 'dsp'], ['Fabless IC Design', 'Processor / SoC']],
+    [['memory', 'sram', 'dram', 'flash', 'nand', 'nvm'], ['Memory Semiconductor', 'IDM']],
+    [['clock', 'pll', 'oscillator', 'timing'], ['Analog / Mixed-Signal', 'Fabless IC Design']],
+    [['serdes', 'interface', 'high-speed', 'high speed'], ['High-Speed Interface', 'Fabless IC Design']],
+    [['sensor', 'mems', 'image sensor', 'cis'], ['Sensor / MEMS', 'IDM']],
+    [['eda', 'verification', 'fpga'], ['EDA / IP', 'Fabless IC Design']],
+    [['foundry', 'fab', 'process', 'manufacturing'], ['Foundry', 'IDM', 'Semiconductor Equipment']],
+    [['test', 'ate', 'packaging', 'assembly'], ['Test & Measurement', 'OSAT']],
+    [['ai', 'machine learning', 'neural', 'accelerator', 'npu'], ['AI Chip', 'Fabless IC Design']],
+    [['automotive', 'car', 'vehicle', 'ev'], ['Automotive Semiconductor', 'Tier-1 Supplier']],
+    [['photonic', 'opto', 'optical'], ['Photonics / Optoelectronics']],
+  ]
+  for (const [keywords, types] of map) {
+    if (keywords.some((k) => d.includes(k))) {
+      types.forEach((t) => matches.add(t))
+    }
+  }
+  const result = [...matches]
+  if (result.length === 0) return ['Fabless IC Design', 'IDM']
+  return result.slice(0, 5)
+}
+
 export default function RoadmapDetailPage() {
   const { slug = '' } = useParams()
   const roadmap = useQuery({ queryKey: ['learning-roadmap', slug], queryFn: () => api.learningRoadmap(slug), enabled: Boolean(slug) })
@@ -232,6 +261,29 @@ export default function RoadmapDetailPage() {
             )) ?? <p className="learning-muted">Loading related papers...</p>}
           </div>
         </article>
+      </section>
+
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Career</span>
+            <h3>Career Directions</h3>
+          </div>
+        </div>
+        <div className="learning-chip-row" style={{ marginBottom: '0.75rem' }}>
+          {getSuitableCompanyTypes(data.domain).map((type) => (
+            <span key={type}>{type}</span>
+          ))}
+        </div>
+        <div className="learning-progress-actions">
+          <Link to={searchPath({ q: data.paperQuery || data.title, scope: 'all', semantic: 1 })}>
+            Search: {data.paperQuery || data.title}
+          </Link>
+          <Link to="/companies">Explore companies →</Link>
+        </div>
+        <p className="learning-muted" style={{ fontSize: 12, marginTop: '0.5rem' }}>
+          Company type suggestions are based on domain matching, not verified employer listings.
+        </p>
       </section>
     </div>
   )

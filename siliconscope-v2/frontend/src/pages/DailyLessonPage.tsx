@@ -5,6 +5,35 @@ import { EntityLink } from '../components/EntityLink'
 import { PaperLink } from '../components/PaperLink'
 import { roadmapPath, searchPath } from '../utils/routes'
 
+function getSuitableCompanyTypes(domain: string): string[] {
+  const d = domain.toLowerCase()
+  const matches = new Set<string>()
+  const map: [string[], string[]][] = [
+    [['power', 'pmic', 'dc-dc', 'ldo', 'voltage'], ['Power Semiconductor', 'Analog / Mixed-Signal']],
+    [['analog', 'mixed-signal', 'adc', 'dac', 'bandgap'], ['Analog / Mixed-Signal', 'Fabless IC Design']],
+    [['rf', 'wireless', 'mmwave', 'mm-wave', 'transceiver'], ['RF / Wireless Semiconductor', 'Fabless IC Design', 'Telecom Equipment']],
+    [['digital', 'processor', 'cpu', 'gpu', 'soc', 'dsp'], ['Fabless IC Design', 'Processor / SoC']],
+    [['memory', 'sram', 'dram', 'flash', 'nand', 'nvm'], ['Memory Semiconductor', 'IDM']],
+    [['clock', 'pll', 'oscillator', 'timing'], ['Analog / Mixed-Signal', 'Fabless IC Design']],
+    [['serdes', 'interface', 'high-speed', 'high speed'], ['High-Speed Interface', 'Fabless IC Design']],
+    [['sensor', 'mems', 'image sensor', 'cis'], ['Sensor / MEMS', 'IDM']],
+    [['eda', 'verification', 'fpga'], ['EDA / IP', 'Fabless IC Design']],
+    [['foundry', 'fab', 'process', 'manufacturing'], ['Foundry', 'IDM', 'Semiconductor Equipment']],
+    [['test', 'ate', 'packaging', 'assembly'], ['Test & Measurement', 'OSAT']],
+    [['ai', 'machine learning', 'neural', 'accelerator', 'npu'], ['AI Chip', 'Fabless IC Design']],
+    [['automotive', 'car', 'vehicle', 'ev'], ['Automotive Semiconductor', 'Tier-1 Supplier']],
+    [['photonic', 'opto', 'optical'], ['Photonics / Optoelectronics']],
+  ]
+  for (const [keywords, types] of map) {
+    if (keywords.some((k) => d.includes(k))) {
+      types.forEach((t) => matches.add(t))
+    }
+  }
+  const result = [...matches]
+  if (result.length === 0) return ['Fabless IC Design', 'IDM']
+  return result.slice(0, 5)
+}
+
 const sectionLabels: Record<string, string> = {
   problem: '1. What problem does this circuit solve?',
   intuition: '2. Core intuition',
@@ -132,6 +161,28 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
           </div>
           {(!lesson.relatedTopics || lesson.relatedTopics.length === 0) && (!lesson.relatedVenues || lesson.relatedVenues.length === 0) && (!lesson.relatedSearchQueries || lesson.relatedSearchQueries.length === 0) && !lesson.roadmap?.paperQuery && (
             <p className="learning-muted">No research links available.</p>
+          )}
+
+          {lesson.roadmap?.domain && (
+            <>
+              <div className="learning-section-head" style={{ marginTop: '1.5rem' }}>
+                <div>
+                  <span>Career</span>
+                  <h3>Career Relevance</h3>
+                </div>
+              </div>
+              <div className="learning-chip-row" style={{ marginBottom: '0.75rem' }}>
+                {getSuitableCompanyTypes(lesson.roadmap.domain).map((type) => (
+                  <span key={type}>{type}</span>
+                ))}
+              </div>
+              <div className="learning-progress-actions">
+                <Link to="/companies">Explore companies in this area →</Link>
+              </div>
+              <p className="learning-muted" style={{ fontSize: 12, marginTop: '0.5rem' }}>
+                Company suggestions are domain-based and may not reflect current hiring.
+              </p>
+            </>
           )}
         </aside>
       </section>

@@ -553,6 +553,15 @@ export default function HomePage() {
           <label className="ss-check"><input type="checkbox" checked={controls.favorite} onChange={(event) => updateControl('favorite', event.target.checked)} /> 仅看收藏</label>
           <button className="ss-apply-filter" onClick={() => submit(1)}>应用筛选</button>
           <AdminTools onImported={appendImported} />
+          <section className="ss-tool-panel" style={{ marginTop: '1rem' }}>
+            <h3>Company Intelligence</h3>
+            <p>Explore IC industry employers and research labs.</p>
+            <div className="ss-inline-form">
+              <Link to="/companies" style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 16px', borderRadius: 12, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink-text)', textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
+                Explore companies →
+              </Link>
+            </div>
+          </section>
         </aside>
 
         <main className="ss-result-panel">

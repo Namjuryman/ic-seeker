@@ -17,6 +17,7 @@ import { identityAdminService } from "../services/identity-admin.service.js";
 import { clearCache, memoCache, memoCacheAsync } from "../services/cache.service.js";
 import { snapshotService } from "../services/snapshot.service.js";
 import { learningService } from "../services/learning.service.js";
+import { companyService } from "../services/company.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -217,6 +218,94 @@ router.post("/mentor/authors/:name/reviews", requireAuth, async (req: Authentica
   try {
     const result = reviewService.addReview(name, req.user?.userId ?? 0, req.body);
     clearCache("moderation");
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+// Company / Employer Intelligence
+router.get("/companies", requireAuth, async (req, res) => {
+  try {
+    const result = companyService.listCompanies(req.query as Record<string, string>);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/companies/types", requireAuth, async (_req, res) => {
+  res.json(companyService.getCompanyTypes());
+});
+
+router.get("/companies/domains", requireAuth, async (_req, res) => {
+  res.json(companyService.getDomains());
+});
+
+router.get("/companies/:id", requireAuth, async (req, res) => {
+  const company = companyService.getCompany(req.params.id);
+  if (!company) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  res.json(company);
+});
+
+router.get("/companies/:id/related-papers", requireAuth, async (req, res) => {
+  const result = companyService.getRelatedPapers(req.params.id, Number(req.query.limit || 20));
+  if (!result) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  res.json(result);
+});
+
+router.get("/companies/:id/related-roadmaps", requireAuth, async (req, res) => {
+  const result = companyService.getRelatedRoadmaps(req.params.id);
+  if (!result) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  res.json(result);
+});
+
+router.get("/compare/companies", requireAuth, async (req, res) => {
+  try {
+    const ids = String(req.query.ids || "").split(",").map((id) => id.trim()).filter(Boolean);
+    if (ids.length < 2) {
+      res.status(400).json({ error: "At least 2 company IDs are required" });
+      return;
+    }
+    res.json(companyService.compareCompanies(ids));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/companies", requireAuth, async (req, res) => {
+  try {
+    const company = companyService.createCompany(req.body);
+    clearCache();
+    res.json(company);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch("/admin/companies/:id", requireAuth, async (req, res) => {
+  try {
+    const company = companyService.updateCompany(req.params.id, req.body);
+    clearCache();
+    res.json(company);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.delete("/admin/companies/:id", requireAuth, async (req, res) => {
+  try {
+    const result = companyService.deleteCompany(req.params.id);
+    clearCache();
     res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

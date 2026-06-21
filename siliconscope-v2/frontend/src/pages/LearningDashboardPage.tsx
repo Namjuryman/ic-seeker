@@ -174,6 +174,19 @@ export default function LearningDashboardPage() {
           <button type="button">Add related papers to reading queue</button>
         </div>
       </section>
+
+      <section className="learning-section">
+        <div className="learning-section-head">
+          <div>
+            <span>Industry</span>
+            <h3>Career & Industry</h3>
+          </div>
+        </div>
+        <p className="learning-muted">Connect learning directions to industry employers.</p>
+        <div className="learning-progress-actions" style={{ marginTop: '0.75rem' }}>
+          <Link to="/companies">Explore IC companies →</Link>
+        </div>
+      </section>
     </div>
   )
 }

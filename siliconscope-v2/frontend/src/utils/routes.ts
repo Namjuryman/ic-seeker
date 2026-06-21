@@ -54,3 +54,7 @@ export function lessonPath(id: string) {
 export function todayLessonPath() {
   return "/learning/today"
 }
+
+export function companyPath(id: string) {
+  return `/companies/${encodeURIComponent(id)}`
+}

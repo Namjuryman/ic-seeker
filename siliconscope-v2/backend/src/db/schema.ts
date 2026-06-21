@@ -226,3 +226,92 @@ export const learningProgress = sqliteTable("learning_progress", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+// Company / Employer Intelligence tables
+export const companies = sqliteTable("companies", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  legalName: text("legal_name"),
+  aliasesJson: text("aliases_json"),
+  country: text("country"),
+  city: text("city"),
+  website: text("website"),
+  companyType: text("company_type"),
+  status: text("status"), // active | dissolved | acquired | merged | unknown
+  foundedYear: integer("founded_year", { mode: "number" }),
+  registeredCapital: text("registered_capital"),
+  employeeCount: text("employee_count"),
+  employeeCountRange: text("employee_count_range"), // exact | range | estimated | unknown
+  stockTicker: text("stock_ticker"),
+  exchange: text("exchange"),
+  description: text("description"),
+  productLinesJson: text("product_lines_json"),
+  domainsJson: text("domains_json"),
+  technologyKeywordsJson: text("technology_keywords_json"),
+  applicationMarketsJson: text("application_markets_json"),
+  careerRolesJson: text("career_roles_json"),
+  hiringSignalsJson: text("hiring_signals_json"),
+  dataConfidence: integer("data_confidence", { mode: "number" }).notNull().default(0),
+  lastEnrichedAt: text("last_enriched_at"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const companySources = sqliteTable("company_sources", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id").notNull().default(""),
+  sourceType: text("source_type").notNull().default("other"), // official_registry | company_website | annual_report | sec_edgar | companies_house | opencorporates | commercial_provider | manual | other
+  sourceName: text("source_name").notNull().default(""),
+  sourceUrl: text("source_url"),
+  fetchedAt: text("fetched_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  payloadJson: text("payload_json"),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  notes: text("notes"),
+});
+
+export const companyAliases = sqliteTable("company_aliases", {
+  id: text("id").primaryKey(),
+  alias: text("alias").notNull().default(""),
+  companyId: text("company_id").notNull().default(""),
+  canonicalName: text("canonical_name").notNull().default(""),
+  source: text("source").notNull().default("manual"),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(100),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const companyFieldFacts = sqliteTable("company_field_facts", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id").notNull().default(""),
+  fieldName: text("field_name").notNull().default(""),
+  fieldValue: text("field_value").notNull().default(""),
+  sourceId: text("source_id"),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  fetchedAt: text("fetched_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const companyJobSignals = sqliteTable("company_job_signals", {
+  id: text("id").primaryKey(),
+  companyId: text("company_id").notNull().default(""),
+  roleTitle: text("role_title").notNull().default(""),
+  roleCategory: text("role_category"),
+  location: text("location"),
+  sourceUrl: text("source_url"),
+  fetchedAt: text("fetched_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  status: text("status").default("unknown"), // active | expired | unknown
+  keywordsJson: text("keywords_json"),
+});

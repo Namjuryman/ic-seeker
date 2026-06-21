@@ -33,6 +33,9 @@ import type {
   DailyLesson,
   RouteFamily,
   FoundationGroup,
+  CompanyListResult,
+  CompanyRow,
+  CompanyCompareResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -284,6 +287,56 @@ export const api = {
 
   async reportContent(targetType: string, targetId: number, reason: string) {
     const res = await axios.post('/api/reports', { targetType, targetId, reason })
+    return res.data
+  },
+
+  async companies(params?: Record<string, string | number>) {
+    const res = await axios.get<CompanyListResult>('/api/companies', { params })
+    return res.data
+  },
+
+  async company(id: string) {
+    const res = await axios.get<CompanyRow>(`/api/companies/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async companyRelatedPapers(id: string, limit = 20) {
+    const res = await axios.get<SearchResult>(`/api/companies/${encodeURIComponent(id)}/related-papers`, { params: { limit } })
+    return res.data
+  },
+
+  async companyRelatedRoadmaps(id: string) {
+    const res = await axios.get<Array<{ slug: string; title: string; domain: string; level: string; score: number }>>(`/api/companies/${encodeURIComponent(id)}/related-roadmaps`)
+    return res.data
+  },
+
+  async companyTypes() {
+    const res = await axios.get<string[]>('/api/companies/types')
+    return res.data
+  },
+
+  async companyDomains() {
+    const res = await axios.get<string[]>('/api/companies/domains')
+    return res.data
+  },
+
+  async compareCompanies(ids: string[]) {
+    const res = await axios.get<CompanyCompareResult>('/api/compare/companies', { params: { ids: ids.join(',') } })
+    return res.data
+  },
+
+  async createCompany(body: Record<string, unknown>) {
+    const res = await axios.post<CompanyRow>('/api/admin/companies', body)
+    return res.data
+  },
+
+  async updateCompany(id: string, body: Record<string, unknown>) {
+    const res = await axios.patch<CompanyRow>(`/api/admin/companies/${encodeURIComponent(id)}`, body)
+    return res.data
+  },
+
+  async deleteCompany(id: string) {
+    const res = await axios.delete<{ id: string; deleted: boolean }>(`/api/admin/companies/${encodeURIComponent(id)}`)
     return res.data
   },
 
