@@ -21,11 +21,21 @@ export default function InstitutionComparePage() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<InstitutionCompareResult | null>(null)
   const [institutions, setInstitutions] = useState<InstitutionListItem[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [suggestionsError, setSuggestionsError] = useState('')
 
   useEffect(() => {
-    api.institutions({ limit: 500, minPapers: 2 })
-      .then((data) => setInstitutions(data as InstitutionListItem[]))
-      .catch(() => { /* silently fail, user can still type manually */ })
+    setSuggestionsLoading(true)
+    api.institutions({ limit: 300, minPapers: 2 })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : []
+        setInstitutions(list as InstitutionListItem[])
+        setSuggestionsError('')
+      })
+      .catch((err) => {
+        setSuggestionsError(err?.response?.data?.error || err.message || '加载机构列表失败')
+      })
+      .finally(() => setSuggestionsLoading(false))
   }, [])
 
   const autocompleteOptions = useMemo(() => {
@@ -102,6 +112,7 @@ export default function InstitutionComparePage() {
                 onChange={(val) => updateName(index, val)}
                 onSelect={(val) => updateName(index, val)}
                 options={autocompleteOptions}
+                loading={suggestionsLoading}
                 placeholder={`Institution name ${index + 1}`}
               />
               {names.length > 1 && (
@@ -114,6 +125,12 @@ export default function InstitutionComparePage() {
               )}
             </div>
           ))}
+          {suggestionsError && (
+            <p className="text-sm text-red-600">{suggestionsError}</p>
+          )}
+          {!suggestionsLoading && !suggestionsError && autocompleteOptions.length === 0 && (
+            <p className="text-sm text-ink-muted">未加载到机构数据，您可以继续手动输入。</p>
+          )}
         </div>
 
         <div className="flex gap-2 mt-4">

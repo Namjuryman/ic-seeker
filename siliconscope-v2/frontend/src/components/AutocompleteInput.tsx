@@ -13,6 +13,7 @@ interface AutocompleteInputProps {
   options: AutocompleteOption[]
   placeholder?: string
   disabled?: boolean
+  loading?: boolean
 }
 
 export function AutocompleteInput({
@@ -22,15 +23,17 @@ export function AutocompleteInput({
   options,
   placeholder,
   disabled,
+  loading,
 }: AutocompleteInputProps) {
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState(-1)
   const containerRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const filtered = options.filter((opt) =>
     opt.label.toLowerCase().includes(value.trim().toLowerCase())
   )
+
+  const showDropdown = open && (loading || filtered.length > 0 || value.trim().length > 0)
 
   const handleSelect = useCallback(
     (val: string) => {
@@ -60,10 +63,9 @@ export function AutocompleteInput({
   return (
     <div ref={containerRef} className="relative flex-1">
       <input
-        ref={inputRef}
         type="text"
         value={value}
-        disabled={disabled}
+        disabled={disabled || loading}
         onChange={(e) => {
           onChange(e.target.value)
           setOpen(true)
@@ -89,11 +91,16 @@ export function AutocompleteInput({
           }
         }}
         placeholder={placeholder}
-        className="w-full px-3 py-2 rounded-lg border border-line bg-surface-elevated text-sm text-ink-text focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300"
+        className="w-full px-3 py-2 rounded-lg border border-line bg-surface-elevated text-sm text-ink-text focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300 disabled:opacity-50"
       />
-      {open && filtered.length > 0 && (
+      {showDropdown && (
         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border border-line bg-surface-panel shadow-lg">
-          {filtered.slice(0, 20).map((opt, idx) => (
+          {loading && (
+            <div className="px-3 py-2 text-sm text-ink-muted">
+              加载中...
+            </div>
+          )}
+          {!loading && filtered.length > 0 && filtered.slice(0, 20).map((opt, idx) => (
             <button
               key={opt.value}
               type="button"
@@ -111,11 +118,11 @@ export function AutocompleteInput({
               )}
             </button>
           ))}
-        </div>
-      )}
-      {open && value.trim().length > 0 && filtered.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-line bg-surface-panel shadow-lg p-3 text-sm text-ink-muted">
-          未找到匹配项
+          {!loading && value.trim().length > 0 && filtered.length === 0 && (
+            <div className="px-3 py-2 text-sm text-ink-muted">
+              未找到匹配项
+            </div>
+          )}
         </div>
       )}
     </div>

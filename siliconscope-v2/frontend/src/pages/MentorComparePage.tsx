@@ -21,11 +21,21 @@ export default function MentorComparePage() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<MentorCompareResult | null>(null)
   const [authors, setAuthors] = useState<AuthorListItem[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const [suggestionsError, setSuggestionsError] = useState('')
 
   useEffect(() => {
-    api.professors({ limit: 500, minPapers: 2 })
-      .then((data) => setAuthors(data as AuthorListItem[]))
-      .catch(() => { /* silently fail */ })
+    setSuggestionsLoading(true)
+    api.professors({ limit: 300, minPapers: 2 })
+      .then((data) => {
+        const list = Array.isArray(data) ? data : []
+        setAuthors(list as AuthorListItem[])
+        setSuggestionsError('')
+      })
+      .catch((err) => {
+        setSuggestionsError(err?.response?.data?.error || err.message || '加载学者列表失败')
+      })
+      .finally(() => setSuggestionsLoading(false))
   }, [])
 
   const autocompleteOptions = useMemo(() => {
@@ -110,6 +120,7 @@ export default function MentorComparePage() {
                 onChange={(val) => updateName(index, val)}
                 onSelect={(val) => updateName(index, val)}
                 options={autocompleteOptions}
+                loading={suggestionsLoading}
                 placeholder={`Mentor name ${index + 1}`}
               />
               {names.length > 1 && (
@@ -122,6 +133,12 @@ export default function MentorComparePage() {
               )}
             </div>
           ))}
+          {suggestionsError && (
+            <p className="text-sm text-red-600">{suggestionsError}</p>
+          )}
+          {!suggestionsLoading && !suggestionsError && autocompleteOptions.length === 0 && (
+            <p className="text-sm text-ink-muted">未加载到学者数据，您可以继续手动输入。</p>
+          )}
         </div>
 
         <div className="flex gap-2 mt-4">
