@@ -28,7 +28,7 @@ export default function ComparePage() {
     },
     {
       to: '/compare/mentors',
-      title: '导师对比',
+      title: '导师口碑对比',
       description: 'Compare mentors using verified anonymous reviews with threshold protection.',
       icon: 'M',
       color: 'bg-purple-50 text-purple-700 border-purple-100',

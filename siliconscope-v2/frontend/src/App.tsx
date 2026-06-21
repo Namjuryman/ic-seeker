@@ -50,7 +50,7 @@ const navItems = [
   { to: '/reports', label: '报告中心', icon: '¶', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
-  { to: '/mentors', label: '导师/机构', icon: 'M', section: '画像' },
+  { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
   { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
   { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
   { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据' },

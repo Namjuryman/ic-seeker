@@ -90,18 +90,16 @@ export default function MentorComparePage() {
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
           <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Intelligence</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">Compare Mentors</h1>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">导师口碑对比</h1>
           <p className="text-sm text-ink-muted mt-1">
-            Enter 2–4 mentor names to compare verified anonymous reviews with threshold protection.
+            基于匿名评价横向对比 2–4 位导师。数据维度：指导质量、方向匹配、组内氛围等。
           </p>
         </div>
       </section>
 
       <section className="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">
         <p className="text-sm text-amber-800 leading-relaxed">
-          <strong>Privacy & Threshold Protection:</strong> Mentor comparison uses only approved reviews. 
-          Less than 3 reviews = insufficient data; 3–4 = aggregate scores only; 5–9 = aggregate + summary; 10+ = aggregate + summary + curated comments. 
-          No ranking, no personal attacks, no identity exposure.
+          <strong>注意：</strong>此处对比仅基于匿名评价，不是论文维度对比。如需查看学术产出，请去「导师档案」页面。
         </p>
       </section>
 
