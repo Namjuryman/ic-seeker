@@ -25,6 +25,8 @@ const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
 const CompanyProfilePage = lazy(() => import('./pages/CompanyProfilePage'))
 const CompanyComparePage = lazy(() => import('./pages/CompanyComparePage'))
 const CompanyAdminPage = lazy(() => import('./pages/CompanyAdminPage'))
+const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
+const ReadingQueuePage = lazy(() => import('./pages/ReadingQueuePage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -37,6 +39,8 @@ const navItems = [
   { to: '/topics', label: '方向洞察', icon: 'T', section: '探索' },
   { to: '/geo', label: '区域地图', icon: 'G', section: '探索' },
   { to: '/companies', label: '企业情报', icon: 'C', section: '探索' },
+  { to: '/watchlist', label: '关注列表', icon: 'W', section: '探索' },
+  { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师/机构', icon: 'M', section: '画像' },
@@ -184,6 +188,8 @@ function App() {
                 <Route path="/moderation" element={<ModerationPage />} />
                 <Route path="/companies" element={<CompaniesPage />} />
                 <Route path="/companies/:companyId" element={<CompanyProfilePage />} />
+                <Route path="/watchlist" element={<WatchlistPage />} />
+                <Route path="/reading-queue" element={<ReadingQueuePage />} />
                 <Route path="/compare/companies" element={<CompanyComparePage />} />
                 <Route path="/admin/companies" element={<CompanyAdminPage />} />
               </Routes>

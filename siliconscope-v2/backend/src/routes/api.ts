@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { requireAuth, requireAdmin, type AuthenticatedRequest } from "../middleware/auth.js";
 import { statsService } from "../services/stats.service.js";
 import { searchService } from "../services/search.service.js";
 import { paperService } from "../services/paper.service.js";
@@ -18,6 +18,9 @@ import { clearCache, memoCache, memoCacheAsync } from "../services/cache.service
 import { snapshotService } from "../services/snapshot.service.js";
 import { learningService } from "../services/learning.service.js";
 import { companyService } from "../services/company.service.js";
+import { watchlistService } from "../services/watchlist.service.js";
+import { readingQueueService } from "../services/reading-queue.service.js";
+import { WATCHLIST_VALID_TYPES } from "../services/watchlist.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -282,7 +285,7 @@ router.get("/compare/companies", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/admin/companies", requireAuth, async (req, res) => {
+router.post("/admin/companies", requireAdmin, async (req, res) => {
   try {
     const company = companyService.createCompany(req.body);
     clearCache();
@@ -292,7 +295,7 @@ router.post("/admin/companies", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/admin/companies/:id", requireAuth, async (req, res) => {
+router.patch("/admin/companies/:id", requireAdmin, async (req, res) => {
   try {
     const company = companyService.updateCompany(req.params.id, req.body);
     clearCache();
@@ -302,7 +305,7 @@ router.patch("/admin/companies/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/admin/companies/:id", requireAuth, async (req, res) => {
+router.delete("/admin/companies/:id", requireAdmin, async (req, res) => {
   try {
     const result = companyService.deleteCompany(req.params.id);
     clearCache();
@@ -310,6 +313,97 @@ router.delete("/admin/companies/:id", requireAuth, async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.get("/watchlist/companies", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(companyService.listWatchedCompanies(req.user?.userId ?? 0));
+});
+
+router.get("/watchlist/companies/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json({ watched: companyService.isWatchedCompany(req.user?.userId ?? 0, req.params.id) });
+});
+
+router.post("/watchlist/companies/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(companyService.watchCompany(req.user?.userId ?? 0, req.params.id));
+});
+
+router.delete("/watchlist/companies/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(companyService.unwatchCompany(req.user?.userId ?? 0, req.params.id));
+});
+
+// Generic watchlist routes (works for all target types)
+router.get("/watchlist", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(watchlistService.listWatchlistItems(req.user?.userId ?? 0));
+});
+
+router.get("/watchlist/type/:type", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const type = req.params.type;
+  if (!WATCHLIST_VALID_TYPES.includes(type as any)) {
+    res.status(400).json({ error: 'Invalid target type' });
+    return;
+  }
+  res.json(watchlistService.listWatchlistByType(req.user?.userId ?? 0, type));
+});
+
+router.post("/watchlist", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const { targetType, targetId, queryJson } = req.body as { targetType: string; targetId: string; queryJson?: Record<string, unknown> | string };
+  if (!WATCHLIST_VALID_TYPES.includes(targetType as any)) {
+    res.status(400).json({ error: 'Invalid target type' });
+    return;
+  }
+  if (!targetId || targetId.length > 256) {
+    res.status(400).json({ error: 'targetId is required and must be <= 256 chars' });
+    return;
+  }
+  const result = watchlistService.addWatchlistItem(req.user?.userId ?? 0, targetType, targetId, queryJson);
+  if (result.error) {
+    res.status(400).json(result);
+    return;
+  }
+  res.status(result.alreadyExists ? 200 : 201).json(result);
+});
+
+router.delete("/watchlist/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: 'Invalid id' });
+    return;
+  }
+  const result = watchlistService.deleteWatchlistItem(req.user?.userId ?? 0, id);
+  if (result.error) {
+    res.status(404).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+// Reading Queue routes
+router.get("/reading-queue", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(readingQueueService.getReadingQueue(req.user?.userId ?? 0));
+});
+
+router.get("/reading-queue/:paperId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const paperId = Number(req.params.paperId);
+  if (!Number.isFinite(paperId)) {
+    res.status(400).json({ error: 'Invalid paperId' });
+    return;
+  }
+  res.json({ status: readingQueueService.getPaperStatus(req.user?.userId ?? 0, paperId) });
+});
+
+router.post("/reading-queue/:paperId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const paperId = Number(req.params.paperId);
+  const { status } = req.body as { status: string };
+  if (!Number.isFinite(paperId) || !status) {
+    res.status(400).json({ error: 'paperId and status are required' });
+    return;
+  }
+  const result = readingQueueService.updateReadingStatus(req.user?.userId ?? 0, paperId, status);
+  if (result.error) {
+    res.status(400).json(result);
+    return;
+  }
+  res.json(result);
 });
 
 router.get("/papers/:id/comments", requireAuth, async (req, res) => {
@@ -346,7 +440,7 @@ router.post("/journal-filters/evaluate", requireAuth, async (req, res) => {
   res.json(await journalFilterService.evaluate(req.body));
 });
 
-router.get("/admin/moderation", requireAuth, async (req, res) => {
+router.get("/admin/moderation", requireAdmin, async (req, res) => {
   res.json(moderationService.getQueue({
     limit: Number(req.query.limit || 25),
     offset: Number(req.query.offset || 0),
@@ -354,7 +448,7 @@ router.get("/admin/moderation", requireAuth, async (req, res) => {
   }));
 });
 
-router.post("/admin/moderation/:targetType/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const targetType = decodeURIComponent(req.params.targetType);
     const targetId = Number(req.params.id);
@@ -367,18 +461,18 @@ router.post("/admin/moderation/:targetType/:id", requireAuth, async (req: Authen
   }
 });
 
-router.get("/admin/snapshots", requireAuth, async (_req, res) => {
+router.get("/admin/snapshots", requireAdmin, async (_req, res) => {
   res.json(snapshotService.list());
 });
 
-router.post("/admin/snapshots/refresh", requireAuth, async (req, res) => {
+router.post("/admin/snapshots/refresh", requireAdmin, async (req, res) => {
   const keys = Array.isArray(req.body?.keys)
     ? req.body.keys.map(String)
     : String(req.body?.key || "all").split(",").map((key) => key.trim()).filter(Boolean);
   res.json(snapshotService.refresh(keys.length ? keys : ["all"]));
 });
 
-router.post("/admin/snapshots/clear", requireAuth, async (req, res) => {
+router.post("/admin/snapshots/clear", requireAdmin, async (req, res) => {
   const key = typeof req.body?.key === "string" ? req.body.key.trim() : "";
   const prefix = typeof req.body?.prefix === "string" ? req.body.prefix.trim() : "";
   if (key) {
@@ -404,7 +498,7 @@ router.post("/reports", requireAuth, async (req: AuthenticatedRequest, res) => {
 });
 
 
-router.get("/admin/identity/aliases", requireAuth, async (req, res) => {
+router.get("/admin/identity/aliases", requireAdmin, async (req, res) => {
   try {
     res.json(identityAdminService.listAliases(req.query.type, {
       q: req.query.q,
@@ -416,7 +510,7 @@ router.get("/admin/identity/aliases", requireAuth, async (req, res) => {
   }
 });
 
-router.put("/admin/identity/aliases/:type", requireAuth, async (req, res) => {
+router.put("/admin/identity/aliases/:type", requireAdmin, async (req, res) => {
   try {
     const result = identityAdminService.upsertAlias(req.params.type, req.body);
     clearCache();
@@ -427,7 +521,7 @@ router.put("/admin/identity/aliases/:type", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/admin/identity/aliases/:type/:alias", requireAuth, async (req, res) => {
+router.delete("/admin/identity/aliases/:type/:alias", requireAdmin, async (req, res) => {
   try {
     const result = identityAdminService.deleteAlias(req.params.type, decodeURIComponent(req.params.alias));
     clearCache();
@@ -438,11 +532,11 @@ router.delete("/admin/identity/aliases/:type/:alias", requireAuth, async (req, r
   }
 });
 
-router.get("/admin/api-keys", requireAuth, async (_req, res) => {
+router.get("/admin/api-keys", requireAdmin, async (_req, res) => {
   res.json(statsService.getApiKeys());
 });
 
-router.put("/admin/api-keys/:provider", requireAuth, async (req, res) => {
+router.put("/admin/api-keys/:provider", requireAdmin, async (req, res) => {
   const provider = decodeURIComponent(req.params.provider);
   const { value } = req.body;
   res.json(statsService.setApiKey(provider, value));

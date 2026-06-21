@@ -84,5 +84,17 @@ export function ensureCompanyTables(sqlite: ReturnType<typeof Database>): void {
     CREATE INDEX IF NOT EXISTS idx_company_sources_company ON company_sources(company_id);
     CREATE INDEX IF NOT EXISTS idx_company_facts_company ON company_field_facts(company_id);
     CREATE INDEX IF NOT EXISTS idx_company_jobs_company ON company_job_signals(company_id);
+
+    CREATE TABLE IF NOT EXISTS watchlist_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      target_type TEXT NOT NULL DEFAULT 'company',
+      target_id TEXT NOT NULL DEFAULT '',
+      query_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist_items(user_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_user_target ON watchlist_items(user_id, target_type, target_id);
   `);
 }

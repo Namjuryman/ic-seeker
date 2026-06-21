@@ -315,3 +315,18 @@ export const companyJobSignals = sqliteTable("company_job_signals", {
   status: text("status").default("unknown"), // active | expired | unknown
   keywordsJson: text("keywords_json"),
 });
+
+// Watchlist items: user-saved companies and searches
+export const watchlistItems = sqliteTable("watchlist_items", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  targetType: text("target_type").notNull().default("company"), // company | search
+  targetId: text("target_id").notNull().default(""),
+  queryJson: text("query_json"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});

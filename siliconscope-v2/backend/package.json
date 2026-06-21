@@ -9,6 +9,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "companies:seed": "tsx src/scripts/seed-companies.ts",
     "snapshots:refresh": "tsx src/scripts/refresh-snapshots.ts",
     "test": "vitest"
   },

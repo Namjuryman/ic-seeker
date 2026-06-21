@@ -663,12 +663,12 @@ export default function CompanyAdminPage() {
 
       {/* CSV Import Note */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-        <h2 className="font-semibold text-ink-text mb-2">CSV Import Template</h2>
+        <h2 className="font-semibold text-ink-text mb-2">CSV Import</h2>
         <p className="text-sm text-ink-muted mb-2">
-          CSV import template: name,legalName,country,city,website,companyType,domains,registeredCapital,employeeCount,sourceUrl,notes
+          Coming soon — bulk CSV import will be supported via the admin API.
         </p>
         <p className="text-xs text-ink-subtle">
-          Contact the backend team to enable bulk CSV import via the admin API.
+          Template fields: name, legalName, country, city, website, companyType, domains, registeredCapital, employeeCount, sourceUrl, notes
         </p>
       </section>
     </div>

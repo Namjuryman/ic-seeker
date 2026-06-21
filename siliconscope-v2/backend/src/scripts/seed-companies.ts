@@ -220,7 +220,9 @@ function ensureJobSignals(sqlite: BetterSqliteDatabase, companyId: string, paylo
 }
 
 function rawUpsertCompany(sqlite: BetterSqliteDatabase, seed: RawCompanySeed, payload: CompanyPayload): ExistingCompany {
-  const existing = sqlite.prepare("SELECT id, name FROM companies WHERE name = ?").get(payload.name) as ExistingCompany | undefined;
+  const existing = sqlite.prepare(
+    "SELECT id, name FROM companies WHERE name = ? OR legal_name = ?"
+  ).get(payload.name, payload.legalName) as ExistingCompany | undefined;
   const id = existing?.id || `seed-co-${payload.legalName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   const now = new Date().toISOString();
   sqlite.prepare(`

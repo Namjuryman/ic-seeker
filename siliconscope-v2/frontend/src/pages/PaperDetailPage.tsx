@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { PaperComment, PaperRow } from '../types'
 
@@ -12,6 +13,18 @@ const REPORT_REASONS = [
   'misleading',
   'copyright concern',
   'other',
+]
+
+const READING_STATUS_OPTIONS = [
+  { value: 'unread', label: '未读' },
+  { value: 'reading', label: '在读' },
+  { value: 'read', label: '已读' },
+  { value: 'important', label: '重点' },
+  { value: 'skip', label: '跳过' },
+  { value: 'review_later', label: '稍后复习' },
+  { value: 'use_for_literature_review', label: '用于文献综述' },
+  { value: 'use_for_application', label: '用于应用' },
+  { value: 'use_for_project', label: '用于项目' },
 ]
 
 function splitAuthors(authors: string) {
@@ -50,6 +63,8 @@ export default function PaperDetailPage() {
   const [loadingComments, setLoadingComments] = useState(false)
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
   const [activeReportId, setActiveReportId] = useState<number | null>(null)
+
+  const queryClient = useQueryClient()
 
   const authors = useMemo(() => splitAuthors(paper?.authors || ''), [paper?.authors])
 
@@ -91,6 +106,15 @@ export default function PaperDetailPage() {
     setMessage('已保存')
     setTimeout(() => setMessage(''), 1600)
   }
+
+  const updateReadingQueue = useMutation({
+    mutationFn: (status: string) => api.updateReadingQueue(paperId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reading-queue'] })
+      setMessage('阅读状态已更新')
+      setTimeout(() => setMessage(''), 1600)
+    },
+  })
 
   async function copyCitation(format: 'ieee' | 'apa' | 'bibtex') {
     if (!paper) return
@@ -253,16 +277,36 @@ export default function PaperDetailPage() {
             <label>
               <span>状态</span>
               <select value={readingStatus} onChange={(event) => setReadingStatus(event.target.value)}>
-                <option value="unread">未读</option>
-                <option value="reading">在读</option>
-                <option value="read">已读</option>
-                <option value="important">重点</option>
-                <option value="skip">跳过</option>
+                {READING_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </label>
             <label><span>标签</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="PMIC, must-read" /></label>
             <label><span>私人笔记</span><textarea value={note} onChange={(event) => setNote(event.target.value)} /></label>
             <button className="ss-apply-filter" onClick={() => saveState()}>保存阅读状态</button>
+          </section>
+
+          <section className="ss-panel">
+            <div className="ss-panel-head compact"><h2>阅读队列</h2></div>
+            <div className="space-y-2 text-sm">
+              <p className="text-ink-muted text-xs">快速标记到阅读队列，不影响收藏和笔记。</p>
+              <div className="flex flex-wrap gap-1">
+                {READING_STATUS_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`text-xs px-2 py-1 rounded border ${readingStatus === opt.value ? 'bg-brand-50 border-brand-200 text-brand-700' : 'border-line hover:bg-surface-elevated'}`}
+                    onClick={() => {
+                      setReadingStatus(opt.value)
+                      updateReadingQueue.mutate(opt.value)
+                    }}
+                    disabled={updateReadingQueue.isPending}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </section>
         </aside>
       </div>

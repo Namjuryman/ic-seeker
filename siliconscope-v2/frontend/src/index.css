@@ -4485,10 +4485,21 @@
   display: grid;
 }
 
+.company-toast {
+  margin: 14px 18px 0;
+  border: 1px solid #cceee2;
+  border-radius: 12px;
+  background: #ecfdf6;
+  color: #087552;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
 .company-row {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) minmax(180px, 260px);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
   align-items: center;
   border-bottom: 1px solid #edf2f8;
   padding: 18px;
@@ -4500,6 +4511,16 @@
 .company-row:hover {
   background: #f7faff;
   box-shadow: inset 3px 0 0 #315fe8;
+}
+
+.company-row-link {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) minmax(190px, 270px);
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
 }
 
 .company-avatar {
@@ -4558,6 +4579,9 @@
 
 .company-tags em,
 .company-row-side i {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
   border-radius: 999px;
   background: #f1f5fb;
   padding: 5px 8px;
@@ -4565,9 +4589,13 @@
   font-size: 11px;
   font-style: normal;
   font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .company-tags em:first-child {
+  max-width: min(220px, 100%);
   background: #edf3ff;
   color: #315fe8;
 }
@@ -4598,6 +4626,40 @@
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
+  max-width: 270px;
+}
+
+.company-watch-button {
+  justify-self: end;
+  min-width: 74px;
+  border: 1px solid #d9e3f3;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f1f3d;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 20px rgba(49, 95, 232, .08);
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+
+.company-watch-button:hover:not(:disabled) {
+  border-color: #315fe8;
+  color: #315fe8;
+  transform: translateY(-1px);
+}
+
+.company-watch-button.active {
+  border-color: transparent;
+  background: #edf3ff;
+  color: #315fe8;
+}
+
+.company-watch-button:disabled {
+  opacity: .58;
+  cursor: wait;
 }
 
 @media (max-width: 980px) {
@@ -4619,6 +4681,10 @@
   }
 
   .company-row {
+    grid-template-columns: 1fr;
+  }
+
+  .company-row-link {
     grid-template-columns: 42px minmax(0, 1fr);
   }
 
@@ -4626,6 +4692,15 @@
     grid-column: 2;
     justify-items: start;
     text-align: left;
+  }
+
+  .company-row-side div {
+    justify-content: flex-start;
+  }
+
+  .company-watch-button {
+    justify-self: start;
+    margin-left: 58px;
   }
 }
 

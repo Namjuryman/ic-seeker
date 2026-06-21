@@ -36,6 +36,9 @@ import type {
   CompanyListResult,
   CompanyRow,
   CompanyCompareResult,
+  WatchlistItem,
+  WatchlistByType,
+  ReadingQueueGroup,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -337,6 +340,61 @@ export const api = {
 
   async deleteCompany(id: string) {
     const res = await axios.delete<{ id: string; deleted: boolean }>(`/api/admin/companies/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async watchlistItems() {
+    const res = await axios.get<WatchlistByType>('/api/watchlist')
+    return res.data
+  },
+
+  async watchlistByType(type: string) {
+    const res = await axios.get<WatchlistItem[]>(`/api/watchlist/type/${encodeURIComponent(type)}`)
+    return res.data
+  },
+
+  async addWatchlistItem(type: string, targetId: string, queryJson?: Record<string, unknown>) {
+    const res = await axios.post<{ ok: boolean; created?: boolean; alreadyExists?: boolean }>('/api/watchlist', { targetType: type, targetId, queryJson })
+    return res.data
+  },
+
+  async deleteWatchlistItem(id: number) {
+    const res = await axios.delete<{ ok: boolean }>(`/api/watchlist/${id}`)
+    return res.data
+  },
+
+  async readingQueue() {
+    const res = await axios.get<ReadingQueueGroup[]>('/api/reading-queue')
+    return res.data
+  },
+
+  async readingQueueStatus(paperId: number) {
+    const res = await axios.get<{ status: string }>(`/api/reading-queue/${paperId}`)
+    return res.data
+  },
+
+  async updateReadingQueue(paperId: number, status: string) {
+    const res = await axios.post<{ ok: boolean }>(`/api/reading-queue/${paperId}`, { status })
+    return res.data
+  },
+
+  async watchlistCompanies() {
+    const res = await axios.get<CompanyRow[]>('/api/watchlist/companies')
+    return res.data
+  },
+
+  async isWatchedCompany(id: string) {
+    const res = await axios.get<{ watched: boolean }>(`/api/watchlist/companies/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async watchCompany(id: string) {
+    const res = await axios.post<{ watched: boolean; companyId: string }>(`/api/watchlist/companies/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async unwatchCompany(id: string) {
+    const res = await axios.delete<{ watched: boolean; companyId: string }>(`/api/watchlist/companies/${encodeURIComponent(id)}`)
     return res.data
   },
 

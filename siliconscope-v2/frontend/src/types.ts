@@ -22,6 +22,7 @@ export interface PaperRow {
   readingStatus?: string;
   tags?: Array<{ name: string; color: string }>;
   note?: string;
+  matchReason?: string;
 }
 
 export interface SearchResult {
@@ -547,6 +548,8 @@ export interface CompanyFieldFact {
   fieldValue: string;
   confidence: number;
   fetchedAt?: string;
+  sourceName?: string;
+  sourceUrl?: string;
 }
 
 export interface CompanyListResult {
@@ -554,6 +557,30 @@ export interface CompanyListResult {
   total: number;
   limit: number;
   offset: number;
+}
+
+export type WatchlistTargetType = 'company' | 'paper' | 'author' | 'institution' | 'topic' | 'venue' | 'search' | 'roadmap' | 'lesson'
+
+export interface WatchlistItem {
+  id: number
+  userId: number
+  targetType: WatchlistTargetType
+  targetId: string
+  queryJson?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WatchlistByType {
+  companies: Array<WatchlistItem & { title: string; subtitle: string; country: string; city: string; dataConfidence?: number; href: string }>
+  searches: Array<WatchlistItem & { queryJsonObj?: Record<string, unknown>; href: string }>
+  papers: Array<WatchlistItem & { title: string; venue: string; year: number | null; rank: string; field: string; score: number | null; href: string }>
+  authors: Array<WatchlistItem & { title: string; href: string }>
+  institutions: Array<WatchlistItem & { title: string; href: string }>
+  topics: Array<WatchlistItem & { title: string; href: string }>
+  venues: Array<WatchlistItem & { title: string; href: string }>
+  roadmaps: Array<WatchlistItem & { title: string; family: string; href: string }>
+  lessons: Array<WatchlistItem & { title: string; roadmapSlug: string; href: string }>
 }
 
 export interface CompanyCompareResult {
@@ -564,6 +591,13 @@ export interface CompanyCompareResult {
   sharedProductLines: string[];
   fitMatching: Record<string, string[]>;
   caveat: string;
+}
+
+export interface ReadingQueueGroup {
+  status: string
+  label: string
+  count: number
+  papers: Array<{ paper: PaperRow; status: string; updatedAt: string | null }>
 }
 
 export type CompanyJobSignal = {

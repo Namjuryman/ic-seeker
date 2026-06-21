@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { db, sqlite } from "../db/connection.js";
 import { companies, companyAliases, companySources, companyFieldFacts } from "../db/schema.js";
-import { searchService } from "./search.service.js";
+import { toPaperRow } from "./paper-row.js";
 import { learningRoadmaps } from "../data/learning-catalog.js";
+import { watchlistService } from "./watchlist.service.js";
 
 const ORDER_BY_COLUMNS: Record<string, string> = {
   name: "name",
@@ -43,6 +44,10 @@ function parseJson(value: string | null): string[] {
 function toJson(value: string[] | null): string | null {
   if (!value || !value.length) return null;
   return JSON.stringify(value);
+}
+
+function escapeLike(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
 function enrichCompany(row: Record<string, any>): Record<string, any> {
@@ -146,12 +151,23 @@ export const companyService = {
       .all(id) as Record<string, any>[];
 
     const fieldFacts = sqlite
-      .prepare("SELECT * FROM company_field_facts WHERE company_id = ? ORDER BY field_name")
+      .prepare(`
+        SELECT f.id, f.field_name, f.field_value, f.confidence, f.fetched_at,
+               s.source_name, s.source_url
+        FROM company_field_facts f
+        LEFT JOIN company_sources s ON f.source_id = s.id
+        WHERE f.company_id = ?
+        ORDER BY f.field_name
+      `)
       .all(id) as Record<string, any>[];
 
     const aliases = sqlite
       .prepare("SELECT alias FROM company_aliases WHERE company_id = ?")
       .all(id) as Array<{ alias: string }>;
+
+    const rowAliases = parseJson(row.aliases_json);
+    const dbAliases = aliases.map((a) => a.alias);
+    const allAliases = [...new Set([...rowAliases, ...dbAliases])].filter(Boolean);
 
     return {
       ...enrichCompany(row),
@@ -170,8 +186,10 @@ export const companyService = {
         fieldValue: f.field_value,
         confidence: f.confidence,
         fetchedAt: f.fetched_at,
+        sourceName: f.source_name || undefined,
+        sourceUrl: f.source_url || undefined,
       })),
-      aliases: aliases.map((a) => a.alias),
+      aliases: allAliases,
     } as Record<string, any>;
   },
 
@@ -424,12 +442,94 @@ export const companyService = {
     const company = this.getCompany(companyId);
     if (!company) return null;
 
-    const names = [company.name, ...(company.aliases || [])].filter(Boolean);
-    if (!names.length) return { rows: [], total: 0 };
+    const primaryNames = [company.name, company.legalName]
+      .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+      .map((n) => n.trim());
+    const safeAliases = (company.aliases || [] as string[])
+      .filter((a: string) => typeof a === "string" && a.trim().length > 3)
+      .map((a: string) => a.trim());
 
-    // Build an OR query for affiliation matching
-    const q = names.map((n) => `"${n}"`).join(" OR ");
-    return searchService.search({ q, scope: "all", limit: String(limit), sort: "relevance" }, 0);
+    const allNames = [...new Set([...primaryNames, ...safeAliases])];
+    if (!allNames.length) {
+      return { rows: [], total: 0, limit, offset: 0, engine: "sqlite-affiliation", query: "", caveat: "based on affiliation text matching" };
+    }
+
+    // Total count using all names
+    const orConditions = allNames.map(() => "affiliations LIKE ? ESCAPE '\\'").join(" OR ");
+    const orParams = allNames.map((n) => `%${escapeLike(n)}%`);
+    const totalRow = sqlite
+      .prepare(`SELECT COUNT(*) as n FROM papers WHERE ${orConditions}`)
+      .get(...orParams) as { n: number } | undefined;
+
+    // Query per name to determine matchReason, then merge
+    const matchMap = new Map<number, { paper: Record<string, any>; matchReason: string }>();
+
+    for (const name of primaryNames) {
+      const like = `%${escapeLike(name)}%`;
+      const rows = sqlite
+        .prepare(`
+          SELECT
+            id, title, authors, affiliations, abstract, year,
+            venue, venue_rank AS rank, domain AS field,
+            quality_score AS score, doi, pdf_link AS pdfLink,
+            source_url AS sourceUrl, publication_title AS publicationTitle,
+            openalex_id AS openalexId, ieee_article_number AS ieeeArticleNumber,
+            local_pdf AS localPdf, download_status AS downloadStatus,
+            citation_count AS citationCount, verification_status AS verificationStatus,
+            collection_method AS collectionMethod
+          FROM papers
+          WHERE affiliations LIKE ? ESCAPE '\\'
+          ORDER BY year DESC, quality_score DESC
+          LIMIT ?
+        `)
+        .all(like, limit) as Record<string, any>[];
+      const reason = name === company.name ? "name" : "legalName";
+      for (const row of rows) {
+        if (!matchMap.has(row.id)) {
+          matchMap.set(row.id, { paper: row, matchReason: reason });
+        }
+      }
+    }
+
+    for (const alias of safeAliases) {
+      const like = `%${escapeLike(alias)}%`;
+      const rows = sqlite
+        .prepare(`
+          SELECT
+            id, title, authors, affiliations, abstract, year,
+            venue, venue_rank AS rank, domain AS field,
+            quality_score AS score, doi, pdf_link AS pdfLink,
+            source_url AS sourceUrl, publication_title AS publicationTitle,
+            openalex_id AS openalexId, ieee_article_number AS ieeeArticleNumber,
+            local_pdf AS localPdf, download_status AS downloadStatus,
+            citation_count AS citationCount, verification_status AS verificationStatus,
+            collection_method AS collectionMethod
+          FROM papers
+          WHERE affiliations LIKE ? ESCAPE '\\'
+          ORDER BY year DESC, quality_score DESC
+          LIMIT ?
+        `)
+        .all(like, limit) as Record<string, any>[];
+      for (const row of rows) {
+        if (!matchMap.has(row.id)) {
+          matchMap.set(row.id, { paper: row, matchReason: "alias" });
+        }
+      }
+    }
+
+    const matched = [...matchMap.values()]
+      .sort((a, b) => (b.paper.year - a.paper.year) || (b.paper.quality_score - a.paper.quality_score))
+      .slice(0, limit);
+
+    return {
+      rows: matched.map((m) => ({ ...toPaperRow(m.paper), matchReason: m.matchReason })),
+      total: totalRow?.n ?? 0,
+      limit,
+      offset: 0,
+      engine: "sqlite-affiliation",
+      query: allNames.join(" | "),
+      caveat: "based on affiliation text matching",
+    };
   },
 
   getRelatedRoadmaps(companyId: string) {
@@ -502,6 +602,40 @@ export const companyService = {
     return matchedRoadmaps
       .sort((a, b) => b.score - a.score)
       .slice(0, 8);
+  },
+
+  listWatchedCompanies(userId: number) {
+    const rows = sqlite
+      .prepare(`
+        SELECT c.* FROM companies c
+        JOIN watchlist_items w ON w.target_id = c.id
+        WHERE w.user_id = ? AND w.target_type = 'company'
+        ORDER BY c.name COLLATE NOCASE
+      `)
+      .all(userId) as Record<string, any>[];
+    return rows.map(enrichCompany);
+  },
+
+  isWatchedCompany(userId: number, companyId: string) {
+    const row = sqlite
+      .prepare("SELECT id FROM watchlist_items WHERE user_id = ? AND target_type = 'company' AND target_id = ?")
+      .get(userId, companyId) as { id: number } | undefined;
+    return Boolean(row);
+  },
+
+  watchCompany(userId: number, companyId: string) {
+    const now = new Date().toISOString();
+    sqlite.prepare(`
+      INSERT INTO watchlist_items (user_id, target_type, target_id, created_at, updated_at)
+      VALUES (?, 'company', ?, ?, ?)
+      ON CONFLICT DO NOTHING
+    `).run(userId, companyId, now, now);
+    return { watched: true, companyId };
+  },
+
+  unwatchCompany(userId: number, companyId: string) {
+    sqlite.prepare("DELETE FROM watchlist_items WHERE user_id = ? AND target_type = 'company' AND target_id = ?").run(userId, companyId);
+    return { watched: false, companyId };
   },
 
   getCompanyTypes() {

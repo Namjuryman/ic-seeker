@@ -3,11 +3,15 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema.js";
 import { appConfig } from "../config.js";
 import { applyPerformanceSettings } from "./performance.js";
+import { ensureCompanyTables } from "../scripts/company-schema.js";
 
 export const sqlite = new Database(appConfig.dbPath);
 
 // Apply SQLite read-performance pragmas and indexes at startup.
 applyPerformanceSettings(sqlite);
+
+// Ensure company intelligence tables exist on startup
+ensureCompanyTables(sqlite);
 
 export const db = drizzle(sqlite, { schema });
 

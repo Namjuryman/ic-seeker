@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, useSearchParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EntityLink } from '../components/EntityLink'
@@ -409,8 +410,26 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [saveMessage, setSaveMessage] = useState('')
+
+  const queryClient = useQueryClient()
 
   const page = Math.max(1, Number(searchParams.get('page') || 1))
+
+  const saveSearchMutation = useMutation({
+    mutationFn: async () => {
+      const params = paramsFromControls(controls)
+      return api.addWatchlistItem('search', 'placeholder', params)
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] })
+      setSaveMessage(data.alreadyExists ? '搜索已保存（已存在）' : '搜索已保存')
+      setTimeout(() => setSaveMessage(''), 1400)
+    },
+    onError: (err: any) => {
+      setError(err?.response?.data?.error || err?.message || '保存失败')
+    },
+  })
 
   const venueOptions = useMemo(() => (stats?.venues || []).filter(Boolean).slice(0, 120), [stats])
   const fieldOptions = useMemo(() => (stats?.fields || []).filter(Boolean).slice(0, 120), [stats])
@@ -570,6 +589,7 @@ export default function HomePage() {
             <div>
               <strong>{formatNumber(results?.total)} 条结果</strong>
               <span>{results?.expandedQuery ? `扩展查询：${results.expandedQuery}` : results?.engine || 'sqlite'}</span>
+              {saveMessage && <span className="ml-2 text-xs text-emerald-600">{saveMessage}</span>}
             </div>
             <div className="ss-result-tools">
               <select value={controls.sort} onChange={(event) => { const next = { ...controls, sort: event.target.value }; setControls(next); submit(1, next) }}>
@@ -579,6 +599,9 @@ export default function HomePage() {
                 <option value="citations">引用数</option>
                 <option value="title">标题</option>
               </select>
+              <button type="button" onClick={() => saveSearchMutation.mutate()} disabled={saveSearchMutation.isPending}>
+                {saveSearchMutation.isPending ? '保存中...' : '保存搜索'}
+              </button>
               <button type="button">列表</button>
               <button type="button">导出</button>
             </div>

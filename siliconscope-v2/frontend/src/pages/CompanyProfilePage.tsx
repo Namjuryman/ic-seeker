@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { searchPath, roadmapPath } from '../utils/routes'
-import type { CompanyRow, PaperRow, SearchResult } from '../types'
+import type { CompanyRow, PaperRow, SearchResult, CompanyFieldFact } from '../types'
 
 interface RelatedRoadmap {
   slug: string
@@ -29,15 +30,74 @@ function formatDate(iso: string | undefined): string {
   }
 }
 
+function findFieldFact(fieldFacts: CompanyFieldFact[] | undefined, fieldName: string): CompanyFieldFact | undefined {
+  return fieldFacts?.find((f) => f.fieldName === fieldName)
+}
+
+function FieldProvenance({ fieldFacts, fieldName }: { fieldFacts: CompanyFieldFact[] | undefined; fieldName: string }) {
+  const fact = findFieldFact(fieldFacts, fieldName)
+  if (!fact || !fact.sourceName) {
+    return <span className="text-xs text-ink-subtle">source not verified</span>
+  }
+  return (
+    <span className="text-xs text-ink-secondary">
+      {fact.sourceUrl ? (
+        <a
+          href={fact.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-brand-600 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {fact.sourceName}
+        </a>
+      ) : (
+        <span>{fact.sourceName}</span>
+      )}
+      {' · '}
+      <span className={confidenceBadge(fact.confidence)}>{fact.confidence}% confidence</span>
+      {' · '}
+      <span>{formatDate(fact.fetchedAt)}</span>
+    </span>
+  )
+}
+
 export default function CompanyProfilePage() {
   const { companyId } = useParams<{ companyId: string }>()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const [company, setCompany] = useState<CompanyRow | null>(null)
   const [papers, setPapers] = useState<SearchResult | null>(null)
   const [roadmaps, setRoadmaps] = useState<RelatedRoadmap[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+
+  const watchQuery = useQuery({
+    queryKey: ['is-watched-company', companyId],
+    queryFn: () => api.isWatchedCompany(companyId || '').catch(() => ({ watched: false })),
+    enabled: !!companyId,
+  })
+  const watched = watchQuery.data?.watched || false
+
+  const watchMutation = useMutation({
+    mutationFn: async () => {
+      if (!companyId) throw new Error('Missing company ID')
+      if (watched) return api.unwatchCompany(companyId)
+      return api.watchCompany(companyId)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['is-watched-company', companyId] })
+      queryClient.invalidateQueries({ queryKey: ['watchlist-companies-ids'] })
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] })
+      setMessage(watched ? '已取消关注' : '已关注')
+      setTimeout(() => setMessage(''), 1400)
+    },
+    onError: (err: any) => {
+      setError(err?.message || 'Failed to update watchlist')
+    },
+  })
 
   useEffect(() => {
     if (!companyId) {
@@ -111,6 +171,12 @@ export default function CompanyProfilePage() {
 
   return (
     <div className="ss-profile-page">
+      {message && (
+        <div className="rounded-xl border p-2 text-sm bg-emerald-50 text-emerald-700 border-emerald-100 mb-4">
+          {message}
+        </div>
+      )}
+
       <button className="ss-back-button" onClick={() => navigate('/companies')}>
         Back to companies
       </button>
@@ -140,6 +206,9 @@ export default function CompanyProfilePage() {
               </a>
             )}
           </div>
+          <p className="text-xs text-ink-subtle mt-2">
+            Confidence is a metadata completeness and provenance score, not a company strength, salary level, or employment quality ranking.
+          </p>
           {aliases.length > 0 && (
             <p className="text-sm text-ink-muted mt-2">
               Also known as: {aliases.join(', ')}
@@ -147,8 +216,13 @@ export default function CompanyProfilePage() {
           )}
         </div>
         <div className="ss-profile-actions">
-          <button className="ss-button" disabled title="Coming soon">
-            Watch company
+          <button
+            className={`ss-button ${watched ? 'ss-button-secondary' : ''}`}
+            disabled={watchMutation.isPending}
+            onClick={() => watchMutation.mutate()}
+            title={watched ? 'Unwatch this company' : 'Watch this company'}
+          >
+            {watchMutation.isPending ? '...' : watched ? 'Unwatch' : 'Watch company'}
           </button>
         </div>
       </section>
@@ -171,18 +245,22 @@ export default function CompanyProfilePage() {
               <div>
                 <span className="text-ink-muted">Founded</span>
                 <div className="font-medium text-ink-text">{company.foundedYear ?? '—'}</div>
+                <FieldProvenance fieldFacts={company.fieldFacts} fieldName="foundedYear" />
               </div>
               <div>
                 <span className="text-ink-muted">Registered Capital</span>
                 <div className="font-medium text-ink-text">{company.registeredCapital || '—'}</div>
+                <FieldProvenance fieldFacts={company.fieldFacts} fieldName="registeredCapital" />
               </div>
               <div>
                 <span className="text-ink-muted">Employees</span>
                 <div className="font-medium text-ink-text">{company.employeeCount || company.employeeCountRange || '—'}</div>
+                <FieldProvenance fieldFacts={company.fieldFacts} fieldName="employees" />
               </div>
               <div>
                 <span className="text-ink-muted">Status</span>
                 <div className="font-medium text-ink-text">{company.status || '—'}</div>
+                <FieldProvenance fieldFacts={company.fieldFacts} fieldName="status" />
               </div>
               <div>
                 <span className="text-ink-muted">Stock Ticker</span>
@@ -226,6 +304,7 @@ export default function CompanyProfilePage() {
                       </Link>
                     ))}
                   </div>
+                  <FieldProvenance fieldFacts={company.fieldFacts} fieldName="domains" />
                 </div>
               )}
               {company.productLines && company.productLines.length > 0 && (
@@ -340,6 +419,9 @@ export default function CompanyProfilePage() {
                       <div>
                         <h4><PaperLink id={paper.id} title={paper.title} /></h4>
                         <p>{paper.authors || '-'}</p>
+                        {paper.matchReason && (
+                          <span className="text-xs text-ink-subtle">Matched by: {paper.matchReason}</span>
+                        )}
                       </div>
                       <div className="ss-mini-meta">
                         <span>{paper.venue}</span>
@@ -408,6 +490,51 @@ export default function CompanyProfilePage() {
                 </div>
               ) : (
                 <div className="text-ink-muted text-sm">No source data available.</div>
+              )}
+
+              {company.fieldFacts && company.fieldFacts.length > 0 && (
+                <div className="mt-4 overflow-x-auto">
+                  <h3 className="text-xs font-semibold text-ink-subtle uppercase tracking-wide mb-2">Field Facts</h3>
+                  <table className="w-full text-sm text-left">
+                    <thead className="border-b border-line">
+                      <tr>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">Field</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">Value</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">Source</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">Conf.</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">Fetched</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {company.fieldFacts.slice(0, 20).map((f) => (
+                        <tr key={f.id} className="border-b border-line last:border-b-0">
+                          <td className="py-2 pr-2 text-ink-text">{f.fieldName}</td>
+                          <td className="py-2 pr-2 text-ink-text">{f.fieldValue}</td>
+                          <td className="py-2 pr-2 text-ink-text">
+                            {f.sourceUrl ? (
+                              <a
+                                href={f.sourceUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-brand-600 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {f.sourceName || '—'}
+                              </a>
+                            ) : (
+                              f.sourceName || '—'
+                            )}
+                          </td>
+                          <td className="py-2 pr-2 text-ink-secondary">{f.confidence}</td>
+                          <td className="py-2 text-ink-muted">{formatDate(f.fetchedAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {company.fieldFacts.length > 20 && (
+                    <p className="text-xs text-ink-muted mt-2">+{company.fieldFacts.length - 20} more field facts</p>
+                  )}
+                </div>
               )}
             </div>
           </section>

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
@@ -36,8 +36,17 @@ function getSuitableCompanyTypes(domain: string): string[] {
 
 export default function RoadmapDetailPage() {
   const { slug = '' } = useParams()
+  const queryClient = useQueryClient()
   const roadmap = useQuery({ queryKey: ['learning-roadmap', slug], queryFn: () => api.learningRoadmap(slug), enabled: Boolean(slug) })
   const related = useQuery({ queryKey: ['learning-roadmap-papers', slug], queryFn: () => api.roadmapRelatedPapers(slug, 8), enabled: Boolean(slug) })
+
+  const addToQueue = useMutation({
+    mutationFn: ({ paperId, status }: { paperId: number; status: string }) =>
+      api.updateReadingQueue(paperId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reading-queue'] })
+    },
+  })
 
   if (roadmap.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading roadmap...</p></div>
   if (roadmap.isError || !roadmap.data) return <div className="ss-empty-state">Roadmap not found.</div>
@@ -254,9 +263,19 @@ export default function RoadmapDetailPage() {
           </div>
           <div className="learning-paper-list">
             {related.data?.rows?.slice(0, 6).map((paper) => (
-              <div key={paper.id}>
-                <PaperLink id={paper.id} title={paper.title} />
-                <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
+              <div key={paper.id} className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <PaperLink id={paper.id} title={paper.title} />
+                  <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
+                </div>
+                <button
+                  className="text-xs px-2 py-0.5 rounded border border-line hover:bg-surface-elevated shrink-0"
+                  onClick={() => addToQueue.mutate({ paperId: paper.id, status: 'unread' })}
+                  disabled={addToQueue.isPending}
+                  title="Add to reading queue"
+                >
+                  + 队列
+                </button>
               </div>
             )) ?? <p className="learning-muted">Loading related papers...</p>}
           </div>

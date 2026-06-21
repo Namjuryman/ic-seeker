@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
@@ -50,6 +50,8 @@ const sectionLabels: Record<string, string> = {
 
 export default function DailyLessonPage({ today = false }: { today?: boolean }) {
   const { lessonId = '' } = useParams()
+  const queryClient = useQueryClient()
+
   const lessonQuery = useQuery({
     queryKey: ['learning-lesson', today ? 'today' : lessonId],
     queryFn: () => today ? api.todayLesson() : api.dailyLesson(lessonId),
@@ -59,6 +61,14 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
     queryKey: ['learning-lesson-papers', lessonQuery.data?.id],
     queryFn: () => api.lessonRelatedPapers(lessonQuery.data!.id, 8),
     enabled: Boolean(lessonQuery.data?.id),
+  })
+
+  const addToQueue = useMutation({
+    mutationFn: ({ paperId, status }: { paperId: number; status: string }) =>
+      api.updateReadingQueue(paperId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reading-queue'] })
+    },
   })
 
   if (lessonQuery.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading lesson...</p></div>
@@ -198,7 +208,17 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
         <div className="learning-paper-grid">
           {related.data?.rows?.slice(0, 8).map((paper) => (
             <article key={paper.id}>
-              <PaperLink id={paper.id} title={paper.title} />
+              <div className="flex items-center justify-between gap-2">
+                <PaperLink id={paper.id} title={paper.title} />
+                <button
+                  className="text-xs px-2 py-0.5 rounded border border-line hover:bg-surface-elevated shrink-0"
+                  onClick={() => addToQueue.mutate({ paperId: paper.id, status: 'unread' })}
+                  disabled={addToQueue.isPending}
+                  title="Add to reading queue"
+                >
+                  + 队列
+                </button>
+              </div>
               <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
               <p>{paper.abstract || 'No abstract available.'}</p>
             </article>

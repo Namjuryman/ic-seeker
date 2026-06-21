@@ -138,8 +138,8 @@ Recommended first public setup:
 - Rent a small VPS with Docker support.
 - Point your domain to Cloudflare DNS.
 - Run IC Seeker with `docker compose up -d` on the VPS.
-- Put Caddy, Nginx Proxy Manager, or Cloudflare Tunnel in front of port `8750` for HTTPS.
-- Keep `ADMIN_PASSWORD`, `COOKIE_SECRET`, and future IEEE/OpenAI keys in `.env`, never in Git.
+- Put Caddy, Nginx Proxy Manager, or Cloudflare Tunnel in front of port `8751` for HTTPS.
+- Keep `ADMIN_PASSWORD`, `JWT_SECRET`, and future IEEE/OpenAI keys in `.env`, never in Git.
 - Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/` regularly.
 - For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
 - When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
@@ -155,6 +155,40 @@ Vercel is useful for a future static/Next.js frontend, but the current app is a 
 - Store optional service keys from the API-key panel. Values are masked in the UI.
 
 More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).
+
+## Company Intelligence
+
+The Company Intelligence module is a curated employer/industry metadata directory within SiliconScope. It is designed for:
+
+- Browsing semiconductor companies by type, region, and technology domain.
+- Viewing public metadata such as company type, product lines, domains, and career signals.
+- Linking companies to related research papers (via affiliation text matching) and learning roadmaps.
+- Comparing companies side-by-side for competitive landscape context.
+
+It is **not** an investment recommendation platform, a company ranking service, or a job board. All company data is sourced from public information and may be incomplete or stale; verify critical decisions independently.
+
+### Seed the Company Directory
+
+The company tables are auto-created on backend startup, but the directory must be seeded with initial data:
+
+```powershell
+cd backend
+npm run companies:seed
+```
+
+Or from the project root:
+
+```powershell
+npm run companies:seed
+```
+
+This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`, `company_sources`, `company_aliases`, `company_field_facts`, and `company_job_signals` tables if needed, then inserts/updating the seed catalog. You can safely rerun it after updating the seed data in `backend/src/data/company-seed/`.
+
+### Admin Operations
+
+- Create, edit, and delete companies from the Company Admin page (`/admin/companies`).
+- CSV bulk import is planned but not yet implemented.
+- All `/api/admin/*` endpoints require admin role (`requireAdmin`). In the current private MVP, local users are treated as admin when auth is disabled.
 
 ## Learning Roadmap Source
 

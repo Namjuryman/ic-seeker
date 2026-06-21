@@ -14,7 +14,8 @@
     "build:backend": "npm --workspace siliconscope-v2-backend run build",
     "build:frontend": "npm --workspace siliconscope-v2-frontend run build",
     "start": "npm --workspace siliconscope-v2-backend run start",
-    "test": "npm --workspace siliconscope-v2-backend run test"
+    "test": "npm --workspace siliconscope-v2-backend run test",
+    "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed"
   },
   "engines": {
     "node": ">=22.0.0"
