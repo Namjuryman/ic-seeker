@@ -9,6 +9,7 @@ ENV PUBLIC_DIR=/app/frontend/dist
 COPY package.json ./
 COPY backend/package.json backend/package.json
 COPY frontend/package.json frontend/package.json
+COPY frontend-admin/package.json frontend-admin/package.json
 
 RUN npm install --workspaces --include=dev
 

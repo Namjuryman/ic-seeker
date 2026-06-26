@@ -4,9 +4,10 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $BackendDir = Join-Path $ScriptDir "backend"
 $FrontendDir = Join-Path $ScriptDir "frontend"
+$AdminDir = Join-Path $ScriptDir "frontend-admin"
 $BackendUrl = "http://127.0.0.1:8751"
 $FrontendUrl = "http://localhost:5173"
-$AdminUrl = "$FrontendUrl/admin"
+$AdminUrl = "http://localhost:5176"
 
 function Start-NamedShell {
   param(
@@ -34,17 +35,22 @@ Write-Host "  SiliconScope v2 dev launcher" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "[1/3] Starting backend API..." -ForegroundColor Yellow
+Write-Host "[1/4] Starting backend API..." -ForegroundColor Yellow
 Start-NamedShell -Title "SiliconScope v2 Backend" -WorkingPath $BackendDir -Command "`$env:IC_SEEKER_LOCAL_ADMIN='1'; npx tsx watch src/index.ts"
 
 Start-Sleep -Seconds 2
 
-Write-Host "[2/3] Starting frontend dev server..." -ForegroundColor Yellow
+Write-Host "[2/4] Starting public frontend dev server..." -ForegroundColor Yellow
 Start-NamedShell -Title "SiliconScope v2 Frontend" -WorkingPath $FrontendDir -Command "npm run dev"
+
+Start-Sleep -Seconds 1
+
+Write-Host "[3/4] Starting independent admin frontend..." -ForegroundColor Yellow
+Start-NamedShell -Title "SiliconScope v2 Admin" -WorkingPath $AdminDir -Command "npm run dev"
 
 Start-Sleep -Seconds 3
 
-Write-Host "[3/3] Opening frontend and admin console..." -ForegroundColor Yellow
+Write-Host "[4/4] Opening frontend and admin console..." -ForegroundColor Yellow
 Start-Process $FrontendUrl
 Start-Process $AdminUrl
 

@@ -1,13 +1,28 @@
-# IC Seeker Public Deployment
+# SiliconScope Public Deployment
 
-IC Seeker is a Node.js service backed by a local SQLite database and PDF inbox. The recommended public deployment is:
+SiliconScope is now split into three deployable surfaces:
 
-1. Run the app on a small VPS or your own always-on machine with Docker.
-2. Put Cloudflare in front of it with either Cloudflare Tunnel or normal DNS + reverse proxy.
+1. Public frontend: `frontend`, deployed to `www.siliconscope.com` or the root domain.
+2. Independent admin frontend: `frontend-admin`, deployed to `admin.siliconscope.com`.
+3. Backend API: `backend`, deployed on a VPS/Docker host behind HTTPS.
 
-The current public-safe product shape should expose metadata, DOI links, abstracts, search, author/institution/topic/region intelligence, and personal reading state. It should not serve publisher PDFs to other users. For a commercial public site, keep paper reading as official-source redirects unless you have redistribution rights.
+The public-safe product shape should expose metadata, DOI links, abstracts, search, author/institution/topic/region intelligence, and personal reading state. It should not serve publisher PDFs to other users. For a commercial public site, keep paper reading as official-source redirects unless you have redistribution rights.
 
-Vercel is not the recommended target for the current architecture because the app expects a persistent SQLite file and long-running Node server process. Vercel is better after the backend is split into serverless APIs and the database is moved to a hosted database.
+Vercel or Cloudflare Pages can host the two static frontends. The backend still needs a persistent server or container because it owns SQLite/Postgres access, admin APIs, authentication cookies, ingestion jobs, and local PDF workflows.
+
+## Local Development
+
+```powershell
+.\start-dev.ps1
+```
+
+This starts:
+
+- Backend API: `http://127.0.0.1:8751`
+- Public frontend: `http://localhost:5173`
+- Admin frontend: `http://localhost:5176`
+
+The launcher sets `IC_SEEKER_LOCAL_ADMIN=1` for local development only. Never set that flag on a public server.
 
 ## Option A: Cloudflare Tunnel
 
@@ -15,19 +30,21 @@ Use this when you do not want to open inbound ports on the server.
 
 1. Point your domain to Cloudflare.
 2. On the server, clone the repo and create `.env`.
-3. Start IC Seeker:
+3. Start the backend API:
 
 ```powershell
 docker compose up -d --build
 ```
 
-4. In Cloudflare Zero Trust, create a Tunnel and map your hostname to:
+4. In Cloudflare Zero Trust, create tunnel hostnames:
 
 ```text
-http://ic-seeker:8750
+api.siliconscope.com -> http://ic-seeker:8750
+www.siliconscope.com -> static frontend hosting
+admin.siliconscope.com -> static admin hosting
 ```
 
-If you run `cloudflared` outside Docker on the host, map the hostname to:
+If you run `cloudflared` outside Docker on the host, map the API hostname to:
 
 ```text
 http://127.0.0.1:8750
@@ -37,8 +54,10 @@ http://127.0.0.1:8750
 
 ```env
 IC_SEEKER_REQUIRE_LOGIN=1
+IC_SEEKER_LOCAL_ADMIN=0
 ADMIN_PASSWORD=replace-with-a-long-password
-COOKIE_SECRET=replace-with-a-long-random-string
+JWT_SECRET=replace-with-a-long-random-string
+FRONTEND_ORIGINS=https://www.siliconscope.com,https://admin.siliconscope.com
 HOST=0.0.0.0
 PORT=8750
 ```
@@ -47,10 +66,11 @@ PORT=8750
 
 Use this when you are comfortable opening ports `80` and `443` on a VPS.
 
-1. Run the app with Docker Compose.
-2. Put Caddy or Nginx in front of `127.0.0.1:8750`.
-3. Create a Cloudflare DNS record for your domain pointing to the VPS.
-4. Enable HTTPS at the reverse proxy.
+1. Run the backend API with Docker Compose.
+2. Put Caddy or Nginx in front of `127.0.0.1:8750` as `api.siliconscope.com`.
+3. Host `frontend/dist` as `www.siliconscope.com`.
+4. Host `frontend-admin/dist` as `admin.siliconscope.com`.
+5. Enable HTTPS at the reverse proxy and static hosts.
 
 ## Why Not Vercel Yet
 
@@ -71,14 +91,16 @@ Before a Vercel deployment, migrate to:
 ## Production Checklist
 
 - Set `IC_SEEKER_REQUIRE_LOGIN=1`.
+- Set `IC_SEEKER_LOCAL_ADMIN=0`.
 - Use a strong `ADMIN_PASSWORD`.
-- Use a strong random `COOKIE_SECRET`.
+- Use a strong random `JWT_SECRET`.
+- Set `FRONTEND_ORIGINS` to both the public frontend and admin frontend domains.
 - Keep `.env` out of Git.
 - Back up `ic_database/ic_papers.sqlite`.
 - Do not proxy raw publisher PDFs unless you have rights to redistribute them.
 - Keep AMiner/IEEE API keys in environment variables, not frontend code.
 - Schedule regular database backups before running new crawls/imports.
-- Add a private admin route or script for IEEE API sync rather than calling paid APIs directly from the frontend.
+- Run IEEE/OpenAlex/Crossref sync and admin operations only from the backend/admin frontend, never from the public frontend.
 - Add rate limiting before public traffic or paid subscriptions.
 
 ## Upgrade Path
@@ -88,6 +110,6 @@ When the site grows beyond private usage:
 1. Keep the current Docker+SQLite version as the local/private edition.
 2. Move metadata to Postgres, with migrations and normalized tables for papers, authors, institutions, venues, topics, and paper-source provenance.
 3. Move user PDFs, if any, to private object storage with per-user access control.
-4. Split the frontend into a static app or Next.js app, then deploy that frontend to Vercel/Cloudflare Pages.
+4. Keep public frontend and admin frontend as separate deployments.
 5. Run IEEE/OpenAlex/Crossref/AMiner sync jobs on the backend with quotas, logs, retries, and source provenance.
 6. Add billing only after the metadata policy, access control, and source terms are clear.

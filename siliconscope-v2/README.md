@@ -4,7 +4,7 @@ SiliconScope v2 is the active frontend/backend separated edition of the IC paper
 
 It builds on the original ChipSeeker-style private prototype, but v2 is now the canonical product path. New product work should happen in this folder rather than the archived `ic_seeker/` v1 app.
 
-It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current web app is designed as a private MVP, not a public multi-user SaaS.
+It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current product is split into a public research frontend, an independent admin frontend, and a backend API. It is still a private MVP, not a public multi-user SaaS.
 
 ## Current Dataset
 
@@ -58,6 +58,7 @@ git lfs pull
 - Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
 - CSV export compatible with ChipSeeker-like workflows
 - Mobile-friendly web layout
+- Independent admin frontend for operations, intended for a future `admin.siliconscope.com` deployment
 - Docker deployment
 
 ## Commercial Architecture Track
@@ -86,11 +87,19 @@ Requirements:
 - Node.js `>=22.5.0`
 - Windows PowerShell, macOS shell, or Linux shell
 
-Run both v2 services from this folder:
+Run v2 services from this folder:
 
 ```powershell
 .\start-dev.ps1
 ```
+
+The dev launcher starts:
+
+- Backend API: `http://127.0.0.1:8751`
+- Public frontend: `http://localhost:5173`
+- Independent admin frontend: `http://localhost:5176`
+
+The launcher sets `IC_SEEKER_LOCAL_ADMIN=1` only for local development so the admin app can be opened on your machine. Do not enable this flag on a public server.
 
 Or run the production-style build from this folder:
 
@@ -110,10 +119,23 @@ cd frontend
 npm run dev
 ```
 
+For the independent admin frontend:
+
+```powershell
+cd frontend-admin
+npm run dev
+```
+
 Open the development frontend:
 
 ```text
 http://localhost:5173
+```
+
+Open the development admin console:
+
+```text
+http://localhost:5176
 ```
 
 The backend API runs at:
@@ -122,7 +144,7 @@ The backend API runs at:
 http://127.0.0.1:8751
 ```
 
-For Docker or production-style serving, the backend serves `frontend/dist` after `npm run build`.
+For Docker or production-style serving, the backend currently serves `frontend/dist` as the public site after `npm run build`. The admin frontend builds separately into `frontend-admin/dist` and should be deployed behind a separate admin host.
 
 Create `.env` from the example before exposing the site outside your own machine:
 
@@ -149,14 +171,19 @@ Recommended first public setup:
 
 - Rent a small VPS with Docker support.
 - Point your domain to Cloudflare DNS.
-- Run IC Seeker with `docker compose up -d` on the VPS.
-- Put Caddy, Nginx Proxy Manager, or Cloudflare Tunnel in front of port `8751` for HTTPS.
+- Run the backend API with `docker compose up -d` on the VPS.
+- Deploy the public frontend to `siliconscope.com` or `www.siliconscope.com`.
+- Deploy the independent admin frontend to `admin.siliconscope.com`.
+- Put Caddy, Nginx Proxy Manager, Cloudflare Tunnel, or another HTTPS reverse proxy in front of the API.
 - Keep `ADMIN_PASSWORD`, `JWT_SECRET`, and future IEEE/OpenAI keys in `.env`, never in Git.
+- Set `IC_SEEKER_REQUIRE_LOGIN=1` for public deployment.
+- Keep `IC_SEEKER_LOCAL_ADMIN=0` on every public server. It is only for local development.
+- Allow both frontend origins in `FRONTEND_ORIGINS`, for example `https://www.siliconscope.com,https://admin.siliconscope.com`.
 - Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/` regularly.
 - For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
 - When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
 
-Vercel is useful for a future static/Next.js frontend, but the current app is a Node server plus SQLite file, so a Docker VPS or Cloudflare Tunnel is the cleanest deployment path.
+Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 
 ## Private MVP Workflow
 

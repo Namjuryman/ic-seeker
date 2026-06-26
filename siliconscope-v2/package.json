@@ -6,13 +6,15 @@
   "type": "module",
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "frontend-admin"
   ],
   "scripts": {
     "dev": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
-    "build": "npm --workspace siliconscope-v2-backend run build && npm --workspace siliconscope-v2-frontend run build",
+    "build": "npm --workspace siliconscope-v2-backend run build && npm --workspace siliconscope-v2-frontend run build && npm --workspace siliconscope-v2-admin run build",
     "build:backend": "npm --workspace siliconscope-v2-backend run build",
     "build:frontend": "npm --workspace siliconscope-v2-frontend run build",
+    "build:admin": "npm --workspace siliconscope-v2-admin run build",
     "start": "npm --workspace siliconscope-v2-backend run start",
     "test": "npm --workspace siliconscope-v2-backend run test",
     "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed"
