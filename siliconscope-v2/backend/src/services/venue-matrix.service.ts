@@ -1,10 +1,10 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 
 export const venueMatrixService = {
   getVenueMatrix() {
-    const rows = db.all<{
+    const rows = metadataDb.all<{
       venue: string;
       venueRank: string;
       year: number;
@@ -18,7 +18,7 @@ export const venueMatrixService = {
       ORDER BY venue, year DESC, count DESC
     `);
 
-    const domainRows = db.all<{
+    const domainRows = metadataDb.all<{
       venue: string;
       domain: string;
       count: number;

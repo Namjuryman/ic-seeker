@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { authorIdentityService } from "./author-identity.service.js";
 import { institutionIdentityService } from "./institution-identity.service.js";
 
@@ -57,7 +57,7 @@ export const identityAdminService = {
     const offset = Math.max(Number(options.offset || 0), 0);
 
     if (type === "author") {
-      return db.all(sql`
+      return appDb.all(sql`
         SELECT alias,
                canonical_name AS canonicalName,
                institution_hint AS institutionHint,
@@ -71,7 +71,7 @@ export const identityAdminService = {
       `);
     }
 
-    return db.all(sql`
+    return appDb.all(sql`
       SELECT alias,
              canonical_name AS canonicalName,
              country_code AS countryCode,
@@ -98,7 +98,7 @@ export const identityAdminService = {
     if (!alias) throw new Error("Alias normalizes to an empty key");
 
     if (type === "author") {
-      db.run(sql`
+      appDb.run(sql`
         INSERT INTO author_aliases (alias, canonical_name, institution_hint, source, confidence, updated_at)
         VALUES (${alias}, ${canonicalName}, ${nullableText(body.institutionHint)}, ${source(body.source)}, ${confidence(body.confidence)}, CURRENT_TIMESTAMP)
         ON CONFLICT(alias) DO UPDATE SET
@@ -111,7 +111,7 @@ export const identityAdminService = {
       return { type, alias, canonicalName, institutionHint: nullableText(body.institutionHint), source: source(body.source), confidence: confidence(body.confidence) };
     }
 
-    db.run(sql`
+    appDb.run(sql`
       INSERT INTO institution_aliases (alias, canonical_name, country_code, country_name, city, source, confidence, updated_at)
       VALUES (${alias}, ${canonicalName}, ${nullableText(body.countryCode, 16)}, ${nullableText(body.countryName, 80)}, ${nullableText(body.city, 80)}, ${source(body.source)}, ${confidence(body.confidence)}, CURRENT_TIMESTAMP)
       ON CONFLICT(alias) DO UPDATE SET
@@ -141,9 +141,9 @@ export const identityAdminService = {
     if (!rawAlias) throw new Error("Alias is required");
     const alias = normalizedAlias(type, rawAlias);
     if (type === "author") {
-      db.run(sql`DELETE FROM author_aliases WHERE alias = ${alias}`);
+      appDb.run(sql`DELETE FROM author_aliases WHERE alias = ${alias}`);
     } else {
-      db.run(sql`DELETE FROM institution_aliases WHERE alias = ${alias}`);
+      appDb.run(sql`DELETE FROM institution_aliases WHERE alias = ${alias}`);
     }
     return { type, alias, deleted: true };
   },

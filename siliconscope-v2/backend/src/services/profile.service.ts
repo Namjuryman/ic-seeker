@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers, qsRankings } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
@@ -24,7 +24,7 @@ function scoreAuthor(item: {
 function findQsRank(institutionName: string) {
   const canonical = institutionIdentityService.canonicalize(institutionName).canonicalName;
   const target = String(canonical || institutionName || "").trim().toLowerCase();
-  const rows = db.select().from(qsRankings).all();
+  const rows = metadataDb.select().from(qsRankings).all();
   for (const r of rows) {
     const names = [r.name, ...r.aliases.split(",")].map((s) => institutionIdentityService.canonicalize(s.trim()).canonicalName.toLowerCase());
     if (names.some((n) => n === target || target.includes(n) || n.includes(target))) {
@@ -105,7 +105,7 @@ function candidateRowsByAuthor(name: string) {
   const variants = authorIdentityService.variantsFor(name);
   const seen = new Map<number, typeof papers.$inferSelect>();
   for (const variant of variants) {
-    const rows = db.select().from(papers)
+    const rows = metadataDb.select().from(papers)
       .where(sql`${papers.authors} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
       .all();
     for (const row of rows) seen.set(row.id, row);
@@ -117,7 +117,7 @@ function candidateRowsByInstitution(name: string) {
   const variants = institutionIdentityService.variantsFor(name);
   const seen = new Map<number, typeof papers.$inferSelect>();
   for (const variant of variants) {
-    const rows = db.select().from(papers)
+    const rows = metadataDb.select().from(papers)
       .where(sql`${papers.affiliations} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
       .all();
     for (const row of rows) seen.set(row.id, row);
@@ -130,7 +130,7 @@ export const profileService = {
     const limit = Math.min(Number(params.limit || 80), 300);
     const minPapers = Number(params.minPapers || 2);
 
-    const rows = db.select({
+    const rows = metadataDb.select({
       authors: papers.authors,
       affiliations: papers.affiliations,
       venueRank: papers.venueRank,
@@ -245,7 +245,7 @@ export const profileService = {
     const limit = Math.min(Number(params.limit || 80), 300);
     const minPapers = Number(params.minPapers || 2);
 
-    const rows = db.select({
+    const rows = metadataDb.select({
       affiliations: papers.affiliations,
       venueRank: papers.venueRank,
       qualityScore: papers.qualityScore,

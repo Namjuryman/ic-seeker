@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers, qsRankings } from "../db/schema.js";
 import { sql, not } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
@@ -156,7 +156,7 @@ function topCounts(map: Map<string, number>, key = "key", limit = 12) {
 function buildGeo(requestedField: string | null): GeoResult {
   const recentCutoff = new Date().getFullYear() - 9;
 
-  const fields = db.all<{ domain: string }>(sql`
+  const fields = metadataDb.all<{ domain: string }>(sql`
     SELECT DISTINCT domain FROM papers
     WHERE domain IS NOT NULL AND domain != '' AND COALESCE(venue_rank, '') != 'Hidden'
     ORDER BY domain
@@ -166,7 +166,7 @@ function buildGeo(requestedField: string | null): GeoResult {
     ? sql`${papers.domain} = ${requestedField} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`
     : sql`COALESCE(${papers.venueRank}, '') != 'Hidden'`;
 
-  const rows = db.select().from(papers).where(where)
+  const rows = metadataDb.select().from(papers).where(where)
     .orderBy(sql`${papers.year} DESC, ${papers.qualityScore} DESC`)
     .all();
 

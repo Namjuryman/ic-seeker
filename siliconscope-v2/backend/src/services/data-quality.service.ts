@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 
 function normalizeKey(value: unknown) {
   return String(value || "")
@@ -40,9 +40,9 @@ export const dataQualityService = {
   getReport(options: { scanLimit?: number; sampleLimit?: number } = {}) {
     const scanLimit = Math.min(Math.max(Number(options.scanLimit || 12000), 1000), 50000);
     const sampleLimit = Math.min(Math.max(Number(options.sampleLimit || 50), 10), 200);
-    const total = db.get<{ total: number }>(sql`SELECT COUNT(*) AS total FROM papers`)?.total ?? 0;
+    const total = metadataDb.get<{ total: number }>(sql`SELECT COUNT(*) AS total FROM papers`)?.total ?? 0;
 
-    const duplicateDoi = db.all(sql`
+    const duplicateDoi = metadataDb.all(sql`
       SELECT LOWER(TRIM(doi)) AS key, COUNT(*) AS count,
              GROUP_CONCAT(id || ':' || SUBSTR(title, 1, 90), ' || ') AS samples
       FROM papers
@@ -53,7 +53,7 @@ export const dataQualityService = {
       LIMIT ${sampleLimit}
     `);
 
-    const duplicateTitleYear = db.all(sql`
+    const duplicateTitleYear = metadataDb.all(sql`
       SELECT LOWER(TRIM(title)) || '|' || year AS key, COUNT(*) AS count,
              GROUP_CONCAT(id || ':' || SUBSTR(venue, 1, 40), ' || ') AS samples
       FROM papers
@@ -64,7 +64,7 @@ export const dataQualityService = {
       LIMIT ${sampleLimit}
     `);
 
-    const unknownVenues = db.all(sql`
+    const unknownVenues = metadataDb.all(sql`
       SELECT venue, venue_rank AS rank, COUNT(*) AS count, ROUND(AVG(quality_score), 1) AS avgScore
       FROM papers
       WHERE COALESCE(venue, '') = '' OR COALESCE(venue_rank, '') IN ('', 'User', 'Unknown') OR quality_score <= 0
@@ -73,7 +73,7 @@ export const dataQualityService = {
       LIMIT ${sampleLimit}
     `);
 
-    const lowConfidenceTopics = db.all(sql`
+    const lowConfidenceTopics = metadataDb.all(sql`
       SELECT domain AS field, COUNT(*) AS count,
              ROUND(AVG(domain_hits), 2) AS avgHits,
              GROUP_CONCAT(id || ':' || SUBSTR(title, 1, 90), ' || ') AS samples
@@ -84,7 +84,7 @@ export const dataQualityService = {
       LIMIT ${sampleLimit}
     `);
 
-    const rows = db.all<{ id: number; title: string; authors: string; affiliations: string; venue: string; year: number }>(sql`
+    const rows = metadataDb.all<{ id: number; title: string; authors: string; affiliations: string; venue: string; year: number }>(sql`
       SELECT id, title, authors, affiliations, venue, year FROM papers ORDER BY year DESC LIMIT ${scanLimit}
     `);
 

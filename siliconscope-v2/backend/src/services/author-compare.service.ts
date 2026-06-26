@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
@@ -55,7 +55,7 @@ function candidateRowsByAuthor(name: string) {
   const variants = authorIdentityService.variantsFor(name);
   const seen = new Map<number, typeof papers.$inferSelect>();
   for (const variant of variants) {
-    const rows = db.select().from(papers)
+    const rows = metadataDb.select().from(papers)
       .where(sql`${papers.authors} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
       .all();
     for (const row of rows) seen.set(row.id, row);

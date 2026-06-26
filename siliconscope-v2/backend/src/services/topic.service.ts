@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers, qsRankings } from "../db/schema.js";
 import { sql, eq, not } from "drizzle-orm";
 
@@ -44,7 +44,7 @@ function paperPreview(row: typeof papers.$inferSelect) {
 
 export const topicService = {
   getTopics() {
-    const rows = db.all<{
+    const rows = metadataDb.all<{
       field: string;
       papers: number;
       avgScore: number;
@@ -79,7 +79,7 @@ export const topicService = {
     const target = String(field || "").trim();
     if (!target) throw new Error("Topic field is required");
 
-    const rows = db.select().from(papers)
+    const rows = metadataDb.select().from(papers)
       .where(sql`${papers.domain} = ${target} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
       .orderBy(sql`${papers.year} DESC, ${papers.qualityScore} DESC`)
       .all();

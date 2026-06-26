@@ -2,6 +2,7 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { appConfig } from "../config.js";
 import { z } from "zod";
+import { authService } from "../services/auth.service.js";
 
 const router = Router();
 
@@ -52,8 +53,8 @@ router.post("/login", async (req, res) => {
   }
 
   const payload = appConfig.authEnabled
-    ? { userId: 1, email: "admin", role: "admin" }
-    : { userId: 0, email: "local", role: "admin" };
+    ? authService.ensureAdminUser()
+    : { userId: 0, email: "local", role: "admin" as const };
 
   const token = jwt.sign(payload, appConfig.jwtSecret, { expiresIn: appConfig.tokenExpiry });
   res.cookie(appConfig.cookieName, token, cookieOptions());

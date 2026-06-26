@@ -1,8 +1,8 @@
-import { topicService } from "./topic.service.js";
+﻿import { topicService } from "./topic.service.js";
 import { learningRoadmaps } from "../data/learning-catalog.js";
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { companies } from "../db/schema.js";
-import { sql, like } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
 
 export const topicReportService = {
@@ -15,7 +15,7 @@ export const topicReportService = {
     const recentPapers = detail.recentPapers?.length ?? 0;
 
     // Find related companies by domain matching
-    const relatedCompanies = db
+    const relatedCompanies = appDb
       .select({
         id: companies.id,
         name: companies.name,
@@ -68,7 +68,7 @@ export const topicReportService = {
         totalPapers: detail.papers,
         recentPapers,
         yearRange: detail.byYear.length
-          ? `${detail.byYear[0].year}–${detail.byYear[detail.byYear.length - 1].year}`
+          ? `${detail.byYear[0].year}-${detail.byYear[detail.byYear.length - 1].year}`
           : undefined,
       },
       trend: detail.byYear,

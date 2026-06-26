@@ -1,4 +1,5 @@
-import { db, sqlite } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { papers, readingStatus } from "../db/schema.js";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
@@ -29,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export const readingQueueService = {
   getReadingQueue(userId: number) {
-    const rows = db
+    const rows = appDb
       .select({
         paperId: readingStatus.paperId,
         status: readingStatus.status,
@@ -48,7 +49,7 @@ export const readingQueueService = {
       const batchSize = 100;
       for (let i = 0; i < paperIds.length; i += batchSize) {
         const batch = paperIds.slice(i, i + batchSize);
-        const paperRows = db
+        const paperRows = metadataDb
           .select()
           .from(papers)
           .where(inArray(papers.id, batch))
@@ -99,14 +100,14 @@ export const readingQueueService = {
       return { ok: false, error: "Invalid reading status" };
     }
 
-    const exists = db
+    const exists = metadataDb
       .select({ id: papers.id })
       .from(papers)
       .where(eq(papers.id, paperId))
       .get();
     if (!exists) return { ok: false, error: "Paper not found" };
 
-    db.insert(readingStatus)
+    appDb.insert(readingStatus)
       .values({ userId, paperId, status })
       .onConflictDoUpdate({
         target: [readingStatus.userId, readingStatus.paperId],
@@ -118,7 +119,7 @@ export const readingQueueService = {
   },
 
   getPaperStatus(userId: number, paperId: number) {
-    const row = db
+    const row = appDb
       .select({ status: readingStatus.status })
       .from(readingStatus)
       .where(

@@ -28,6 +28,40 @@ export const appConfig = {
   tokenExpiry: "14d",
   
   crossrefMailto: process.env.CROSSREF_MAILTO || "",
+
+  postgresUrl: process.env.POSTGRES_URL || "",
+  redisUrl: process.env.REDIS_URL || "",
+  searchEngine: process.env.SEARCH_ENGINE || "sqlite",
+  meilisearchHost: process.env.MEILISEARCH_HOST || "",
+  meilisearchApiKey: process.env.MEILISEARCH_API_KEY || "",
+
+  objectStorageProvider: process.env.OBJECT_STORAGE_PROVIDER || "local",
+  objectStorageEndpoint: process.env.OBJECT_STORAGE_ENDPOINT || "",
+  objectStorageRegion: process.env.OBJECT_STORAGE_REGION || "auto",
+  objectStorageBucket: process.env.OBJECT_STORAGE_BUCKET || "",
+  objectStorageAccessKeyId: process.env.OBJECT_STORAGE_ACCESS_KEY_ID || "",
+  objectStorageSecretAccessKey: process.env.OBJECT_STORAGE_SECRET_ACCESS_KEY || "",
+  objectStoragePublicBaseUrl: process.env.OBJECT_STORAGE_PUBLIC_BASE_URL || "",
+
+  queueBackend: process.env.QUEUE_BACKEND || "disabled",
+  realtimeEnabled: process.env.REALTIME_ENABLED === "1",
+  socketIoPath: process.env.SOCKET_IO_PATH || "/socket.io",
+
+  paymentProvider: process.env.PAYMENT_PROVIDER || "disabled",
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || "",
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || "",
+  paddleApiKey: process.env.PADDLE_API_KEY || "",
+
+  emailProvider: process.env.EMAIL_PROVIDER || "disabled",
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpPort: Number(process.env.SMTP_PORT || 587),
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPassword: process.env.SMTP_PASSWORD || "",
+  oauthGoogleClientId: process.env.OAUTH_GOOGLE_CLIENT_ID || "",
+  oauthGoogleClientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || "",
+
+  sentryDsn: process.env.SENTRY_DSN || "",
+  prometheusEnabled: process.env.PROMETHEUS_ENABLED === "1",
 } as const;
 
 export type AppConfig = typeof appConfig;

@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { mentorReviews } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 
@@ -31,7 +31,7 @@ function trimText(value: unknown): string {
 
 export const reviewService = {
   listReviews(professorId: string) {
-    const rows = db.select().from(mentorReviews)
+    const rows = appDb.select().from(mentorReviews)
       .where(sql`${mentorReviews.professorId} = ${professorId} AND ${mentorReviews.moderationStatus} = 'approved'`)
       .orderBy(sql`${mentorReviews.createdAt} DESC`)
       .all();
@@ -45,7 +45,7 @@ export const reviewService = {
   },
 
   getReviewStats(professorId: string) {
-    const result = db.get<{ approved: number; pending: number; verified: number }>(sql`
+    const result = appDb.get<{ approved: number; pending: number; verified: number }>(sql`
       SELECT
         SUM(CASE WHEN moderation_status = 'approved' THEN 1 ELSE 0 END) as approved,
         SUM(CASE WHEN moderation_status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -62,7 +62,7 @@ export const reviewService = {
     if (!target) throw new Error("Professor id is required");
     if (userId === undefined || userId === null || Number.isNaN(Number(userId))) throw new Error("Login required");
 
-    const result = db.insert(mentorReviews).values({
+    const result = appDb.insert(mentorReviews).values({
       professorId: target,
       userId: Number(userId),
       publicAlias: "Anonymous Verified Reviewer",

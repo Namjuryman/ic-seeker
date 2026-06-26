@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { mentorReviews } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { authorIdentityService } from "./author-identity.service.js";
@@ -31,7 +31,7 @@ export const mentorCompareService = {
       const professorId = identity.canonicalName || name;
 
       // Only approved reviews
-      const rows = db.select().from(mentorReviews)
+      const rows = appDb.select().from(mentorReviews)
         .where(sql`${mentorReviews.professorId} = ${professorId} AND ${mentorReviews.moderationStatus} = 'approved'`)
         .orderBy(sql`${mentorReviews.createdAt} DESC`)
         .all();

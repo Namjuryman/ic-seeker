@@ -1,4 +1,4 @@
-import { db, sqlite } from "../db/connection.js";
+import { cacheDb, cacheSqlite } from "../db/cache-db.js";
 import { sql } from "drizzle-orm";
 import { profileService } from "./profile.service.js";
 import { topicService } from "./topic.service.js";
@@ -20,7 +20,7 @@ function stableJson(value: unknown): string {
 }
 
 function readSnapshot<T>(key: string): T | null {
-  const row = db.get<SnapshotRow>(sql`
+  const row = cacheDb.get<SnapshotRow>(sql`
     SELECT "key" AS key, value_json AS valueJson, updated_at AS updatedAt
     FROM computed_snapshots
     WHERE "key" = ${key}
@@ -34,7 +34,7 @@ function readSnapshot<T>(key: string): T | null {
 }
 
 function writeSnapshot(key: string, value: unknown) {
-  sqlite.prepare(`
+  cacheSqlite.prepare(`
     INSERT INTO computed_snapshots ("key", value_json, source_version, updated_at)
     VALUES (?, ?, 'v1', CURRENT_TIMESTAMP)
     ON CONFLICT("key") DO UPDATE SET
@@ -45,20 +45,20 @@ function writeSnapshot(key: string, value: unknown) {
 }
 
 function invalidateSnapshot(key: string) {
-  sqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" = ?`).run(key);
-  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  cacheSqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" = ?`).run(key);
+  const row = cacheSqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
   return { deleted: row.n };
 }
 
 function invalidateSnapshotsByPrefix(prefix: string) {
-  sqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" LIKE ?`).run(`${prefix}%`);
-  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  cacheSqlite.prepare(`DELETE FROM computed_snapshots WHERE "key" LIKE ?`).run(`${prefix}%`);
+  const row = cacheSqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
   return { deleted: row.n };
 }
 
 function invalidateAllSnapshots() {
-  sqlite.prepare(`DELETE FROM computed_snapshots`).run();
-  const row = sqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
+  cacheSqlite.prepare(`DELETE FROM computed_snapshots`).run();
+  const row = cacheSqlite.prepare(`SELECT changes() AS n`).get() as { n: number };
   return { deleted: row.n };
 }
 
@@ -235,7 +235,7 @@ export const snapshotService = {
   },
 
   list() {
-    return db.all(sql`
+    return cacheDb.all(sql`
       SELECT "key" AS key, updated_at AS updatedAt, LENGTH(value_json) AS bytes
       FROM computed_snapshots
       ORDER BY "key"

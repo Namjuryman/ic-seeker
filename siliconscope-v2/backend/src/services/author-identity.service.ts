@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { authorAliases } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 
@@ -29,7 +29,7 @@ function titleCaseName(value: string): string {
 function aliasRows(keys: string[]) {
   if (!keys.length) return [];
   try {
-    return db.select().from(authorAliases).where(inArray(authorAliases.alias, keys)).all();
+    return appDb.select().from(authorAliases).where(inArray(authorAliases.alias, keys)).all();
   } catch {
     return [];
   }
@@ -68,7 +68,7 @@ export const authorIdentityService = {
     const canonical = this.canonicalize(name);
     const variants = new Set([name, canonical.canonicalName]);
     try {
-      const rows = db.select().from(authorAliases).where(eq(authorAliases.canonicalName, canonical.canonicalName)).all();
+      const rows = appDb.select().from(authorAliases).where(eq(authorAliases.canonicalName, canonical.canonicalName)).all();
       for (const row of rows) variants.add(row.alias);
     } catch {
       // ignore before migration

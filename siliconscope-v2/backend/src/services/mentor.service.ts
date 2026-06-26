@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
 import { papers } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
@@ -66,7 +66,7 @@ function inferMentorCandidate(summary: {
 export const mentorService = {
   getInstitutionsWithMentors(params: Record<string, string>) {
     // Simplified version: return institutions with high paper counts
-    const rows = db.select({
+    const rows = metadataDb.select({
       authors: papers.authors,
       affiliations: papers.affiliations,
       venueRank: papers.venueRank,
@@ -143,7 +143,7 @@ export const mentorService = {
       };
     }
     const targetIdentity = institutionIdentityService.canonicalize(name);
-    const rows = db.select().from(papers)
+    const rows = metadataDb.select().from(papers)
       .where(sql`${papers.affiliations} LIKE ${`%${name}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
       .all()
       .filter((row) => institutionIdentityService.canonicalizeList(row.affiliations).some((inst) => inst.normalizedKey === targetIdentity.normalizedKey));
@@ -254,7 +254,7 @@ export const mentorService = {
     const variants = authorIdentityService.variantsFor(name);
     const seen = new Map<number, typeof papers.$inferSelect>();
     for (const variant of variants) {
-      const rowsForVariant = db.select().from(papers)
+      const rowsForVariant = metadataDb.select().from(papers)
         .where(sql`${papers.authors} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
         .all();
       for (const row of rowsForVariant) seen.set(row.id, row);

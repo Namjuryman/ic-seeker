@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { contentReports, moderationLogs, mentorReviews, paperComments } from "../db/schema.js";
 
 const allowedTargets = new Set(["paper_comment", "mentor_review"]);
@@ -41,7 +41,7 @@ export const moderationService = {
 
     let comments;
     if (isReported) {
-      comments = db.all(sql`
+      comments = appDb.all(sql`
         SELECT c.id, c.paper_id, c.user_id, c.comment_type, c.body, c.moderation_status, c.created_at,
                p.title AS paper_title,
                u.nickname, u.verification_status
@@ -54,7 +54,7 @@ export const moderationService = {
         LIMIT ${limit} OFFSET ${offset}
       `);
     } else {
-      comments = db.all(sql`
+      comments = appDb.all(sql`
         SELECT c.id, c.paper_id, c.user_id, c.comment_type, c.body, c.moderation_status, c.created_at,
                p.title AS paper_title,
                u.nickname, u.verification_status
@@ -68,7 +68,7 @@ export const moderationService = {
     }
 
     const reviewStatus = statusMap[status] || "pending";
-    const reviews = db.all(sql`
+    const reviews = appDb.all(sql`
       SELECT r.id, r.professor_id, r.user_id, r.public_alias, r.is_verified_review,
              r.relationship_type, r.structured_scores_json, r.strengths_text, r.cautions_text,
              r.fit_text, r.moderation_status, r.created_at
@@ -78,7 +78,7 @@ export const moderationService = {
       LIMIT ${limit} OFFSET ${offset}
     `);
 
-    const reports = db.all(sql`
+    const reports = appDb.all(sql`
       SELECT id, target_type, target_id, reporter_user_id, reason, status, created_at
       FROM content_reports
       WHERE status = 'open'
@@ -86,7 +86,7 @@ export const moderationService = {
       LIMIT ${limit} OFFSET ${offset}
     `);
 
-    const logs = db.all(sql`
+    const logs = appDb.all(sql`
       SELECT id, target_type, target_id, moderator_id, action, reason, created_at
       FROM moderation_logs
       ORDER BY created_at DESC
@@ -94,14 +94,14 @@ export const moderationService = {
     `);
 
     const commentCount = isReported
-      ? db.get<{ n: number }>(sql`SELECT COUNT(DISTINCT c.id) AS n FROM paper_comments c INNER JOIN content_reports r ON r.target_type = 'paper_comment' AND r.target_id = c.id AND r.status = 'open' WHERE c.moderation_status = 'approved'`)?.n ?? 0
-      : db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM paper_comments WHERE moderation_status = ${commentStatus}`)?.n ?? 0;
+      ? appDb.get<{ n: number }>(sql`SELECT COUNT(DISTINCT c.id) AS n FROM paper_comments c INNER JOIN content_reports r ON r.target_type = 'paper_comment' AND r.target_id = c.id AND r.status = 'open' WHERE c.moderation_status = 'approved'`)?.n ?? 0
+      : appDb.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM paper_comments WHERE moderation_status = ${commentStatus}`)?.n ?? 0;
 
     const totals = {
       comments: commentCount,
-      reviews: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM mentor_reviews WHERE moderation_status = ${reviewStatus}`)?.n ?? 0,
-      reports: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM content_reports WHERE status = 'open'`)?.n ?? 0,
-      logs: db.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM moderation_logs`)?.n ?? 0,
+      reviews: appDb.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM mentor_reviews WHERE moderation_status = ${reviewStatus}`)?.n ?? 0,
+      reports: appDb.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM content_reports WHERE status = 'open'`)?.n ?? 0,
+      logs: appDb.get<{ n: number }>(sql`SELECT COUNT(*) AS n FROM moderation_logs`)?.n ?? 0,
     };
 
     return { comments, reviews, reports, logs, totals, limit, offset };
@@ -112,7 +112,7 @@ export const moderationService = {
     if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("Invalid target id");
     const cleanReason = String(reason || "").trim().slice(0, 1000);
     if (!cleanReason) throw new Error("Report reason is required");
-    const row = db.insert(contentReports).values({
+    const row = appDb.insert(contentReports).values({
       targetType,
       targetId,
       reporterUserId,
@@ -128,12 +128,12 @@ export const moderationService = {
     if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("Invalid target id");
 
     if (targetType === "paper_comment") {
-      db.update(paperComments).set({ moderationStatus: normalized.status }).where(eq(paperComments.id, targetId)).run();
+      appDb.update(paperComments).set({ moderationStatus: normalized.status }).where(eq(paperComments.id, targetId)).run();
     } else if (targetType === "mentor_review") {
-      db.update(mentorReviews).set({ moderationStatus: normalized.status }).where(eq(mentorReviews.id, targetId)).run();
+      appDb.update(mentorReviews).set({ moderationStatus: normalized.status }).where(eq(mentorReviews.id, targetId)).run();
     }
 
-    db.insert(moderationLogs).values({
+    appDb.insert(moderationLogs).values({
       targetType,
       targetId,
       moderatorId,
@@ -141,7 +141,7 @@ export const moderationService = {
       reason: String(reason || "").slice(0, 1000),
     }).run();
 
-    db.update(contentReports).set({ status: "resolved" })
+    appDb.update(contentReports).set({ status: "resolved" })
       .where(and(eq(contentReports.targetType, targetType), eq(contentReports.targetId, targetId)))
       .run();
 

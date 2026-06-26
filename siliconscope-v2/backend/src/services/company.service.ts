@@ -1,9 +1,7 @@
-import { sql } from "drizzle-orm";
-import { db, sqlite } from "../db/connection.js";
-import { companies, companyAliases, companySources, companyFieldFacts } from "../db/schema.js";
+import { sqlite as metadataSqlite } from "../db/connection.js";
+import { appSqlite } from "../db/app-db.js";
 import { toPaperRow } from "./paper-row.js";
 import { learningRoadmaps } from "../data/learning-catalog.js";
-import { watchlistService } from "./watchlist.service.js";
 
 const ORDER_BY_COLUMNS: Record<string, string> = {
   name: "name",
@@ -126,11 +124,11 @@ export const companyService = {
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-    const rows = sqlite
+    const rows = appSqlite
       .prepare(`SELECT * FROM companies ${whereClause} ORDER BY ${orderBy} COLLATE NOCASE ${direction} LIMIT ? OFFSET ?`)
       .all(...args, limit, offset) as Record<string, any>[];
 
-    const countRow = sqlite
+    const countRow = appSqlite
       .prepare(`SELECT COUNT(*) as n FROM companies ${whereClause}`)
       .get(...args) as { n: number } | undefined;
 
@@ -143,14 +141,14 @@ export const companyService = {
   },
 
   getCompany(id: string): Record<string, any> | null {
-    const row = sqlite.prepare("SELECT * FROM companies WHERE id = ?").get(id) as Record<string, any> | undefined;
+    const row = appSqlite.prepare("SELECT * FROM companies WHERE id = ?").get(id) as Record<string, any> | undefined;
     if (!row) return null;
 
-    const sources = sqlite
+    const sources = appSqlite
       .prepare("SELECT * FROM company_sources WHERE company_id = ? ORDER BY fetched_at DESC")
       .all(id) as Record<string, any>[];
 
-    const fieldFacts = sqlite
+    const fieldFacts = appSqlite
       .prepare(`
         SELECT f.id, f.field_name, f.field_value, f.confidence, f.fetched_at,
                s.source_name, s.source_url
@@ -161,7 +159,7 @@ export const companyService = {
       `)
       .all(id) as Record<string, any>[];
 
-    const aliases = sqlite
+    const aliases = appSqlite
       .prepare("SELECT alias FROM company_aliases WHERE company_id = ?")
       .all(id) as Array<{ alias: string }>;
 
@@ -206,7 +204,7 @@ export const companyService = {
 
     const aliases = Array.isArray(body.aliases) ? body.aliases.map(String) : [];
 
-    sqlite.prepare(`
+    appSqlite.prepare(`
       INSERT INTO companies (
         id, name, legal_name, aliases_json, country, city, website, company_type,
         status, founded_year, registered_capital, employee_count, employee_count_range,
@@ -247,14 +245,14 @@ export const companyService = {
     for (const alias of aliases) {
       const clean = alias.trim();
       if (clean) {
-        sqlite.prepare(
+        appSqlite.prepare(
           "INSERT INTO company_aliases (id, alias, company_id, canonical_name, source, confidence) VALUES (?, ?, ?, ?, ?, ?)"
         ).run(generateId(), clean, id, name, "manual", 100);
       }
     }
 
     // Insert source record
-    sqlite.prepare(`
+    appSqlite.prepare(`
       INSERT INTO company_sources (id, company_id, source_type, source_name, source_url, fetched_at, confidence, notes)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
@@ -272,7 +270,7 @@ export const companyService = {
   },
 
   updateCompany(id: string, body: Record<string, unknown>) {
-    const existing = sqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
+    const existing = appSqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
     if (!existing) throw new Error("Company not found");
 
     const cleanText = (v: unknown) => (v !== undefined ? String(v || "").trim() || null : undefined);
@@ -332,17 +330,17 @@ export const companyService = {
     }
 
     if (setters.length) {
-      sqlite.prepare(`UPDATE companies SET ${setters.join(", ")} WHERE id = ?`).run(...values, id);
+      appSqlite.prepare(`UPDATE companies SET ${setters.join(", ")} WHERE id = ?`).run(...values, id);
     }
 
     // Update aliases if provided
     if (Array.isArray(body.aliases)) {
-      sqlite.prepare("DELETE FROM company_aliases WHERE company_id = ?").run(id);
+      appSqlite.prepare("DELETE FROM company_aliases WHERE company_id = ?").run(id);
       const name = String(body.name || "").trim();
       for (const alias of body.aliases.map(String)) {
         const clean = alias.trim();
         if (clean) {
-          sqlite.prepare(
+          appSqlite.prepare(
             "INSERT INTO company_aliases (id, alias, company_id, canonical_name, source, confidence) VALUES (?, ?, ?, ?, ?, ?)"
           ).run(generateId(), clean, id, name || clean, "manual", 100);
         }
@@ -353,14 +351,14 @@ export const companyService = {
   },
 
   deleteCompany(id: string) {
-    const existing = sqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
+    const existing = appSqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
     if (!existing) throw new Error("Company not found");
 
-    sqlite.prepare("DELETE FROM company_sources WHERE company_id = ?").run(id);
-    sqlite.prepare("DELETE FROM company_aliases WHERE company_id = ?").run(id);
-    sqlite.prepare("DELETE FROM company_field_facts WHERE company_id = ?").run(id);
-    sqlite.prepare("DELETE FROM company_job_signals WHERE company_id = ?").run(id);
-    sqlite.prepare("DELETE FROM companies WHERE id = ?").run(id);
+    appSqlite.prepare("DELETE FROM company_sources WHERE company_id = ?").run(id);
+    appSqlite.prepare("DELETE FROM company_aliases WHERE company_id = ?").run(id);
+    appSqlite.prepare("DELETE FROM company_field_facts WHERE company_id = ?").run(id);
+    appSqlite.prepare("DELETE FROM company_job_signals WHERE company_id = ?").run(id);
+    appSqlite.prepare("DELETE FROM companies WHERE id = ?").run(id);
 
     return { id, deleted: true };
   },
@@ -457,7 +455,7 @@ export const companyService = {
     // Total count using all names
     const orConditions = allNames.map(() => "affiliations LIKE ? ESCAPE '\\'").join(" OR ");
     const orParams = allNames.map((n) => `%${escapeLike(n)}%`);
-    const totalRow = sqlite
+    const totalRow = metadataSqlite
       .prepare(`SELECT COUNT(*) as n FROM papers WHERE ${orConditions}`)
       .get(...orParams) as { n: number } | undefined;
 
@@ -466,7 +464,7 @@ export const companyService = {
 
     for (const name of primaryNames) {
       const like = `%${escapeLike(name)}%`;
-      const rows = sqlite
+      const rows = metadataSqlite
         .prepare(`
           SELECT
             id, title, authors, affiliations, abstract, year,
@@ -493,7 +491,7 @@ export const companyService = {
 
     for (const alias of safeAliases) {
       const like = `%${escapeLike(alias)}%`;
-      const rows = sqlite
+      const rows = metadataSqlite
         .prepare(`
           SELECT
             id, title, authors, affiliations, abstract, year,
@@ -605,7 +603,7 @@ export const companyService = {
   },
 
   listWatchedCompanies(userId: number) {
-    const rows = sqlite
+    const rows = appSqlite
       .prepare(`
         SELECT c.* FROM companies c
         JOIN watchlist_items w ON w.target_id = c.id
@@ -617,7 +615,7 @@ export const companyService = {
   },
 
   isWatchedCompany(userId: number, companyId: string) {
-    const row = sqlite
+    const row = appSqlite
       .prepare("SELECT id FROM watchlist_items WHERE user_id = ? AND target_type = 'company' AND target_id = ?")
       .get(userId, companyId) as { id: number } | undefined;
     return Boolean(row);
@@ -625,7 +623,7 @@ export const companyService = {
 
   watchCompany(userId: number, companyId: string) {
     const now = new Date().toISOString();
-    sqlite.prepare(`
+    appSqlite.prepare(`
       INSERT INTO watchlist_items (user_id, target_type, target_id, created_at, updated_at)
       VALUES (?, 'company', ?, ?, ?)
       ON CONFLICT DO NOTHING
@@ -634,7 +632,7 @@ export const companyService = {
   },
 
   unwatchCompany(userId: number, companyId: string) {
-    sqlite.prepare("DELETE FROM watchlist_items WHERE user_id = ? AND target_type = 'company' AND target_id = ?").run(userId, companyId);
+    appSqlite.prepare("DELETE FROM watchlist_items WHERE user_id = ? AND target_type = 'company' AND target_id = ?").run(userId, companyId);
     return { watched: false, companyId };
   },
 

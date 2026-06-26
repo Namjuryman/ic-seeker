@@ -1,4 +1,5 @@
-import { db, sqlite } from "../db/connection.js";
+import { sqlite as metadataSqlite } from "../db/connection.js";
+import { appSqlite } from "../db/app-db.js";
 import { learningRoadmaps, dailyLessons } from "../data/learning-catalog.js";
 
 const VALID_TARGET_TYPES = [
@@ -94,7 +95,7 @@ function hashString(str: string): string {
 
 export const watchlistService = {
   listWatchlistItems(userId: number) {
-    const all = sqlite
+    const all = appSqlite
       .prepare(
         `SELECT * FROM watchlist_items WHERE user_id = ? ORDER BY target_type, updated_at DESC`
       )
@@ -116,7 +117,7 @@ export const watchlistService = {
       .map((w) => Number(w.target_id))
       .filter(Number.isFinite);
     const paperRows = paperIds.length
-      ? (sqlite
+      ? (metadataSqlite
           .prepare(
             `SELECT id, title, venue, year, venue_rank as rank, domain as field, quality_score as score
              FROM papers WHERE id IN (${paperIds.map(() => "?").join(", ")})`
@@ -130,7 +131,7 @@ export const watchlistService = {
       .filter((w) => w.target_type === "company")
       .map((w) => w.target_id);
     const companyRows = companyIds.length
-      ? (sqlite
+      ? (metadataSqlite
           .prepare(
             `SELECT id, name, legal_name, company_type, country, city, data_confidence
              FROM companies WHERE id IN (${companyIds.map(() => "?").join(", ")})`
@@ -244,7 +245,7 @@ export const watchlistService = {
   },
 
   listWatchlistByType(userId: number, type: string) {
-    const rows = sqlite
+    const rows = appSqlite
       .prepare(
         `SELECT * FROM watchlist_items WHERE user_id = ? AND target_type = ? ORDER BY updated_at DESC`
       )
@@ -290,7 +291,7 @@ export const watchlistService = {
 
     const now = new Date().toISOString();
     try {
-      sqlite
+      appSqlite
         .prepare(
           `
           INSERT INTO watchlist_items (user_id, target_type, target_id, query_json, created_at, updated_at)
@@ -309,16 +310,16 @@ export const watchlistService = {
   },
 
   deleteWatchlistItem(userId: number, id: number) {
-    const row = sqlite
+    const row = appSqlite
       .prepare("SELECT id FROM watchlist_items WHERE id = ? AND user_id = ?")
       .get(id, userId) as { id: number } | undefined;
     if (!row) return { ok: false, error: "Not found or not authorized" };
-    sqlite.prepare("DELETE FROM watchlist_items WHERE id = ?").run(id);
+    appSqlite.prepare("DELETE FROM watchlist_items WHERE id = ?").run(id);
     return { ok: true };
   },
 
   isWatchlistItem(userId: number, targetType: string, targetId: string) {
-    const row = sqlite
+    const row = appSqlite
       .prepare(
         "SELECT id FROM watchlist_items WHERE user_id = ? AND target_type = ? AND target_id = ?"
       )

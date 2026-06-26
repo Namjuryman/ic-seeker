@@ -1,4 +1,5 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { papers, favorites, readingStatus, notes, tags, paperTags, importLog } from "../db/schema.js";
 import { sql, eq, and } from "drizzle-orm";
 import { searchService, semanticText } from "./search.service.js";
@@ -77,7 +78,7 @@ function baseScore(venue: string, year: number, citations = 0): number {
 }
 
 function rebuildFtsForPaper(paperId: number) {
-  const row = db.select({
+  const row = metadataDb.select({
     id: papers.id,
     title: papers.title,
     authors: papers.authors,
@@ -87,16 +88,16 @@ function rebuildFtsForPaper(paperId: number) {
     doi: papers.doi,
   }).from(papers).where(eq(papers.id, paperId)).get();
   if (!row) return;
-  db.run(sql`DELETE FROM papers_fts WHERE rowid = ${paperId}`);
-  db.run(sql`INSERT INTO papers_fts (rowid, title, authors, abstract, venue, domain, doi) VALUES (${paperId}, ${row.title || ""}, ${row.authors || ""}, ${row.abstract || ""}, ${row.venue || ""}, ${row.domain || ""}, ${row.doi || ""})`);
+  metadataDb.run(sql`DELETE FROM papers_fts WHERE rowid = ${paperId}`);
+  metadataDb.run(sql`INSERT INTO papers_fts (rowid, title, authors, abstract, venue, domain, doi) VALUES (${paperId}, ${row.title || ""}, ${row.authors || ""}, ${row.abstract || ""}, ${row.venue || ""}, ${row.domain || ""}, ${row.doi || ""})`);
 }
 
 export const paperService = {
   getPaper(id: number, userId = 0) {
-    const row = db.select().from(papers).where(eq(papers.id, id)).get();
+    const row = metadataDb.select().from(papers).where(eq(papers.id, id)).get();
     if (!row) return null;
     const [enriched] = searchService.enrichWithUserState([toPaperRow(row) as unknown as { id: number; [key: string]: unknown }], userId);
-    const note = db.select({ body: notes.body })
+    const note = appDb.select({ body: notes.body })
       .from(notes)
       .where(and(eq(notes.userId, userId), eq(notes.paperId, id)))
       .get();
@@ -104,38 +105,38 @@ export const paperService = {
   },
 
   upsertPaperState(id: number, body: Record<string, unknown>, userId = 0) {
-    const exists = db.select({ id: papers.id }).from(papers).where(eq(papers.id, id)).get();
+    const exists = metadataDb.select({ id: papers.id }).from(papers).where(eq(papers.id, id)).get();
     if (!exists) return null;
 
     if (typeof body.favorite === "boolean") {
       if (body.favorite) {
-        db.insert(favorites).values({ userId, paperId: id }).onConflictDoNothing().run();
+        appDb.insert(favorites).values({ userId, paperId: id }).onConflictDoNothing().run();
       } else {
-        db.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.paperId, id))).run();
+        appDb.delete(favorites).where(and(eq(favorites.userId, userId), eq(favorites.paperId, id))).run();
       }
     }
 
     if (body.readingStatus) {
       const allowed = new Set(["unread", "reading", "read", "important", "skip"]);
       const status = allowed.has(String(body.readingStatus)) ? String(body.readingStatus) : "unread";
-      db.insert(readingStatus).values({ userId, paperId: id, status })
+      appDb.insert(readingStatus).values({ userId, paperId: id, status })
         .onConflictDoUpdate({ target: [readingStatus.userId, readingStatus.paperId], set: { status, updatedAt: sql`CURRENT_TIMESTAMP` } })
         .run();
     }
 
     if (typeof body.note === "string") {
-      db.insert(notes).values({ userId, paperId: id, body: body.note.slice(0, 20000) })
+      appDb.insert(notes).values({ userId, paperId: id, body: body.note.slice(0, 20000) })
         .onConflictDoUpdate({ target: [notes.userId, notes.paperId], set: { body: body.note.slice(0, 20000), updatedAt: sql`CURRENT_TIMESTAMP` } })
         .run();
     }
 
     if ("tags" in body) {
-      db.delete(paperTags).where(and(eq(paperTags.userId, userId), eq(paperTags.paperId, id))).run();
+      appDb.delete(paperTags).where(and(eq(paperTags.userId, userId), eq(paperTags.paperId, id))).run();
       for (const tag of normalizeTags(body.tags)) {
-        db.insert(tags).values({ name: tag }).onConflictDoNothing().run();
-        const tagRow = db.select({ id: tags.id }).from(tags).where(eq(tags.name, tag)).get();
+        appDb.insert(tags).values({ name: tag }).onConflictDoNothing().run();
+        const tagRow = appDb.select({ id: tags.id }).from(tags).where(eq(tags.name, tag)).get();
         if (tagRow) {
-          db.insert(paperTags).values({ userId, paperId: id, tagId: tagRow.id }).onConflictDoNothing().run();
+          appDb.insert(paperTags).values({ userId, paperId: id, tagId: tagRow.id }).onConflictDoNothing().run();
         }
       }
     }
@@ -144,7 +145,7 @@ export const paperService = {
   },
 
   getAllTags(userId = 0) {
-    return db.select({
+    return appDb.select({
       name: tags.name,
       color: tags.color,
       papers: sql<number>`COUNT(${paperTags.paperId})`,
@@ -168,11 +169,11 @@ export const paperService = {
     const sourceUrl = String(input.source_url || (doi ? `https://doi.org/${doi}` : ""));
 
     if (doi) {
-      const existing = db.select({ id: papers.id }).from(papers).where(sql`LOWER(${papers.doi}) = LOWER(${doi})`).get();
+      const existing = metadataDb.select({ id: papers.id }).from(papers).where(sql`LOWER(${papers.doi}) = LOWER(${doi})`).get();
       if (existing) return this.getPaper(existing.id, 0);
     }
 
-    const result = db.insert(papers).values({
+    const result = metadataDb.insert(papers).values({
       title,
       authors,
       affiliations: String(input.affiliations || ""),
@@ -200,7 +201,7 @@ export const paperService = {
 
     const paperId = result.id;
     rebuildFtsForPaper(paperId);
-    db.insert(importLog).values({
+    metadataDb.insert(importLog).values({
       source: String(input.collection_method || "manual_import"),
       status: "ok",
       message: title,

@@ -60,6 +60,18 @@ git lfs pull
 - Mobile-friendly web layout
 - Docker deployment
 
+## Commercial Architecture Track
+
+SiliconScope v2 is still runnable as a local/private SQLite MVP, but the target product architecture is tracked in [`docs/COMMERCIAL_ARCHITECTURE.md`](docs/COMMERCIAL_ARCHITECTURE.md). The SQLite-to-Postgres data split is tracked in [`docs/DATA_LAYER_MIGRATION.md`](docs/DATA_LAYER_MIGRATION.md).
+
+Optional local infrastructure for the future commercial stack can be started with:
+
+```powershell
+docker compose -f docker-compose.infra.yml up -d
+```
+
+This starts Postgres, Redis, Meilisearch, MinIO, and Mailpit for development. The current app does not require these services until the corresponding adapters are implemented.
+
 ## Quick Start
 
 **Important notes:**

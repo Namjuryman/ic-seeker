@@ -1,4 +1,5 @@
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { papers, favorites, readingStatus, notes, tags, paperTags } from "../db/schema.js";
 import { sql, eq, and, inArray, not, gte, lte } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
@@ -92,26 +93,33 @@ function buildWhereClause(params: Record<string, string>, userId = 0) {
     conditions.push(not(eq(papers.localPdf, "")));
   }
   if (params.favorite === "1") {
-    conditions.push(inArray(papers.id, db.select({ id: favorites.paperId }).from(favorites).where(eq(favorites.userId, userId))));
+    const favoriteIds = appDb.select({ id: favorites.paperId })
+      .from(favorites)
+      .where(eq(favorites.userId, userId))
+      .all()
+      .map((row) => row.id);
+    conditions.push(favoriteIds.length ? inArray(papers.id, favoriteIds) : sql`0 = 1`);
   }
   if (params.tag) {
-    const tagId = db.select({ id: tags.id }).from(tags).where(eq(tags.name, params.tag)).get()?.id;
+    const tagId = appDb.select({ id: tags.id }).from(tags).where(eq(tags.name, params.tag)).get()?.id;
     if (tagId) {
-      conditions.push(
-        inArray(
-          papers.id,
-          db.select({ paperId: paperTags.paperId }).from(paperTags).where(and(eq(paperTags.userId, userId), eq(paperTags.tagId, tagId)))
-        )
-      );
+      const taggedIds = appDb.select({ paperId: paperTags.paperId })
+        .from(paperTags)
+        .where(and(eq(paperTags.userId, userId), eq(paperTags.tagId, tagId)))
+        .all()
+        .map((row) => row.paperId);
+      conditions.push(taggedIds.length ? inArray(papers.id, taggedIds) : sql`0 = 1`);
+    } else {
+      conditions.push(sql`0 = 1`);
     }
   }
   if (params.status) {
-    conditions.push(
-      inArray(
-        papers.id,
-        db.select({ paperId: readingStatus.paperId }).from(readingStatus).where(and(eq(readingStatus.userId, userId), eq(readingStatus.status, params.status)))
-      )
-    );
+    const statusIds = appDb.select({ paperId: readingStatus.paperId })
+      .from(readingStatus)
+      .where(and(eq(readingStatus.userId, userId), eq(readingStatus.status, params.status)))
+      .all()
+      .map((row) => row.paperId);
+    conditions.push(statusIds.length ? inArray(papers.id, statusIds) : sql`0 = 1`);
   }
 
   return conditions;
@@ -164,7 +172,7 @@ export const searchService = {
 
     if (query) {
       // FTS5 search
-      const totalResult = db.get<{ n: number }>(sql`
+      const totalResult = metadataDb.get<{ n: number }>(sql`
         WITH matched AS (
           SELECT rowid AS id FROM papers_fts WHERE papers_fts MATCH ${query}
         )
@@ -174,7 +182,7 @@ export const searchService = {
       `);
       const total = totalResult?.n ?? 0;
 
-      const rows = db.all<{
+      const rows = metadataDb.all<{
         id: number;
         title: string;
         authors: string;
@@ -225,13 +233,13 @@ export const searchService = {
     }
 
     // Non-FTS search
-    const totalResult = db.get<{ n: number }>(sql`
+    const totalResult = metadataDb.get<{ n: number }>(sql`
       SELECT COUNT(*) AS n FROM papers
       ${whereConditions.length > 0 ? sql`WHERE ${and(...whereConditions)}` : sql``}
     `);
     const total = totalResult?.n ?? 0;
 
-    const rows = db.all<{
+    const rows = metadataDb.all<{
       id: number;
       title: string;
       authors: string;
@@ -282,19 +290,19 @@ export const searchService = {
   ) {
     if (!rows.length) return rows;
     const ids = rows.map((r) => r.id);
-    const favRows = db.select({ paperId: favorites.paperId })
+    const favRows = appDb.select({ paperId: favorites.paperId })
       .from(favorites)
       .where(and(eq(favorites.userId, userId), inArray(favorites.paperId, ids)))
       .all();
     const favoriteIds = new Set(favRows.map((r) => r.paperId));
 
-    const statusRows = db.select({ paperId: readingStatus.paperId, status: readingStatus.status })
+    const statusRows = appDb.select({ paperId: readingStatus.paperId, status: readingStatus.status })
       .from(readingStatus)
       .where(and(eq(readingStatus.userId, userId), inArray(readingStatus.paperId, ids)))
       .all();
     const statusMap = new Map(statusRows.map((r) => [r.paperId, r.status]));
 
-    const tagRows = db.select({ paperId: paperTags.paperId, name: tags.name, color: tags.color })
+    const tagRows = appDb.select({ paperId: paperTags.paperId, name: tags.name, color: tags.color })
       .from(paperTags)
       .innerJoin(tags, eq(tags.id, paperTags.tagId))
       .where(and(eq(paperTags.userId, userId), inArray(paperTags.paperId, ids)))

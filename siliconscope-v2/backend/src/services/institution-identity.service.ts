@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { institutionAliases } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
 
@@ -78,7 +78,7 @@ function titleCaseInstitution(value: string): string {
 function manualAliasRows(keys: string[]) {
   if (!keys.length) return [];
   try {
-    return db.select().from(institutionAliases).where(inArray(institutionAliases.alias, keys)).all();
+    return appDb.select().from(institutionAliases).where(inArray(institutionAliases.alias, keys)).all();
   } catch {
     return [];
   }
@@ -152,7 +152,7 @@ export const institutionIdentityService = {
       }
     }
     try {
-      const rows = db.select().from(institutionAliases).where(eq(institutionAliases.canonicalName, canonical.canonicalName)).all();
+      const rows = appDb.select().from(institutionAliases).where(eq(institutionAliases.canonicalName, canonical.canonicalName)).all();
       for (const row of rows) variants.add(row.alias);
     } catch {
       // table may not exist in older dev DBs before startup migration

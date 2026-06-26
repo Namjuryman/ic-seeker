@@ -1,4 +1,4 @@
-import { db } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { paperComments } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 
@@ -31,7 +31,7 @@ export const discussionService = {
   listComments(paperId: number, options: { limit?: number; offset?: number } = {}) {
     const limit = Math.min(Math.max(Number(options.limit || 20), 1), 100);
     const offset = Math.max(Number(options.offset || 0), 0);
-    const rows = db.all<{
+    const rows = appDb.all<{
       id: number;
       paper_id: number;
       user_id: number;
@@ -64,7 +64,7 @@ export const discussionService = {
     if (text.length < 2) throw new Error("Comment body is required");
     if (text.length > 10000) throw new Error("Comment is too long");
 
-    const result = db.insert(paperComments).values({
+    const result = appDb.insert(paperComments).values({
       paperId,
       userId: Number(userId),
       commentType: normalizeCommentType(body.commentType),

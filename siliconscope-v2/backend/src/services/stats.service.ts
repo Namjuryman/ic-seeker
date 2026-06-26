@@ -1,5 +1,6 @@
 import { appConfig } from "../config.js";
-import { db } from "../db/connection.js";
+import { db as metadataDb } from "../db/connection.js";
+import { appDb } from "../db/app-db.js";
 import { papers, favorites, notes, tags, apiKeys, importLog, qsRankings } from "../db/schema.js";
 import { sql, count, eq, ne, and, gte, lte, like, inArray, isNotNull, not } from "drizzle-orm";
 import { promises as fs } from "node:fs";
@@ -23,20 +24,20 @@ function methodLabel(method: string): string {
 
 export const statsService = {
   getStats(userId = 0) {
-    const total = db.select({ count: count() }).from(papers).get()?.count ?? 0;
-    const pdfs = db.select({ count: count() }).from(papers).where(ne(papers.localPdf, "")).get()?.count ?? 0;
-    const aminerRows = db.select({ count: count() }).from(papers)
+    const total = metadataDb.select({ count: count() }).from(papers).get()?.count ?? 0;
+    const pdfs = metadataDb.select({ count: count() }).from(papers).where(ne(papers.localPdf, "")).get()?.count ?? 0;
+    const aminerRows = metadataDb.select({ count: count() }).from(papers)
       .where(sql`${papers.openalexId} LIKE 'aminer:%' OR ${papers.collectionMethod} LIKE 'aminer%'`)
       .get()?.count ?? 0;
-    const favoriteCount = db.select({ count: count() }).from(favorites).where(eq(favorites.userId, userId)).get()?.count ?? 0;
-    const notesCount = db.select({ count: count() }).from(notes).where(and(eq(notes.userId, userId), ne(notes.body, ""))).get()?.count ?? 0;
-    const tagsList = db.select().from(tags).orderBy(tags.name).all();
-    const years = db.select({
+    const favoriteCount = appDb.select({ count: count() }).from(favorites).where(eq(favorites.userId, userId)).get()?.count ?? 0;
+    const notesCount = appDb.select({ count: count() }).from(notes).where(and(eq(notes.userId, userId), ne(notes.body, ""))).get()?.count ?? 0;
+    const tagsList = appDb.select().from(tags).orderBy(tags.name).all();
+    const years = metadataDb.select({
       minYear: sql<number>`MIN(${papers.year})`,
       maxYear: sql<number>`MAX(${papers.year})`,
     }).from(papers).get();
 
-    const byVenue = db.select({
+    const byVenue = metadataDb.select({
       venue: papers.venue,
       rank: papers.venueRank,
       count: count(),
@@ -44,37 +45,37 @@ export const statsService = {
     }).from(papers).groupBy(papers.venue, papers.venueRank)
       .orderBy(sql`MAX(${papers.qualityScore}) DESC`).all();
 
-    const byField = db.select({
+    const byField = metadataDb.select({
       field: papers.domain,
       count: count(),
     }).from(papers).groupBy(papers.domain).orderBy(sql`COUNT(*) DESC`).all();
 
-    const byVenueYear = db.select({
+    const byVenueYear = metadataDb.select({
       venue: papers.venue,
       year: papers.year,
       count: count(),
     }).from(papers).groupBy(papers.venue, papers.year)
       .orderBy(papers.venue, papers.year).all();
 
-    const byCollectionMethod = db.select({
+    const byCollectionMethod = metadataDb.select({
       method: sql<string>`COALESCE(NULLIF(${papers.collectionMethod}, ''), 'unknown')`,
       count: count(),
     }).from(papers)
       .groupBy(sql`COALESCE(NULLIF(${papers.collectionMethod}, ''), 'unknown')`)
       .orderBy(sql`COUNT(*) DESC, COALESCE(NULLIF(${papers.collectionMethod}, ''), 'unknown')`).all();
 
-    const byVerification = db.select({
+    const byVerification = metadataDb.select({
       status: sql<string>`COALESCE(NULLIF(${papers.verificationStatus}, ''), 'unverified')`,
       count: count(),
     }).from(papers)
       .groupBy(sql`COALESCE(NULLIF(${papers.verificationStatus}, ''), 'unverified')`)
       .orderBy(sql`COUNT(*) DESC, COALESCE(NULLIF(${papers.verificationStatus}, ''), 'unverified')`).all();
 
-    const venues = db.selectDistinct({ venue: papers.venue }).from(papers)
+    const venues = metadataDb.selectDistinct({ venue: papers.venue }).from(papers)
       .orderBy(papers.venue).all().map(r => r.venue);
-    const fields = db.selectDistinct({ domain: papers.domain }).from(papers)
+    const fields = metadataDb.selectDistinct({ domain: papers.domain }).from(papers)
       .orderBy(papers.domain).all().map(r => r.domain);
-    const ranks = db.selectDistinct({ rank: papers.venueRank }).from(papers)
+    const ranks = metadataDb.selectDistinct({ rank: papers.venueRank }).from(papers)
       .orderBy(papers.venueRank).all().map(r => r.rank);
 
     return {
@@ -101,7 +102,7 @@ export const statsService = {
   },
 
   getApiKeys() {
-    const rows = db.select().from(apiKeys).orderBy(apiKeys.provider).all();
+    const rows = appDb.select().from(apiKeys).orderBy(apiKeys.provider).all();
     const envProviders = ["OPENAI_API_KEY", "IEEE_API_KEY", "AMINER_API_KEY", "AMINER_AUTH_TOKEN", "CROSSREF_MAILTO"]
       .filter(name => process.env[name])
       .map(name => ({
@@ -124,11 +125,11 @@ export const statsService = {
     const clean = String(provider || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
     if (!clean) throw new Error("Invalid provider");
     if (value) {
-      db.insert(apiKeys).values({ provider: clean, value: String(value).trim() })
+      appDb.insert(apiKeys).values({ provider: clean, value: String(value).trim() })
         .onConflictDoUpdate({ target: apiKeys.provider, set: { value: String(value).trim(), updatedAt: sql`CURRENT_TIMESTAMP` } })
         .run();
     } else {
-      db.delete(apiKeys).where(eq(apiKeys.provider, clean)).run();
+      appDb.delete(apiKeys).where(eq(apiKeys.provider, clean)).run();
     }
     return this.getApiKeys();
   },
