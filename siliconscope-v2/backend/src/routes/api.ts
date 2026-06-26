@@ -25,6 +25,7 @@ import { institutionCompareService } from "../services/institution-compare.servi
 import { authorCompareService } from "../services/author-compare.service.js";
 import { mentorCompareService } from "../services/mentor-compare.service.js";
 import { topicReportService } from "../services/topic-report.service.js";
+import { platformService } from "../services/platform.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -32,6 +33,10 @@ const router = Router();
 router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.userId ?? 0;
   res.json(memoCache(`stats:${userId}`, 30_000, () => statsService.getStats(userId)));
+});
+
+router.get("/platform", requireAuth, async (_req, res) => {
+  res.json(platformService.getOverview());
 });
 
 router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {

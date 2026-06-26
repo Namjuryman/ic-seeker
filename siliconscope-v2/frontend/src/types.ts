@@ -283,6 +283,41 @@ export interface AuthStatus {
   user?: { userId: number; email: string; role: string };
 }
 
+export interface PlatformModule {
+  id: string;
+  name: string;
+  track: 'research' | 'learning' | 'business' | 'operations' | 'community' | 'commercial';
+  status: 'ready' | 'partial' | 'planned';
+  maturity: number;
+  summary: string;
+  shipped: string[];
+  next: string[];
+}
+
+export interface PlatformOverview {
+  appName: string;
+  generatedAt: string;
+  topology: {
+    mode: string;
+    metadataStore: { provider: string; path: string; role: string };
+    appStore: { provider: string; configured: boolean; role: string };
+    cache: { provider: string; configured: boolean; role: string };
+    search: { provider: string; configured: boolean };
+    objectStorage: { provider: string; configured: boolean; bucket?: string };
+    queue: { provider: string; configured: boolean };
+  };
+  summary: {
+    modules: number;
+    ready: number;
+    partial: number;
+    planned: number;
+    averageMaturity: number;
+  };
+  tracks: Array<{ id: string; name: string; score: number; modules: number }>;
+  modules: PlatformModule[];
+  nextMilestones: string[];
+}
+
 
 export interface DataQualityReport {
   generatedAt: string;

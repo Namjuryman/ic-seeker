@@ -4662,17 +4662,362 @@
   cursor: wait;
 }
 
+.company-pagination {
+  justify-content: center;
+  border-top: 1px solid #edf2f8;
+  margin: 0;
+  padding: 18px;
+}
+
+.company-pagination button.active {
+  border-color: #315fe8;
+  background: #315fe8;
+  color: #fff;
+}
+
+/* Platform console */
+.platform-page {
+  max-width: 1580px;
+  margin: 0 auto;
+  padding: 22px;
+  color: var(--ink-text);
+}
+
+.platform-hero {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #dce5f2;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(49, 95, 232, .15), transparent 28%),
+    linear-gradient(135deg, #ffffff, #f4f9ff 58%, #edf9f4);
+  padding: 28px;
+  box-shadow: 0 14px 32px rgba(31, 45, 80, .08);
+}
+
+.platform-hero span,
+.platform-panel-head span,
+.platform-module-head span {
+  color: #315fe8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+.platform-hero h1 {
+  margin-top: 9px;
+  color: #0f1f3d;
+  font-size: 42px;
+  line-height: 1.05;
+  font-weight: 950;
+}
+
+.platform-hero p {
+  max-width: 760px;
+  margin-top: 12px;
+  color: #5d6f8e;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.platform-score {
+  display: grid;
+  min-width: 180px;
+  place-items: center;
+  border: 1px solid #dce5f2;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.platform-score strong {
+  color: #12a875;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.platform-score span {
+  color: #5d6f8e;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.platform-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.platform-summary div,
+.platform-panel,
+.platform-module {
+  border: 1px solid #dce5f2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(31, 45, 80, .065);
+}
+
+.platform-summary div {
+  padding: 16px;
+}
+
+.platform-summary span {
+  display: block;
+  color: #7485a3;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.platform-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: #0f1f3d;
+  font-size: 25px;
+  font-weight: 950;
+}
+
+.platform-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, .8fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.platform-panel {
+  padding: 18px;
+}
+
+.platform-wide {
+  min-width: 0;
+}
+
+.platform-panel-head h2 {
+  margin-top: 4px;
+  color: #0f1f3d;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.platform-track-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.platform-track {
+  border: 1px solid #e2e9f4;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 14px;
+}
+
+.platform-track strong {
+  color: #315fe8;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.platform-track span,
+.platform-track small {
+  display: block;
+  margin-top: 4px;
+}
+
+.platform-track span {
+  color: #0f1f3d;
+  font-weight: 900;
+}
+
+.platform-track small,
+.platform-infra dd,
+.platform-milestones li {
+  color: #5d6f8e;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.platform-infra {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.platform-infra div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #edf2f8;
+  padding-bottom: 9px;
+}
+
+.platform-infra dt {
+  color: #0f1f3d;
+  font-weight: 900;
+}
+
+.platform-infra dd {
+  margin: 0;
+  text-align: right;
+}
+
+.platform-modules {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.platform-module {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.platform-module::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: #315fe8;
+}
+
+.platform-module-ready::before {
+  background: #12b886;
+}
+
+.platform-module-planned::before {
+  background: #f59f00;
+}
+
+.platform-module-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.platform-module-head h3 {
+  margin-top: 5px;
+  color: #0f1f3d;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 950;
+}
+
+.platform-module-head strong {
+  color: #0f1f3d;
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.platform-module p {
+  margin-top: 11px;
+  min-height: 66px;
+  color: #5d6f8e;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.platform-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eff7;
+  margin: 12px 0;
+}
+
+.platform-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #315fe8, #12b886);
+}
+
+.platform-module-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.platform-module-columns em {
+  display: block;
+  margin-bottom: 6px;
+  color: #0f1f3d;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.platform-module-columns small {
+  display: block;
+  margin: 5px 0;
+  color: #5d6f8e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.platform-module b {
+  display: inline-flex;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: #edf3ff;
+  padding: 5px 9px;
+  color: #315fe8;
+  font-size: 12px;
+}
+
+.platform-milestones {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-left: 20px;
+}
+
+.platform-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.platform-shortcuts a {
+  border: 1px solid #dce5f2;
+  border-radius: 999px;
+  background: #f8fbff;
+  padding: 8px 11px;
+  color: #24406f;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.platform-shortcuts a:hover {
+  border-color: #315fe8;
+  color: #315fe8;
+}
+
 @media (max-width: 980px) {
   .company-hero,
-  .company-layout {
+  .company-layout,
+  .platform-hero,
+  .platform-grid {
     grid-template-columns: 1fr;
   }
 
-  .company-hero {
+  .company-hero,
+  .platform-hero {
     display: grid;
   }
 
-  .company-stats {
+  .company-stats,
+  .platform-summary,
+  .platform-modules {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -4702,14 +5047,26 @@
     justify-self: start;
     margin-left: 58px;
   }
+
+  .platform-track-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
-  .company-page {
+  .company-page,
+  .platform-page {
     padding: 14px;
   }
 
-  .company-stats {
+  .company-stats,
+  .platform-summary,
+  .platform-modules,
+  .platform-track-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-module-columns {
     grid-template-columns: 1fr;
   }
 }

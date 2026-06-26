@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+﻿import { Suspense, lazy, useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from './api'
@@ -32,6 +32,7 @@ const InstitutionComparePage = lazy(() => import('./pages/InstitutionComparePage
 const AuthorComparePage = lazy(() => import('./pages/AuthorComparePage'))
 const MentorComparePage = lazy(() => import('./pages/MentorComparePage'))
 const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
+const PlatformPage = lazy(() => import('./pages/PlatformPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -46,18 +47,18 @@ const navItems = [
   { to: '/companies', label: '企业情报', icon: 'C', section: '探索' },
   { to: '/watchlist', label: '关注列表', icon: 'W', section: '探索' },
   { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
-  { to: '/compare', label: '对比中心', icon: '≡', section: '探索' },
-  { to: '/reports', label: '报告中心', icon: '¶', section: '探索' },
+  { to: '/compare', label: '对比中心', icon: '≋', section: '探索' },
+  { to: '/reports', label: '报告中心', icon: 'P', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
+  { to: '/platform', label: '平台中枢', icon: 'O', section: '数据' },
   { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
   { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
   { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据' },
   { to: '/data-quality', label: '数据质量', icon: 'Q', section: '数据' },
   { to: '/moderation', label: '审核中心', icon: '!', section: '数据' },
 ]
-
 function LoginGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [password, setPassword] = useState('')
@@ -203,6 +204,7 @@ function App() {
                 <Route path="/compare/authors" element={<AuthorComparePage />} />
                 <Route path="/compare/mentors" element={<MentorComparePage />} />
                 <Route path="/reports" element={<TopicReportPage />} />
+                <Route path="/platform" element={<PlatformPage />} />
                 <Route path="/reports/topics/:field" element={<TopicReportPage />} />
                 <Route path="/admin/companies" element={<CompanyAdminPage />} />
               </Routes>

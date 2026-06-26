@@ -43,6 +43,7 @@ import type {
   AuthorCompareResult,
   MentorCompareResult,
   TopicReport,
+  PlatformOverview,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -70,6 +71,11 @@ export const api = {
 
   async stats() {
     const res = await axios.get<StatsData>('/api/stats')
+    return res.data
+  },
+
+  async platform() {
+    const res = await axios.get<PlatformOverview>('/api/platform')
     return res.data
   },
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
@@ -12,9 +12,15 @@ const typeLabels: Record<string, string> = {
   IDM: 'IDM',
   'OSAT / Packaging': '封装测试',
   Equipment: '半导体设备',
-  Materials: '材料',
+  Materials: '半导体材料',
   'Semiconductor IP': 'IP',
   EDA: 'EDA',
+}
+
+function pageWindow(page: number, pages: number) {
+  const start = Math.max(1, page - 2)
+  const end = Math.min(pages, page + 2)
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
 export default function CompaniesPage() {
@@ -65,12 +71,12 @@ export default function CompaniesPage() {
   const rows = companies.data?.rows || []
   const total = companies.data?.total || 0
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const topCountries = [...new Set(rows.map((row) => row.country).filter(Boolean))].slice(0, 6)
+  const topCountries = useMemo(() => [...new Set(rows.map((row) => row.country).filter(Boolean))].slice(0, 6), [rows])
   const watchedSet = watchedIds.data || new Set<string>()
 
   function submit(nextPage = 1) {
     const params: Record<string, string> = {}
-    if (q) params.q = q
+    if (q.trim()) params.q = q.trim()
     if (domain) params.domain = domain
     if (nextPage > 1) params.page = String(nextPage)
     setSearchParams(params)
@@ -88,7 +94,7 @@ export default function CompaniesPage() {
         <div>
           <span>Company Intelligence</span>
           <h1>半导体企业情报</h1>
-          <p>按产业链、国家地区和技术方向浏览主要 IC 公司，后续可接岗位、论文和学习路线。</p>
+          <p>按产业链、国家地区和技术方向浏览主要 IC 公司，后续可接岗位、论文、学习路线、新闻和供应链关系。</p>
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
@@ -119,6 +125,7 @@ export default function CompaniesPage() {
               type="text"
               value={q}
               onChange={(event) => setQ(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && submit(1)}
               placeholder="TSMC / 长鑫 / RF / DC-DC"
             />
           </label>
@@ -126,7 +133,7 @@ export default function CompaniesPage() {
           <label>
             <span>技术方向</span>
             <select value={domain} onChange={(event) => setDomain(event.target.value)}>
-              <option value="">All domains</option>
+              <option value="">全部方向</option>
               {domains.data?.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
@@ -134,17 +141,13 @@ export default function CompaniesPage() {
           <button className="company-primary" onClick={() => submit(1)}>搜索</button>
 
           <div className="company-filter-hints">
-            <span>当前地区</span>
+            <span>当前结果地区</span>
             {topCountries.length ? topCountries.map((country) => <em key={country}>{country}</em>) : <p>暂无结果</p>}
           </div>
         </aside>
 
         <main className="company-results">
-          {message && (
-            <div className="company-toast">
-              {message}
-            </div>
-          )}
+          {message && <div className="company-toast">{message}</div>}
 
           <div className="company-results-head">
             <div>
@@ -166,7 +169,7 @@ export default function CompaniesPage() {
                         <strong>{company.name}</strong>
                         {company.legalName && <span>{company.legalName}</span>}
                       </div>
-                      <p>{company.description || 'No description available.'}</p>
+                      <p>{company.description || '暂无简介，后续可由官网、财报、招聘页和新闻源补全。'}</p>
                       <div className="company-tags">
                         <em>{typeLabels[company.companyType || ''] || company.companyType || 'Company'}</em>
                         <em>{company.country || '-'}</em>
@@ -201,24 +204,30 @@ export default function CompaniesPage() {
             <div className="learning-muted">
               {total === 0 ? (
                 <div>
-                  <p>No company data yet.</p>
+                  <p>还没有企业数据。</p>
                   <p className="mt-2">
-                    Run <code>npm run companies:seed</code> or{' '}
-                    <Link to="/admin/companies" className="text-brand-600 hover:underline">add companies in Admin</Link>.
+                    运行 <code>npm run companies:seed</code>，或进入{' '}
+                    <Link to="/admin/companies" className="text-brand-600 hover:underline">数据维护</Link>手动添加。
                   </p>
                 </div>
               ) : (
-                'No companies found.'
+                '没有匹配的企业。'
               )}
             </div>
           )}
           {companies.isLoading && <p className="learning-muted">Loading...</p>}
 
           {pages > 1 && (
-            <nav className="ss-pagination" style={{ marginTop: '1rem' }}>
+            <nav className="ss-pagination company-pagination">
+              <button onClick={() => submit(1)} disabled={page <= 1}>首页</button>
               <button onClick={() => submit(Math.max(1, page - 1))} disabled={page <= 1}>上一页</button>
-              <span>Page {page} / {pages}</span>
+              {pageWindow(page, pages).map((num) => (
+                <button key={num} className={num === page ? 'active' : ''} onClick={() => submit(num)}>
+                  {num}
+                </button>
+              ))}
               <button onClick={() => submit(Math.min(pages, page + 1))} disabled={page >= pages}>下一页</button>
+              <button onClick={() => submit(pages)} disabled={page >= pages}>末页</button>
             </nav>
           )}
         </main>
