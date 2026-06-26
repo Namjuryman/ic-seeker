@@ -44,6 +44,7 @@ import type {
   MentorCompareResult,
   TopicReport,
   PlatformOverview,
+  AdminOverview,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -76,6 +77,11 @@ export const api = {
 
   async platform() {
     const res = await axios.get<PlatformOverview>('/api/platform')
+    return res.data
+  },
+
+  async adminOverview() {
+    const res = await axios.get<AdminOverview>('/api/admin/overview')
     return res.data
   },
 

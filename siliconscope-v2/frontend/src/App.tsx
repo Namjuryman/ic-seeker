@@ -25,6 +25,7 @@ const CompaniesPage = lazy(() => import('./pages/CompaniesPage'))
 const CompanyProfilePage = lazy(() => import('./pages/CompanyProfilePage'))
 const CompanyComparePage = lazy(() => import('./pages/CompanyComparePage'))
 const CompanyAdminPage = lazy(() => import('./pages/CompanyAdminPage'))
+const AdminConsolePage = lazy(() => import('./pages/AdminConsolePage'))
 const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
 const ReadingQueuePage = lazy(() => import('./pages/ReadingQueuePage'))
 const ComparePage = lazy(() => import('./pages/ComparePage'))
@@ -53,6 +54,7 @@ const navItems = [
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
   { to: '/platform', label: '平台中枢', icon: 'O', section: '数据' },
+  { to: '/admin', label: '管理后台', icon: 'B', section: '数据' },
   { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
   { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
   { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据' },
@@ -206,6 +208,7 @@ function App() {
                 <Route path="/reports" element={<TopicReportPage />} />
                 <Route path="/platform" element={<PlatformPage />} />
                 <Route path="/reports/topics/:field" element={<TopicReportPage />} />
+                <Route path="/admin" element={<AdminConsolePage />} />
                 <Route path="/admin/companies" element={<CompanyAdminPage />} />
               </Routes>
             </Suspense>

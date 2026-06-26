@@ -26,6 +26,7 @@ import { authorCompareService } from "../services/author-compare.service.js";
 import { mentorCompareService } from "../services/mentor-compare.service.js";
 import { topicReportService } from "../services/topic-report.service.js";
 import { platformService } from "../services/platform.service.js";
+import { adminService } from "../services/admin.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -37,6 +38,10 @@ router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.get("/platform", requireAuth, async (_req, res) => {
   res.json(platformService.getOverview());
+});
+
+router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  res.json(await adminService.getOverview(req.user?.userId ?? 0));
 });
 
 router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {

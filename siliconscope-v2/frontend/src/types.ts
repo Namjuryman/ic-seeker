@@ -318,6 +318,54 @@ export interface PlatformOverview {
   nextMilestones: string[];
 }
 
+export interface AdminOperation {
+  id: string;
+  title: string;
+  status: 'ready' | 'partial' | 'planned' | 'attention' | 'needs-refresh' | 'needs-seed';
+  metric: string;
+  detail: string;
+  href: string;
+  action: string;
+}
+
+export interface AdminOverview {
+  appName: string;
+  generatedAt: string;
+  health: {
+    backend: string;
+    authMode: string;
+    metadataDb: string;
+    publicDir: string;
+  };
+  platform: PlatformOverview;
+  summary: {
+    papers: number;
+    years?: { minYear: number; maxYear: number };
+    pdfs: number;
+    companies: number;
+    snapshots: number;
+    snapshotBytes: number;
+    moderationOpen: number;
+    apiKeys: number;
+    pdfInbox: number;
+    dataQuality: number;
+  };
+  operations: AdminOperation[];
+  apiKeys: ApiKeyInfo[];
+  pdfInbox: {
+    path: string;
+    count: number;
+    importCommand: string;
+    samples: Array<{ name: string; path: string }>;
+  };
+  recentModeration: {
+    comments: Array<Record<string, any>>;
+    reviews: Array<Record<string, any>>;
+    reports: Array<Record<string, any>>;
+    totals?: { comments: number; reviews: number; reports: number; logs: number };
+  };
+}
+
 
 export interface DataQualityReport {
   generatedAt: string;
