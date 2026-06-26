@@ -29,13 +29,21 @@ function readPayload(req: any) {
   }
 }
 
+function localUser() {
+  return {
+    userId: 0,
+    email: "local",
+    role: appConfig.localAdminEnabled ? "admin" : "user",
+  };
+}
+
 router.get("/status", (req, res) => {
   const payload = readPayload(req);
   res.json({
     authenticated: Boolean(payload) || !appConfig.authEnabled,
     authEnabled: appConfig.authEnabled,
     appName: appConfig.appName,
-    user: payload || (!appConfig.authEnabled ? { userId: 0, email: "local", role: "admin" } : null),
+    user: payload || (!appConfig.authEnabled ? localUser() : null),
   });
 });
 
@@ -54,7 +62,7 @@ router.post("/login", async (req, res) => {
 
   const payload = appConfig.authEnabled
     ? authService.ensureAdminUser()
-    : { userId: 0, email: "local", role: "admin" as const };
+    : localUser();
 
   const token = jwt.sign(payload, appConfig.jwtSecret, { expiresIn: appConfig.tokenExpiry });
   res.cookie(appConfig.cookieName, token, cookieOptions());

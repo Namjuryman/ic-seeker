@@ -19,6 +19,7 @@ export const appConfig = {
   jwtSecret: process.env.JWT_SECRET || "change-me-in-production",
   adminPassword: process.env.ADMIN_PASSWORD || "change-me-now",
   authEnabled: process.env.IC_SEEKER_REQUIRE_LOGIN === "1" || process.env.IC_SEEKER_AUTH === "password",
+  localAdminEnabled: process.env.IC_SEEKER_LOCAL_ADMIN === "1",
   frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175")
     .split(",")
     .map((origin) => origin.trim())

@@ -1636,6 +1636,38 @@
     font-size: 12px;
   }
 
+  .ss-admin-denied {
+    max-width: 760px;
+    margin: 96px auto;
+    padding: 40px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ss-admin-denied span {
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .ss-admin-denied h1 {
+    margin: 12px 0;
+    color: var(--text);
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 950;
+  }
+
+  .ss-admin-denied p {
+    max-width: 620px;
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
   .ss-mark,
   .ss-brand-logo {
     display: grid;

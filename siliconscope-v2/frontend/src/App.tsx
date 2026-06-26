@@ -1,4 +1,4 @@
-﻿import { Suspense, lazy, useEffect, useState } from 'react'
+﻿import { Suspense, createContext, lazy, useContext, useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from './api'
@@ -39,7 +39,17 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
 })
 
-const navItems = [
+type NavItem = {
+  to: string
+  label: string
+  icon: string
+  section: string
+  adminOnly?: boolean
+}
+
+const AuthContext = createContext<AuthStatus | null>(null)
+
+const navItems: NavItem[] = [
   { to: '/', label: '学术搜索', icon: 'S', section: '探索' },
   { to: '/learning', label: '每日电路', icon: 'D', section: '探索' },
   { to: '/learning-path', label: '路线库', icon: 'L', section: '探索' },
@@ -54,13 +64,17 @@ const navItems = [
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
   { to: '/platform', label: '平台中枢', icon: 'O', section: '数据' },
-  { to: '/admin', label: '管理后台', icon: 'B', section: '数据' },
   { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
-  { to: '/identity', label: '别名管理', icon: 'N', section: '数据' },
-  { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据' },
-  { to: '/data-quality', label: '数据质量', icon: 'Q', section: '数据' },
-  { to: '/moderation', label: '审核中心', icon: '!', section: '数据' },
+  { to: '/identity', label: '别名管理', icon: 'N', section: '数据', adminOnly: true },
+  { to: '/snapshots', label: '快照管理', icon: 'C', section: '数据', adminOnly: true },
+  { to: '/data-quality', label: '数据质量', icon: 'Q', section: '数据', adminOnly: true },
+  { to: '/moderation', label: '审核中心', icon: '!', section: '数据', adminOnly: true },
 ]
+
+function isAdmin(status: AuthStatus | null) {
+  return status?.user?.role === 'admin'
+}
+
 function LoginGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [password, setPassword] = useState('')
@@ -111,12 +125,14 @@ function LoginGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return children
+  return <AuthContext.Provider value={status}>{children}</AuthContext.Provider>
 }
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const auth = useContext(AuthContext)
   const [navOpen, setNavOpen] = useState(true)
-  const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
+  const visibleItems = navItems.filter((item) => !item.adminOnly || isAdmin(auth))
+  const grouped = visibleItems.reduce<Record<string, NavItem[]>>((acc, item) => {
     acc[item.section] = acc[item.section] || []
     acc[item.section].push(item)
     return acc
@@ -167,6 +183,22 @@ function Layout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const auth = useContext(AuthContext)
+
+  if (!isAdmin(auth)) {
+    return (
+      <div className="ss-admin-denied">
+        <span>Admin only</span>
+        <h1>这个页面只有管理员能访问</h1>
+        <p>普通用户不会在导航中看到后台入口；即使直接输入地址，也会被前端拦截，后端 API 仍然会做管理员权限校验。</p>
+      </div>
+    )
+  }
+
+  return children
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -191,11 +223,11 @@ function App() {
                 <Route path="/mentors" element={<MentorsPage />} />
                 <Route path="/mentors/*" element={<MentorsPage />} />
                 <Route path="/venue-matrix" element={<VenueMatrixPage />} />
-                <Route path="/identity" element={<IdentityPage />} />
-                <Route path="/snapshots" element={<SnapshotAdminPage />} />
-                <Route path="/journal-ingestion" element={<JournalIngestionPage />} />
-                <Route path="/data-quality" element={<DataQualityPage />} />
-                <Route path="/moderation" element={<ModerationPage />} />
+                <Route path="/identity" element={<AdminOnly><IdentityPage /></AdminOnly>} />
+                <Route path="/snapshots" element={<AdminOnly><SnapshotAdminPage /></AdminOnly>} />
+                <Route path="/journal-ingestion" element={<AdminOnly><JournalIngestionPage /></AdminOnly>} />
+                <Route path="/data-quality" element={<AdminOnly><DataQualityPage /></AdminOnly>} />
+                <Route path="/moderation" element={<AdminOnly><ModerationPage /></AdminOnly>} />
                 <Route path="/companies" element={<CompaniesPage />} />
                 <Route path="/companies/:companyId" element={<CompanyProfilePage />} />
                 <Route path="/watchlist" element={<WatchlistPage />} />
@@ -208,8 +240,8 @@ function App() {
                 <Route path="/reports" element={<TopicReportPage />} />
                 <Route path="/platform" element={<PlatformPage />} />
                 <Route path="/reports/topics/:field" element={<TopicReportPage />} />
-                <Route path="/admin" element={<AdminConsolePage />} />
-                <Route path="/admin/companies" element={<CompanyAdminPage />} />
+                <Route path="/admin" element={<AdminOnly><AdminConsolePage /></AdminOnly>} />
+                <Route path="/admin/companies" element={<AdminOnly><CompanyAdminPage /></AdminOnly>} />
               </Routes>
             </Suspense>
           </Layout>
@@ -220,3 +252,4 @@ function App() {
 }
 
 export default App
+
