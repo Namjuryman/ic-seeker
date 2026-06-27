@@ -37,6 +37,7 @@ import { observabilityService } from "../services/observability.service.js";
 import { schedulerService, type SchedulerJobId } from "../services/scheduler.service.js";
 import { jobOperationsService } from "../services/job-operations.service.js";
 import { ingestionJobService } from "../services/ingestion-job.service.js";
+import { siteSettingsService } from "../services/site-settings.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -48,6 +49,10 @@ router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.get("/platform", requireAuth, async (_req, res) => {
   res.json(platformService.getOverview());
+});
+
+router.get("/site-settings", requireAuth, async (_req, res) => {
+  res.json(siteSettingsService.publicSettings());
 });
 
 router.get("/billing/plans", requireAuth, async (_req, res) => {
@@ -152,6 +157,28 @@ router.get("/admin/scheduler", requireAdmin, async (_req, res) => {
 
 router.get("/admin/job-operations", requireAdmin, async (_req, res) => {
   res.json(jobOperationsService.overview());
+});
+
+router.get("/admin/site-settings", requireAdmin, async (_req, res) => {
+  res.json({ rows: siteSettingsService.list(), summary: siteSettingsService.summary() });
+});
+
+router.patch("/admin/site-settings/:key", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const key = String(req.params.key || "");
+  try {
+    const row = siteSettingsService.update(key, req.body?.value, req.user?.userId ?? 0);
+    adminAuditService.record({
+      req,
+      action: "site_settings.update",
+      resourceType: "site_setting",
+      resourceId: key,
+      metadata: { value: row?.value },
+    });
+    res.json(row);
+  } catch (err) {
+    adminAuditService.record({ req, action: "site_settings.update", resourceType: "site_setting", resourceId: key, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/admin/ingestion/jobs", requireAdmin, async (req, res) => {

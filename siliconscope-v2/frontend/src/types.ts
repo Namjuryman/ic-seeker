@@ -717,6 +717,8 @@ export interface AdminOverview {
     schedulerEnabled?: boolean;
     schedulerJobs?: number;
     ingestionJobs?: number;
+    siteSettings?: number;
+    publicSettings?: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];
@@ -733,6 +735,36 @@ export interface AdminOverview {
     totals?: { comments: number; reviews: number; reports: number; logs: number };
   };
   recentAuditLogs: AdminAuditLog[];
+}
+
+export type SiteSettingValueType = 'boolean' | 'string' | 'number';
+
+export interface SiteSettingRow {
+  key: string;
+  label: string;
+  description: string;
+  groupName: 'Access' | 'Commercial' | 'Research' | 'Community' | 'Operations';
+  valueType: SiteSettingValueType;
+  value: boolean | string | number;
+  defaultValue: boolean | string | number;
+  isPublic: boolean;
+  isSensitive?: boolean;
+  displayOrder: number;
+  updatedAt: string | null;
+  updatedByUserId: number | null;
+}
+
+export interface SiteSettingsResult {
+  rows: SiteSettingRow[];
+  summary: {
+    total: number;
+    public: number;
+    enabledFlags: number;
+    disabledFlags: number;
+    maintenanceMode: boolean;
+    checkoutEnabled: boolean;
+    inviteOnlyMode: boolean;
+  };
 }
 
 export interface AdminAuditLog {

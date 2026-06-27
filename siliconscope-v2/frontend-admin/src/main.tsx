@@ -9,6 +9,7 @@ import type { AuthStatus } from '../../frontend/src/types'
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
 const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
 const JobOperationsPage = lazy(() => import('../../frontend/src/pages/JobOperationsPage'))
+const SiteSettingsAdminPage = lazy(() => import('../../frontend/src/pages/SiteSettingsAdminPage'))
 const SchedulerAdminPage = lazy(() => import('../../frontend/src/pages/SchedulerAdminPage'))
 const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/MaintenanceAdminPage'))
 const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
@@ -38,6 +39,7 @@ const adminNav = [
       { to: '/', label: 'Overview', icon: 'A' },
       { to: '/launch', label: 'Launch checklist', icon: 'G' },
       { to: '/job-operations', label: 'Operations ledger', icon: 'J' },
+      { to: '/site-settings', label: 'Site settings', icon: 'F' },
       { to: '/observability', label: 'Observability', icon: 'O' },
     ],
   },
@@ -197,6 +199,7 @@ function AdminRoutes() {
       <Route path="/" element={<AdminConsolePage />} />
       <Route path="/launch" element={<LaunchAdminPage />} />
       <Route path="/job-operations" element={<JobOperationsPage />} />
+      <Route path="/site-settings" element={<SiteSettingsAdminPage />} />
       <Route path="/scheduler" element={<SchedulerAdminPage />} />
       <Route path="/maintenance" element={<MaintenanceAdminPage />} />
       <Route path="/observability" element={<ObservabilityPage />} />

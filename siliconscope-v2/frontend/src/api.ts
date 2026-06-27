@@ -68,6 +68,8 @@ import type {
   IngestionJob,
   IngestionJobResult,
   IngestionJobEventResult,
+  SiteSettingsResult,
+  SiteSettingRow,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -101,6 +103,11 @@ export const api = {
 
   async platform() {
     const res = await axios.get<PlatformOverview>('/api/platform')
+    return res.data
+  },
+
+  async publicSiteSettings() {
+    const res = await axios.get<Record<string, boolean | string | number>>('/api/site-settings')
     return res.data
   },
 
@@ -206,6 +213,16 @@ export const api = {
 
   async jobOperations() {
     const res = await axios.get<JobOperationsOverview>('/api/admin/job-operations')
+    return res.data
+  },
+
+  async siteSettings() {
+    const res = await axios.get<SiteSettingsResult>('/api/admin/site-settings')
+    return res.data
+  },
+
+  async updateSiteSetting(key: string, value: boolean | string | number) {
+    const res = await axios.patch<SiteSettingRow>(`/api/admin/site-settings/${encodeURIComponent(key)}`, { value })
     return res.data
   },
 

@@ -35,6 +35,7 @@ npm run dev
 | paper detail | `/api/papers/:id` | pending | |
 | learning dashboard | `/api/learning` | pending | |
 | companies | `/api/companies` | pending | |
+| public site settings | `/api/site-settings` | pending | |
 | company detail | `/api/companies/:id` | pending | |
 | related papers | `/api/companies/:id/related-papers` | pending | |
 | watchlist | `/api/watchlist` | pending | |
@@ -45,6 +46,7 @@ npm run dev
 | company compare | `/api/compare/companies` | pending | |
 | topic report | `/api/reports/topics/Power%20Management` | pending | |
 | admin snapshots | `/api/admin/snapshots` | pending | |
+| admin site settings | `/api/admin/site-settings` | pending | |
 | admin audit logs | `/api/admin/audit-logs` | pending | |
 
 ## Page Smoke
@@ -69,7 +71,9 @@ npm run dev
 | `/reports/topics/Power%20Management` | pending | |
 | `/billing` | pending | |
 | `/legal` | pending | |
+| `/admin/anything` on public frontend | pending | should show external admin handoff only |
 | admin `/` | pending | |
+| admin `/site-settings` | pending | |
 | admin `/journal-ingestion` | pending | |
 | admin `/moderation` | pending | |
 | admin `/snapshots` | pending | |
@@ -91,6 +95,7 @@ npm run dev
 | data-quality maintenance run | pending | |
 | scheduler manual run | pending | |
 | ingestion job create/start/cancel/retry | pending | |
+| site setting toggle | pending | should write admin audit log |
 | admin audit log after mutation | pending | |
 
 ## Findings

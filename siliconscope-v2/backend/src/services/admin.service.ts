@@ -13,6 +13,7 @@ import { maintenanceService } from "./maintenance.service.js";
 import { observabilityService } from "./observability.service.js";
 import { schedulerService } from "./scheduler.service.js";
 import { ingestionJobService } from "./ingestion-job.service.js";
+import { siteSettingsService } from "./site-settings.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -36,6 +37,7 @@ export const adminService = {
     const observability = observabilityService.snapshot();
     const scheduler = schedulerService.status();
     const ingestionJobs = ingestionJobService.list({ limit: 1 });
+    const siteSettings = siteSettingsService.summary();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -78,8 +80,19 @@ export const adminService = {
         schedulerEnabled: scheduler.enabled,
         schedulerJobs: scheduler.jobs.length,
         ingestionJobs: ingestionJobs.total,
+        siteSettings: siteSettings.total,
+        publicSettings: siteSettings.public,
       },
       operations: [
+        {
+          id: "site-settings",
+          title: "Site Settings",
+          status: siteSettings.maintenanceMode ? "attention" : siteSettings.checkoutEnabled ? "partial" : "ready",
+          metric: siteSettings.inviteOnlyMode ? "invite-only" : "public",
+          detail: `${siteSettings.enabledFlags} flags enabled, ${siteSettings.disabledFlags} disabled; checkout ${siteSettings.checkoutEnabled ? "enabled" : "off"}.`,
+          href: "/admin/site-settings",
+          action: "Configure flags",
+        },
         {
           id: "job-operations",
           title: "Job Operations",

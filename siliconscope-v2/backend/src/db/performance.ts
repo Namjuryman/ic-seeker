@@ -30,6 +30,7 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_usage_events_user_metric_created ON usage_events(user_id, metric, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_institution_aliases_canonical ON institution_aliases(canonical_name)",
   "CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_name)",
+  "CREATE INDEX IF NOT EXISTS idx_site_settings_group ON site_settings(group_name, display_order)",
 ];
 
 function tableColumns(sqlite: any, table: string): string[] {
@@ -242,6 +243,24 @@ function ensureBillingTables(sqlite: any) {
   `);
 }
 
+function ensureSiteSettingsTables(sqlite: any) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS site_settings (
+      key TEXT PRIMARY KEY,
+      value_json TEXT NOT NULL,
+      value_type TEXT NOT NULL DEFAULT 'string',
+      group_name TEXT NOT NULL DEFAULT 'general',
+      label TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      is_public INTEGER NOT NULL DEFAULT 0,
+      is_sensitive INTEGER NOT NULL DEFAULT 0,
+      display_order INTEGER NOT NULL DEFAULT 0,
+      updated_by_user_id INTEGER,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
@@ -255,6 +274,7 @@ export function applyPerformanceSettings(sqlite: any) {
   ensureAdminAuditTables(sqlite);
   ensureNotificationTables(sqlite);
   ensureBillingTables(sqlite);
+  ensureSiteSettingsTables(sqlite);
 
   for (const statement of PERFORMANCE_INDEXES) {
     sqlite.exec(statement);

@@ -58,6 +58,10 @@ export default function PlatformPage() {
     queryKey: ['platform-overview'],
     queryFn: () => api.platform(),
   })
+  const settings = useQuery({
+    queryKey: ['public-site-settings'],
+    queryFn: api.publicSiteSettings,
+  })
 
   if (overview.isLoading) {
     return <div className="learning-muted">Loading platform overview...</div>
@@ -69,6 +73,7 @@ export default function PlatformPage() {
 
   const data = overview.data
   const topology = data.topology
+  const publicSettings = settings.data || {}
 
   return (
     <div className="platform-page">
@@ -124,6 +129,23 @@ export default function PlatformPage() {
             <div><dt>Storage</dt><dd>{topology.objectStorage.provider} / {infraState(topology.objectStorage.configured)}</dd></div>
             <div><dt>Queue</dt><dd>{topology.queue.provider} / {infraState(topology.queue.configured)}</dd></div>
           </dl>
+        </div>
+
+        <div className="platform-panel">
+          <div className="platform-panel-head">
+            <span>Product Mode</span>
+            <h2>运营开关</h2>
+          </div>
+          <dl className="platform-infra">
+            <div><dt>Private beta</dt><dd>{publicSettings.invite_only_mode ? 'on' : 'off'}</dd></div>
+            <div><dt>Maintenance</dt><dd>{publicSettings.maintenance_mode ? 'on' : 'off'}</dd></div>
+            <div><dt>AI reports</dt><dd>{publicSettings.ai_reports_enabled ? 'enabled' : 'planned'}</dd></div>
+            <div><dt>Checkout</dt><dd>{publicSettings.checkout_enabled ? 'enabled' : 'disabled'}</dd></div>
+            <div><dt>Exports</dt><dd>{publicSettings.export_center_enabled ? 'enabled' : 'planned'}</dd></div>
+          </dl>
+          {publicSettings.data_readiness_banner && (
+            <p className="learning-muted">{String(publicSettings.data_readiness_banner)}</p>
+          )}
         </div>
       </section>
 

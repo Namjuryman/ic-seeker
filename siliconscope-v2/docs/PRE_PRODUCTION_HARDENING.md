@@ -78,6 +78,7 @@ Paid features should monetize workflow efficiency and AI assistance, not copyrig
 - [x] Point public platform admin actions to `ADMIN_SITE_URL`, not public internal routes.
 - [x] Clarify billing copy: core free, paid AI reports / advanced export / team workspace.
 - [x] Add draft legal and product boundary pages.
+- [x] Add admin-managed site settings for private beta, maintenance, paid-feature gates, community features, and data-readiness copy.
 - [ ] Run full runtime QA with a real non-LFS-pointer SQLite database.
 - [ ] Record results in `docs/RUNTIME_QA_RESULTS.md`.
 - [ ] Split Reading Queue long-term model into `readingStatus`, `flags`, and `useCases`.
@@ -95,6 +96,7 @@ Build success is not enough. Before public beta, verify with the real database:
 - backup, maintenance, scheduler, snapshots, and audit logs execute real operations.
 - admin domain isolation and cookie/CORS behavior work in deployment mode.
 - payment disabled state is explicit and does not pretend real checkout is available.
+- site settings reflect the intended launch mode and every mutation appears in admin audit logs.
 
 ## Legal / Policy Pages Needed
 
