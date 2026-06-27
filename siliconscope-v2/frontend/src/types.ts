@@ -469,6 +469,36 @@ export interface BillingUsersResult {
   plans: BillingPlan[];
 }
 
+export interface BackupManifest {
+  id: string;
+  label: string;
+  createdAt: string;
+  dbPath: string;
+  dbBytes: number;
+  manifestPath: string;
+  manifestBytes: number;
+  source: {
+    databasePath: string;
+    appName: string;
+    deploymentMode: string;
+    nodeVersion: string;
+  };
+  notes: string[];
+}
+
+export interface BackupListResult {
+  backupDir: string;
+  total: number;
+  totalBytes: number;
+  rows: BackupManifest[];
+}
+
+export interface BackupPruneResult {
+  keep: number;
+  deleted: number;
+  rows: Array<{ deleted: boolean; id: string; deletedFiles?: number }>;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;
@@ -498,6 +528,8 @@ export interface AdminOverview {
     unreadNotifications?: number;
     billingPlan?: string;
     paymentProvider?: string;
+    backups?: number;
+    backupBytes?: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];

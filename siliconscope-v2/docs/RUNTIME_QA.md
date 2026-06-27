@@ -124,6 +124,9 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] Public deployment should target `status: ok` with `IC_SEEKER_REQUIRE_LOGIN=1`, `IC_SEEKER_LOCAL_ADMIN=0`, a strong `JWT_SECRET`, and exact `FRONTEND_ORIGINS`.
 - [ ] `npm run deploy:doctor -- .env.production` passes after `npm run build`.
 - [ ] Docker production stack exposes `www`, `admin`, and `api` hostnames through Caddy or an equivalent external reverse proxy.
+- [ ] `npm run backup:create -- smoke --keep=10` creates a `.sqlite` backup plus JSON manifest under `BACKUP_DIR`.
+- [ ] `GET /api/admin/backups` lists backup rows with `id`, `createdAt`, `dbBytes`, and source metadata.
+- [ ] Admin `/backups` page creates and prunes restore points; destructive delete writes an admin audit log.
 
 ### 11. Notification Center
 

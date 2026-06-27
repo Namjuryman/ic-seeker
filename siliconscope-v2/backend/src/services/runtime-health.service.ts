@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import { sql } from "drizzle-orm";
 import { appConfig } from "../config.js";
 import { db as metadataDb } from "../db/connection.js";
@@ -100,6 +101,17 @@ export const runtimeHealthService = {
       message: safeFileExists(appConfig.publicDir) ? "frontend/dist exists" : "frontend/dist not found",
       detail: appConfig.publicDir,
     }));
+
+    runCheck(checks, () => {
+      const backupDir = path.resolve(appConfig.backupDir);
+      return {
+        id: "backup-dir",
+        label: "Backup directory",
+        status: safeFileExists(backupDir) ? "ok" : "warn",
+        message: safeFileExists(backupDir) ? "configured" : "not created yet",
+        detail: backupDir,
+      };
+    });
 
     runCheck(checks, () => ({
       id: "auth-mode",

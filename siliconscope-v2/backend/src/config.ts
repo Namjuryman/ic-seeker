@@ -19,6 +19,7 @@ export const appConfig = {
   dbPath: process.env.DATABASE_URL || path.resolve(__dirname, "../../ic_database/ic_papers.sqlite"),
   csvPath: process.env.IC_SEEKER_CSV || path.resolve(__dirname, "../../ic_database/ic_chipseeker.csv"),
   pdfInboxPath: process.env.IC_SEEKER_PDF_INBOX || path.resolve(__dirname, "../../ic_database/pdf_inbox"),
+  backupDir: process.env.BACKUP_DIR || path.resolve(__dirname, "../../backups"),
   publicDir: process.env.PUBLIC_DIR || path.resolve(__dirname, "../../frontend/dist"),
   
   jwtSecret: process.env.JWT_SECRET || "change-me-in-production",

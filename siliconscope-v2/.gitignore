@@ -1,0 +1,28 @@
+node_modules/
+
+# Local environment and secrets
+.env
+.env.local
+.env.production
+*.local
+
+# Build outputs
+dist/
+frontend/dist/
+frontend-admin/dist/
+backend/dist/
+
+# Runtime data and generated backups
+backups/
+*.sqlite-wal
+*.sqlite-shm
+
+# Local logs
+*.log
+*.err.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

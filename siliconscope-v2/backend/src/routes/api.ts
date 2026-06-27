@@ -31,6 +31,7 @@ import { adminAuditService } from "../services/admin-audit.service.js";
 import { runtimeHealthService } from "../services/runtime-health.service.js";
 import { notificationService } from "../services/notification.service.js";
 import { billingService } from "../services/billing.service.js";
+import { backupService } from "../services/backup.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -122,6 +123,65 @@ router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: Authenti
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
   res.status(runtime.status === "error" ? 503 : 200).json(runtime);
+});
+
+router.get("/admin/backups", requireAdmin, async (_req, res) => {
+  res.json(backupService.list());
+});
+
+router.post("/admin/backups", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const backup = await backupService.create({
+      label: String(req.body?.label || "admin"),
+      actor: req.user?.email || "admin",
+    });
+    adminAuditService.record({
+      req,
+      action: "backup.create",
+      resourceType: "backup",
+      resourceId: backup.id,
+      metadata: { label: backup.label, dbBytes: backup.dbBytes },
+    });
+    res.json(backup);
+  } catch (err) {
+    adminAuditService.record({ req, action: "backup.create", resourceType: "backup", status: "failure", error: err });
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/backups/prune", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const keep = Math.max(1, Math.min(100, Number(req.body?.keep || 10)));
+    const result = backupService.prune(keep);
+    adminAuditService.record({
+      req,
+      action: "backup.prune",
+      resourceType: "backup",
+      resourceId: "local",
+      metadata: result,
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "backup.prune", resourceType: "backup", status: "failure", error: err });
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.delete("/admin/backups/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = backupService.delete(req.params.id);
+    adminAuditService.record({
+      req,
+      action: "backup.delete",
+      resourceType: "backup",
+      resourceId: req.params.id,
+      metadata: result,
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "backup.delete", resourceType: "backup", resourceId: req.params.id, status: "failure", error: err });
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 router.post("/admin/notifications", requireAdmin, async (req: AuthenticatedRequest, res) => {

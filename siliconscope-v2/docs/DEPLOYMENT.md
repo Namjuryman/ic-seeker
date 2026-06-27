@@ -130,6 +130,12 @@ Before a Vercel deployment, migrate to:
 - Do not proxy raw publisher PDFs unless you have rights to redistribute them.
 - Keep AMiner/IEEE API keys in environment variables, not frontend code.
 - Schedule regular database backups before running new crawls/imports.
+- Create a restore point before deploys and weekly imports:
+
+```powershell
+npm run backup:create -- weekly-refresh --keep=10
+```
+
 - Run IEEE/OpenAlex/Crossref sync and admin operations only from the backend/admin frontend, never from the public frontend.
 - Add rate limiting before public traffic or paid subscriptions.
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.

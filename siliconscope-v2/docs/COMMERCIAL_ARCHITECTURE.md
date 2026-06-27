@@ -54,7 +54,7 @@ Third-party Services
 | Client | React + Vite web frontend and independent admin frontend | Mobile app not started; no SSR/BFF |
 | CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, Nginx, and Dockerized Caddy edge | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
 | Frontend / BFF | Frontends directly call Express API; `VITE_API_BASE_URL` supports split API domains | Optional Next.js BFF layer for SaaS edition |
-| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog | Payment checkout and email delivery missing |
+| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog, and backup operations | Payment checkout and email delivery missing |
 | Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
 | Redis | Optional infra compose only | Needed for production cache, sessions, rate limits, queues |
@@ -91,6 +91,13 @@ Third-party Services
 - Billing API endpoints for plan catalog, current user entitlements, monthly usage summary, admin overview, and checkout-adapter placeholder.
 - Admin billing endpoints for listing users, inspecting usage, and manually changing a user's plan during private beta.
 - App-data tables for subscriptions, payment customers, billing events, and usage events.
+- Local backup operations:
+  - `GET /api/admin/backups`.
+  - `POST /api/admin/backups`.
+  - `POST /api/admin/backups/prune`.
+  - `DELETE /api/admin/backups/:id`.
+  - `npm run backup:create -- label --keep=10`.
+  - Backup writes use the SQLite backup API and produce `.sqlite` plus manifest JSON files under `BACKUP_DIR`.
 - Independent-domain scaffolding:
   - `PUBLIC_SITE_URL`, `ADMIN_SITE_URL`, `API_BASE_URL`, `VITE_API_BASE_URL`.
   - `docker-compose.production.yml`.

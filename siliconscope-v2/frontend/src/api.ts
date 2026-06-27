@@ -55,6 +55,9 @@ import type {
   BillingUsersResult,
   BillingUserRow,
   CheckoutResult,
+  BackupListResult,
+  BackupManifest,
+  BackupPruneResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -133,6 +136,26 @@ export const api = {
 
   async adminRuntime() {
     const res = await axios.get<RuntimeHealth>('/api/admin/runtime')
+    return res.data
+  },
+
+  async backups() {
+    const res = await axios.get<BackupListResult>('/api/admin/backups')
+    return res.data
+  },
+
+  async createBackup(label: string) {
+    const res = await axios.post<BackupManifest>('/api/admin/backups', { label })
+    return res.data
+  },
+
+  async pruneBackups(keep: number) {
+    const res = await axios.post<BackupPruneResult>('/api/admin/backups/prune', { keep })
+    return res.data
+  },
+
+  async deleteBackup(id: string) {
+    const res = await axios.delete<{ deleted: boolean; id: string; deletedFiles?: number }>(`/api/admin/backups/${encodeURIComponent(id)}`)
     return res.data
   },
 

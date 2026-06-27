@@ -8,6 +8,7 @@ import { adminAuditService } from "./admin-audit.service.js";
 import { runtimeHealthService } from "./runtime-health.service.js";
 import { notificationService } from "./notification.service.js";
 import { billingService } from "./billing.service.js";
+import { backupService } from "./backup.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -26,6 +27,7 @@ export const adminService = {
     const runtime = runtimeHealthService.getHealth();
     const notifications = notificationService.stats(userId);
     const billing = billingService.getBillingStatus(userId);
+    const backups = backupService.list();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -60,6 +62,8 @@ export const adminService = {
         unreadNotifications: notifications.unread,
         billingPlan: billing.currentPlan.id,
         paymentProvider: billing.paymentProvider,
+        backups: backups.total,
+        backupBytes: backups.totalBytes,
       },
       operations: [
         {
@@ -79,6 +83,15 @@ export const adminService = {
           detail: "admin mutations, actor, resource, status, IP and user-agent",
           href: "/audit-logs",
           action: "查看留痕",
+        },
+        {
+          id: "backups",
+          title: "数据库备份",
+          status: backups.total ? "ready" : "attention",
+          metric: `${backups.total} backups`,
+          detail: backups.rows[0] ? `latest ${backups.rows[0].createdAt}` : "No backup has been created yet",
+          href: "/backups",
+          action: "创建 / 清理",
         },
         {
           id: "notifications",

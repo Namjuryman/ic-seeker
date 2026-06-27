@@ -583,9 +583,204 @@
   color: #b91c1c;
 }
 
+.backup-admin-page {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.backup-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 18px;
+  align-items: stretch;
+  border: 1px solid #dce6f5;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 5% 8%, rgba(49, 94, 234, .12), transparent 32%),
+    linear-gradient(135deg, rgba(49, 94, 234, .08), rgba(18, 167, 119, .08)),
+    #fff;
+  padding: 28px 30px;
+  box-shadow: 0 16px 46px rgba(15, 31, 61, .08);
+}
+
+.backup-hero span,
+.backup-actions span {
+  color: #315eea;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .06em;
+}
+
+.backup-hero h1 {
+  margin: 8px 0 10px;
+  color: #07152f;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1;
+}
+
+.backup-hero p,
+.backup-actions p,
+.backup-restore-note p {
+  margin: 0;
+  color: #5b6f91;
+  line-height: 1.65;
+}
+
+.backup-hero-card,
+.backup-actions article,
+.backup-restore-note,
+.backup-table {
+  border: 1px solid #dce6f5;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .9);
+  box-shadow: 0 10px 26px rgba(15, 31, 61, .06);
+}
+
+.backup-hero-card {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  padding: 22px;
+}
+
+.backup-hero-card strong {
+  color: #07152f;
+  overflow-wrap: anywhere;
+}
+
+.backup-hero-card em {
+  color: #12a777;
+  font-style: normal;
+  font-weight: 950;
+}
+
+.backup-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.backup-actions article,
+.backup-restore-note {
+  padding: 18px 20px;
+}
+
+.backup-actions h2 {
+  margin: 6px 0;
+  color: #07152f;
+  font-size: 20px;
+}
+
+.backup-action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.backup-action-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #dce6f5;
+  border-radius: 12px;
+  padding: 0 12px;
+  color: #0f1b33;
+  font-weight: 850;
+}
+
+.backup-action-row button,
+.backup-row-actions button {
+  min-height: 42px;
+  border: 1px solid #d8e2f2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 14px;
+  color: #0f1b33;
+  font-weight: 950;
+}
+
+.backup-action-row button {
+  background: #315eea;
+  border-color: #315eea;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(49, 94, 234, .18);
+}
+
+.backup-action-row button:disabled,
+.backup-row-actions button:disabled {
+  cursor: not-allowed;
+  background: #eef3fb;
+  color: #7b8ba7;
+}
+
+.backup-row-actions button.danger {
+  border-color: rgba(185, 28, 28, .22);
+  background: #fff8f7;
+  color: #b91c1c;
+}
+
+.backup-restore-note strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #07152f;
+  font-size: 17px;
+}
+
+.backup-table {
+  overflow: hidden;
+}
+
+.backup-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.3fr) minmax(120px, .5fr) minmax(240px, 1fr) minmax(180px, .6fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid #edf2f8;
+}
+
+.backup-head {
+  background: #f8fbff;
+  color: #6f82a2;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.backup-row strong,
+.backup-row small {
+  display: block;
+}
+
+.backup-row strong {
+  color: #07152f;
+}
+
+.backup-row small {
+  margin-top: 5px;
+  color: #607393;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.backup-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.backup-empty {
+  padding: 28px;
+  color: #607393;
+}
+
 @media (max-width: 980px) {
   .billing-hero,
   .billing-admin-hero,
+  .backup-hero,
+  .backup-actions,
   .billing-status-strip,
   .billing-entitlements,
   .billing-admin-stats,
@@ -596,6 +791,14 @@
   .billing-admin-filters {
     grid-template-columns: 1fr;
   }
+
+  .backup-row {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-row-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -605,6 +808,7 @@
 
   .billing-hero,
   .billing-admin-hero,
+  .backup-hero,
   .billing-status-strip,
   .billing-entitlements,
   .billing-admin-stats,
@@ -614,6 +818,10 @@
 
   .billing-section-head {
     align-items: start;
+    flex-direction: column;
+  }
+
+  .backup-action-row {
     flex-direction: column;
   }
 }

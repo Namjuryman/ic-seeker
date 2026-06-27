@@ -91,9 +91,9 @@ const modules: PlatformModule[] = [
     name: "Commercial Stack",
     track: "commercial",
     status: "partial",
-    maturity: 43,
-    summary: "Independent-domain deployment, notification center, billing catalog, usage ledger, partial quota enforcement, and admin plan management are in place; real payment and infrastructure adapters still need to be connected.",
-    shipped: ["appDb adapter", "cacheDb adapter", "infra compose", "independent-domain templates", "notification center", "billing plan catalog", "usage ledger", "admin plan management"],
+    maturity: 47,
+    summary: "Independent-domain deployment, notification center, billing catalog, usage ledger, partial quota enforcement, admin plan management, and local backup operations are in place; real payment and infrastructure adapters still need to be connected.",
+    shipped: ["appDb adapter", "cacheDb adapter", "infra compose", "independent-domain templates", "notification center", "billing plan catalog", "usage ledger", "admin plan management", "backup operations"],
     next: ["Stripe/Paddle checkout adapter", "billing webhooks", "PostgreSQL app store", "Redis cache/queue", "object storage", "email/OAuth", "observability"],
   },
 ];

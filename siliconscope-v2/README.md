@@ -43,6 +43,7 @@ git lfs pull
 - Favorites, reading status, private notes, and tags
 - Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
 - Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
+- Admin backup operations for SQLite private/public-beta deployments, with CLI restore-point creation and retention pruning
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -110,6 +111,14 @@ Or run the production-style build from this folder:
 ```powershell
 npm start
 ```
+
+Before weekly imports, crawls, or schema/data maintenance, create a restore point:
+
+```powershell
+npm run backup:create -- weekly-refresh --keep=10
+```
+
+The admin console also has a backup page for creating, listing, pruning, and deleting local restore points. Restore remains manual-first: stop the API, copy the selected `.sqlite` backup over the active database, then restart.
 
 For manual development, run backend and frontend separately:
 
@@ -212,6 +221,7 @@ Ready-to-edit independent-domain templates are included under `deploy/`:
 - `deploy/cloudflare-tunnel.example.yml` for API-only Cloudflare Tunnel ingress.
 - `deploy/DOMAIN_GO_LIVE.md` for the complete go-live checklist.
 - `npm run deploy:doctor -- .env.production` to check env, frontend builds, and DNS readiness before going live.
+- `npm run backup:create -- pre-deploy --keep=10` before risky imports, schema work, or public deployments.
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 
