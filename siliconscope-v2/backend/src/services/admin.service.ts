@@ -4,6 +4,7 @@ import { statsService } from "./stats.service.js";
 import { snapshotService } from "./snapshot.service.js";
 import { moderationService } from "./moderation.service.js";
 import { companyService } from "./company.service.js";
+import { adminAuditService } from "./admin-audit.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -18,6 +19,7 @@ export const adminService = {
     const apiKeys = statsService.getApiKeys();
     const pdfInbox = await statsService.getPdfInbox();
     const companies = companyService.listCompanies({ limit: "1", offset: "0" });
+    const auditCount = adminAuditService.count().count || 0;
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -44,8 +46,18 @@ export const adminService = {
         apiKeys: configuredApiKeys,
         pdfInbox: pdfInbox.count,
         dataQuality: platform.summary.averageMaturity,
+        auditLogs: auditCount,
       },
       operations: [
+        {
+          id: "audit-logs",
+          title: "审计日志",
+          status: auditCount ? "ready" : "planned",
+          metric: `${auditCount} events`,
+          detail: "admin mutations, actor, resource, status, IP and user-agent",
+          href: "/audit-logs",
+          action: "查看留痕",
+        },
         {
           id: "snapshots",
           title: "快照缓存",
@@ -132,6 +144,7 @@ export const adminService = {
         reports: moderation.reports.slice(0, 5),
         totals: moderation.totals,
       },
+      recentAuditLogs: adminAuditService.recent(6),
     };
   },
 };

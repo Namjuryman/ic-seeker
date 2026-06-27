@@ -1,0 +1,47 @@
+# SiliconScope independent-domain deployment template.
+# Replace the example domains with your own domains.
+#
+# Expected layout on the server after `npm run build`:
+# - /srv/siliconscope/frontend/dist
+# - /srv/siliconscope/frontend-admin/dist
+# - backend API listening on 127.0.0.1:8750
+
+siliconscope.com, www.siliconscope.com {
+	root * /srv/siliconscope/frontend/dist
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+}
+
+admin.siliconscope.com {
+	root * /srv/siliconscope/frontend-admin/dist
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# Recommended: also protect this hostname with Cloudflare Access,
+	# Tailscale Funnel ACL, VPN, or Caddy basicauth before real admin login is hardened.
+}
+
+api.siliconscope.com {
+	encode gzip zstd
+	reverse_proxy 127.0.0.1:8750
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+}

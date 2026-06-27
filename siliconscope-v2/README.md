@@ -183,6 +183,12 @@ Recommended first public setup:
 - For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
 - When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
 
+Ready-to-edit independent-domain templates are included under `deploy/`:
+
+- `deploy/Caddyfile.example` for the cleanest VPS + automatic HTTPS setup.
+- `deploy/nginx.siliconscope.example.conf` for a classic Nginx reverse-proxy setup.
+- `deploy/production.env.example` for production API environment variables.
+
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 
 ## Private MVP Workflow
@@ -225,9 +231,9 @@ This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`
 
 ### Admin Operations
 
-- Create, edit, and delete companies from the Company Admin page (`/admin/companies`).
+- Create, edit, and delete companies from the independent admin frontend (`frontend-admin`, local `http://localhost:5176`).
 - CSV bulk import is planned but not yet implemented.
-- All `/api/admin/*` endpoints require admin role (`requireAdmin`). In the current private MVP, local users are treated as admin when auth is disabled.
+- All `/api/admin/*` endpoints require admin role (`requireAdmin`). In local development, the launcher sets `IC_SEEKER_LOCAL_ADMIN=1`; public deployments must keep that flag disabled and require login.
 
 ## Learning Roadmap Source
 

@@ -27,6 +27,7 @@ import { mentorCompareService } from "../services/mentor-compare.service.js";
 import { topicReportService } from "../services/topic-report.service.js";
 import { platformService } from "../services/platform.service.js";
 import { adminService } from "../services/admin.service.js";
+import { adminAuditService } from "../services/admin-audit.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -351,32 +352,55 @@ router.get("/reports/topics/:field", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/admin/companies", requireAdmin, async (req, res) => {
+router.get("/admin/audit-logs", requireAdmin, async (req, res) => {
+  res.json(adminAuditService.list(req.query));
+});
+
+router.post("/admin/companies", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const company = companyService.createCompany(req.body);
+    if (!company) throw new Error("Company creation returned empty result");
+    adminAuditService.record({
+      req,
+      action: "company.create",
+      resourceType: "company",
+      resourceId: company.id,
+      metadata: { name: company.name, companyType: company.companyType },
+    });
     clearCache();
     res.json(company);
   } catch (err) {
+    adminAuditService.record({ req, action: "company.create", resourceType: "company", status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
 
-router.patch("/admin/companies/:id", requireAdmin, async (req, res) => {
+router.patch("/admin/companies/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const company = companyService.updateCompany(req.params.id, req.body);
+    adminAuditService.record({
+      req,
+      action: "company.update",
+      resourceType: "company",
+      resourceId: req.params.id,
+      metadata: { fields: Object.keys(req.body || {}), name: company?.name },
+    });
     clearCache();
     res.json(company);
   } catch (err) {
+    adminAuditService.record({ req, action: "company.update", resourceType: "company", resourceId: req.params.id, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
 
-router.delete("/admin/companies/:id", requireAdmin, async (req, res) => {
+router.delete("/admin/companies/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const result = companyService.deleteCompany(req.params.id);
+    adminAuditService.record({ req, action: "company.delete", resourceType: "company", resourceId: req.params.id });
     clearCache();
     res.json(result);
   } catch (err) {
+    adminAuditService.record({ req, action: "company.delete", resourceType: "company", resourceId: req.params.id, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -520,9 +544,17 @@ router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: Authe
     const targetId = Number(req.params.id);
     const { action, reason } = req.body;
     const result = moderationService.moderate(targetType, targetId, action, req.user?.userId ?? null, reason);
+    adminAuditService.record({
+      req,
+      action: `moderation.${action}`,
+      resourceType: targetType,
+      resourceId: targetId,
+      metadata: { reason },
+    });
     clearCache();
     res.json(result);
   } catch (err) {
+    adminAuditService.record({ req, action: "moderation.action", resourceType: decodeURIComponent(req.params.targetType), resourceId: req.params.id, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -531,25 +563,38 @@ router.get("/admin/snapshots", requireAdmin, async (_req, res) => {
   res.json(snapshotService.list());
 });
 
-router.post("/admin/snapshots/refresh", requireAdmin, async (req, res) => {
+router.post("/admin/snapshots/refresh", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const keys = Array.isArray(req.body?.keys)
     ? req.body.keys.map(String)
     : String(req.body?.key || "all").split(",").map((key) => key.trim()).filter(Boolean);
-  res.json(snapshotService.refresh(keys.length ? keys : ["all"]));
+  try {
+    const result = snapshotService.refresh(keys.length ? keys : ["all"]);
+    adminAuditService.record({ req, action: "snapshot.refresh", resourceType: "snapshot", resourceId: keys.join(",") || "all", metadata: { count: result.length } });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "snapshot.refresh", resourceType: "snapshot", resourceId: keys.join(",") || "all", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
-router.post("/admin/snapshots/clear", requireAdmin, async (req, res) => {
+router.post("/admin/snapshots/clear", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const key = typeof req.body?.key === "string" ? req.body.key.trim() : "";
   const prefix = typeof req.body?.prefix === "string" ? req.body.prefix.trim() : "";
   if (key) {
-    res.json({ mode: "key", key, ...snapshotService.invalidateSnapshot(key) });
+    const result = { mode: "key", key, ...snapshotService.invalidateSnapshot(key) };
+    adminAuditService.record({ req, action: "snapshot.clear", resourceType: "snapshot", resourceId: key, metadata: result });
+    res.json(result);
     return;
   }
   if (prefix) {
-    res.json({ mode: "prefix", prefix, ...snapshotService.invalidateSnapshotsByPrefix(prefix) });
+    const result = { mode: "prefix", prefix, ...snapshotService.invalidateSnapshotsByPrefix(prefix) };
+    adminAuditService.record({ req, action: "snapshot.clear_prefix", resourceType: "snapshot", resourceId: prefix, metadata: result });
+    res.json(result);
     return;
   }
-  res.json({ mode: "all", ...snapshotService.invalidateAllSnapshots() });
+  const result = { mode: "all", ...snapshotService.invalidateAllSnapshots() };
+  adminAuditService.record({ req, action: "snapshot.clear_all", resourceType: "snapshot", resourceId: "all", metadata: result });
+  res.json(result);
 });
 
 router.post("/reports", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -576,24 +621,34 @@ router.get("/admin/identity/aliases", requireAdmin, async (req, res) => {
   }
 });
 
-router.put("/admin/identity/aliases/:type", requireAdmin, async (req, res) => {
+router.put("/admin/identity/aliases/:type", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const result = identityAdminService.upsertAlias(req.params.type, req.body);
+    adminAuditService.record({
+      req,
+      action: "identity.upsert_alias",
+      resourceType: `identity.${req.params.type}`,
+      resourceId: req.body?.alias,
+      metadata: { canonicalName: req.body?.canonicalName, source: req.body?.source },
+    });
     clearCache();
     snapshotService.invalidateAllSnapshots();
     res.json(result);
   } catch (err) {
+    adminAuditService.record({ req, action: "identity.upsert_alias", resourceType: `identity.${req.params.type}`, resourceId: req.body?.alias, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
 
-router.delete("/admin/identity/aliases/:type/:alias", requireAdmin, async (req, res) => {
+router.delete("/admin/identity/aliases/:type/:alias", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const result = identityAdminService.deleteAlias(req.params.type, decodeURIComponent(req.params.alias));
+    adminAuditService.record({ req, action: "identity.delete_alias", resourceType: `identity.${req.params.type}`, resourceId: decodeURIComponent(req.params.alias) });
     clearCache();
     snapshotService.invalidateAllSnapshots();
     res.json(result);
   } catch (err) {
+    adminAuditService.record({ req, action: "identity.delete_alias", resourceType: `identity.${req.params.type}`, resourceId: decodeURIComponent(req.params.alias), status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -602,10 +657,12 @@ router.get("/admin/api-keys", requireAdmin, async (_req, res) => {
   res.json(statsService.getApiKeys());
 });
 
-router.put("/admin/api-keys/:provider", requireAdmin, async (req, res) => {
+router.put("/admin/api-keys/:provider", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const provider = decodeURIComponent(req.params.provider);
   const { value } = req.body;
-  res.json(statsService.setApiKey(provider, value));
+  const result = statsService.setApiKey(provider, value);
+  adminAuditService.record({ req, action: "api_key.update", resourceType: "api_key", resourceId: provider, metadata: { configured: Boolean(value) } });
+  res.json(result);
 });
 
 router.get("/pdf-inbox", requireAuth, async (_req, res) => {

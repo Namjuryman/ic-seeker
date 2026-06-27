@@ -67,8 +67,8 @@ Navigate to `/watchlist`:
 
 ### 6. Company Admin
 
-Navigate to `/admin/companies`:
-- [ ] Admin guard (`requireAdmin`) allows access in local dev (auth disabled → local user = admin)
+Navigate to the independent admin frontend at `http://localhost:5176/companies`:
+- [ ] Admin guard (`requireAdmin`) allows access in local dev when `IC_SEEKER_LOCAL_ADMIN=1`
 - [ ] Create company works
 - [ ] Edit company works
 - [ ] Delete company works

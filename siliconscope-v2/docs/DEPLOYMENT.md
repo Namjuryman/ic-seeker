@@ -72,6 +72,22 @@ Use this when you are comfortable opening ports `80` and `443` on a VPS.
 4. Host `frontend-admin/dist` as `admin.siliconscope.com`.
 5. Enable HTTPS at the reverse proxy and static hosts.
 
+Ready-to-edit templates live in `deploy/`:
+
+- `deploy/Caddyfile.example`: three independent HTTPS hostnames with SPA fallback.
+- `deploy/nginx.siliconscope.example.conf`: equivalent Nginx virtual hosts.
+- `deploy/production.env.example`: production environment variables for the API host.
+
+The intended production domain split is:
+
+```text
+https://www.your-domain.com   -> public frontend
+https://admin.your-domain.com -> independent admin frontend
+https://api.your-domain.com   -> backend API
+```
+
+Keep the admin hostname behind Cloudflare Access, VPN, or another access-control layer even though the backend also checks admin privileges. Defense in depth matters once this leaves localhost.
+
 ## Why Not Vercel Yet
 
 Vercel can run Node.js functions, but the current app is a stateful service with:

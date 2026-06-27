@@ -7,6 +7,7 @@ import { api } from '../../frontend/src/api'
 import type { AuthStatus } from '../../frontend/src/types'
 
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
+const AdminAuditPage = lazy(() => import('../../frontend/src/pages/AdminAuditPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -22,6 +23,7 @@ const queryClient = new QueryClient({
 
 const adminNav = [
   { to: '/', label: '总览', icon: 'A' },
+  { to: '/audit-logs', label: '审计日志', icon: 'L' },
   { to: '/companies', label: '企业数据', icon: 'C' },
   { to: '/snapshots', label: '快照缓存', icon: 'S' },
   { to: '/moderation', label: '审核队列', icon: 'M' },
@@ -146,6 +148,7 @@ function AdminApp() {
             <Suspense fallback={<div className="ss-loading">Loading admin module...</div>}>
               <Routes>
                 <Route path="/" element={<AdminConsolePage />} />
+                <Route path="/audit-logs" element={<AdminAuditPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
                 <Route path="/snapshots" element={<SnapshotAdminPage />} />
                 <Route path="/moderation" element={<ModerationPage />} />

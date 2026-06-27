@@ -45,6 +45,7 @@ import type {
   TopicReport,
   PlatformOverview,
   AdminOverview,
+  AdminAuditLogResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -82,6 +83,11 @@ export const api = {
 
   async adminOverview() {
     const res = await axios.get<AdminOverview>('/api/admin/overview')
+    return res.data
+  },
+
+  async adminAuditLogs(params?: Record<string, string | number>) {
+    const res = await axios.get<AdminAuditLogResult>('/api/admin/audit-logs', { params })
     return res.data
   },
 

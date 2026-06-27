@@ -349,6 +349,7 @@ export interface AdminOverview {
     apiKeys: number;
     pdfInbox: number;
     dataQuality: number;
+    auditLogs: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];
@@ -364,6 +365,31 @@ export interface AdminOverview {
     reports: Array<Record<string, any>>;
     totals?: { comments: number; reviews: number; reports: number; logs: number };
   };
+  recentAuditLogs: AdminAuditLog[];
+}
+
+export interface AdminAuditLog {
+  id: number;
+  actorUserId?: number | null;
+  actorEmail?: string | null;
+  action: string;
+  resourceType: string;
+  resourceId?: string | null;
+  status: 'success' | 'failure';
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, any> | null;
+  error?: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuditLogResult {
+  rows: AdminAuditLog[];
+  total: number;
+  limit: number;
+  offset: number;
+  actions: Array<{ action: string; count: number }>;
+  resourceTypes: Array<{ resourceType: string; count: number }>;
 }
 
 

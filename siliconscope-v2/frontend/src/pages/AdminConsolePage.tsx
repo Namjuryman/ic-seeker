@@ -84,6 +84,7 @@ export default function AdminConsolePage() {
         <div><span>API Key</span><strong>{summary.apiKeys}</strong><small>configured</small></div>
         <div><span>PDF Inbox</span><strong>{summary.pdfInbox}</strong><small>local PDFs</small></div>
         <div><span>企业数据</span><strong>{summary.companies}</strong><small>companies</small></div>
+        <div><span>审计日志</span><strong>{summary.auditLogs}</strong><small>admin events</small></div>
       </section>
 
       <section className="admin-grid">
