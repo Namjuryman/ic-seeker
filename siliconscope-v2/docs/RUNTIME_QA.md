@@ -108,6 +108,7 @@ Verify these routes return `403 Admin access required` when auth is enabled and 
 - `GET /api/admin/api-keys`
 - `PUT /api/admin/api-keys/:provider`
 - `GET /api/admin/runtime`
+- `POST /api/admin/notifications`
 
 ### 10. Runtime Health
 
@@ -122,7 +123,20 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] Local development may return `status: warn` for local admin bypass, weak JWT, or missing production build.
 - [ ] Public deployment should target `status: ok` with `IC_SEEKER_REQUIRE_LOGIN=1`, `IC_SEEKER_LOCAL_ADMIN=0`, a strong `JWT_SECRET`, and exact `FRONTEND_ORIGINS`.
 
-### 11. Build
+### 11. Notification Center
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8751/api/notifications
+Invoke-RestMethod http://127.0.0.1:8751/api/notifications/unread-count
+```
+
+- [ ] First visit creates a welcome notification for the current user.
+- [ ] Notification list returns `rows`, `total`, `unread`, `limit`, and `offset`.
+- [ ] `POST /api/notifications/:id/read` marks one notification read.
+- [ ] `POST /api/notifications/read-all` clears unread state for the user.
+- [ ] Admin can create user notifications with `POST /api/admin/notifications`.
+
+### 12. Build
 
 ```powershell
 cd siliconscope-v2

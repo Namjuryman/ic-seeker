@@ -9,7 +9,7 @@ SiliconScope v2 currently uses one local SQLite database for both paper metadata
 | Paper metadata: papers, FTS, DOI, venue, domain, affiliations | SQLite | Keep SQLite as import/cache first; later mirror to Postgres/Search | Large mostly-read corpus; current tooling depends on SQLite FTS |
 | User accounts and auth | SQLite | PostgreSQL | Multi-user writes, constraints, backups, SaaS readiness |
 | Private paper state: favorites, reading status, notes, tags | SQLite | PostgreSQL | User-specific mutable data |
-| Community: comments, mentor reviews, content reports, moderation logs | SQLite | PostgreSQL | Public writes, moderation auditability |
+| Community: comments, mentor reviews, notifications, content reports, moderation logs | SQLite | PostgreSQL | Public writes, moderation auditability, user operations |
 | Companies and aliases | SQLite | PostgreSQL | Business/admin data; needs auditing and enrichment |
 | API keys and admin settings | SQLite | PostgreSQL plus secret manager later | Operational state should not live in metadata DB |
 | Computed snapshots/rankings | SQLite | Redis cache plus Postgres snapshot registry | Avoid expensive recompute; allow invalidation |

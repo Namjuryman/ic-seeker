@@ -6,6 +6,7 @@ import { moderationService } from "./moderation.service.js";
 import { companyService } from "./company.service.js";
 import { adminAuditService } from "./admin-audit.service.js";
 import { runtimeHealthService } from "./runtime-health.service.js";
+import { notificationService } from "./notification.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -22,6 +23,7 @@ export const adminService = {
     const companies = companyService.listCompanies({ limit: "1", offset: "0" });
     const auditCount = adminAuditService.count().count || 0;
     const runtime = runtimeHealthService.getHealth();
+    const notifications = notificationService.stats(userId);
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -52,6 +54,8 @@ export const adminService = {
         pdfInbox: pdfInbox.count,
         dataQuality: platform.summary.averageMaturity,
         auditLogs: auditCount,
+        notifications: notifications.total,
+        unreadNotifications: notifications.unread,
       },
       operations: [
         {
@@ -71,6 +75,15 @@ export const adminService = {
           detail: "admin mutations, actor, resource, status, IP and user-agent",
           href: "/audit-logs",
           action: "查看留痕",
+        },
+        {
+          id: "notifications",
+          title: "通知中心",
+          status: notifications.unread ? "attention" : "ready",
+          metric: `${notifications.unread} unread`,
+          detail: `${notifications.total} total user notifications; weekly digest and job receipts will reuse this channel`,
+          href: "/notifications",
+          action: "查看通知",
         },
         {
           id: "snapshots",

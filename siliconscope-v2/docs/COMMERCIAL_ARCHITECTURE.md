@@ -53,8 +53,8 @@ Third-party Services
 | Client | React + Vite web frontend | Mobile app not started; no SSR/BFF |
 | CDN / WAF / Load Balancer | Not implemented | Add Cloudflare or reverse proxy for public deployment |
 | Frontend / BFF | Frontend directly calls Express API | Optional Next.js BFF layer for SaaS edition |
-| Backend API | Express API with auth, search, admin, moderation, comments, watchlist, reading queue, companies | Payment and notification missing |
-| Realtime | Not implemented | Add Socket.IO or WebSocket gateway later |
+| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies | Payment and email delivery missing |
+| Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
 | Redis | Not implemented | Needed for production cache, sessions, rate limits, queues |
 | Object storage | Local folders only | Add S3-compatible storage such as Cloudflare R2, MinIO, or OSS |
@@ -71,7 +71,7 @@ Third-party Services
 | 0 | Stabilize MVP | Keep React + Express + SQLite working; document target architecture | `npm run build` passes; docs describe gaps |
 | 1 | Infrastructure scaffold | Add optional local infra compose: Postgres, Redis, Meilisearch, MinIO, Mailpit | Developers can start infra without changing current app |
 | 2 | Data abstraction | Separate metadata SQLite source from user/business data; introduce repository/service boundaries | User tables can move without rewriting paper search |
-| 3 | PostgreSQL migration | Move users, comments, reviews, watchlist, reading queue, companies, admin logs to PostgreSQL | SQLite remains optional metadata import; user data persists in Postgres |
+| 3 | PostgreSQL migration | Move users, notifications, comments, reviews, watchlist, reading queue, companies, admin logs to PostgreSQL | SQLite remains optional metadata import; user data persists in Postgres |
 | 4 | Redis integration | Cache snapshots/search facets; store sessions/rate-limit counters; prepare BullMQ | Hot pages avoid expensive recompute |
 | 5 | Search engine | Index papers, authors, institutions, companies, roadmaps into Meilisearch | Search latency and relevance improve; rebuild index task exists |
 | 6 | Object storage | Store avatars, company logos, PDFs, attachments in S3-compatible storage | Local disk is no longer required for uploaded assets |
@@ -89,6 +89,7 @@ Third-party Services
 - Track the data-layer split in `docs/DATA_LAYER_MIGRATION.md`.
 - Introduce `backend/src/db/app-db.ts` as the app/business data adapter; it currently falls back to SQLite.
 - Add runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, and production adapter configuration.
+- Add a SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages. Email/realtime delivery remains a later adapter.
 
 ## Design Principles
 

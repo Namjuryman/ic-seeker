@@ -41,6 +41,7 @@ git lfs pull
 - Paper import by DOI through Crossref metadata
 - Manual paper import for missing records
 - Favorites, reading status, private notes, and tags
+- Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -59,6 +60,7 @@ git lfs pull
 - CSV export compatible with ChipSeeker-like workflows
 - Mobile-friendly web layout
 - Independent admin frontend for operations, intended for a future `admin.siliconscope.com` deployment
+- Admin audit trail, runtime readiness checks, and notification operations for production-facing maintenance
 - Docker deployment
 
 ## Commercial Architecture Track

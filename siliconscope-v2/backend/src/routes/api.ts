@@ -29,6 +29,7 @@ import { platformService } from "../services/platform.service.js";
 import { adminService } from "../services/admin.service.js";
 import { adminAuditService } from "../services/admin-audit.service.js";
 import { runtimeHealthService } from "../services/runtime-health.service.js";
+import { notificationService } from "../services/notification.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -49,6 +50,23 @@ router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, re
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
   res.status(runtime.status === "error" ? 503 : 200).json(runtime);
+});
+
+router.post("/admin/notifications", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const notification = notificationService.create(req.body);
+    adminAuditService.record({
+      req,
+      action: "notification.create",
+      resourceType: "notification",
+      resourceId: notification.id,
+      metadata: { userId: notification.userId, severity: notification.severity, kind: notification.kind },
+    });
+    res.json(notification);
+  } catch (err) {
+    adminAuditService.record({ req, action: "notification.create", resourceType: "notification", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -83,6 +101,36 @@ router.put("/private/papers/:id/state", requireAuth, async (req: AuthenticatedRe
 
 router.get("/private/tags", requireAuth, async (req: AuthenticatedRequest, res) => {
   res.json(paperService.getAllTags(req.user?.userId ?? 0));
+});
+
+router.get("/notifications", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(notificationService.list(req.user?.userId ?? 0, req.query as Record<string, unknown>));
+});
+
+router.get("/notifications/unread-count", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(notificationService.unreadCount(req.user?.userId ?? 0));
+});
+
+router.post("/notifications/read-all", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(notificationService.markAllRead(req.user?.userId ?? 0));
+});
+
+router.post("/notifications/:id/read", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid notification ID" });
+    return;
+  }
+  res.json(notificationService.markRead(req.user?.userId ?? 0, id));
+});
+
+router.delete("/notifications/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid notification ID" });
+    return;
+  }
+  res.json(notificationService.delete(req.user?.userId ?? 0, id));
 });
 
 router.post("/import/manual", requireAuth, async (req, res) => {

@@ -22,6 +22,8 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created ON admin_audit_logs(created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor_created ON admin_audit_logs(actor_user_id, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_resource ON admin_audit_logs(resource_type, resource_id)",
+  "CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read_at, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_institution_aliases_canonical ON institution_aliases(canonical_name)",
   "CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_name)",
 ];
@@ -160,6 +162,24 @@ function ensureAdminAuditTables(sqlite: any) {
   `);
 }
 
+function ensureNotificationTables(sqlite: any) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      kind TEXT NOT NULL DEFAULT 'system',
+      severity TEXT NOT NULL DEFAULT 'info',
+      title TEXT NOT NULL,
+      body TEXT NOT NULL DEFAULT '',
+      href TEXT,
+      action_label TEXT,
+      metadata_json TEXT,
+      read_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
@@ -171,6 +191,7 @@ export function applyPerformanceSettings(sqlite: any) {
   ensureIdentityTables(sqlite);
   ensureSnapshotTables(sqlite);
   ensureAdminAuditTables(sqlite);
+  ensureNotificationTables(sqlite);
 
   for (const statement of PERFORMANCE_INDEXES) {
     sqlite.exec(statement);

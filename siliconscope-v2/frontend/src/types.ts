@@ -347,6 +347,28 @@ export interface RuntimeHealth {
   warnings: string[];
 }
 
+export interface NotificationItem {
+  id: number;
+  userId: number;
+  kind: string;
+  severity: 'info' | 'success' | 'warning' | 'critical';
+  title: string;
+  body: string;
+  href: string | null;
+  actionLabel: string | null;
+  metadata: Record<string, unknown> | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationResult {
+  rows: NotificationItem[];
+  total: number;
+  unread: number;
+  limit: number;
+  offset: number;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;
@@ -372,6 +394,8 @@ export interface AdminOverview {
     pdfInbox: number;
     dataQuality: number;
     auditLogs: number;
+    notifications?: number;
+    unreadNotifications?: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];

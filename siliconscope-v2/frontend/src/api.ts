@@ -46,6 +46,7 @@ import type {
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
+  NotificationResult,
   AdminAuditLogResult,
 } from './types'
 
@@ -89,6 +90,31 @@ export const api = {
 
   async adminRuntime() {
     const res = await axios.get<RuntimeHealth>('/api/admin/runtime')
+    return res.data
+  },
+
+  async notifications(params?: Record<string, string | number>) {
+    const res = await axios.get<NotificationResult>('/api/notifications', { params })
+    return res.data
+  },
+
+  async notificationUnreadCount() {
+    const res = await axios.get<{ unread: number }>('/api/notifications/unread-count')
+    return res.data
+  },
+
+  async markNotificationRead(id: number) {
+    const res = await axios.post<{ ok: boolean }>(`/api/notifications/${id}/read`)
+    return res.data
+  },
+
+  async markAllNotificationsRead() {
+    const res = await axios.post<{ ok: boolean; changed: number }>('/api/notifications/read-all')
+    return res.data
+  },
+
+  async deleteNotification(id: number) {
+    const res = await axios.delete<{ ok: boolean }>(`/api/notifications/${id}`)
     return res.data
   },
 

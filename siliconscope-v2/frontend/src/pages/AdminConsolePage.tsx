@@ -109,7 +109,7 @@ export default function AdminConsolePage() {
         <div><span>审核待处理</span><strong>{summary.moderationOpen}</strong><small>comments / reviews / reports</small></div>
         <div><span>API Key</span><strong>{summary.apiKeys}</strong><small>configured</small></div>
         <div><span>企业数据</span><strong>{summary.companies}</strong><small>companies</small></div>
-        <div><span>审计日志</span><strong>{summary.auditLogs}</strong><small>admin events</small></div>
+        <div><span>通知</span><strong>{summary.unreadNotifications ?? 0}</strong><small>{summary.notifications ?? 0} total</small></div>
       </section>
 
       <section className="admin-grid">

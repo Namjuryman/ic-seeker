@@ -8,6 +8,7 @@ import type { AuthStatus } from '../../frontend/src/types'
 
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
 const AdminAuditPage = lazy(() => import('../../frontend/src/pages/AdminAuditPage'))
+const NotificationsPage = lazy(() => import('../../frontend/src/pages/NotificationsPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -24,10 +25,11 @@ const queryClient = new QueryClient({
 const adminNav = [
   { to: '/', label: '总览', icon: 'A' },
   { to: '/audit-logs', label: '审计日志', icon: 'L' },
+  { to: '/notifications', label: '通知中心', icon: 'N' },
   { to: '/companies', label: '企业数据', icon: 'C' },
   { to: '/snapshots', label: '快照缓存', icon: 'S' },
   { to: '/moderation', label: '审核队列', icon: 'M' },
-  { to: '/identity', label: '别名归一', icon: 'N' },
+  { to: '/identity', label: '别名归一', icon: 'I' },
   { to: '/data-quality', label: '数据质量', icon: 'Q' },
   { to: '/journal-ingestion', label: '导入任务', icon: 'J' },
   { to: '/venue-matrix', label: '会议期刊', icon: 'V' },
@@ -149,6 +151,7 @@ function AdminApp() {
               <Routes>
                 <Route path="/" element={<AdminConsolePage />} />
                 <Route path="/audit-logs" element={<AdminAuditPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
                 <Route path="/snapshots" element={<SnapshotAdminPage />} />
                 <Route path="/moderation" element={<ModerationPage />} />
