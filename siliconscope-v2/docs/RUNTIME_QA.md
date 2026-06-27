@@ -122,6 +122,8 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] Metadata DB check reports a non-zero paper count.
 - [ ] Local development may return `status: warn` for local admin bypass, weak JWT, or missing production build.
 - [ ] Public deployment should target `status: ok` with `IC_SEEKER_REQUIRE_LOGIN=1`, `IC_SEEKER_LOCAL_ADMIN=0`, a strong `JWT_SECRET`, and exact `FRONTEND_ORIGINS`.
+- [ ] Public deployment keeps `RATE_LIMIT_ENABLED=1`; `/api/auth/login`, `/api/admin/*`, and general `/api/*` requests expose standard rate-limit headers.
+- [ ] Error responses include `requestId`; production `500` responses do not expose raw stack traces or internal exception text.
 - [ ] `npm run deploy:doctor -- .env.production` passes after `npm run build`.
 - [ ] Docker production stack exposes `www`, `admin`, and `api` hostnames through Caddy or an equivalent external reverse proxy.
 - [ ] `npm run backup:create -- smoke --keep=10` creates a `.sqlite` backup plus JSON manifest under `BACKUP_DIR`.

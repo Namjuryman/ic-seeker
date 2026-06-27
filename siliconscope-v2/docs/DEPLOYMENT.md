@@ -70,6 +70,10 @@ VITE_API_BASE_URL=https://api.siliconscope.com
 FRONTEND_ORIGINS=https://www.siliconscope.com,https://admin.siliconscope.com
 HOST=0.0.0.0
 PORT=8750
+RATE_LIMIT_ENABLED=1
+RATE_LIMIT_MAX=400
+AUTH_RATE_LIMIT_MAX=8
+ADMIN_RATE_LIMIT_MAX=120
 ```
 
 Run the production guard after `npm run build`:
@@ -138,6 +142,7 @@ Before a Vercel deployment, migrate to:
 - Use a strong `ADMIN_PASSWORD`.
 - Use a strong random `JWT_SECRET`.
 - Set `FRONTEND_ORIGINS` to both the public frontend and admin frontend domains.
+- Keep `RATE_LIMIT_ENABLED=1`; tune `RATE_LIMIT_MAX`, `AUTH_RATE_LIMIT_MAX`, and `ADMIN_RATE_LIMIT_MAX` as traffic grows.
 - Keep `.env` out of Git.
 - Back up `ic_database/ic_papers.sqlite`.
 - Do not proxy raw publisher PDFs unless you have rights to redistribute them.
@@ -150,7 +155,7 @@ npm run backup:create -- weekly-refresh --keep=10
 ```
 
 - Run IEEE/OpenAlex/Crossref sync and admin operations only from the backend/admin frontend, never from the public frontend.
-- Add rate limiting before public traffic or paid subscriptions.
+- API responses include `X-Request-Id`; use that ID when correlating production errors with server logs.
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
 - Check the independent admin console runtime panel before major imports or public announcements.
 - Run `npm run deploy:check -- .env.production` before every first-time public deploy or secret rotation.

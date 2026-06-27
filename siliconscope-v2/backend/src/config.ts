@@ -33,6 +33,14 @@ export const appConfig = {
   
   cookieName: "siliconscope_token",
   tokenExpiry: "14d",
+
+  rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "0",
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000),
+  rateLimitMax: Number(process.env.RATE_LIMIT_MAX || 400),
+  authRateLimitWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS || 60 * 1000),
+  authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX || 8),
+  adminRateLimitWindowMs: Number(process.env.ADMIN_RATE_LIMIT_WINDOW_MS || 5 * 60 * 1000),
+  adminRateLimitMax: Number(process.env.ADMIN_RATE_LIMIT_MAX || 120),
   
   crossrefMailto: process.env.CROSSREF_MAILTO || "",
 

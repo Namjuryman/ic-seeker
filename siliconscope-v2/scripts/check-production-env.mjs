@@ -20,6 +20,11 @@ function isBlank(value) {
   return !value || value.includes("replace-with") || value.includes("your-domain.com");
 }
 
+function readPositiveInt(key, fallback) {
+  const value = Number(env[key] || fallback);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
 if (!fs.existsSync(envPath)) {
   console.error(`Missing env file: ${envPath}`);
   process.exit(1);
@@ -51,6 +56,26 @@ if (env.IC_SEEKER_REQUIRE_LOGIN !== "1") {
 
 if (env.IC_SEEKER_LOCAL_ADMIN === "1") {
   errors.push("IC_SEEKER_LOCAL_ADMIN must be 0 or unset in production.");
+}
+
+if (env.RATE_LIMIT_ENABLED === "0") {
+  errors.push("RATE_LIMIT_ENABLED must not be 0 in production.");
+}
+
+const generalLimit = readPositiveInt("RATE_LIMIT_MAX", 400);
+const authLimit = readPositiveInt("AUTH_RATE_LIMIT_MAX", 8);
+const adminLimit = readPositiveInt("ADMIN_RATE_LIMIT_MAX", 120);
+
+if (!generalLimit || !authLimit || !adminLimit) {
+  errors.push("RATE_LIMIT_MAX, AUTH_RATE_LIMIT_MAX, and ADMIN_RATE_LIMIT_MAX must be positive numbers.");
+}
+
+if (authLimit > 20) {
+  warnings.push("AUTH_RATE_LIMIT_MAX is high for a public login endpoint.");
+}
+
+if (adminLimit > generalLimit) {
+  warnings.push("ADMIN_RATE_LIMIT_MAX is higher than RATE_LIMIT_MAX; admin operations usually need a stricter limit.");
 }
 
 if (env.TRUST_PROXY !== "1") {

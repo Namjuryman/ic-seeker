@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import crypto from "node:crypto";
 import { authRouter } from "./routes/auth.js";
 import { apiRouter } from "./routes/api.js";
 import { staticRouter } from "./routes/static.js";
@@ -15,6 +16,25 @@ const app = express();
 if (appConfig.trustProxy) {
   app.set("trust proxy", 1);
 }
+
+function requestId(req: Request, res: Response, next: NextFunction) {
+  const existing = req.headers["x-request-id"];
+  const id = Array.isArray(existing) ? existing[0] : existing || crypto.randomUUID();
+  res.locals.requestId = id;
+  res.setHeader("X-Request-Id", id);
+  next();
+}
+
+function rateLimitHandler(req: Request, res: Response) {
+  res.status(429).json({
+    error: "Too many requests",
+    requestId: res.locals.requestId,
+    retryAfter: res.getHeader("Retry-After") || null,
+    path: req.path,
+  });
+}
+
+app.use(requestId);
 
 // Security middleware
 app.use(helmet({
@@ -40,32 +60,55 @@ app.use(express.json({ limit: "2mb" }));
 
 // Rate limiting
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
+  windowMs: appConfig.rateLimitWindowMs,
+  max: appConfig.rateLimitMax,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: rateLimitHandler,
+  skip: (req) => req.originalUrl.startsWith("/api/health/"),
 });
-app.use(generalLimiter);
 
 const authLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 8,
+  windowMs: appConfig.authRateLimitWindowMs,
+  max: appConfig.authRateLimitMax,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
+  handler: rateLimitHandler,
 });
-app.use("/api/auth/login", authLimiter);
+
+const adminLimiter = rateLimit({
+  windowMs: appConfig.adminRateLimitWindowMs,
+  max: appConfig.adminRateLimitMax,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+});
+
+if (appConfig.rateLimitEnabled) {
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/admin", adminLimiter);
+  app.use("/api", generalLimiter);
+}
 
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api", apiRouter);
 app.use("/api/health", healthRouter);
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "API route not found", requestId: res.locals.requestId, path: req.path });
+});
 app.use(staticRouter);
 
 // Global error handler
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err);
-  res.status(500).json({ error: err.message || "Internal server error" });
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  const requestIdValue = res.locals.requestId;
+  console.error(`[${requestIdValue}] ${req.method} ${req.originalUrl}`, err);
+  const isProduction = process.env.NODE_ENV === "production";
+  res.status(500).json({
+    error: isProduction ? "Internal server error" : err.message || "Internal server error",
+    requestId: requestIdValue,
+  });
 });
 
 app.listen(appConfig.port, appConfig.host, () => {

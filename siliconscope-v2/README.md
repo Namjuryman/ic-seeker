@@ -65,6 +65,7 @@ git lfs pull
 - Independent admin frontend for operations, intended for a future `admin.siliconscope.com` deployment
 - Admin audit trail, runtime readiness checks, and notification operations for production-facing maintenance
 - Independent-domain deployment scaffold with production env checks, API/static frontend domain split, and Cloudflare/Caddy/Nginx templates
+- Public API hardening with configurable general/auth/admin rate limits, request IDs, and production-safe error responses
 - Docker deployment
 
 ## Commercial Architecture Track

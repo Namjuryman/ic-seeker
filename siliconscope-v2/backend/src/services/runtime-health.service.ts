@@ -139,6 +139,16 @@ export const runtimeHealthService = {
     }));
 
     runCheck(checks, () => ({
+      id: "rate-limits",
+      label: "API rate limits",
+      status: appConfig.rateLimitEnabled ? "ok" : appConfig.deploymentMode === "production" ? "warn" : "ok",
+      message: appConfig.rateLimitEnabled
+        ? `general ${appConfig.rateLimitMax}, auth ${appConfig.authRateLimitMax}, admin ${appConfig.adminRateLimitMax}`
+        : "disabled",
+      detail: "Configure RATE_LIMIT_MAX, AUTH_RATE_LIMIT_MAX, and ADMIN_RATE_LIMIT_MAX for public traffic.",
+    }));
+
+    runCheck(checks, () => ({
       id: "public-domain",
       label: "Public domain",
       status: appConfig.deploymentMode === "production" && !appConfig.publicSiteUrl ? "warn" : "ok",
