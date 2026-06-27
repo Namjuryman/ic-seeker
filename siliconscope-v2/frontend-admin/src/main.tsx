@@ -1,21 +1,21 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react'
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import '../../frontend/src/index.css'
 import { api } from '../../frontend/src/api'
 import type { AuthStatus } from '../../frontend/src/types'
 
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
+const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
+const JobOperationsPage = lazy(() => import('../../frontend/src/pages/JobOperationsPage'))
+const SchedulerAdminPage = lazy(() => import('../../frontend/src/pages/SchedulerAdminPage'))
+const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/MaintenanceAdminPage'))
+const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
 const AdminAuditPage = lazy(() => import('../../frontend/src/pages/AdminAuditPage'))
 const NotificationsPage = lazy(() => import('../../frontend/src/pages/NotificationsPage'))
 const AdminBillingPage = lazy(() => import('../../frontend/src/pages/AdminBillingPage'))
 const BackupAdminPage = lazy(() => import('../../frontend/src/pages/BackupAdminPage'))
-const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/MaintenanceAdminPage'))
-const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
-const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
-const SchedulerAdminPage = lazy(() => import('../../frontend/src/pages/SchedulerAdminPage'))
-const JobOperationsPage = lazy(() => import('../../frontend/src/pages/JobOperationsPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -29,26 +29,52 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 })
 
+const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:5173'
+
 const adminNav = [
-  { to: '/', label: '总览', icon: 'A' },
-  { to: '/launch', label: '上线检查', icon: 'G' },
-  { to: '/job-operations', label: '任务台账', icon: 'J' },
-  { to: '/scheduler', label: '定时任务', icon: 'S' },
-  { to: '/maintenance', label: '维护任务', icon: 'T' },
-  { to: '/observability', label: '运行观测', icon: 'O' },
-  { to: '/audit-logs', label: '审计日志', icon: 'L' },
-  { to: '/notifications', label: '通知中心', icon: 'N' },
-  { to: '/billing', label: '订阅配额', icon: 'B' },
-  { to: '/backups', label: '备份恢复', icon: 'R' },
-  { to: '/companies', label: '企业数据', icon: 'C' },
-  { to: '/snapshots', label: '快照缓存', icon: 'K' },
-  { to: '/moderation', label: '审核队列', icon: 'M' },
-  { to: '/identity', label: '别名归一', icon: 'I' },
-  { to: '/data-quality', label: '数据质量', icon: 'Q' },
-  { to: '/journal-ingestion', label: '导入任务', icon: 'D' },
-  { to: '/venue-matrix', label: '会议期刊', icon: 'V' },
-  { to: '/platform', label: '平台中枢', icon: 'P' },
+  {
+    section: 'Command',
+    items: [
+      { to: '/', label: 'Overview', icon: 'A' },
+      { to: '/launch', label: 'Launch checklist', icon: 'G' },
+      { to: '/job-operations', label: 'Operations ledger', icon: 'J' },
+      { to: '/observability', label: 'Observability', icon: 'O' },
+    ],
+  },
+  {
+    section: 'Jobs',
+    items: [
+      { to: '/journal-ingestion', label: 'Ingestion jobs', icon: 'D' },
+      { to: '/scheduler', label: 'Scheduler', icon: 'S' },
+      { to: '/maintenance', label: 'Maintenance', icon: 'T' },
+      { to: '/backups', label: 'Backups', icon: 'R' },
+      { to: '/snapshots', label: 'Snapshots', icon: 'K' },
+    ],
+  },
+  {
+    section: 'Governance',
+    items: [
+      { to: '/audit-logs', label: 'Audit logs', icon: 'L' },
+      { to: '/moderation', label: 'Moderation', icon: 'M' },
+      { to: '/identity', label: 'Identity aliases', icon: 'I' },
+      { to: '/data-quality', label: 'Data quality', icon: 'Q' },
+    ],
+  },
+  {
+    section: 'Business',
+    items: [
+      { to: '/billing', label: 'Billing admin', icon: 'B' },
+      { to: '/companies', label: 'Company data', icon: 'C' },
+      { to: '/notifications', label: 'Notifications', icon: 'N' },
+      { to: '/venue-matrix', label: 'Venue matrix', icon: 'V' },
+      { to: '/platform', label: 'Platform map', icon: 'P' },
+    ],
+  },
 ]
+
+function normalizeAdminPath(pathname: string) {
+  return pathname.startsWith('/admin/') ? pathname.slice('/admin'.length) : pathname === '/admin' ? '/' : pathname
+}
 
 function AdminLoginGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AuthStatus | null>(null)
@@ -69,7 +95,7 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
       await api.login(password)
       setStatus(await api.authStatus())
     } catch (err: any) {
-      setError(err?.response?.data?.error || '管理员登录失败')
+      setError(err?.response?.data?.error || 'Admin login failed')
     } finally {
       setLoading(false)
     }
@@ -77,13 +103,13 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
 
   if (!status) return <div className="ss-loading">Loading SiliconScope Admin...</div>
 
-  if (!status.authenticated || (status.authEnabled && status.user?.role !== 'admin')) {
+  if (!status.authenticated) {
     return (
       <div className="ss-login">
         <div className="ss-login-card">
           <div className="ss-mark">A</div>
           <h1>SiliconScope Admin</h1>
-          <p>独立管理后台。公网部署时仅管理员可进入，普通用户不会看到这个入口。</p>
+          <p>Independent operations console. Public deployments should protect this hostname with Access, VPN, or an equivalent gate.</p>
           <input
             type="password"
             value={password}
@@ -93,7 +119,7 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
           />
           {error && <div className="ss-login-error">{error}</div>}
           <button disabled={loading || !password} onClick={login}>
-            {loading ? '登录中...' : '管理员登录'}
+            {loading ? 'Signing in...' : 'Admin sign in'}
           </button>
         </div>
       </div>
@@ -104,11 +130,12 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="ss-admin-denied">
         <span>Admin only</span>
-        <h1>后台权限未开启</h1>
+        <h1>Access denied</h1>
         <p>
-          当前会话不是管理员。公网环境请启用密码登录并使用管理员账号；本地开发请通过 start-dev 脚本启动，
-          它会显式设置 IC_SEEKER_LOCAL_ADMIN=1。
+          This admin application is intentionally separate from the public frontend. Use an administrator session,
+          Cloudflare Access, VPN, or the local development launcher with IC_SEEKER_LOCAL_ADMIN enabled.
         </p>
+        <a href={publicSiteUrl}>Return to public app</a>
       </div>
     )
   }
@@ -124,27 +151,29 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           <div className="ss-brand-logo">A</div>
           <div>
             <strong>SiliconScope Admin</strong>
-            <span>Operations console</span>
+            <span>Private control plane</span>
           </div>
         </div>
         <nav className="ss-nav" aria-label="Admin navigation">
-          <div className="ss-nav-group">
-            <em>后台</em>
-            {adminNav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) => `ss-nav-item ${isActive ? 'active' : ''}`}
-              >
-                <i aria-hidden="true">{item.icon}</i>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
+          {adminNav.map((group) => (
+            <div className="ss-nav-group" key={group.section}>
+              <em>{group.section}</em>
+              {group.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) => `ss-nav-item ${isActive ? 'active' : ''}`}
+                >
+                  <i aria-hidden="true">{item.icon}</i>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          ))}
         </nav>
         <div className="ss-sidebar-foot">
-          <a href="http://localhost:5173">返回前台</a>
+          <a href={publicSiteUrl}>Public app</a>
           <span>Deploy as admin.siliconscope.com</span>
         </div>
       </aside>
@@ -155,6 +184,39 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function AdminRoutes() {
+  const location = useLocation()
+  const normalizedPath = useMemo(() => normalizeAdminPath(location.pathname), [location.pathname])
+
+  if (normalizedPath !== location.pathname) {
+    return <Navigate to={`${normalizedPath}${location.search}${location.hash}`} replace />
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<AdminConsolePage />} />
+      <Route path="/launch" element={<LaunchAdminPage />} />
+      <Route path="/job-operations" element={<JobOperationsPage />} />
+      <Route path="/scheduler" element={<SchedulerAdminPage />} />
+      <Route path="/maintenance" element={<MaintenanceAdminPage />} />
+      <Route path="/observability" element={<ObservabilityPage />} />
+      <Route path="/audit-logs" element={<AdminAuditPage />} />
+      <Route path="/notifications" element={<NotificationsPage />} />
+      <Route path="/billing" element={<AdminBillingPage />} />
+      <Route path="/backups" element={<BackupAdminPage />} />
+      <Route path="/companies" element={<CompanyAdminPage />} />
+      <Route path="/snapshots" element={<SnapshotAdminPage />} />
+      <Route path="/moderation" element={<ModerationPage />} />
+      <Route path="/identity" element={<IdentityPage />} />
+      <Route path="/data-quality" element={<DataQualityPage />} />
+      <Route path="/journal-ingestion" element={<JournalIngestionPage />} />
+      <Route path="/venue-matrix" element={<VenueMatrixPage />} />
+      <Route path="/platform" element={<PlatformPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
 function AdminApp() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -162,27 +224,7 @@ function AdminApp() {
         <BrowserRouter>
           <AdminLayout>
             <Suspense fallback={<div className="ss-loading">Loading admin module...</div>}>
-              <Routes>
-                <Route path="/" element={<AdminConsolePage />} />
-                <Route path="/launch" element={<LaunchAdminPage />} />
-                <Route path="/job-operations" element={<JobOperationsPage />} />
-                <Route path="/scheduler" element={<SchedulerAdminPage />} />
-                <Route path="/maintenance" element={<MaintenanceAdminPage />} />
-                <Route path="/observability" element={<ObservabilityPage />} />
-                <Route path="/audit-logs" element={<AdminAuditPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/billing" element={<AdminBillingPage />} />
-                <Route path="/backups" element={<BackupAdminPage />} />
-                <Route path="/companies" element={<CompanyAdminPage />} />
-                <Route path="/snapshots" element={<SnapshotAdminPage />} />
-                <Route path="/moderation" element={<ModerationPage />} />
-                <Route path="/identity" element={<IdentityPage />} />
-                <Route path="/data-quality" element={<DataQualityPage />} />
-                <Route path="/journal-ingestion" element={<JournalIngestionPage />} />
-                <Route path="/venue-matrix" element={<VenueMatrixPage />} />
-                <Route path="/platform" element={<PlatformPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+              <AdminRoutes />
             </Suspense>
           </AdminLayout>
         </BrowserRouter>

@@ -34,17 +34,17 @@ export default function BillingPage() {
   })
 
   if (isLoading) return <div className="ss-loading">Loading billing workspace...</div>
-  if (error || !data) return <div className="ss-empty">订阅配置暂时不可用。</div>
+  if (error || !data) return <div className="ss-empty">订阅与配额暂时不可用。</div>
 
   return (
     <div className="billing-page">
       <section className="billing-hero">
         <div>
-          <span className="eyebrow">COMMERCIAL CONTROL</span>
+          <span className="eyebrow">COMMERCIAL BOUNDARY</span>
           <h1>订阅与配额</h1>
           <p>
-            SiliconScope 现在已有计划目录、权益元数据和 checkout 适配器边界。
-            后续接 Stripe/Paddle 时会沿用这里的 plan 与 quota 模型。
+            SiliconScope 的核心搜索、学习路线、基础对比、关注列表和阅读队列应保持免费。
+            未来收费重点放在 AI 结构化报告、高级导出、批量分析和团队工作区，而不是售卖论文 PDF 或封闭基础检索。
           </p>
         </div>
         <div className="billing-current">
@@ -64,14 +64,16 @@ export default function BillingPage() {
           <strong>{data.checkoutAvailable ? 'Ready' : 'Adapter pending'}</strong>
         </div>
         <div>
-          <span>Current badge</span>
-          <strong>{data.currentPlan.badge}</strong>
+          <span>Paid layer</span>
+          <strong>AI / Export / Team</strong>
         </div>
       </section>
 
       <section className="billing-note">
         <strong>{data.paymentConfigured ? 'Payment credentials detected' : 'Payment credentials not configured'}</strong>
-        <p>{data.checkoutReason}</p>
+        <p>
+          {data.checkoutReason} Until a real payment provider and billing terms are connected, upgrade buttons are product placeholders.
+        </p>
         {message && <em>{message}</em>}
       </section>
 
@@ -115,6 +117,7 @@ export default function BillingPage() {
       <section className="billing-plans">
         {data.plans.map((plan) => {
           const active = plan.id === data.currentPlan.id
+          const payable = data.checkoutAvailable && plan.priceMonthlyUsd !== null && plan.priceMonthlyUsd > 0
           return (
             <article className={`billing-plan ${active ? 'active' : ''} ${plan.recommended ? 'recommended' : ''}`} key={plan.id}>
               <div className="billing-plan-head">
@@ -129,18 +132,25 @@ export default function BillingPage() {
               </ul>
               <div className="billing-plan-limits">
                 <span>Watchlist {limitText(plan.limits.watchlistItems)}</span>
-                <span>AI {limitText(plan.limits.aiSummariesPerMonth, '/mo')}</span>
+                <span>AI reports {limitText(plan.limits.aiSummariesPerMonth, '/mo')}</span>
                 <span>Seats {limitText(plan.limits.teamSeats)}</span>
               </div>
               <button
-                disabled={active || checkout.isPending || plan.id === 'internal'}
+                disabled={active || checkout.isPending || plan.id === 'internal' || !payable}
                 onClick={() => checkout.mutate(plan.id)}
               >
-                {active ? 'Current plan' : plan.priceMonthlyUsd === null ? 'Contact / Configure' : 'Upgrade'}
+                {active ? 'Current plan' : payable ? 'Upgrade' : 'Contact / Not connected'}
               </button>
             </article>
           )
         })}
+      </section>
+
+      <section className="billing-note">
+        <strong>Policy</strong>
+        <p>
+          Billing should monetize workflow efficiency and AI-assisted reports, not copyrighted PDFs, hidden data, or absolute rankings of mentors, schools, or companies.
+        </p>
       </section>
     </div>
   )

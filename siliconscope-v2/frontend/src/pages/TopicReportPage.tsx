@@ -1,15 +1,47 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import type { TopicReport } from '../types'
 import { searchPath, topicPath, companyPath, roadmapPath } from '../utils/routes'
 
 export default function TopicReportPage() {
-  const [field, setField] = useState('')
+  const params = useParams()
+  const routeField = params.field ? decodeURIComponent(params.field) : ''
+  const [field, setField] = useState(routeField)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<TopicReport | null>(null)
   const navigate = useNavigate()
+
+  async function loadReport(target: string, replaceUrl: boolean) {
+    const trimmed = target.trim()
+    if (!trimmed) {
+      setResult(null)
+      return
+    }
+    setLoading(true)
+    setError('')
+    try {
+      const data = await api.topicReport(trimmed)
+      setResult(data)
+      setField(trimmed)
+      if (replaceUrl) {
+        navigate(`/reports/topics/${encodeURIComponent(trimmed)}`, { replace: true })
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err.message || 'Failed to generate topic report')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (routeField && routeField !== result?.field) {
+      loadReport(routeField, false)
+    }
+    // result is intentionally excluded so a loaded report does not retrigger itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeField])
 
   async function handleGenerate() {
     const target = field.trim()
@@ -17,17 +49,7 @@ export default function TopicReportPage() {
       setError('Please enter a topic field.')
       return
     }
-    setLoading(true)
-    setError('')
-    try {
-      const data = await api.topicReport(target)
-      setResult(data)
-      navigate(`/reports/topics/${encodeURIComponent(target)}`, { replace: true })
-    } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to generate topic report')
-    } finally {
-      setLoading(false)
-    }
+    await loadReport(target, true)
   }
 
   const suggestedFields = [
@@ -81,7 +103,7 @@ export default function TopicReportPage() {
           {suggestedFields.map((f) => (
             <button
               key={f}
-              onClick={() => { setField(f); }}
+            onClick={() => { setField(f); loadReport(f, true) }}
               className="px-2 py-0.5 rounded border text-xs bg-surface-elevated text-ink-secondary border-line hover:bg-surface-soft transition-colors"
             >
               {f}
@@ -226,7 +248,7 @@ export default function TopicReportPage() {
 
       {!result && !loading && (
         <div className="bg-surface-panel border border-line rounded-xl p-8 shadow-sm text-center">
-          <p className="text-ink-muted text-sm">Enter a research topic above to generate a report.</p>
+          <p className="text-ink-muted text-sm">Enter a research topic above to generate a report, or open a direct URL such as /reports/topics/Power%20Management.</p>
         </div>
       )}
 

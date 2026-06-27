@@ -22,6 +22,8 @@ function infraState(configured: boolean) {
   return configured ? '已配置' : '本地 / 待接入'
 }
 
+const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5176'
+
 function ModuleCard({ item }: { item: PlatformModule }) {
   return (
     <article className={`platform-module platform-module-${item.status}`}>
@@ -145,11 +147,7 @@ export default function PlatformPage() {
             <h2>常用入口</h2>
           </div>
           <div className="platform-shortcuts">
-            <Link to="/admin/job-operations">运维台账</Link>
-            <Link to="/admin/ingestion">导入任务</Link>
-            <Link to="/admin/snapshots">快照管理</Link>
-            <Link to="/admin/data-quality">数据质量</Link>
-            <Link to="/admin/identity">别名管理</Link>
+            <a href={adminSiteUrl}>打开独立管理后台</a>
             <Link to="/venue-matrix">会议/期刊</Link>
             <Link to="/companies">企业情报</Link>
             <Link to="/learning-path">路线库</Link>

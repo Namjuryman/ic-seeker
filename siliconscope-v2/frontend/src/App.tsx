@@ -29,21 +29,8 @@ const AuthorComparePage = lazy(() => import('./pages/AuthorComparePage'))
 const MentorComparePage = lazy(() => import('./pages/MentorComparePage'))
 const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
 const PlatformPage = lazy(() => import('./pages/PlatformPage'))
-const AdminConsolePage = lazy(() => import('./pages/AdminConsolePage'))
-const LaunchAdminPage = lazy(() => import('./pages/LaunchAdminPage'))
-const ObservabilityPage = lazy(() => import('./pages/ObservabilityPage'))
-const BackupAdminPage = lazy(() => import('./pages/BackupAdminPage'))
-const MaintenanceAdminPage = lazy(() => import('./pages/MaintenanceAdminPage'))
-const SchedulerAdminPage = lazy(() => import('./pages/SchedulerAdminPage'))
-const JobOperationsPage = lazy(() => import('./pages/JobOperationsPage'))
-const JournalIngestionPage = lazy(() => import('./pages/JournalIngestionPage'))
-const SnapshotAdminPage = lazy(() => import('./pages/SnapshotAdminPage'))
-const AdminAuditPage = lazy(() => import('./pages/AdminAuditPage'))
-const AdminBillingPage = lazy(() => import('./pages/AdminBillingPage'))
-const CompanyAdminPage = lazy(() => import('./pages/CompanyAdminPage'))
-const ModerationPage = lazy(() => import('./pages/ModerationPage'))
-const DataQualityPage = lazy(() => import('./pages/DataQualityPage'))
-const IdentityPage = lazy(() => import('./pages/IdentityPage'))
+const LegalPage = lazy(() => import('./pages/LegalPage'))
+const AdminRedirectPage = lazy(() => import('./pages/AdminRedirectPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -62,6 +49,7 @@ const navItems = [
   { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
   { to: '/compare', label: '对比中心', icon: '≋', section: '探索' },
   { to: '/reports', label: '报告中心', icon: 'P', section: '探索' },
+  { to: '/legal', label: '政策边界', icon: '§', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
   { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
   { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
@@ -212,34 +200,11 @@ function App() {
                 <Route path="/compare/mentors" element={<MentorComparePage />} />
                 <Route path="/reports" element={<TopicReportPage />} />
                 <Route path="/platform" element={<PlatformPage />} />
+                <Route path="/reports/topics" element={<TopicReportPage />} />
                 <Route path="/reports/topics/:field" element={<TopicReportPage />} />
-                <Route path="/admin" element={<AdminConsolePage />} />
-                <Route path="/admin/launch" element={<LaunchAdminPage />} />
-                <Route path="/admin/observability" element={<ObservabilityPage />} />
-                <Route path="/admin/backups" element={<BackupAdminPage />} />
-                <Route path="/admin/maintenance" element={<MaintenanceAdminPage />} />
-                <Route path="/admin/scheduler" element={<SchedulerAdminPage />} />
-                <Route path="/admin/job-operations" element={<JobOperationsPage />} />
-                <Route path="/admin/ingestion" element={<JournalIngestionPage />} />
-                <Route path="/admin/snapshots" element={<SnapshotAdminPage />} />
-                <Route path="/admin/audit-logs" element={<AdminAuditPage />} />
-                <Route path="/admin/billing" element={<AdminBillingPage />} />
-                <Route path="/admin/companies" element={<CompanyAdminPage />} />
-                <Route path="/admin/moderation" element={<ModerationPage />} />
-                <Route path="/admin/data-quality" element={<DataQualityPage />} />
-                <Route path="/admin/identity" element={<IdentityPage />} />
-                <Route path="/launch" element={<LaunchAdminPage />} />
-                <Route path="/observability" element={<ObservabilityPage />} />
-                <Route path="/backups" element={<BackupAdminPage />} />
-                <Route path="/maintenance" element={<MaintenanceAdminPage />} />
-                <Route path="/scheduler" element={<SchedulerAdminPage />} />
-                <Route path="/job-operations" element={<JobOperationsPage />} />
-                <Route path="/journal-ingestion" element={<JournalIngestionPage />} />
-                <Route path="/snapshots" element={<SnapshotAdminPage />} />
-                <Route path="/audit-logs" element={<AdminAuditPage />} />
-                <Route path="/moderation" element={<ModerationPage />} />
-                <Route path="/data-quality" element={<DataQualityPage />} />
-                <Route path="/identity" element={<IdentityPage />} />
+                <Route path="/legal" element={<LegalPage />} />
+                <Route path="/legal/:slug" element={<LegalPage />} />
+                <Route path="/admin/*" element={<AdminRedirectPage />} />
               </Routes>
             </Suspense>
           </Layout>

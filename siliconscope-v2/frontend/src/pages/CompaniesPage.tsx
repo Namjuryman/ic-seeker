@@ -98,7 +98,6 @@ export default function CompaniesPage() {
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
-          <Link to="/admin/companies">维护数据</Link>
         </div>
       </section>
 
@@ -206,8 +205,7 @@ export default function CompaniesPage() {
                 <div>
                   <p>还没有企业数据。</p>
                   <p className="mt-2">
-                    运行 <code>npm run companies:seed</code>，或进入{' '}
-                    <Link to="/admin/companies" className="text-brand-600 hover:underline">数据维护</Link>手动添加。
+                    运行 <code>npm run companies:seed</code>，或从独立管理后台手动添加。
                   </p>
                 </div>
               ) : (
