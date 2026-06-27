@@ -347,6 +347,45 @@ export interface RuntimeHealth {
   warnings: string[];
 }
 
+export interface ObservedRoute {
+  key: string;
+  method: string;
+  path: string;
+  count: number;
+  errorCount: number;
+  rateLimitedCount: number;
+  totalDurationMs: number;
+  averageDurationMs: number;
+  maxDurationMs: number;
+  lastStatus: number;
+  lastSeenAt: string;
+}
+
+export interface ObservabilitySnapshot {
+  startedAt: string;
+  generatedAt: string;
+  uptimeSeconds: number;
+  totalRequests: number;
+  totalErrors: number;
+  totalRateLimited: number;
+  errorRate: number;
+  requestsLastMinute: number;
+  requestsLastFiveMinutes: number;
+  averageDurationMs: number;
+  maxDurationMs: number;
+  statusBuckets: Record<string, number>;
+  slowRoutes: ObservedRoute[];
+  hotRoutes: ObservedRoute[];
+  recentErrors: Array<{
+    requestId: string | null;
+    method: string;
+    path: string;
+    status: number;
+    durationMs: number;
+    at: string;
+  }>;
+}
+
 export interface NotificationItem {
   id: number;
   userId: number;

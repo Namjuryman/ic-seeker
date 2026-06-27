@@ -116,6 +116,7 @@ Third-party Services
   - `npm run deploy:check -- .env.production`.
   - `npm run deploy:doctor -- .env.production`.
   - Admin `/launch` go-live console for runtime blockers, backup freshness, maintenance runs, and DNS cutover.
+  - Admin `/observability` runtime console for in-process request volume, latency, status buckets, hot routes, slow routes, and recent error/request IDs.
 
 ## Billing Boundary
 

@@ -33,6 +33,7 @@ import { notificationService } from "../services/notification.service.js";
 import { billingService } from "../services/billing.service.js";
 import { backupService } from "../services/backup.service.js";
 import { maintenanceService, type MaintenanceJobId } from "../services/maintenance.service.js";
+import { observabilityService } from "../services/observability.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -124,6 +125,10 @@ router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: Authenti
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
   res.status(runtime.status === "error" ? 503 : 200).json(runtime);
+});
+
+router.get("/admin/observability", requireAdmin, async (_req, res) => {
+  res.json(observabilityService.snapshot());
 });
 
 router.get("/admin/backups", requireAdmin, async (_req, res) => {

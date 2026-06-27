@@ -10,6 +10,7 @@ import { notificationService } from "./notification.service.js";
 import { billingService } from "./billing.service.js";
 import { backupService } from "./backup.service.js";
 import { maintenanceService } from "./maintenance.service.js";
+import { observabilityService } from "./observability.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -30,6 +31,7 @@ export const adminService = {
     const billing = billingService.getBillingStatus(userId);
     const backups = backupService.list();
     const maintenanceRuns = maintenanceService.runs({ limit: 1 });
+    const observability = observabilityService.snapshot();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -67,6 +69,8 @@ export const adminService = {
         backups: backups.total,
         backupBytes: backups.totalBytes,
         maintenanceRuns: maintenanceRuns.total,
+        totalRequests: observability.totalRequests,
+        errorRate: observability.errorRate,
       },
       operations: [
         {
@@ -86,6 +90,15 @@ export const adminService = {
           detail: "admin mutations, actor, resource, status, IP and user-agent",
           href: "/audit-logs",
           action: "查看留痕",
+        },
+        {
+          id: "observability",
+          title: "Runtime Observability",
+          status: observability.totalErrors || observability.totalRateLimited ? "attention" : "ready",
+          metric: `${observability.totalRequests} req`,
+          detail: `${observability.requestsLastMinute}/min, avg ${observability.averageDurationMs}ms, errors ${observability.totalErrors}`,
+          href: "/observability",
+          action: "Inspect traffic",
         },
         {
           id: "maintenance",

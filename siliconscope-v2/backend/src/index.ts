@@ -10,6 +10,7 @@ import { authRouter } from "./routes/auth.js";
 import { apiRouter } from "./routes/api.js";
 import { staticRouter } from "./routes/static.js";
 import { healthRouter } from "./routes/health.js";
+import { observabilityService } from "./services/observability.service.js";
 
 const app = express();
 
@@ -35,6 +36,7 @@ function rateLimitHandler(req: Request, res: Response) {
 }
 
 app.use(requestId);
+app.use(observabilityService.middleware);
 
 // Security middleware
 app.use(helmet({

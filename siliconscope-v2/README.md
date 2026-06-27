@@ -66,6 +66,7 @@ git lfs pull
 - Admin audit trail, runtime readiness checks, and notification operations for production-facing maintenance
 - Independent-domain deployment scaffold with production env checks, API/static frontend domain split, and Cloudflare/Caddy/Nginx templates
 - Public API hardening with configurable general/auth/admin rate limits, request IDs, and production-safe error responses
+- Lightweight admin observability for request volume, latency, status buckets, slow routes, hot routes, and recent errors before Prometheus/Sentry are connected
 - Docker deployment
 
 ## Commercial Architecture Track

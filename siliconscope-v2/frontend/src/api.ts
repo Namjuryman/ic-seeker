@@ -46,6 +46,7 @@ import type {
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
+  ObservabilitySnapshot,
   NotificationResult,
   AdminAuditLogResult,
   BillingPlan,
@@ -139,6 +140,11 @@ export const api = {
 
   async adminRuntime() {
     const res = await axios.get<RuntimeHealth>('/api/admin/runtime')
+    return res.data
+  },
+
+  async adminObservability() {
+    const res = await axios.get<ObservabilitySnapshot>('/api/admin/observability')
     return res.data
   },
 

@@ -7066,14 +7066,212 @@
   color: var(--ss-muted);
 }
 
+.observability-page {
+  display: grid;
+  gap: 22px;
+}
+
+.observability-hero,
+.observability-panel,
+.observability-stats > div {
+  border: 1px solid var(--ss-border);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-soft);
+}
+
+.observability-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 30px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(49, 94, 234, 0.15), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f7faff 64%, #f1fff9 100%);
+}
+
+.observability-hero span,
+.observability-panel-head span {
+  color: var(--ss-blue);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.observability-hero h1,
+.observability-panel h2 {
+  margin: 8px 0;
+  color: var(--ss-ink);
+}
+
+.observability-hero p {
+  max-width: 760px;
+  color: var(--ss-muted);
+  line-height: 1.65;
+}
+
+.observability-live {
+  min-width: 180px;
+  padding: 18px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid var(--ss-border);
+  text-align: right;
+}
+
+.observability-live strong {
+  display: block;
+  color: var(--ss-blue);
+  font-size: 38px;
+}
+
+.observability-live span {
+  color: var(--ss-muted);
+  font-weight: 800;
+}
+
+.observability-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.observability-stats > div {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.observability-stats span,
+.observability-stats small {
+  display: block;
+  color: var(--ss-muted);
+  font-weight: 800;
+}
+
+.observability-stats strong {
+  display: block;
+  margin: 10px 0 6px;
+  color: var(--ss-ink);
+  font-size: 26px;
+}
+
+.observability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.observability-panel {
+  border-radius: 22px;
+  padding: 22px;
+  overflow: hidden;
+}
+
+.observability-panel-head {
+  margin-bottom: 16px;
+}
+
+.observability-buckets,
+.observability-errors,
+.observability-table {
+  display: grid;
+  gap: 10px;
+}
+
+.observability-buckets div {
+  position: relative;
+  padding: 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 16px;
+  background: #f8fbff;
+  overflow: hidden;
+}
+
+.observability-buckets strong,
+.observability-buckets span {
+  position: relative;
+  z-index: 1;
+}
+
+.observability-buckets span {
+  float: right;
+  color: var(--ss-muted);
+  font-weight: 900;
+}
+
+.observability-buckets i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--ss-blue), #10b981);
+}
+
+.observability-errors div {
+  padding: 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.observability-errors strong,
+.observability-errors span,
+.observability-errors small {
+  display: block;
+}
+
+.observability-errors span,
+.observability-errors small {
+  margin-top: 5px;
+  color: var(--ss-muted);
+}
+
+.observability-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 86px 76px 76px 92px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.observability-row-head {
+  background: #f8fbff;
+  color: var(--ss-muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.observability-row strong {
+  color: var(--ss-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.observability-row span {
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
 @media (max-width: 1200px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .launch-panels,
-  .launch-command-card {
+  .launch-command-card,
+  .observability-grid {
     grid-template-columns: 1fr;
+  }
+
+  .observability-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -7087,6 +7285,15 @@
   }
 
   .launch-check {
+    grid-template-columns: 1fr;
+  }
+
+  .observability-hero {
+    display: grid;
+  }
+
+  .observability-stats,
+  .observability-row {
     grid-template-columns: 1fr;
   }
 }

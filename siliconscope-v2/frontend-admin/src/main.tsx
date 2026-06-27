@@ -13,6 +13,7 @@ const AdminBillingPage = lazy(() => import('../../frontend/src/pages/AdminBillin
 const BackupAdminPage = lazy(() => import('../../frontend/src/pages/BackupAdminPage'))
 const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/MaintenanceAdminPage'))
 const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
+const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -32,6 +33,7 @@ const adminNav = [
   { to: '/notifications', label: '通知中心', icon: 'N' },
   { to: '/billing', label: '订阅配额', icon: 'B' },
   { to: '/launch', label: '上线检查', icon: 'G' },
+  { to: '/observability', label: '运行观测', icon: 'O' },
   { to: '/maintenance', label: '维护任务', icon: 'T' },
   { to: '/backups', label: '备份恢复', icon: 'R' },
   { to: '/companies', label: '企业数据', icon: 'C' },
@@ -162,6 +164,7 @@ function AdminApp() {
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/billing" element={<AdminBillingPage />} />
                 <Route path="/launch" element={<LaunchAdminPage />} />
+                <Route path="/observability" element={<ObservabilityPage />} />
                 <Route path="/maintenance" element={<MaintenanceAdminPage />} />
                 <Route path="/backups" element={<BackupAdminPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
