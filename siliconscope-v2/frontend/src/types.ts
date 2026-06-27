@@ -568,6 +568,29 @@ export interface MaintenanceRunResult {
   offset: number;
 }
 
+export interface SchedulerJob {
+  id: 'daily-backup' | 'core-snapshots' | 'data-quality';
+  title: string;
+  description: string;
+  maintenanceJobId: string;
+  intervalMinutes: number;
+  enabled: boolean;
+  payload: Record<string, unknown>;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  lastStatus: string | null;
+  lastRunId: number | null;
+  updatedAt: string;
+}
+
+export interface SchedulerStatus {
+  enabled: boolean;
+  running: boolean;
+  generatedAt: string;
+  jobs: SchedulerJob[];
+  nextRunAt: string | null;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;

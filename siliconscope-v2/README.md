@@ -45,6 +45,7 @@ git lfs pull
 - Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
 - Admin backup operations for SQLite private/public-beta deployments, with CLI restore-point creation and retention pruning
 - Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
+- Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search

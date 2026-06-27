@@ -7259,6 +7259,209 @@
   font-weight: 850;
 }
 
+.scheduler-page {
+  display: grid;
+  gap: 22px;
+}
+
+.scheduler-hero,
+.scheduler-card,
+.scheduler-summary > div {
+  border: 1px solid var(--ss-border);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-soft);
+}
+
+.scheduler-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 30px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(16, 185, 129, 0.15), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f6f9ff 60%, #f2fff9 100%);
+}
+
+.scheduler-hero span,
+.scheduler-card-main span {
+  color: var(--ss-blue);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scheduler-hero h1,
+.scheduler-card h3 {
+  margin: 8px 0;
+  color: var(--ss-ink);
+}
+
+.scheduler-hero p,
+.scheduler-card p {
+  max-width: 760px;
+  color: var(--ss-muted);
+  line-height: 1.65;
+}
+
+.scheduler-live {
+  min-width: 170px;
+  padding: 18px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid var(--ss-border);
+  text-align: right;
+}
+
+.scheduler-live strong {
+  display: block;
+  font-size: 38px;
+  color: #f59e0b;
+}
+
+.scheduler-live.is-enabled strong {
+  color: #10b981;
+}
+
+.scheduler-live span {
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
+.scheduler-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.scheduler-summary > div {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.scheduler-summary span {
+  display: block;
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
+.scheduler-summary strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ss-ink);
+  font-size: 24px;
+}
+
+.scheduler-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.scheduler-card {
+  border-radius: 22px;
+  padding: 22px;
+}
+
+.scheduler-card-enabled {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.scheduler-card-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.scheduler-card-main > strong {
+  align-self: flex-start;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: var(--ss-blue);
+  background: #edf4ff;
+}
+
+.scheduler-card-enabled .scheduler-card-main > strong {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.scheduler-card-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.scheduler-card-stats div {
+  padding: 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.scheduler-card-stats span,
+.scheduler-card-stats strong {
+  display: block;
+}
+
+.scheduler-card-stats span {
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
+.scheduler-card-stats strong {
+  margin-top: 6px;
+  color: var(--ss-ink);
+}
+
+.scheduler-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scheduler-actions button {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  color: #ffffff;
+  background: var(--ss-blue);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.scheduler-actions button.subtle {
+  color: var(--ss-ink);
+  background: #eef4ff;
+  border: 1px solid var(--ss-border);
+}
+
+.scheduler-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.scheduler-result {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 850;
+  background: #edf4ff;
+  color: var(--ss-blue);
+}
+
+.scheduler-result-success {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.scheduler-result-failure {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
 @media (max-width: 1200px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7270,7 +7473,9 @@
     grid-template-columns: 1fr;
   }
 
-  .observability-stats {
+  .observability-stats,
+  .scheduler-summary,
+  .scheduler-card-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -7293,7 +7498,14 @@
   }
 
   .observability-stats,
-  .observability-row {
+  .observability-row,
+  .scheduler-summary,
+  .scheduler-card-stats {
     grid-template-columns: 1fr;
+  }
+
+  .scheduler-hero,
+  .scheduler-card-main {
+    display: grid;
   }
 }

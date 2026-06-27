@@ -11,6 +11,7 @@ import { apiRouter } from "./routes/api.js";
 import { staticRouter } from "./routes/static.js";
 import { healthRouter } from "./routes/health.js";
 import { observabilityService } from "./services/observability.service.js";
+import { schedulerService } from "./services/scheduler.service.js";
 
 const app = express();
 
@@ -116,6 +117,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 app.listen(appConfig.port, appConfig.host, () => {
   console.log(`${appConfig.appName} v2 running at http://${appConfig.host}:${appConfig.port}`);
   console.log(`Database: ${appConfig.dbPath}`);
+  schedulerService.start();
 });
 
 export default app;

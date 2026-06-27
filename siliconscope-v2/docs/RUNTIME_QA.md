@@ -134,6 +134,10 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] `GET /api/admin/maintenance/jobs` lists backup, snapshot-core, snapshot-full, and data-quality jobs.
 - [ ] `POST /api/admin/maintenance/jobs/data-quality/run` records a `maintenance_runs` row with status, duration, and summary.
 - [ ] Admin `/maintenance` page shows job cards and recent run history.
+- [ ] `GET /api/admin/scheduler` lists daily-backup, core-snapshots, and data-quality jobs with enabled state and next-run timestamps.
+- [ ] `PATCH /api/admin/scheduler/:jobId` updates enabled state or interval and writes an admin audit log.
+- [ ] `POST /api/admin/scheduler/:jobId/run` triggers the mapped maintenance job, records a maintenance run, and creates a notification receipt.
+- [ ] Admin `/scheduler` page renders the same jobs and allows manual run/toggle operations.
 
 ### 11. Notification Center
 

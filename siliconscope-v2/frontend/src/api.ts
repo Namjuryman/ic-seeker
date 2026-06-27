@@ -62,6 +62,8 @@ import type {
   MaintenanceJob,
   MaintenanceRun,
   MaintenanceRunResult,
+  SchedulerStatus,
+  SchedulerJob,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -180,6 +182,21 @@ export const api = {
 
   async runMaintenanceJob(jobId: string, payload?: Record<string, unknown>) {
     const res = await axios.post<MaintenanceRun>(`/api/admin/maintenance/jobs/${encodeURIComponent(jobId)}/run`, payload || {})
+    return res.data
+  },
+
+  async schedulerStatus() {
+    const res = await axios.get<SchedulerStatus>('/api/admin/scheduler')
+    return res.data
+  },
+
+  async updateSchedulerJob(jobId: string, body: { enabled?: boolean; intervalMinutes?: number; payload?: Record<string, unknown> }) {
+    const res = await axios.patch<SchedulerJob>(`/api/admin/scheduler/${encodeURIComponent(jobId)}`, body)
+    return res.data
+  },
+
+  async runSchedulerJob(jobId: string) {
+    const res = await axios.post<MaintenanceRun>(`/api/admin/scheduler/${encodeURIComponent(jobId)}/run`)
     return res.data
   },
 

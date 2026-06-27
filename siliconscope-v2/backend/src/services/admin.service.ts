@@ -11,6 +11,7 @@ import { billingService } from "./billing.service.js";
 import { backupService } from "./backup.service.js";
 import { maintenanceService } from "./maintenance.service.js";
 import { observabilityService } from "./observability.service.js";
+import { schedulerService } from "./scheduler.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -32,6 +33,7 @@ export const adminService = {
     const backups = backupService.list();
     const maintenanceRuns = maintenanceService.runs({ limit: 1 });
     const observability = observabilityService.snapshot();
+    const scheduler = schedulerService.status();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -71,6 +73,8 @@ export const adminService = {
         maintenanceRuns: maintenanceRuns.total,
         totalRequests: observability.totalRequests,
         errorRate: observability.errorRate,
+        schedulerEnabled: scheduler.enabled,
+        schedulerJobs: scheduler.jobs.length,
       },
       operations: [
         {
@@ -108,6 +112,15 @@ export const adminService = {
           detail: maintenanceRuns.rows[0] ? `${maintenanceRuns.rows[0].jobId} ${maintenanceRuns.rows[0].status}` : "No maintenance jobs have run yet",
           href: "/maintenance",
           action: "运行任务",
+        },
+        {
+          id: "scheduler",
+          title: "Scheduled Operations",
+          status: scheduler.enabled ? "ready" : "planned",
+          metric: scheduler.enabled ? "enabled" : "manual",
+          detail: scheduler.nextRunAt ? `next ${scheduler.nextRunAt}` : `${scheduler.jobs.length} jobs configured; scheduler disabled`,
+          href: "/scheduler",
+          action: "Configure jobs",
         },
         {
           id: "backups",

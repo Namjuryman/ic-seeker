@@ -149,6 +149,14 @@ export const runtimeHealthService = {
     }));
 
     runCheck(checks, () => ({
+      id: "scheduler",
+      label: "Background scheduler",
+      status: appConfig.schedulerEnabled ? "ok" : appConfig.deploymentMode === "production" ? "warn" : "ok",
+      message: appConfig.schedulerEnabled ? `enabled, tick ${appConfig.schedulerTickSeconds}s` : "disabled",
+      detail: "Set SCHEDULER_ENABLED=1 on the server to run backup, snapshot, and data-quality maintenance jobs automatically.",
+    }));
+
+    runCheck(checks, () => ({
       id: "public-domain",
       label: "Public domain",
       status: appConfig.deploymentMode === "production" && !appConfig.publicSiteUrl ? "warn" : "ok",

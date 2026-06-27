@@ -59,6 +59,8 @@ export const appConfig = {
   objectStoragePublicBaseUrl: process.env.OBJECT_STORAGE_PUBLIC_BASE_URL || "",
 
   queueBackend: process.env.QUEUE_BACKEND || "disabled",
+  schedulerEnabled: process.env.SCHEDULER_ENABLED === "1",
+  schedulerTickSeconds: Number(process.env.SCHEDULER_TICK_SECONDS || 60),
   realtimeEnabled: process.env.REALTIME_ENABLED === "1",
   socketIoPath: process.env.SOCKET_IO_PATH || "/socket.io",
 

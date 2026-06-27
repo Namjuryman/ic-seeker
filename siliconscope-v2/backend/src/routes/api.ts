@@ -34,6 +34,7 @@ import { billingService } from "../services/billing.service.js";
 import { backupService } from "../services/backup.service.js";
 import { maintenanceService, type MaintenanceJobId } from "../services/maintenance.service.js";
 import { observabilityService } from "../services/observability.service.js";
+import { schedulerService, type SchedulerJobId } from "../services/scheduler.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -141,6 +142,46 @@ router.get("/admin/maintenance/jobs", requireAdmin, async (_req, res) => {
 
 router.get("/admin/maintenance/runs", requireAdmin, async (req, res) => {
   res.json(maintenanceService.runs(req.query as Record<string, string>));
+});
+
+router.get("/admin/scheduler", requireAdmin, async (_req, res) => {
+  res.json(schedulerService.status());
+});
+
+router.patch("/admin/scheduler/:jobId", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const job = schedulerService.update(req.params.jobId as SchedulerJobId, req.body || {});
+    adminAuditService.record({
+      req,
+      action: "scheduler.update",
+      resourceType: "scheduler_job",
+      resourceId: req.params.jobId,
+      metadata: { enabled: job.enabled, intervalMinutes: job.intervalMinutes },
+    });
+    res.json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "scheduler.update", resourceType: "scheduler_job", resourceId: req.params.jobId, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/scheduler/:jobId/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const run = await schedulerService.runNow(req.params.jobId as SchedulerJobId, req.user?.email || "admin");
+    adminAuditService.record({
+      req,
+      action: "scheduler.run_now",
+      resourceType: "scheduler_job",
+      resourceId: req.params.jobId,
+      status: run?.status === "failure" ? "failure" : "success",
+      metadata: { runId: run?.id, status: run?.status },
+      error: run?.error || undefined,
+    });
+    res.status(run?.status === "failure" ? 500 : 200).json(run);
+  } catch (err) {
+    adminAuditService.record({ req, action: "scheduler.run_now", resourceType: "scheduler_job", resourceId: req.params.jobId, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.post("/admin/maintenance/jobs/:jobId/run", requireAdmin, async (req: AuthenticatedRequest, res) => {

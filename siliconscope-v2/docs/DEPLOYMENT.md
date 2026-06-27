@@ -74,6 +74,7 @@ RATE_LIMIT_ENABLED=1
 RATE_LIMIT_MAX=400
 AUTH_RATE_LIMIT_MAX=8
 ADMIN_RATE_LIMIT_MAX=120
+SCHEDULER_ENABLED=0
 ```
 
 Run the production guard after `npm run build`:
@@ -156,6 +157,7 @@ npm run backup:create -- weekly-refresh --keep=10
 
 - Run IEEE/OpenAlex/Crossref sync and admin operations only from the backend/admin frontend, never from the public frontend.
 - API responses include `X-Request-Id`; use that ID when correlating production errors with server logs.
+- Keep `SCHEDULER_ENABLED=0` for the first smoke deploy. Turn it on after backups, admin login, and DNS are verified; configure intervals with `SCHEDULER_BACKUP_INTERVAL_MINUTES`, `SCHEDULER_SNAPSHOT_INTERVAL_MINUTES`, and `SCHEDULER_QUALITY_INTERVAL_MINUTES`.
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
 - Check the independent admin console runtime panel before major imports or public announcements.
 - Run `npm run deploy:check -- .env.production` before every first-time public deploy or secret rotation.
