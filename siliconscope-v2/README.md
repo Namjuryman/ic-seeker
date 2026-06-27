@@ -61,6 +61,7 @@ git lfs pull
 - Mobile-friendly web layout
 - Independent admin frontend for operations, intended for a future `admin.siliconscope.com` deployment
 - Admin audit trail, runtime readiness checks, and notification operations for production-facing maintenance
+- Independent-domain deployment scaffold with production env checks, API/static frontend domain split, and Cloudflare/Caddy/Nginx templates
 - Docker deployment
 
 ## Commercial Architecture Track
@@ -173,7 +174,7 @@ Recommended first public setup:
 
 - Rent a small VPS with Docker support.
 - Point your domain to Cloudflare DNS.
-- Run the backend API with `docker compose up -d` on the VPS.
+- Run the backend API with `docker compose -f docker-compose.production.yml up -d --build` on the VPS.
 - Deploy the public frontend to `siliconscope.com` or `www.siliconscope.com`.
 - Deploy the independent admin frontend to `admin.siliconscope.com`.
 - Put Caddy, Nginx Proxy Manager, Cloudflare Tunnel, or another HTTPS reverse proxy in front of the API.
@@ -185,11 +186,29 @@ Recommended first public setup:
 - For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
 - When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
 
+Active independent-domain layout:
+
+```text
+https://www.your-domain.com   -> public frontend
+https://admin.your-domain.com -> independent admin frontend
+https://api.your-domain.com   -> backend API
+```
+
+Before exposing the service:
+
+```powershell
+copy deploy\production.env.example .env.production
+npm run deploy:check -- .env.production
+docker compose -f docker-compose.production.yml up -d --build
+```
+
 Ready-to-edit independent-domain templates are included under `deploy/`:
 
 - `deploy/Caddyfile.example` for the cleanest VPS + automatic HTTPS setup.
 - `deploy/nginx.siliconscope.example.conf` for a classic Nginx reverse-proxy setup.
 - `deploy/production.env.example` for production API environment variables.
+- `deploy/cloudflare-tunnel.example.yml` for API-only Cloudflare Tunnel ingress.
+- `deploy/DOMAIN_GO_LIVE.md` for the complete go-live checklist.
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 

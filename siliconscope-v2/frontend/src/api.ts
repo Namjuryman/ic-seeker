@@ -51,6 +51,7 @@ import type {
 } from './types'
 
 axios.defaults.withCredentials = true
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || ''
 
 export const api = {
   async authStatus() {

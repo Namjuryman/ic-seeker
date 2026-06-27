@@ -10,11 +10,12 @@ Client
 ├─ Mobile app: optional future client
 │
 CDN / WAF / Load Balancer
+├─ Cloudflare DNS/WAF/Access for the first independent-domain deployment
 │
 Frontend / BFF layer
-├─ Page rendering
-├─ Login state handling
-├─ API aggregation
+├─ Public static frontend: www.your-domain.com
+├─ Independent admin frontend: admin.your-domain.com
+├─ Future BFF/API aggregation layer if SSR or multi-tenant SaaS needs it
 │
 Backend API
 ├─ Auth
@@ -50,13 +51,13 @@ Third-party Services
 
 | Layer | Current status | Gap |
 | --- | --- | --- |
-| Client | React + Vite web frontend | Mobile app not started; no SSR/BFF |
-| CDN / WAF / Load Balancer | Not implemented | Add Cloudflare or reverse proxy for public deployment |
-| Frontend / BFF | Frontend directly calls Express API | Optional Next.js BFF layer for SaaS edition |
+| Client | React + Vite web frontend and independent admin frontend | Mobile app not started; no SSR/BFF |
+| CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, and Nginx | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
+| Frontend / BFF | Frontends directly call Express API; `VITE_API_BASE_URL` supports split API domains | Optional Next.js BFF layer for SaaS edition |
 | Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies | Payment and email delivery missing |
 | Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
-| Redis | Not implemented | Needed for production cache, sessions, rate limits, queues |
+| Redis | Optional infra compose only | Needed for production cache, sessions, rate limits, queues |
 | Object storage | Local folders only | Add S3-compatible storage such as Cloudflare R2, MinIO, or OSS |
 | Search engine | SQLite/service search | Add Meilisearch first; OpenSearch later if scale requires |
 | Message queue | Not implemented | Add BullMQ/Redis or another queue for ingestion, enrichment, snapshots |
@@ -70,26 +71,30 @@ Third-party Services
 | --- | --- | --- | --- |
 | 0 | Stabilize MVP | Keep React + Express + SQLite working; document target architecture | `npm run build` passes; docs describe gaps |
 | 1 | Infrastructure scaffold | Add optional local infra compose: Postgres, Redis, Meilisearch, MinIO, Mailpit | Developers can start infra without changing current app |
-| 2 | Data abstraction | Separate metadata SQLite source from user/business data; introduce repository/service boundaries | User tables can move without rewriting paper search |
-| 3 | PostgreSQL migration | Move users, notifications, comments, reviews, watchlist, reading queue, companies, admin logs to PostgreSQL | SQLite remains optional metadata import; user data persists in Postgres |
-| 4 | Redis integration | Cache snapshots/search facets; store sessions/rate-limit counters; prepare BullMQ | Hot pages avoid expensive recompute |
-| 5 | Search engine | Index papers, authors, institutions, companies, roadmaps into Meilisearch | Search latency and relevance improve; rebuild index task exists |
-| 6 | Object storage | Store avatars, company logos, PDFs, attachments in S3-compatible storage | Local disk is no longer required for uploaded assets |
-| 7 | Async jobs | Add queue workers for IEEE/OpenAlex ingestion, enrichment, PDF matching, snapshot rebuilds | Weekly update can run as scheduled background jobs |
-| 8 | SaaS features | Add payment, notifications, OAuth, public/private permissions | Public demo and paid/private modes can coexist |
-| 9 | Realtime and app | Add realtime notifications/comments; design mobile app API surface | Realtime features do not block core search |
-| 10 | Production ops | Add Sentry, metrics, health checks, backup/restore, deployment docs | Public deployment has monitoring and rollback path |
+| 2 | Independent domain | Add public/admin/API URL configuration, production Docker Compose, Cloudflare/Caddy/Nginx templates, and env validation | A VPS + static hosting path is documented and checkable |
+| 3 | Data abstraction | Separate metadata SQLite source from user/business data; introduce repository/service boundaries | User tables can move without rewriting paper search |
+| 4 | PostgreSQL migration | Move users, notifications, comments, reviews, watchlist, reading queue, companies, admin logs to PostgreSQL | SQLite remains optional metadata import; user data persists in Postgres |
+| 5 | Redis integration | Cache snapshots/search facets; store sessions/rate-limit counters; prepare BullMQ | Hot pages avoid expensive recompute |
+| 6 | Search engine | Index papers, authors, institutions, companies, roadmaps into Meilisearch | Search latency and relevance improve; rebuild index task exists |
+| 7 | Object storage | Store avatars, company logos, PDFs, attachments in S3-compatible storage | Local disk is no longer required for uploaded assets |
+| 8 | Async jobs | Add queue workers for IEEE/OpenAlex ingestion, enrichment, PDF matching, snapshot rebuilds | Weekly update can run as scheduled background jobs |
+| 9 | SaaS features | Add payment, notifications, OAuth, public/private permissions | Public demo and paid/private modes can coexist |
+| 10 | Realtime and app | Add realtime notifications/comments; design mobile app API surface | Realtime features do not block core search |
+| 11 | Production ops | Add Sentry, metrics, health checks, backup/restore, deployment docs | Public deployment has monitoring and rollback path |
 
-## First Implementation Batch
+## Implemented Production Scaffolding
 
-- Add this document as the architectural source of truth.
-- Add `docker-compose.infra.yml` for optional local Postgres, Redis, Meilisearch, MinIO, and Mailpit.
-- Extend `.env.example` and backend config with inert placeholders for the commercial services.
-- Keep the default app path unchanged so the private SQLite MVP continues to work.
-- Track the data-layer split in `docs/DATA_LAYER_MIGRATION.md`.
-- Introduce `backend/src/db/app-db.ts` as the app/business data adapter; it currently falls back to SQLite.
-- Add runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, and production adapter configuration.
-- Add a SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages. Email/realtime delivery remains a later adapter.
+- Optional commercial infrastructure compose: Postgres, Redis, Meilisearch, MinIO, and Mailpit.
+- Runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, production URLs, and commercial adapter configuration.
+- SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages.
+- Independent-domain scaffolding:
+  - `PUBLIC_SITE_URL`, `ADMIN_SITE_URL`, `API_BASE_URL`, `VITE_API_BASE_URL`.
+  - `docker-compose.production.yml`.
+  - `deploy/Caddyfile.example`.
+  - `deploy/nginx.siliconscope.example.conf`.
+  - `deploy/cloudflare-tunnel.example.yml`.
+  - `deploy/DOMAIN_GO_LIVE.md`.
+  - `npm run deploy:check -- .env.production`.
 
 ## Design Principles
 

@@ -1,0 +1,30 @@
+services:
+  siliconscope-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      DEPLOYMENT_MODE: production
+      HOST: 0.0.0.0
+      PORT: 8750
+      PUBLIC_DIR: /app/frontend/dist
+      IC_SEEKER_DB: /app/ic_database/ic_papers.sqlite
+      DATABASE_URL: /app/ic_database/ic_papers.sqlite
+      IC_SEEKER_CSV: /app/ic_database/ic_chipseeker.csv
+      IC_SEEKER_PDF_INBOX: /app/ic_database/pdf_inbox
+    ports:
+      - "127.0.0.1:${PORT:-8750}:8750"
+    volumes:
+      - ./ic_database:/app/ic_database
+      - ./backups:/app/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8750/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+

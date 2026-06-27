@@ -10,6 +10,10 @@ export const appConfig = {
   port: Number(process.env.PORT || 8751),
   host: process.env.HOST || "127.0.0.1",
   appName: process.env.APP_NAME || "SiliconScope",
+  publicSiteUrl: process.env.PUBLIC_SITE_URL || "",
+  adminSiteUrl: process.env.ADMIN_SITE_URL || "",
+  apiBaseUrl: process.env.API_BASE_URL || "",
+  deploymentMode: process.env.DEPLOYMENT_MODE || "local",
   
   dbPath: process.env.DATABASE_URL || path.resolve(__dirname, "../../ic_database/ic_papers.sqlite"),
   csvPath: process.env.IC_SEEKER_CSV || path.resolve(__dirname, "../../ic_database/ic_chipseeker.csv"),

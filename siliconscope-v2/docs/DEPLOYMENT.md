@@ -33,15 +33,15 @@ Use this when you do not want to open inbound ports on the server.
 3. Start the backend API:
 
 ```powershell
-docker compose up -d --build
+docker compose -f docker-compose.production.yml up -d --build
 ```
 
 4. In Cloudflare Zero Trust, create tunnel hostnames:
 
 ```text
 api.siliconscope.com -> http://ic-seeker:8750
-www.siliconscope.com -> static frontend hosting
-admin.siliconscope.com -> static admin hosting
+www.siliconscope.com -> Cloudflare Pages public frontend
+admin.siliconscope.com -> Cloudflare Pages admin frontend protected by Cloudflare Access
 ```
 
 If you run `cloudflared` outside Docker on the host, map the API hostname to:
@@ -57,9 +57,19 @@ IC_SEEKER_REQUIRE_LOGIN=1
 IC_SEEKER_LOCAL_ADMIN=0
 ADMIN_PASSWORD=replace-with-a-long-password
 JWT_SECRET=replace-with-a-long-random-string
+PUBLIC_SITE_URL=https://www.siliconscope.com
+ADMIN_SITE_URL=https://admin.siliconscope.com
+API_BASE_URL=https://api.siliconscope.com
+VITE_API_BASE_URL=https://api.siliconscope.com
 FRONTEND_ORIGINS=https://www.siliconscope.com,https://admin.siliconscope.com
 HOST=0.0.0.0
 PORT=8750
+```
+
+Run the production guard:
+
+```powershell
+npm run deploy:check -- .env.production
 ```
 
 ## Option B: VPS + Cloudflare DNS
@@ -77,6 +87,8 @@ Ready-to-edit templates live in `deploy/`:
 - `deploy/Caddyfile.example`: three independent HTTPS hostnames with SPA fallback.
 - `deploy/nginx.siliconscope.example.conf`: equivalent Nginx virtual hosts.
 - `deploy/production.env.example`: production environment variables for the API host.
+- `deploy/cloudflare-tunnel.example.yml`: API-only Cloudflare Tunnel ingress template.
+- `deploy/DOMAIN_GO_LIVE.md`: practical independent-domain checklist.
 
 The intended production domain split is:
 
@@ -120,6 +132,7 @@ Before a Vercel deployment, migrate to:
 - Add rate limiting before public traffic or paid subscriptions.
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
 - Check the independent admin console runtime panel before major imports or public announcements.
+- Run `npm run deploy:check -- .env.production` before every first-time public deploy or secret rotation.
 
 ## Health Checks
 

@@ -127,6 +127,30 @@ export const runtimeHealthService = {
     }));
 
     runCheck(checks, () => ({
+      id: "public-domain",
+      label: "Public domain",
+      status: appConfig.deploymentMode === "production" && !appConfig.publicSiteUrl ? "warn" : "ok",
+      message: appConfig.publicSiteUrl || "not configured",
+      detail: "Set PUBLIC_SITE_URL for independent-domain deployments.",
+    }));
+
+    runCheck(checks, () => ({
+      id: "admin-domain",
+      label: "Admin domain",
+      status: appConfig.deploymentMode === "production" && !appConfig.adminSiteUrl ? "warn" : "ok",
+      message: appConfig.adminSiteUrl || "not configured",
+      detail: "Use a separate admin hostname protected by login plus Cloudflare Access/VPN.",
+    }));
+
+    runCheck(checks, () => ({
+      id: "api-domain",
+      label: "API domain",
+      status: appConfig.deploymentMode === "production" && !appConfig.apiBaseUrl ? "warn" : "ok",
+      message: appConfig.apiBaseUrl || "relative /api",
+      detail: "Static frontends should set VITE_API_BASE_URL to this API origin.",
+    }));
+
+    runCheck(checks, () => ({
       id: "commercial-adapters",
       label: "Commercial adapters",
       status: appConfig.postgresUrl || appConfig.redisUrl || appConfig.meilisearchHost ? "warn" : "ok",

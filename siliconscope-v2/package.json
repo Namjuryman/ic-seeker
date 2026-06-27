@@ -17,7 +17,8 @@
     "build:admin": "npm --workspace siliconscope-v2-admin run build",
     "start": "npm --workspace siliconscope-v2-backend run start",
     "test": "npm --workspace siliconscope-v2-backend run test",
-    "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed"
+    "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed",
+    "deploy:check": "node scripts/check-production-env.mjs"
   },
   "engines": {
     "node": ">=22.0.0"
