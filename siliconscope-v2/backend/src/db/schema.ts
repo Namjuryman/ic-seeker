@@ -117,6 +117,71 @@ export const users = sqliteTable("users", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const subscriptions = sqliteTable("subscriptions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  planId: text("plan_id").notNull().default("free"),
+  status: text("status").notNull().default("active"),
+  provider: text("provider").notNull().default("manual"),
+  providerCustomerId: text("provider_customer_id"),
+  providerSubscriptionId: text("provider_subscription_id"),
+  currentPeriodStart: text("current_period_start"),
+  currentPeriodEnd: text("current_period_end"),
+  cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }).notNull().default(false),
+  metadataJson: text("metadata_json"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const paymentCustomers = sqliteTable("payment_customers", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  provider: text("provider").notNull().default("manual"),
+  providerCustomerId: text("provider_customer_id").notNull().default(""),
+  email: text("email"),
+  metadataJson: text("metadata_json"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  uniqueIndex("idx_payment_customers_provider_customer").on(table.provider, table.providerCustomerId),
+]);
+
+export const billingEvents = sqliteTable("billing_events", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  provider: text("provider").notNull().default("manual"),
+  eventType: text("event_type").notNull(),
+  providerEventId: text("provider_event_id"),
+  planId: text("plan_id"),
+  status: text("status").notNull().default("recorded"),
+  payloadJson: text("payload_json"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const usageEvents = sqliteTable("usage_events", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("user_id", { mode: "number" }).notNull().default(0),
+  metric: text("metric").notNull(),
+  quantity: integer("quantity", { mode: "number" }).notNull().default(1),
+  source: text("source").notNull().default("app"),
+  resourceType: text("resource_type"),
+  resourceId: text("resource_id"),
+  metadataJson: text("metadata_json"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const paperComments = sqliteTable("paper_comments", {
   id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
   paperId: integer("paper_id", { mode: "number" }).notNull(),

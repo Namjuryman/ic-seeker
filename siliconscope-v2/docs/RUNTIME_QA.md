@@ -137,7 +137,10 @@ Invoke-RestMethod http://127.0.0.1:8751/api/notifications/unread-count
 
 - [ ] `GET /api/billing/plans` returns the public plan catalog.
 - [ ] `GET /api/billing/status` returns `currentPlan`, `entitlementSummary`, `paymentProvider`, and `checkoutAvailable`.
+- [ ] `GET /api/billing/usage` returns monthly usage items with `used`, `limit`, `remaining`, and `enforced`.
 - [ ] `POST /api/billing/checkout` returns an explicit unavailable/not-implemented reason until a real provider adapter is configured.
+- [ ] Adding a new watchlist item checks `watchlistItems`; adding a saved search also checks `savedSearches`.
+- [ ] Moving a paper into a non-`unread` reading state checks `readingQueueItems`.
 - [ ] `GET /api/admin/billing` is admin-only and exposes provider readiness without leaking secrets.
 - [ ] The frontend `/billing` page renders plan cards and current entitlements.
 - [ ] The admin frontend `/billing` route renders the same commercial control surface behind admin login.

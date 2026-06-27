@@ -61,7 +61,7 @@ Third-party Services
 | Object storage | Local folders only | Add S3-compatible storage such as Cloudflare R2, MinIO, or OSS |
 | Search engine | SQLite/service search | Add Meilisearch first; OpenSearch later if scale requires |
 | Message queue | Not implemented | Add BullMQ/Redis or another queue for ingestion, enrichment, snapshots |
-| Payment | Plan catalog, entitlement metadata, and checkout adapter boundary exist | Add Stripe/Paddle session creation and webhook handling; China payments later |
+| Payment | Plan catalog, entitlement metadata, usage ledger, partial quota enforcement, and checkout adapter boundary exist | Add Stripe/Paddle session creation and webhook handling; China payments later |
 | Email/SMS/OAuth | Not implemented | Add email invite/login and optional OAuth |
 | Observability | Runtime health/readiness checks and logs | Add Sentry first; Prometheus/Grafana after production traffic |
 
@@ -88,7 +88,8 @@ Third-party Services
 - Runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, production URLs, and commercial adapter configuration.
 - SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages.
 - Subscription and quota scaffold with `Free Preview`, `Research Pro`, `Lab`, `Enterprise`, and `Internal Admin` plans.
-- Billing API endpoints for plan catalog, current user entitlements, admin overview, and checkout-adapter placeholder.
+- Billing API endpoints for plan catalog, current user entitlements, monthly usage summary, admin overview, and checkout-adapter placeholder.
+- App-data tables for subscriptions, payment customers, billing events, and usage events.
 - Independent-domain scaffolding:
   - `PUBLIC_SITE_URL`, `ADMIN_SITE_URL`, `API_BASE_URL`, `VITE_API_BASE_URL`.
   - `docker-compose.production.yml`.
@@ -104,15 +105,17 @@ The current billing layer deliberately does not call Stripe/Paddle yet. It provi
 
 - Stable plan IDs and quota metadata.
 - Current-user entitlement status from `users.subscription_plan`.
+- Usage ledger via `usage_events`.
+- Partial quota enforcement on watchlist and reading queue workflows.
 - Admin-visible provider state from `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, and `PADDLE_API_KEY`.
 - A checkout endpoint that returns an explicit unavailable/not-implemented reason until provider-specific adapters are added.
 
 Next work:
 
-1. Add `subscriptions`, `billing_events`, and `payment_customers` tables in the app data store.
-2. Implement Stripe Checkout Session creation first, then Paddle if needed.
-3. Add webhook signature verification and idempotent event handling.
-4. Enforce quota checks inside watchlist, export, alerts, AI reading, and API endpoints.
+1. Implement Stripe Checkout Session creation first, then Paddle if needed.
+2. Add webhook signature verification and idempotent event handling into `billing_events`.
+3. Enforce quota checks inside exports, alerts, AI reading, and API endpoints.
+4. Add admin controls for manually changing a user's plan during private beta.
 5. Keep the public demo free and metadata-only; paid plans should unlock workflow limits, team functions, and private deployment features.
 
 ## Design Principles

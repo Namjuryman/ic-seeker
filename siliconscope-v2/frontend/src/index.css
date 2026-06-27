@@ -203,6 +203,103 @@
   padding-bottom: 4px;
 }
 
+.billing-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  border: 1px solid #dce6f5;
+  border-radius: 18px 18px 0 0;
+  background: #fff;
+  padding: 18px 20px;
+}
+
+.billing-section-head h2 {
+  margin: 4px 0 0;
+  color: #07152f;
+  font-size: 26px;
+}
+
+.billing-section-head p {
+  margin: 0;
+  color: #607393;
+  font-weight: 850;
+}
+
+.billing-usage {
+  display: grid;
+}
+
+.billing-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  border: 1px solid #dce6f5;
+  border-top: 0;
+  border-radius: 0 0 18px 18px;
+  background: #f8fbff;
+  padding: 16px;
+}
+
+.billing-usage-grid article {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e3ebf6;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+}
+
+.billing-usage-grid article > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.billing-usage-grid strong {
+  color: #0f1b33;
+  font-size: 15px;
+}
+
+.billing-usage-grid span {
+  border-radius: 999px;
+  background: rgba(49, 94, 234, .1);
+  color: #315eea;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.billing-meter {
+  height: 9px;
+  border-radius: 999px;
+  background: #e8eef7;
+  overflow: hidden;
+}
+
+.billing-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #315eea, #12a777);
+}
+
+.billing-usage-grid p {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  color: #5b6f91;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.billing-usage-grid em {
+  color: #12a777;
+  font-style: normal;
+}
+
 .billing-plan {
   display: grid;
   grid-template-rows: auto auto auto minmax(86px, auto) 1fr auto auto;
@@ -306,7 +403,8 @@
 @media (max-width: 980px) {
   .billing-hero,
   .billing-status-strip,
-  .billing-entitlements {
+  .billing-entitlements,
+  .billing-usage-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -318,8 +416,14 @@
 
   .billing-hero,
   .billing-status-strip,
-  .billing-entitlements {
+  .billing-entitlements,
+  .billing-usage-grid {
     grid-template-columns: 1fr;
+  }
+
+  .billing-section-head {
+    align-items: start;
+    flex-direction: column;
   }
 }
 

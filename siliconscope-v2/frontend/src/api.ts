@@ -50,6 +50,7 @@ import type {
   AdminAuditLogResult,
   BillingPlan,
   BillingStatus,
+  BillingUsageSummary,
   CheckoutResult,
 } from './types'
 
@@ -94,6 +95,11 @@ export const api = {
 
   async billingStatus() {
     const res = await axios.get<BillingStatus>('/api/billing/status')
+    return res.data
+  },
+
+  async billingUsage() {
+    const res = await axios.get<BillingUsageSummary>('/api/billing/usage')
     return res.data
   },
 

@@ -13,7 +13,7 @@ This document records the current product modules and the next high-value improv
 | Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. | Add progress tracking, spaced review, and reading queue handoff. |
 | Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and topic classification. |
 | Data Operations | Partial | Keeps weekly updates manageable. | Add scheduled ingestion jobs and snapshot diff reports. |
-| Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, and billing catalog are in place. | Connect PostgreSQL, Redis, object storage, search engine, payment checkout/webhooks, email, realtime delivery, and observability. |
+| Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, billing catalog, usage ledger, and partial quota enforcement are in place. | Connect PostgreSQL, Redis, object storage, search engine, payment checkout/webhooks, email, realtime delivery, and observability. |
 
 ## Backend Architecture Direction
 

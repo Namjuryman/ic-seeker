@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { appConfig } from "../config.js";
-import { appDb } from "../db/app-db.js";
+import { appDb, appSqlite } from "../db/app-db.js";
 import { users } from "../db/schema.js";
 
 export type BillingPlanId = "free" | "pro" | "lab" | "enterprise" | "internal";
@@ -38,6 +38,25 @@ export type BillingStatus = {
   currentPlan: BillingPlan;
   plans: BillingPlan[];
   entitlementSummary: Array<{ label: string; value: string; detail: string }>;
+  usage: BillingUsageSummary;
+};
+
+export type UsageMetric = "savedSearches" | "watchlistItems" | "readingQueueItems" | "aiSummariesPerMonth" | "exportsPerMonth" | "alerts" | "apiRequestsPerMonth" | "privatePdfStorageGb";
+
+export type BillingUsageItem = {
+  metric: UsageMetric;
+  label: string;
+  used: number;
+  limit: number;
+  remaining: number | null;
+  resetAt: string | null;
+  enforced: boolean;
+};
+
+export type BillingUsageSummary = {
+  periodStart: string;
+  periodEnd: string;
+  items: BillingUsageItem[];
 };
 
 const unlimited = -1;
@@ -183,6 +202,70 @@ function getUserPlanId(userId: number): BillingPlanId {
   return normalizePlanId(row?.subscriptionPlan);
 }
 
+function monthWindow(now = new Date()) {
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0));
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+function countScalar(sql: string, params: Array<string | number> = []) {
+  const row = appSqlite.prepare(sql).get(...params) as { count?: number } | undefined;
+  return Number(row?.count || 0);
+}
+
+function monthlyUsage(userId: number, metric: UsageMetric, start: string, end: string) {
+  const row = appSqlite
+    .prepare(
+      `
+      SELECT COALESCE(SUM(quantity), 0) as count
+      FROM usage_events
+      WHERE user_id = ? AND metric = ? AND created_at >= ? AND created_at < ?
+    `
+    )
+    .get(userId, metric, start, end) as { count?: number } | undefined;
+  return Number(row?.count || 0);
+}
+
+function usageForMetric(userId: number, metric: UsageMetric, start: string, end: string) {
+  switch (metric) {
+    case "savedSearches":
+      return countScalar("SELECT COUNT(*) as count FROM watchlist_items WHERE user_id = ? AND target_type = 'search'", [userId]);
+    case "watchlistItems":
+      return countScalar("SELECT COUNT(*) as count FROM watchlist_items WHERE user_id = ?", [userId]);
+    case "readingQueueItems":
+      return countScalar("SELECT COUNT(*) as count FROM reading_status WHERE user_id = ? AND status <> 'unread'", [userId]);
+    case "aiSummariesPerMonth":
+    case "exportsPerMonth":
+    case "alerts":
+    case "apiRequestsPerMonth":
+      return monthlyUsage(userId, metric, start, end);
+    case "privatePdfStorageGb":
+      return 0;
+  }
+}
+
+function usageItem(
+  userId: number,
+  plan: BillingPlan,
+  metric: UsageMetric,
+  label: string,
+  periodStart: string,
+  periodEnd: string,
+  enforced: boolean
+): BillingUsageItem {
+  const limit = plan.limits[metric];
+  const used = usageForMetric(userId, metric, periodStart, periodEnd);
+  return {
+    metric,
+    label,
+    used,
+    limit,
+    remaining: limit < 0 ? null : Math.max(0, limit - used),
+    resetAt: metric.endsWith("PerMonth") ? periodEnd : null,
+    enforced,
+  };
+}
+
 export const billingService = {
   getPlans(): BillingPlan[] {
     return plans;
@@ -193,6 +276,7 @@ export const billingService = {
   getBillingStatus(userId = 0): BillingStatus {
     const currentPlan = getPlan(getUserPlanId(userId));
     const configured = paymentConfigured();
+    const usage = this.getUsageSummary(userId);
     return {
       paymentProvider: appConfig.paymentProvider,
       paymentConfigured: configured,
@@ -210,7 +294,72 @@ export const billingService = {
         { label: "Alerts", value: formatLimit(currentPlan.limits.alerts), detail: "Saved searches, topic digests, and journal update monitors." },
         { label: "Private PDFs", value: formatLimit(currentPlan.limits.privatePdfStorageGb, " GB"), detail: "Reserved for private deployments with object storage." },
       ],
+      usage,
     };
+  },
+
+  getUsageSummary(userId = 0): BillingUsageSummary {
+    const plan = getPlan(getUserPlanId(userId));
+    const { start, end } = monthWindow();
+    return {
+      periodStart: start,
+      periodEnd: end,
+      items: [
+        usageItem(userId, plan, "savedSearches", "Saved searches", start, end, true),
+        usageItem(userId, plan, "watchlistItems", "Watchlist items", start, end, true),
+        usageItem(userId, plan, "readingQueueItems", "Reading queue", start, end, true),
+        usageItem(userId, plan, "aiSummariesPerMonth", "AI summaries", start, end, false),
+        usageItem(userId, plan, "exportsPerMonth", "Exports", start, end, false),
+        usageItem(userId, plan, "alerts", "Alerts", start, end, false),
+        usageItem(userId, plan, "apiRequestsPerMonth", "API requests", start, end, false),
+      ],
+    };
+  },
+
+  checkQuota(userId: number, metric: UsageMetric, increment = 1) {
+    const plan = getPlan(getUserPlanId(userId));
+    const limit = plan.limits[metric];
+    if (limit < 0) return { allowed: true, used: 0, limit, remaining: null };
+    const { start, end } = monthWindow();
+    const used = usageForMetric(userId, metric, start, end);
+    const remaining = Math.max(0, limit - used);
+    return {
+      allowed: used + increment <= limit,
+      used,
+      limit,
+      remaining,
+      reason: used + increment <= limit ? undefined : `${metric} quota exceeded for ${plan.name}`,
+    };
+  },
+
+  recordUsageEvent(input: {
+    userId: number;
+    metric: UsageMetric;
+    quantity?: number;
+    source?: string;
+    resourceType?: string;
+    resourceId?: string | number;
+    metadata?: Record<string, unknown>;
+  }) {
+    const now = new Date().toISOString();
+    const result = appSqlite
+      .prepare(
+        `
+        INSERT INTO usage_events (user_id, metric, quantity, source, resource_type, resource_id, metadata_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `
+      )
+      .run(
+        input.userId,
+        input.metric,
+        input.quantity ?? 1,
+        input.source || "app",
+        input.resourceType || null,
+        input.resourceId === undefined ? null : String(input.resourceId),
+        input.metadata ? JSON.stringify(input.metadata) : null,
+        now
+      );
+    return { id: Number(result.lastInsertRowid), createdAt: now };
   },
 
   getAdminBillingOverview() {
@@ -222,11 +371,12 @@ export const billingService = {
       rollout: {
         publicSignup: false,
         checkoutAdapter: configured ? "configured" : "not-configured",
-        entitlementEnforcement: "catalog-only",
+        entitlementEnforcement: "partial-watchlist-reading-queue",
         notes: [
           "Plan catalog and entitlement metadata are available now.",
+          "Usage events are recorded for quota-ready workflows.",
           "No external payment provider is called until Stripe/Paddle adapters are implemented.",
-          "Current limits are displayed to users but not yet enforced across every feature.",
+          "Current limits are enforced first on watchlist and reading queue, then later on exports, alerts, AI reading, and API access.",
         ],
       },
     };

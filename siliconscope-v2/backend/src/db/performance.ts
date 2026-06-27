@@ -24,6 +24,10 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_resource ON admin_audit_logs(resource_type, resource_id)",
   "CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read_at, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON subscriptions(user_id, status)",
+  "CREATE INDEX IF NOT EXISTS idx_billing_events_user_created ON billing_events(user_id, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_billing_events_provider_event ON billing_events(provider, provider_event_id)",
+  "CREATE INDEX IF NOT EXISTS idx_usage_events_user_metric_created ON usage_events(user_id, metric, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_institution_aliases_canonical ON institution_aliases(canonical_name)",
   "CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_name)",
 ];
@@ -180,6 +184,64 @@ function ensureNotificationTables(sqlite: any) {
   `);
 }
 
+function ensureBillingTables(sqlite: any) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      plan_id TEXT NOT NULL DEFAULT 'free',
+      status TEXT NOT NULL DEFAULT 'active',
+      provider TEXT NOT NULL DEFAULT 'manual',
+      provider_customer_id TEXT,
+      provider_subscription_id TEXT,
+      current_period_start TEXT,
+      current_period_end TEXT,
+      cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+      metadata_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS payment_customers (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      provider TEXT NOT NULL DEFAULT 'manual',
+      provider_customer_id TEXT NOT NULL DEFAULT '',
+      email TEXT,
+      metadata_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payment_customers_provider_customer
+      ON payment_customers(provider, provider_customer_id);
+
+    CREATE TABLE IF NOT EXISTS billing_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      provider TEXT NOT NULL DEFAULT 'manual',
+      event_type TEXT NOT NULL,
+      provider_event_id TEXT,
+      plan_id TEXT,
+      status TEXT NOT NULL DEFAULT 'recorded',
+      payload_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS usage_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL DEFAULT 0,
+      metric TEXT NOT NULL,
+      quantity INTEGER NOT NULL DEFAULT 1,
+      source TEXT NOT NULL DEFAULT 'app',
+      resource_type TEXT,
+      resource_id TEXT,
+      metadata_json TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
@@ -192,6 +254,7 @@ export function applyPerformanceSettings(sqlite: any) {
   ensureSnapshotTables(sqlite);
   ensureAdminAuditTables(sqlite);
   ensureNotificationTables(sqlite);
+  ensureBillingTables(sqlite);
 
   for (const statement of PERFORMANCE_INDEXES) {
     sqlite.exec(statement);

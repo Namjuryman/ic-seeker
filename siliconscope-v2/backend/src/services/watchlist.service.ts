@@ -1,5 +1,6 @@
 import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
+import { billingService } from "./billing.service.js";
 import { learningRoadmaps, dailyLessons } from "../data/learning-catalog.js";
 
 const VALID_TARGET_TYPES = [
@@ -289,6 +290,25 @@ export const watchlistService = {
       }
     }
 
+    const existing = appSqlite
+      .prepare("SELECT id FROM watchlist_items WHERE user_id = ? AND target_type = ? AND target_id = ?")
+      .get(userId, targetType, finalTargetId) as { id: number } | undefined;
+    if (existing) {
+      return { ok: true, created: false, alreadyExists: true };
+    }
+
+    const watchlistQuota = billingService.checkQuota(userId, "watchlistItems", 1);
+    if (!watchlistQuota.allowed) {
+      return { ok: false, error: watchlistQuota.reason, quota: watchlistQuota };
+    }
+
+    if (targetType === "search") {
+      const searchQuota = billingService.checkQuota(userId, "savedSearches", 1);
+      if (!searchQuota.allowed) {
+        return { ok: false, error: searchQuota.reason, quota: searchQuota };
+      }
+    }
+
     const now = new Date().toISOString();
     try {
       appSqlite
@@ -299,6 +319,13 @@ export const watchlistService = {
         `
         )
         .run(userId, targetType, finalTargetId, finalQueryJson, now, now);
+      billingService.recordUsageEvent({
+        userId,
+        metric: targetType === "search" ? "savedSearches" : "watchlistItems",
+        source: "watchlist",
+        resourceType: targetType,
+        resourceId: finalTargetId,
+      });
       return { ok: true, created: true };
     } catch (err: any) {
       // UNIQUE constraint violation (ON CONFLICT not used, we catch dup)

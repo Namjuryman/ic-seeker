@@ -52,6 +52,10 @@ router.get("/billing/status", requireAuth, async (req: AuthenticatedRequest, res
   res.json(billingService.getBillingStatus(req.user?.userId ?? 0));
 });
 
+router.get("/billing/usage", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(billingService.getUsageSummary(req.user?.userId ?? 0));
+});
+
 router.post("/billing/checkout", requireAuth, async (req: AuthenticatedRequest, res) => {
   const planId = String(req.body?.planId || "");
   if (!planId) {

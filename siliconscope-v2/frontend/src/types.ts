@@ -402,6 +402,7 @@ export interface BillingStatus {
   currentPlan: BillingPlan;
   plans: BillingPlan[];
   entitlementSummary: Array<{ label: string; value: string; detail: string }>;
+  usage: BillingUsageSummary;
 }
 
 export interface CheckoutResult {
@@ -411,6 +412,22 @@ export interface CheckoutResult {
   provider: string;
   checkoutAvailable: boolean;
   reason: string;
+}
+
+export interface BillingUsageItem {
+  metric: string;
+  label: string;
+  used: number;
+  limit: number;
+  remaining: number | null;
+  resetAt: string | null;
+  enforced: boolean;
+}
+
+export interface BillingUsageSummary {
+  periodStart: string;
+  periodEnd: string;
+  items: BillingUsageItem[];
 }
 
 export interface AdminOverview {

@@ -14,6 +14,12 @@ function limitText(value: number, suffix = '') {
   return `${value.toLocaleString()}${suffix}`
 }
 
+function usagePercent(used: number, limit: number) {
+  if (limit < 0) return 8
+  if (limit === 0) return used > 0 ? 100 : 0
+  return Math.min(100, Math.round((used / limit) * 100))
+}
+
 export default function BillingPage() {
   const [message, setMessage] = useState('')
   const { data, isLoading, error } = useQuery({
@@ -77,6 +83,33 @@ export default function BillingPage() {
             <p>{item.detail}</p>
           </article>
         ))}
+      </section>
+
+      <section className="billing-usage">
+        <div className="billing-section-head">
+          <div>
+            <span className="eyebrow">USAGE LEDGER</span>
+            <h2>本月用量与配额</h2>
+          </div>
+          <p>{new Date(data.usage.periodStart).toLocaleDateString()} - {new Date(data.usage.periodEnd).toLocaleDateString()}</p>
+        </div>
+        <div className="billing-usage-grid">
+          {data.usage.items.map((item) => (
+            <article key={item.metric}>
+              <div>
+                <strong>{item.label}</strong>
+                <span>{item.enforced ? 'enforced' : 'tracked'}</span>
+              </div>
+              <div className="billing-meter" aria-label={`${item.label} usage`}>
+                <i style={{ width: `${usagePercent(item.used, item.limit)}%` }} />
+              </div>
+              <p>
+                {item.used.toLocaleString()} / {limitText(item.limit)}
+                {item.remaining !== null && <em>{item.remaining.toLocaleString()} left</em>}
+              </p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="billing-plans">

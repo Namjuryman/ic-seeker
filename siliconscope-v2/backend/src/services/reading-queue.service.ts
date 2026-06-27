@@ -3,6 +3,7 @@ import { appDb } from "../db/app-db.js";
 import { papers, readingStatus } from "../db/schema.js";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
+import { billingService } from "./billing.service.js";
 
 const READING_STATUS_ORDER = [
   "unread",
@@ -107,6 +108,21 @@ export const readingQueueService = {
       .get();
     if (!exists) return { ok: false, error: "Paper not found" };
 
+    const current = appDb
+      .select({ status: readingStatus.status })
+      .from(readingStatus)
+      .where(and(eq(readingStatus.userId, userId), eq(readingStatus.paperId, paperId)))
+      .get();
+
+    const wasQueued = current && current.status !== "unread";
+    const willQueue = status !== "unread";
+    if (!wasQueued && willQueue) {
+      const quota = billingService.checkQuota(userId, "readingQueueItems", 1);
+      if (!quota.allowed) {
+        return { ok: false, error: quota.reason, quota };
+      }
+    }
+
     appDb.insert(readingStatus)
       .values({ userId, paperId, status })
       .onConflictDoUpdate({
@@ -114,6 +130,16 @@ export const readingQueueService = {
         set: { status, updatedAt: sql`CURRENT_TIMESTAMP` },
       })
       .run();
+
+    if (!wasQueued && willQueue) {
+      billingService.recordUsageEvent({
+        userId,
+        metric: "readingQueueItems",
+        source: "reading-queue",
+        resourceType: "paper",
+        resourceId: paperId,
+      });
+    }
 
     return { ok: true };
   },
