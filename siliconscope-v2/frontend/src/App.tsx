@@ -21,6 +21,7 @@ const CompanyProfilePage = lazy(() => import('./pages/CompanyProfilePage'))
 const CompanyComparePage = lazy(() => import('./pages/CompanyComparePage'))
 const WatchlistPage = lazy(() => import('./pages/WatchlistPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const BillingPage = lazy(() => import('./pages/BillingPage'))
 const ReadingQueuePage = lazy(() => import('./pages/ReadingQueuePage'))
 const ComparePage = lazy(() => import('./pages/ComparePage'))
 const InstitutionComparePage = lazy(() => import('./pages/InstitutionComparePage'))
@@ -42,6 +43,7 @@ const navItems = [
   { to: '/companies', label: '企业情报', icon: 'C', section: '探索' },
   { to: '/watchlist', label: '关注列表', icon: 'W', section: '探索' },
   { to: '/notifications', label: '通知中心', icon: 'N', section: '探索' },
+  { to: '/billing', label: '订阅配额', icon: 'B', section: '探索' },
   { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
   { to: '/compare', label: '对比中心', icon: '≋', section: '探索' },
   { to: '/reports', label: '报告中心', icon: 'P', section: '探索' },
@@ -186,6 +188,7 @@ function App() {
                 <Route path="/companies/:companyId" element={<CompanyProfilePage />} />
                 <Route path="/watchlist" element={<WatchlistPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/reading-queue" element={<ReadingQueuePage />} />
                 <Route path="/compare/companies" element={<CompanyComparePage />} />
                 <Route path="/compare" element={<ComparePage />} />

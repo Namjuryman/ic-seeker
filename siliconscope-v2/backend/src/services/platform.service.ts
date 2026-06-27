@@ -90,11 +90,11 @@ const modules: PlatformModule[] = [
     id: "commercial-stack",
     name: "Commercial Stack",
     track: "commercial",
-    status: "planned",
-    maturity: 24,
-    summary: "The adapter boundaries are in place; real commercial infrastructure still needs to be connected.",
-    shipped: ["appDb adapter", "cacheDb adapter", "infra compose", "commercial architecture docs"],
-    next: ["PostgreSQL app store", "Redis cache/queue", "object storage", "billing", "notifications", "observability"],
+    status: "partial",
+    maturity: 34,
+    summary: "Independent-domain deployment, notification center, and subscription/catalog scaffolding are in place; real payment and infrastructure adapters still need to be connected.",
+    shipped: ["appDb adapter", "cacheDb adapter", "infra compose", "independent-domain templates", "notification center", "billing plan catalog"],
+    next: ["Stripe/Paddle checkout adapter", "PostgreSQL app store", "Redis cache/queue", "object storage", "email/OAuth", "observability"],
   },
 ];
 
@@ -135,7 +135,7 @@ export const platformService = {
         "Move computed snapshots to Redis or a snapshot registry behind cacheDb.",
         "Add Meilisearch for papers, authors, institutions, companies, roadmaps, and venues.",
         "Add object storage for PDFs, avatars, institution logos, company logos, and uploaded attachments.",
-        "Add billing, notifications, OAuth, and observability only after the core private workflow is stable.",
+        "Connect Stripe/Paddle checkout after the metadata policy, access control, and public demo boundaries are stable.",
       ],
     };
   },

@@ -42,6 +42,7 @@ git lfs pull
 - Manual paper import for missing records
 - Favorites, reading status, private notes, and tags
 - Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
+- Subscription and quota scaffold with plan catalog, entitlement metadata, and a payment-adapter boundary for future Stripe/Paddle integration
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search

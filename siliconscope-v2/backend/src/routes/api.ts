@@ -30,6 +30,7 @@ import { adminService } from "../services/admin.service.js";
 import { adminAuditService } from "../services/admin-audit.service.js";
 import { runtimeHealthService } from "../services/runtime-health.service.js";
 import { notificationService } from "../services/notification.service.js";
+import { billingService } from "../services/billing.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -43,8 +44,30 @@ router.get("/platform", requireAuth, async (_req, res) => {
   res.json(platformService.getOverview());
 });
 
+router.get("/billing/plans", requireAuth, async (_req, res) => {
+  res.json(billingService.getPlans());
+});
+
+router.get("/billing/status", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(billingService.getBillingStatus(req.user?.userId ?? 0));
+});
+
+router.post("/billing/checkout", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const planId = String(req.body?.planId || "");
+  if (!planId) {
+    res.status(400).json({ error: "planId is required" });
+    return;
+  }
+  const result = billingService.createCheckoutSession(req.user?.userId ?? 0, planId);
+  res.status(result.checkoutAvailable ? 501 : 400).json(result);
+});
+
 router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, res) => {
   res.json(await adminService.getOverview(req.user?.userId ?? 0));
+});
+
+router.get("/admin/billing", requireAdmin, async (_req, res) => {
+  res.json(billingService.getAdminBillingOverview());
 });
 
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {

@@ -48,6 +48,9 @@ import type {
   RuntimeHealth,
   NotificationResult,
   AdminAuditLogResult,
+  BillingPlan,
+  BillingStatus,
+  CheckoutResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -84,8 +87,28 @@ export const api = {
     return res.data
   },
 
+  async billingPlans() {
+    const res = await axios.get<BillingPlan[]>('/api/billing/plans')
+    return res.data
+  },
+
+  async billingStatus() {
+    const res = await axios.get<BillingStatus>('/api/billing/status')
+    return res.data
+  },
+
+  async startCheckout(planId: string) {
+    const res = await axios.post<CheckoutResult>('/api/billing/checkout', { planId })
+    return res.data
+  },
+
   async adminOverview() {
     const res = await axios.get<AdminOverview>('/api/admin/overview')
+    return res.data
+  },
+
+  async adminBilling() {
+    const res = await axios.get('/api/admin/billing')
     return res.data
   },
 

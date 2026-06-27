@@ -132,6 +132,15 @@ Invoke-RestMethod http://127.0.0.1:8751/api/notifications/unread-count
 
 - [ ] First visit creates a welcome notification for the current user.
 - [ ] Notification list returns `rows`, `total`, `unread`, `limit`, and `offset`.
+
+### 12. Billing Scaffold
+
+- [ ] `GET /api/billing/plans` returns the public plan catalog.
+- [ ] `GET /api/billing/status` returns `currentPlan`, `entitlementSummary`, `paymentProvider`, and `checkoutAvailable`.
+- [ ] `POST /api/billing/checkout` returns an explicit unavailable/not-implemented reason until a real provider adapter is configured.
+- [ ] `GET /api/admin/billing` is admin-only and exposes provider readiness without leaking secrets.
+- [ ] The frontend `/billing` page renders plan cards and current entitlements.
+- [ ] The admin frontend `/billing` route renders the same commercial control surface behind admin login.
 - [ ] `POST /api/notifications/:id/read` marks one notification read.
 - [ ] `POST /api/notifications/read-all` clears unread state for the user.
 - [ ] Admin can create user notifications with `POST /api/admin/notifications`.

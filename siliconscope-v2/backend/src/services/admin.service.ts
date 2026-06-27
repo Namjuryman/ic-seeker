@@ -7,6 +7,7 @@ import { companyService } from "./company.service.js";
 import { adminAuditService } from "./admin-audit.service.js";
 import { runtimeHealthService } from "./runtime-health.service.js";
 import { notificationService } from "./notification.service.js";
+import { billingService } from "./billing.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -24,6 +25,7 @@ export const adminService = {
     const auditCount = adminAuditService.count().count || 0;
     const runtime = runtimeHealthService.getHealth();
     const notifications = notificationService.stats(userId);
+    const billing = billingService.getBillingStatus(userId);
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -56,6 +58,8 @@ export const adminService = {
         auditLogs: auditCount,
         notifications: notifications.total,
         unreadNotifications: notifications.unread,
+        billingPlan: billing.currentPlan.id,
+        paymentProvider: billing.paymentProvider,
       },
       operations: [
         {
@@ -84,6 +88,15 @@ export const adminService = {
           detail: `${notifications.total} total user notifications; weekly digest and job receipts will reuse this channel`,
           href: "/notifications",
           action: "查看通知",
+        },
+        {
+          id: "billing",
+          title: "订阅与配额",
+          status: billing.paymentConfigured ? "partial" : "planned",
+          metric: billing.currentPlan.name,
+          detail: billing.checkoutReason,
+          href: "/billing",
+          action: "查看计划",
         },
         {
           id: "snapshots",

@@ -154,4 +154,4 @@ When the site grows beyond private usage:
 3. Move user PDFs, if any, to private object storage with per-user access control.
 4. Keep public frontend and admin frontend as separate deployments.
 5. Run IEEE/OpenAlex/Crossref/AMiner sync jobs on the backend with quotas, logs, retries, and source provenance.
-6. Add billing only after the metadata policy, access control, and source terms are clear.
+6. Connect the existing billing scaffold to Stripe/Paddle only after the metadata policy, access control, and source terms are clear.

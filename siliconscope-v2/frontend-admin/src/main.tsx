@@ -9,6 +9,7 @@ import type { AuthStatus } from '../../frontend/src/types'
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
 const AdminAuditPage = lazy(() => import('../../frontend/src/pages/AdminAuditPage'))
 const NotificationsPage = lazy(() => import('../../frontend/src/pages/NotificationsPage'))
+const BillingPage = lazy(() => import('../../frontend/src/pages/BillingPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -26,6 +27,7 @@ const adminNav = [
   { to: '/', label: '总览', icon: 'A' },
   { to: '/audit-logs', label: '审计日志', icon: 'L' },
   { to: '/notifications', label: '通知中心', icon: 'N' },
+  { to: '/billing', label: '订阅配额', icon: 'B' },
   { to: '/companies', label: '企业数据', icon: 'C' },
   { to: '/snapshots', label: '快照缓存', icon: 'S' },
   { to: '/moderation', label: '审核队列', icon: 'M' },
@@ -152,6 +154,7 @@ function AdminApp() {
                 <Route path="/" element={<AdminConsolePage />} />
                 <Route path="/audit-logs" element={<AdminAuditPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
+                <Route path="/billing" element={<BillingPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
                 <Route path="/snapshots" element={<SnapshotAdminPage />} />
                 <Route path="/moderation" element={<ModerationPage />} />

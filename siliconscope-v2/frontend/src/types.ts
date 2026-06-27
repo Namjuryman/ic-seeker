@@ -369,6 +369,50 @@ export interface NotificationResult {
   offset: number;
 }
 
+export interface BillingLimits {
+  savedSearches: number;
+  watchlistItems: number;
+  readingQueueItems: number;
+  aiSummariesPerMonth: number;
+  exportsPerMonth: number;
+  alerts: number;
+  apiRequestsPerMonth: number;
+  teamSeats: number;
+  privatePdfStorageGb: number;
+}
+
+export interface BillingPlan {
+  id: 'free' | 'pro' | 'lab' | 'enterprise' | 'internal';
+  name: string;
+  audience: string;
+  priceMonthlyUsd: number | null;
+  badge: string;
+  description: string;
+  features: string[];
+  limits: BillingLimits;
+  recommended?: boolean;
+  publicSignupEnabled: boolean;
+}
+
+export interface BillingStatus {
+  paymentProvider: string;
+  paymentConfigured: boolean;
+  checkoutAvailable: boolean;
+  checkoutReason: string;
+  currentPlan: BillingPlan;
+  plans: BillingPlan[];
+  entitlementSummary: Array<{ label: string; value: string; detail: string }>;
+}
+
+export interface CheckoutResult {
+  ok: boolean;
+  userId: number;
+  plan: BillingPlan;
+  provider: string;
+  checkoutAvailable: boolean;
+  reason: string;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;
@@ -396,6 +440,8 @@ export interface AdminOverview {
     auditLogs: number;
     notifications?: number;
     unreadNotifications?: number;
+    billingPlan?: string;
+    paymentProvider?: string;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];
