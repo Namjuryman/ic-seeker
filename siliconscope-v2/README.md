@@ -47,6 +47,7 @@ git lfs pull
 - Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
 - Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
 - Admin job operations ledger for independent-domain deployments, unifying scheduler, maintenance, backup, snapshot, data-quality, and future ingestion activity
+- Admin ingestion job registry for IEEE/OpenAlex/Crossref/CSV/PDF metadata imports, with provider, scope, status, counts, and audit trail before background workers are connected
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -241,6 +242,7 @@ The independent admin frontend includes a `/launch` page for production readines
 - Open a paper detail page to save favorite status, reading status, tags, and notes.
 - Import missing papers by DOI from the sidebar. This stores metadata only and links to the DOI/source.
 - Use manual import for papers that are missing from public metadata.
+- Use the admin ingestion job page to register weekly metadata jobs before running real backend workers.
 - Store optional service keys from the API-key panel. Values are masked in the UI.
 
 More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).

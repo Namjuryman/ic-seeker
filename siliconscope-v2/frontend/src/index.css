@@ -948,6 +948,11 @@
   color: #315eea;
 }
 
+.maintenance-status.warn {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .maintenance-status.idle {
   background: #f3f6fb;
   color: #607393;
@@ -7689,6 +7694,196 @@
   font-weight: 750;
 }
 
+.ingestion-page {
+  display: grid;
+  gap: 22px;
+}
+
+.ingestion-hero,
+.ingestion-form,
+.ingestion-policy,
+.ingestion-board {
+  border: 1px solid var(--ss-border);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-soft);
+}
+
+.ingestion-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 30px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(37, 99, 235, 0.14), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 62%, #f4fff9 100%);
+}
+
+.ingestion-hero span,
+.ingestion-section-head span {
+  color: var(--ss-blue);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ingestion-hero h1,
+.ingestion-section-head h2 {
+  margin: 8px 0;
+  color: var(--ss-ink);
+}
+
+.ingestion-hero p,
+.ingestion-policy li,
+.ingestion-row p,
+.ingestion-row small {
+  color: var(--ss-muted);
+  line-height: 1.6;
+}
+
+.ingestion-hero-card {
+  min-width: 190px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--ss-border);
+  background: #ffffff;
+  text-align: right;
+}
+
+.ingestion-hero-card strong {
+  display: block;
+  color: var(--ss-blue);
+  font-size: 38px;
+}
+
+.ingestion-hero-card span {
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
+.ingestion-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 460px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.ingestion-form,
+.ingestion-policy,
+.ingestion-board {
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.ingestion-form {
+  display: grid;
+  gap: 14px;
+}
+
+.ingestion-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--ss-ink);
+  font-weight: 850;
+}
+
+.ingestion-form input,
+.ingestion-form select,
+.ingestion-form textarea,
+.ingestion-row select {
+  width: 100%;
+  border: 1px solid var(--ss-border);
+  border-radius: 14px;
+  padding: 12px 13px;
+  background: #ffffff;
+  color: var(--ss-ink);
+  font: inherit;
+  font-weight: 800;
+}
+
+.ingestion-form textarea {
+  resize: vertical;
+}
+
+.ingestion-form-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ingestion-form button {
+  border: 0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: #ffffff;
+  background: var(--ss-blue);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.ingestion-form button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.ingestion-policy ul {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding-left: 20px;
+}
+
+.ingestion-board {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ingestion-board-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  border-bottom: 1px solid var(--ss-border);
+}
+
+.ingestion-board-head strong {
+  color: var(--ss-muted);
+}
+
+.ingestion-table {
+  display: grid;
+}
+
+.ingestion-row {
+  display: grid;
+  grid-template-columns: 170px 130px minmax(220px, 1fr) 210px 190px 150px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--ss-border);
+}
+
+.ingestion-row-head {
+  background: #f8fbff;
+  color: var(--ss-muted);
+  font-weight: 950;
+}
+
+.ingestion-row strong,
+.ingestion-row span {
+  color: var(--ss-ink);
+}
+
+.ingestion-row p {
+  margin: 0;
+}
+
+.ingestion-row small {
+  display: block;
+}
+
 @media (max-width: 1200px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7702,6 +7897,7 @@
 
   .observability-stats,
   .jobops-lanes,
+  .ingestion-grid,
   .scheduler-summary,
   .scheduler-card-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7713,6 +7909,14 @@
 
   .jobops-event {
     grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .ingestion-row {
+    grid-template-columns: 1fr 120px;
+  }
+
+  .ingestion-row > * {
+    min-width: 0;
   }
 
   .jobops-event > span {
@@ -7740,6 +7944,8 @@
   .observability-stats,
   .jobops-counts,
   .jobops-lanes,
+  .ingestion-grid,
+  .ingestion-form-pair,
   .observability-row,
   .scheduler-summary,
   .scheduler-card-stats {
@@ -7748,6 +7954,7 @@
 
   .scheduler-hero,
   .jobops-hero,
+  .ingestion-hero,
   .scheduler-card-main {
     display: grid;
   }
@@ -7758,5 +7965,9 @@
 
   .jobops-event > span {
     grid-column: auto;
+  }
+
+  .ingestion-row {
+    grid-template-columns: 1fr;
   }
 }

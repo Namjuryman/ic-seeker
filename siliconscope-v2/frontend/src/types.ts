@@ -627,8 +627,42 @@ export interface JobOperationsOverview {
     failedRuns: number;
     backups: number;
     snapshots: number;
+    ingestionJobs?: number;
+    activeIngestion?: number;
   };
   caveat: string;
+}
+
+export type IngestionJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'review_required';
+export type IngestionProvider = 'ieee' | 'openalex' | 'crossref' | 'csv' | 'pdf' | 'manual';
+
+export interface IngestionJob {
+  id: number;
+  provider: IngestionProvider;
+  mode: string;
+  status: IngestionJobStatus;
+  scope: Record<string, unknown>;
+  counts: {
+    fetched: number;
+    inserted: number;
+    updated: number;
+    skipped: number;
+    review: number;
+  };
+  error: string | null;
+  notes: string | null;
+  createdByUserId: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IngestionJobResult {
+  rows: IngestionJob[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export interface AdminOverview {
@@ -663,6 +697,9 @@ export interface AdminOverview {
     backups?: number;
     backupBytes?: number;
     maintenanceRuns?: number;
+    schedulerEnabled?: boolean;
+    schedulerJobs?: number;
+    ingestionJobs?: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];

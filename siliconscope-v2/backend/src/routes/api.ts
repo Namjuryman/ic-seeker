@@ -36,6 +36,7 @@ import { maintenanceService, type MaintenanceJobId } from "../services/maintenan
 import { observabilityService } from "../services/observability.service.js";
 import { schedulerService, type SchedulerJobId } from "../services/scheduler.service.js";
 import { jobOperationsService } from "../services/job-operations.service.js";
+import { ingestionJobService } from "../services/ingestion-job.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -151,6 +152,60 @@ router.get("/admin/scheduler", requireAdmin, async (_req, res) => {
 
 router.get("/admin/job-operations", requireAdmin, async (_req, res) => {
   res.json(jobOperationsService.overview());
+});
+
+router.get("/admin/ingestion/jobs", requireAdmin, async (req, res) => {
+  res.json(ingestionJobService.list(req.query as Record<string, string>));
+});
+
+router.post("/admin/ingestion/jobs", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const job = ingestionJobService.create({
+      provider: req.body?.provider,
+      mode: req.body?.mode,
+      scope: req.body?.scope,
+      notes: req.body?.notes,
+      createdByUserId: req.user?.userId ?? 0,
+    });
+    adminAuditService.record({
+      req,
+      action: "ingestion.create",
+      resourceType: "ingestion_job",
+      resourceId: job.id,
+      metadata: { provider: job.provider, mode: job.mode, scope: job.scope },
+    });
+    res.status(201).json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ingestion.create", resourceType: "ingestion_job", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid ingestion job ID" });
+    return;
+  }
+  try {
+    const job = ingestionJobService.updateStatus(id, {
+      status: req.body?.status,
+      counts: req.body?.counts,
+      error: req.body?.error,
+      notes: req.body?.notes,
+    });
+    adminAuditService.record({
+      req,
+      action: "ingestion.update",
+      resourceType: "ingestion_job",
+      resourceId: id,
+      metadata: { status: job.status, counts: job.counts },
+    });
+    res.json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ingestion.update", resourceType: "ingestion_job", resourceId: id, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.patch("/admin/scheduler/:jobId", requireAdmin, async (req: AuthenticatedRequest, res) => {

@@ -3,6 +3,7 @@ import { maintenanceService, type MaintenanceRun } from "./maintenance.service.j
 import { runtimeHealthService } from "./runtime-health.service.js";
 import { schedulerService } from "./scheduler.service.js";
 import { snapshotService } from "./snapshot.service.js";
+import { ingestionJobService } from "./ingestion-job.service.js";
 
 export type OperationLane = "scheduler" | "maintenance" | "backup" | "snapshot" | "quality" | "ingestion";
 export type OperationStatus = "ok" | "warning" | "error" | "running" | "idle";
@@ -76,6 +77,7 @@ export const jobOperationsService = {
     const maintenanceJobs = maintenanceService.jobs();
     const backups = backupService.list();
     const snapshots = snapshotService.list() as Array<{ key: string; updatedAt?: string; updated_at?: string; bytes?: number }>;
+    const ingestionJobs = ingestionJobService.list({ limit: 20 });
     const runtime = runtimeHealthService.getHealth();
 
     const latestRun = maintenanceRuns.rows[0] || null;
@@ -83,6 +85,8 @@ export const jobOperationsService = {
     const runningRuns = maintenanceRuns.rows.filter((run) => run.status === "running").length;
     const enabledSchedulerJobs = scheduler.jobs.filter((job) => job.enabled).length;
     const snapshotBytes = snapshots.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
+    const activeIngestion = ingestionJobs.rows.filter((job) => job.status === "queued" || job.status === "running").length;
+    const failedIngestion = ingestionJobs.rows.filter((job) => job.status === "failed").length;
     const latestSnapshot = snapshots
       .map((row) => row.updatedAt || row.updated_at || null)
       .filter(Boolean)
@@ -92,7 +96,7 @@ export const jobOperationsService = {
     const lanes: OperationLaneSummary[] = [
       {
         lane: "scheduler",
-        title: "定时任务",
+        title: "Scheduler",
         status: scheduler.enabled ? "ok" : "idle",
         metric: scheduler.enabled ? `${enabledSchedulerJobs}/${scheduler.jobs.length} enabled` : "manual",
         detail: scheduler.nextRunAt ? `Next run ${scheduler.nextRunAt}` : "Public server can enable SCHEDULER_ENABLED=1 after smoke tests.",
@@ -100,7 +104,7 @@ export const jobOperationsService = {
       },
       {
         lane: "maintenance",
-        title: "维护任务",
+        title: "Maintenance",
         status: runningRuns ? "running" : failedRuns ? "warning" : statusFromRun(latestRun),
         metric: `${maintenanceRuns.total} runs`,
         detail: latestRun ? `${latestRun.jobId}: ${latestRun.status}` : `${maintenanceJobs.length} maintenance jobs configured.`,
@@ -108,7 +112,7 @@ export const jobOperationsService = {
       },
       {
         lane: "backup",
-        title: "备份与恢复点",
+        title: "Backups",
         status: backups.total ? "ok" : "warning",
         metric: `${backups.total} backups`,
         detail: backups.rows[0] ? `Latest ${backups.rows[0].createdAt}` : "Create a restore point before first public go-live.",
@@ -116,7 +120,7 @@ export const jobOperationsService = {
       },
       {
         lane: "snapshot",
-        title: "快照缓存",
+        title: "Snapshots",
         status: snapshots.length ? "ok" : "warning",
         metric: `${snapshots.length} snapshots`,
         detail: `${Math.round(snapshotBytes / 1024).toLocaleString()} KB cached; latest ${latestSnapshot || "-"}`,
@@ -124,7 +128,7 @@ export const jobOperationsService = {
       },
       {
         lane: "quality",
-        title: "数据质量",
+        title: "Data Quality",
         status: failedRuns ? "warning" : "idle",
         metric: runtime.status.toUpperCase(),
         detail: runtime.warnings[0] || "Bounded quality scans are available from maintenance tasks.",
@@ -132,10 +136,12 @@ export const jobOperationsService = {
       },
       {
         lane: "ingestion",
-        title: "导入流水线",
-        status: "idle",
-        metric: "planned",
-        detail: "IEEE/OpenAlex weekly imports should register here once background workers are connected.",
+        title: "Ingestion Pipeline",
+        status: activeIngestion ? "running" : failedIngestion ? "warning" : ingestionJobs.total ? "ok" : "idle",
+        metric: ingestionJobs.total ? `${ingestionJobs.total} jobs` : "planned",
+        detail: activeIngestion
+          ? `${activeIngestion} queued/running ingestion jobs`
+          : "IEEE/OpenAlex weekly imports can now be registered before workers are connected.",
         href: "/journal-ingestion",
       },
     ];
@@ -171,6 +177,22 @@ export const jobOperationsService = {
         href: "/backups",
         sourceId: backup.id,
       })),
+      ...ingestionJobs.rows.map((job) => ({
+        id: `ingestion-${job.id}`,
+        lane: "ingestion" as const,
+        title: `${job.provider} ${job.mode}`,
+        status: job.status === "failed"
+          ? "error" as const
+          : job.status === "running" || job.status === "queued"
+            ? "running" as const
+            : job.status === "review_required"
+              ? "warning" as const
+              : "ok" as const,
+        detail: `${job.counts.inserted} inserted, ${job.counts.updated} updated, ${job.counts.review} review`,
+        at: timeOrNull(job.updatedAt || job.createdAt),
+        href: "/journal-ingestion",
+        sourceId: job.id,
+      })),
     ].sort((a, b) => String(b.at || "").localeCompare(String(a.at || ""))).slice(0, 60);
 
     return {
@@ -186,6 +208,8 @@ export const jobOperationsService = {
         failedRuns,
         backups: backups.total,
         snapshots: snapshots.length,
+        ingestionJobs: ingestionJobs.total,
+        activeIngestion,
       },
       caveat: "This page is the operations ledger for the independent-domain deployment. Import workers are still planned, so ingestion rows are placeholders until IEEE/OpenAlex jobs are connected.",
     };

@@ -65,6 +65,8 @@ import type {
   SchedulerStatus,
   SchedulerJob,
   JobOperationsOverview,
+  IngestionJob,
+  IngestionJobResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -203,6 +205,21 @@ export const api = {
 
   async jobOperations() {
     const res = await axios.get<JobOperationsOverview>('/api/admin/job-operations')
+    return res.data
+  },
+
+  async ingestionJobs(params?: Record<string, string | number>) {
+    const res = await axios.get<IngestionJobResult>('/api/admin/ingestion/jobs', { params })
+    return res.data
+  },
+
+  async createIngestionJob(body: { provider: string; mode: string; scope: Record<string, unknown>; notes?: string }) {
+    const res = await axios.post<IngestionJob>('/api/admin/ingestion/jobs', body)
+    return res.data
+  },
+
+  async updateIngestionJob(id: number, body: { status?: string; counts?: Record<string, number>; error?: string | null; notes?: string | null }) {
+    const res = await axios.patch<IngestionJob>(`/api/admin/ingestion/jobs/${id}`, body)
     return res.data
   },
 

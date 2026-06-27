@@ -4,11 +4,11 @@ import { api } from '../api'
 import type { OperationStatus } from '../types'
 
 const statusLabel: Record<OperationStatus, string> = {
-  ok: '正常',
-  warning: '需关注',
-  error: '失败',
-  running: '运行中',
-  idle: '待启用',
+  ok: 'OK',
+  warning: 'Attention',
+  error: 'Failed',
+  running: 'Running',
+  idle: 'Idle',
 }
 
 function formatTime(value: string | null) {
@@ -30,7 +30,7 @@ export default function JobOperationsPage() {
   }
 
   if (!overview.data) {
-    return <div className="learning-muted">任务运行台账暂不可用。</div>
+    return <div className="learning-muted">Operations ledger is not available.</div>
   }
 
   const data = overview.data
@@ -40,9 +40,10 @@ export default function JobOperationsPage() {
       <section className="jobops-hero">
         <div>
           <span>JOB OPERATIONS</span>
-          <h1>任务运行台账</h1>
+          <h1>Operations ledger</h1>
           <p>
-            面向独立域名部署的统一运维视图：把定时任务、维护任务、备份、快照、数据质量和未来的论文导入流水线放到同一张运行表里。
+            A production-facing view for scheduled jobs, maintenance runs, backups, snapshots, data-quality scans,
+            and ingestion jobs. This is the admin page to check before weekly imports and public announcements.
           </p>
         </div>
         <div className={`jobops-runtime jobops-runtime-${data.runtimeStatus}`}>
@@ -52,11 +53,11 @@ export default function JobOperationsPage() {
       </section>
 
       <section className="jobops-counts">
-        <div><span>定时任务</span><strong>{data.counts.enabledSchedulerJobs}/{data.counts.schedulerJobs}</strong></div>
-        <div><span>维护运行</span><strong>{data.counts.maintenanceRuns}</strong></div>
-        <div><span>失败运行</span><strong>{data.counts.failedRuns}</strong></div>
-        <div><span>备份</span><strong>{data.counts.backups}</strong></div>
-        <div><span>快照</span><strong>{data.counts.snapshots}</strong></div>
+        <div><span>Scheduler</span><strong>{data.counts.enabledSchedulerJobs}/{data.counts.schedulerJobs}</strong></div>
+        <div><span>Maintenance</span><strong>{data.counts.maintenanceRuns}</strong></div>
+        <div><span>Failed</span><strong>{data.counts.failedRuns}</strong></div>
+        <div><span>Backups</span><strong>{data.counts.backups}</strong></div>
+        <div><span>Ingestion</span><strong>{data.counts.ingestionJobs ?? 0}</strong></div>
       </section>
 
       <section className="jobops-lanes">
@@ -76,7 +77,7 @@ export default function JobOperationsPage() {
         <div className="jobops-board-head">
           <div>
             <span>RECENT ACTIVITY</span>
-            <h2>最近运行事件</h2>
+            <h2>Recent operation events</h2>
           </div>
           <strong>{data.timeline.length} loaded</strong>
         </div>
@@ -91,7 +92,7 @@ export default function JobOperationsPage() {
               <span>{formatTime(item.at)}</span>
             </Link>
           ))}
-          {!data.timeline.length && <p className="learning-muted">还没有运行事件。先在维护任务里创建一次备份。</p>}
+          {!data.timeline.length && <p className="learning-muted">No operation event yet. Create a backup or ingestion job first.</p>}
         </div>
       </section>
 
