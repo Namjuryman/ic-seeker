@@ -58,6 +58,9 @@ import type {
   BackupListResult,
   BackupManifest,
   BackupPruneResult,
+  MaintenanceJob,
+  MaintenanceRun,
+  MaintenanceRunResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -156,6 +159,21 @@ export const api = {
 
   async deleteBackup(id: string) {
     const res = await axios.delete<{ deleted: boolean; id: string; deletedFiles?: number }>(`/api/admin/backups/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async maintenanceJobs() {
+    const res = await axios.get<MaintenanceJob[]>('/api/admin/maintenance/jobs')
+    return res.data
+  },
+
+  async maintenanceRuns(params?: Record<string, string | number>) {
+    const res = await axios.get<MaintenanceRunResult>('/api/admin/maintenance/runs', { params })
+    return res.data
+  },
+
+  async runMaintenanceJob(jobId: string, payload?: Record<string, unknown>) {
+    const res = await axios.post<MaintenanceRun>(`/api/admin/maintenance/jobs/${encodeURIComponent(jobId)}/run`, payload || {})
     return res.data
   },
 

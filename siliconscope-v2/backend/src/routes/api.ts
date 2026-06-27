@@ -32,6 +32,7 @@ import { runtimeHealthService } from "../services/runtime-health.service.js";
 import { notificationService } from "../services/notification.service.js";
 import { billingService } from "../services/billing.service.js";
 import { backupService } from "../services/backup.service.js";
+import { maintenanceService, type MaintenanceJobId } from "../services/maintenance.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -127,6 +128,37 @@ router.get("/admin/runtime", requireAdmin, async (_req, res) => {
 
 router.get("/admin/backups", requireAdmin, async (_req, res) => {
   res.json(backupService.list());
+});
+
+router.get("/admin/maintenance/jobs", requireAdmin, async (_req, res) => {
+  res.json(maintenanceService.jobs());
+});
+
+router.get("/admin/maintenance/runs", requireAdmin, async (req, res) => {
+  res.json(maintenanceService.runs(req.query as Record<string, string>));
+});
+
+router.post("/admin/maintenance/jobs/:jobId/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await maintenanceService.run(req.params.jobId as MaintenanceJobId, {
+      actorUserId: req.user?.userId ?? 0,
+      actorEmail: req.user?.email || "admin",
+      payload: req.body || {},
+    });
+    adminAuditService.record({
+      req,
+      action: "maintenance.run",
+      resourceType: "maintenance_job",
+      resourceId: req.params.jobId,
+      status: result.status === "failure" ? "failure" : "success",
+      metadata: { runId: result.id, status: result.status, summary: result.summary },
+      error: result.error || undefined,
+    });
+    res.status(result.status === "failure" ? 500 : 200).json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "maintenance.run", resourceType: "maintenance_job", resourceId: req.params.jobId, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.post("/admin/backups", requireAdmin, async (req: AuthenticatedRequest, res) => {

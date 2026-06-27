@@ -9,6 +9,7 @@ import { runtimeHealthService } from "./runtime-health.service.js";
 import { notificationService } from "./notification.service.js";
 import { billingService } from "./billing.service.js";
 import { backupService } from "./backup.service.js";
+import { maintenanceService } from "./maintenance.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -28,6 +29,7 @@ export const adminService = {
     const notifications = notificationService.stats(userId);
     const billing = billingService.getBillingStatus(userId);
     const backups = backupService.list();
+    const maintenanceRuns = maintenanceService.runs({ limit: 1 });
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -64,6 +66,7 @@ export const adminService = {
         paymentProvider: billing.paymentProvider,
         backups: backups.total,
         backupBytes: backups.totalBytes,
+        maintenanceRuns: maintenanceRuns.total,
       },
       operations: [
         {
@@ -83,6 +86,15 @@ export const adminService = {
           detail: "admin mutations, actor, resource, status, IP and user-agent",
           href: "/audit-logs",
           action: "查看留痕",
+        },
+        {
+          id: "maintenance",
+          title: "维护任务",
+          status: maintenanceRuns.rows[0]?.status === "failure" ? "attention" : "ready",
+          metric: `${maintenanceRuns.total} runs`,
+          detail: maintenanceRuns.rows[0] ? `${maintenanceRuns.rows[0].jobId} ${maintenanceRuns.rows[0].status}` : "No maintenance jobs have run yet",
+          href: "/maintenance",
+          action: "运行任务",
         },
         {
           id: "backups",

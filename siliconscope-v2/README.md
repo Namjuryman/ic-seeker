@@ -44,6 +44,7 @@ git lfs pull
 - Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
 - Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
 - Admin backup operations for SQLite private/public-beta deployments, with CLI restore-point creation and retention pruning
+- Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search

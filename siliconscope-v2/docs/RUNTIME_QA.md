@@ -127,6 +127,9 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] `npm run backup:create -- smoke --keep=10` creates a `.sqlite` backup plus JSON manifest under `BACKUP_DIR`.
 - [ ] `GET /api/admin/backups` lists backup rows with `id`, `createdAt`, `dbBytes`, and source metadata.
 - [ ] Admin `/backups` page creates and prunes restore points; destructive delete writes an admin audit log.
+- [ ] `GET /api/admin/maintenance/jobs` lists backup, snapshot-core, snapshot-full, and data-quality jobs.
+- [ ] `POST /api/admin/maintenance/jobs/data-quality/run` records a `maintenance_runs` row with status, duration, and summary.
+- [ ] Admin `/maintenance` page shows job cards and recent run history.
 
 ### 11. Notification Center
 

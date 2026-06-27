@@ -499,6 +499,36 @@ export interface BackupPruneResult {
   rows: Array<{ deleted: boolean; id: string; deletedFiles?: number }>;
 }
 
+export interface MaintenanceRun {
+  id: number;
+  jobId: string;
+  status: 'running' | 'success' | 'failure';
+  startedAt: string;
+  finishedAt: string | null;
+  durationMs: number | null;
+  actorUserId: number | null;
+  summary: Record<string, unknown> | null;
+  error: string | null;
+}
+
+export interface MaintenanceJob {
+  id: string;
+  title: string;
+  category: 'backup' | 'cache' | 'quality';
+  description: string;
+  expectedDuration: string;
+  risk: 'low' | 'medium';
+  defaultPayload?: Record<string, unknown>;
+  lastRun?: MaintenanceRun | null;
+}
+
+export interface MaintenanceRunResult {
+  rows: MaintenanceRun[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;
@@ -530,6 +560,7 @@ export interface AdminOverview {
     paymentProvider?: string;
     backups?: number;
     backupBytes?: number;
+    maintenanceRuns?: number;
   };
   operations: AdminOperation[];
   apiKeys: ApiKeyInfo[];
