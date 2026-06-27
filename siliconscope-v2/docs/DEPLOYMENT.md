@@ -118,7 +118,7 @@ https://api.your-domain.com   -> backend API
 
 Keep the admin hostname behind Cloudflare Access, VPN, or another access-control layer even though the backend also checks admin privileges. Defense in depth matters once this leaves localhost.
 
-After logging into the independent admin frontend, open `/launch`. It summarizes runtime blockers, backup freshness, maintenance runs, DNS shape, and the exact go-live command sequence.
+After logging into the independent admin frontend, open `/launch`. It summarizes runtime blockers, backup freshness, maintenance runs, DNS shape, and the exact go-live command sequence. Then open `/job-operations` to verify that backups, snapshot refreshes, data-quality scans, and scheduled maintenance are visible in one operational ledger.
 
 ## Why Not Vercel Yet
 
@@ -159,7 +159,7 @@ npm run backup:create -- weekly-refresh --keep=10
 - API responses include `X-Request-Id`; use that ID when correlating production errors with server logs.
 - Keep `SCHEDULER_ENABLED=0` for the first smoke deploy. Turn it on after backups, admin login, and DNS are verified; configure intervals with `SCHEDULER_BACKUP_INTERVAL_MINUTES`, `SCHEDULER_SNAPSHOT_INTERVAL_MINUTES`, and `SCHEDULER_QUALITY_INTERVAL_MINUTES`.
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
-- Check the independent admin console runtime panel before major imports or public announcements.
+- Check the independent admin console runtime panel and `/job-operations` ledger before major imports or public announcements.
 - Run `npm run deploy:check -- .env.production` before every first-time public deploy or secret rotation.
 - Run `npm run deploy:doctor -- .env.production` after `npm run build` to verify env, frontend bundles, and DNS readiness.
 

@@ -46,6 +46,7 @@ git lfs pull
 - Admin backup operations for SQLite private/public-beta deployments, with CLI restore-point creation and retention pruning
 - Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
 - Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
+- Admin job operations ledger for independent-domain deployments, unifying scheduler, maintenance, backup, snapshot, data-quality, and future ingestion activity
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -232,7 +233,7 @@ Ready-to-edit independent-domain templates are included under `deploy/`:
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 
-The independent admin frontend includes a `/launch` page for production readiness: runtime blockers, backup status, maintenance freshness, DNS shape, and the exact command sequence for go-live.
+The independent admin frontend includes a `/launch` page for production readiness and a `/job-operations` page for the operational ledger: runtime blockers, backup status, maintenance freshness, scheduler state, DNS shape, and the exact command sequence for go-live.
 
 ## Private MVP Workflow
 

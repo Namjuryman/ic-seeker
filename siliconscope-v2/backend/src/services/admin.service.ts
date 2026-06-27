@@ -78,6 +78,15 @@ export const adminService = {
       },
       operations: [
         {
+          id: "job-operations",
+          title: "任务运行台账",
+          status: scheduler.enabled || maintenanceRuns.total ? "ready" : "partial",
+          metric: `${maintenanceRuns.total} runs`,
+          detail: "Unified scheduler, maintenance, backup, snapshot, and future ingestion operations ledger",
+          href: "/job-operations",
+          action: "查看台账",
+        },
+        {
           id: "runtime",
           title: "生产就绪",
           status: runtime.status === "ok" ? "ready" : runtime.status === "warn" ? "attention" : "needs-refresh",

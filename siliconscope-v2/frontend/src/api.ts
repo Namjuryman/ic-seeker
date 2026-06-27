@@ -64,6 +64,7 @@ import type {
   MaintenanceRunResult,
   SchedulerStatus,
   SchedulerJob,
+  JobOperationsOverview,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -197,6 +198,11 @@ export const api = {
 
   async runSchedulerJob(jobId: string) {
     const res = await axios.post<MaintenanceRun>(`/api/admin/scheduler/${encodeURIComponent(jobId)}/run`)
+    return res.data
+  },
+
+  async jobOperations() {
+    const res = await axios.get<JobOperationsOverview>('/api/admin/job-operations')
     return res.data
   },
 

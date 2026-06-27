@@ -591,6 +591,46 @@ export interface SchedulerStatus {
   nextRunAt: string | null;
 }
 
+export type OperationLane = 'scheduler' | 'maintenance' | 'backup' | 'snapshot' | 'quality' | 'ingestion';
+export type OperationStatus = 'ok' | 'warning' | 'error' | 'running' | 'idle';
+
+export interface OperationTimelineItem {
+  id: string;
+  lane: OperationLane;
+  title: string;
+  status: OperationStatus;
+  detail: string;
+  at: string | null;
+  href: string;
+  sourceId?: string | number | null;
+}
+
+export interface OperationLaneSummary {
+  lane: OperationLane;
+  title: string;
+  status: OperationStatus;
+  metric: string;
+  detail: string;
+  href: string;
+}
+
+export interface JobOperationsOverview {
+  generatedAt: string;
+  runtimeStatus: 'ok' | 'warn' | 'error';
+  lanes: OperationLaneSummary[];
+  timeline: OperationTimelineItem[];
+  nextRunAt: string | null;
+  counts: {
+    schedulerJobs: number;
+    enabledSchedulerJobs: number;
+    maintenanceRuns: number;
+    failedRuns: number;
+    backups: number;
+    snapshots: number;
+  };
+  caveat: string;
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;

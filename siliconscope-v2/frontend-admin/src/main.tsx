@@ -15,6 +15,7 @@ const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/Mainten
 const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
 const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
 const SchedulerAdminPage = lazy(() => import('../../frontend/src/pages/SchedulerAdminPage'))
+const JobOperationsPage = lazy(() => import('../../frontend/src/pages/JobOperationsPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -30,20 +31,21 @@ const queryClient = new QueryClient({
 
 const adminNav = [
   { to: '/', label: '总览', icon: 'A' },
+  { to: '/launch', label: '上线检查', icon: 'G' },
+  { to: '/job-operations', label: '任务台账', icon: 'J' },
+  { to: '/scheduler', label: '定时任务', icon: 'S' },
+  { to: '/maintenance', label: '维护任务', icon: 'T' },
+  { to: '/observability', label: '运行观测', icon: 'O' },
   { to: '/audit-logs', label: '审计日志', icon: 'L' },
   { to: '/notifications', label: '通知中心', icon: 'N' },
   { to: '/billing', label: '订阅配额', icon: 'B' },
-  { to: '/launch', label: '上线检查', icon: 'G' },
-  { to: '/observability', label: '运行观测', icon: 'O' },
-  { to: '/scheduler', label: '定时任务', icon: 'S' },
-  { to: '/maintenance', label: '维护任务', icon: 'T' },
   { to: '/backups', label: '备份恢复', icon: 'R' },
   { to: '/companies', label: '企业数据', icon: 'C' },
-  { to: '/snapshots', label: '快照缓存', icon: 'S' },
+  { to: '/snapshots', label: '快照缓存', icon: 'K' },
   { to: '/moderation', label: '审核队列', icon: 'M' },
   { to: '/identity', label: '别名归一', icon: 'I' },
   { to: '/data-quality', label: '数据质量', icon: 'Q' },
-  { to: '/journal-ingestion', label: '导入任务', icon: 'J' },
+  { to: '/journal-ingestion', label: '导入任务', icon: 'D' },
   { to: '/venue-matrix', label: '会议期刊', icon: 'V' },
   { to: '/platform', label: '平台中枢', icon: 'P' },
 ]
@@ -81,7 +83,7 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
         <div className="ss-login-card">
           <div className="ss-mark">A</div>
           <h1>SiliconScope Admin</h1>
-          <p>独立管理后台。请输入管理员密码；普通用户不会进入这里。</p>
+          <p>独立管理后台。公网部署时仅管理员可进入，普通用户不会看到这个入口。</p>
           <input
             type="password"
             value={password}
@@ -104,8 +106,8 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
         <span>Admin only</span>
         <h1>后台权限未开启</h1>
         <p>
-          当前会话不是管理员。公网环境请启用密码登录并使用管理员账号；
-          本地开发请通过 start-dev 脚本启动，它会显式设置 IC_SEEKER_LOCAL_ADMIN=1。
+          当前会话不是管理员。公网环境请启用密码登录并使用管理员账号；本地开发请通过 start-dev 脚本启动，
+          它会显式设置 IC_SEEKER_LOCAL_ADMIN=1。
         </p>
       </div>
     )
@@ -162,13 +164,14 @@ function AdminApp() {
             <Suspense fallback={<div className="ss-loading">Loading admin module...</div>}>
               <Routes>
                 <Route path="/" element={<AdminConsolePage />} />
+                <Route path="/launch" element={<LaunchAdminPage />} />
+                <Route path="/job-operations" element={<JobOperationsPage />} />
+                <Route path="/scheduler" element={<SchedulerAdminPage />} />
+                <Route path="/maintenance" element={<MaintenanceAdminPage />} />
+                <Route path="/observability" element={<ObservabilityPage />} />
                 <Route path="/audit-logs" element={<AdminAuditPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/billing" element={<AdminBillingPage />} />
-                <Route path="/launch" element={<LaunchAdminPage />} />
-                <Route path="/observability" element={<ObservabilityPage />} />
-                <Route path="/scheduler" element={<SchedulerAdminPage />} />
-                <Route path="/maintenance" element={<MaintenanceAdminPage />} />
                 <Route path="/backups" element={<BackupAdminPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
                 <Route path="/snapshots" element={<SnapshotAdminPage />} />

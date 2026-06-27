@@ -54,7 +54,7 @@ Third-party Services
 | Client | React + Vite web frontend and independent admin frontend | Mobile app not started; no SSR/BFF |
 | CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, Nginx, and Dockerized Caddy edge | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
 | Frontend / BFF | Frontends directly call Express API; `VITE_API_BASE_URL` supports split API domains | Optional Next.js BFF layer for SaaS edition |
-| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog, backup operations, maintenance task runs, and scheduled operations | Payment checkout and email delivery missing |
+| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog, backup operations, maintenance task runs, scheduled operations, and a unified operations ledger | Payment checkout and email delivery missing |
 | Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
 | Redis | Optional infra compose only | Needed for production cache, sessions, rate limits, queues |
@@ -104,6 +104,9 @@ Third-party Services
   - `POST /api/admin/maintenance/jobs/:jobId/run`.
   - Current jobs: backup, snapshot-core, snapshot-full, and data-quality.
   - Runs are recorded in `maintenance_runs` with status, duration, summary, actor, and error.
+- Job operations ledger:
+  - `GET /api/admin/job-operations`.
+  - Admin `/job-operations` aggregates scheduler state, maintenance runs, backup restore points, snapshot cache state, data-quality status, and future ingestion placeholders for independent-domain operations.
 - Independent-domain scaffolding:
   - `PUBLIC_SITE_URL`, `ADMIN_SITE_URL`, `API_BASE_URL`, `VITE_API_BASE_URL`.
   - `docker-compose.production.yml`.
@@ -116,6 +119,7 @@ Third-party Services
   - `npm run deploy:check -- .env.production`.
   - `npm run deploy:doctor -- .env.production`.
   - Admin `/launch` go-live console for runtime blockers, backup freshness, maintenance runs, and DNS cutover.
+  - Admin `/job-operations` operational ledger for post-launch weekly updates and incident review.
   - Admin `/observability` runtime console for in-process request volume, latency, status buckets, hot routes, slow routes, and recent error/request IDs.
   - Admin `/scheduler` console for server-side backup, snapshot refresh, and data-quality jobs; enable with `SCHEDULER_ENABLED=1` after the deployment is stable.
 

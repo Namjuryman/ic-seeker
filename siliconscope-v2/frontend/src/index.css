@@ -7462,6 +7462,233 @@
   background: #fee2e2;
 }
 
+.jobops-page {
+  display: grid;
+  gap: 22px;
+}
+
+.jobops-hero,
+.jobops-counts > div,
+.jobops-lane,
+.jobops-board {
+  border: 1px solid var(--ss-border);
+  background: var(--ss-surface);
+  box-shadow: var(--ss-shadow-soft);
+}
+
+.jobops-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 30px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 86% 20%, rgba(37, 99, 235, 0.14), transparent 32%),
+    linear-gradient(135deg, #ffffff 0%, #f7faff 58%, #f3fbff 100%);
+}
+
+.jobops-hero span,
+.jobops-board-head span {
+  color: var(--ss-blue);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jobops-hero h1,
+.jobops-board-head h2,
+.jobops-lane h2 {
+  margin: 8px 0;
+  color: var(--ss-ink);
+}
+
+.jobops-hero p,
+.jobops-lane p,
+.jobops-event p,
+.jobops-caveat {
+  color: var(--ss-muted);
+  line-height: 1.65;
+}
+
+.jobops-runtime {
+  min-width: 190px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--ss-border);
+  background: #ffffff;
+  text-align: right;
+}
+
+.jobops-runtime strong {
+  display: block;
+  color: #2563eb;
+  font-size: 34px;
+}
+
+.jobops-runtime-warn strong {
+  color: #f59e0b;
+}
+
+.jobops-runtime-error strong {
+  color: #dc2626;
+}
+
+.jobops-runtime span,
+.jobops-counts span,
+.jobops-lane span,
+.jobops-event i {
+  color: var(--ss-muted);
+  font-weight: 850;
+}
+
+.jobops-counts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.jobops-counts > div {
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.jobops-counts span,
+.jobops-counts strong {
+  display: block;
+}
+
+.jobops-counts strong {
+  margin-top: 8px;
+  color: var(--ss-ink);
+  font-size: 24px;
+}
+
+.jobops-lanes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.jobops-lane {
+  display: block;
+  min-height: 190px;
+  padding: 20px;
+  border-radius: 22px;
+  text-decoration: none;
+}
+
+.jobops-lane:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.jobops-lane > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.jobops-lane strong {
+  color: var(--ss-blue);
+}
+
+.jobops-lane-error {
+  border-color: rgba(220, 38, 38, 0.36);
+}
+
+.jobops-lane-warning {
+  border-color: rgba(245, 158, 11, 0.42);
+}
+
+.jobops-lane-running {
+  border-color: rgba(16, 185, 129, 0.42);
+}
+
+.jobops-board {
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.jobops-board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+  border-bottom: 1px solid var(--ss-border);
+}
+
+.jobops-board-head strong {
+  color: var(--ss-muted);
+}
+
+.jobops-timeline {
+  display: grid;
+}
+
+.jobops-event {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 190px;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--ss-border);
+  color: var(--ss-ink);
+  text-decoration: none;
+}
+
+.jobops-event:hover {
+  background: #f8fbff;
+}
+
+.jobops-event i {
+  width: fit-content;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #eef4ff;
+  font-style: normal;
+}
+
+.jobops-event strong,
+.jobops-event span {
+  color: var(--ss-ink);
+}
+
+.jobops-event p {
+  margin: 4px 0 0;
+}
+
+.jobops-event-ok i {
+  color: #047857;
+  background: #dcfce7;
+}
+
+.jobops-event-error i {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.jobops-event-warning i {
+  color: #b45309;
+  background: #fef3c7;
+}
+
+.jobops-event-running i {
+  color: #0369a1;
+  background: #e0f2fe;
+}
+
+.jobops-caveat {
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--ss-border);
+  border-radius: 18px;
+  background: #f8fbff;
+  font-weight: 750;
+}
+
 @media (max-width: 1200px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7474,9 +7701,22 @@
   }
 
   .observability-stats,
+  .jobops-lanes,
   .scheduler-summary,
   .scheduler-card-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .jobops-counts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .jobops-event {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+
+  .jobops-event > span {
+    grid-column: 2;
   }
 }
 
@@ -7498,6 +7738,8 @@
   }
 
   .observability-stats,
+  .jobops-counts,
+  .jobops-lanes,
   .observability-row,
   .scheduler-summary,
   .scheduler-card-stats {
@@ -7505,7 +7747,16 @@
   }
 
   .scheduler-hero,
+  .jobops-hero,
   .scheduler-card-main {
     display: grid;
+  }
+
+  .jobops-event {
+    grid-template-columns: 1fr;
+  }
+
+  .jobops-event > span {
+    grid-column: auto;
   }
 }

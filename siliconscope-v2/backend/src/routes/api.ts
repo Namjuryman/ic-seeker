@@ -35,6 +35,7 @@ import { backupService } from "../services/backup.service.js";
 import { maintenanceService, type MaintenanceJobId } from "../services/maintenance.service.js";
 import { observabilityService } from "../services/observability.service.js";
 import { schedulerService, type SchedulerJobId } from "../services/scheduler.service.js";
+import { jobOperationsService } from "../services/job-operations.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -146,6 +147,10 @@ router.get("/admin/maintenance/runs", requireAdmin, async (req, res) => {
 
 router.get("/admin/scheduler", requireAdmin, async (_req, res) => {
   res.json(schedulerService.status());
+});
+
+router.get("/admin/job-operations", requireAdmin, async (_req, res) => {
+  res.json(jobOperationsService.overview());
 });
 
 router.patch("/admin/scheduler/:jobId", requireAdmin, async (req: AuthenticatedRequest, res) => {

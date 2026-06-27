@@ -84,13 +84,12 @@ export default function AdminConsolePage() {
           <span>Admin Console</span>
           <h1>管理员控制台</h1>
           <p>
-            面向独立后台域名的运营入口：查看生产就绪状态、缓存快照、审核队列、API key、PDF inbox、
-            企业数据、别名归一化、数据质量和管理员审计日志。
+            面向独立后台域名的运营入口：检查生产就绪状态、任务台账、备份、快照、审核队列、API key、企业数据、别名归一和数据质量。
           </p>
         </div>
         <div className={`admin-health admin-health-${runtime?.status || 'warn'}`}>
           <strong>{runtime?.status || data.health.backend}</strong>
-          <span>{data.health.authMode} · {formatUptime(data.health.uptimeSeconds)}</span>
+          <span>{data.health.authMode} / {formatUptime(data.health.uptimeSeconds)}</span>
         </div>
       </section>
 
@@ -119,7 +118,7 @@ export default function AdminConsolePage() {
               <span>Operations</span>
               <h2>后端运营模块</h2>
             </div>
-            <Link to="/platform">查看平台路线</Link>
+            <Link to="/job-operations">打开任务台账</Link>
           </div>
           <div className="admin-ops">
             {data.operations.map((item) => <OperationCard key={item.id} item={item} />)}
@@ -160,7 +159,7 @@ export default function AdminConsolePage() {
             {data.recentModeration.reports.slice(0, 3).map((report) => (
               <li key={report.id}><span>Report #{report.id}</span><small>{report.reason || report.target_type}</small></li>
             ))}
-            {!data.recentModeration.reports.length && <li><span>暂无 open report</span><small>审核队列安静是好事。</small></li>}
+            {!data.recentModeration.reports.length && <li><span>暂无 open report</span><small>审核队列保持安静是好事。</small></li>}
           </ul>
         </div>
 
