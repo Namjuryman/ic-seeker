@@ -5,6 +5,7 @@ import { snapshotService } from "./snapshot.service.js";
 import { moderationService } from "./moderation.service.js";
 import { companyService } from "./company.service.js";
 import { adminAuditService } from "./admin-audit.service.js";
+import { runtimeHealthService } from "./runtime-health.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -20,6 +21,7 @@ export const adminService = {
     const pdfInbox = await statsService.getPdfInbox();
     const companies = companyService.listCompanies({ limit: "1", offset: "0" });
     const auditCount = adminAuditService.count().count || 0;
+    const runtime = runtimeHealthService.getHealth();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -29,11 +31,14 @@ export const adminService = {
       appName: appConfig.appName,
       generatedAt: new Date().toISOString(),
       health: {
-        backend: "online",
+        backend: runtime.status === "error" ? "degraded" : "online",
         authMode: appConfig.authEnabled ? "password" : "local-dev",
         metadataDb: appConfig.dbPath,
         publicDir: appConfig.publicDir,
+        runtimeStatus: runtime.status,
+        uptimeSeconds: runtime.uptimeSeconds,
       },
+      runtime,
       platform,
       summary: {
         papers: stats.total,
@@ -49,6 +54,15 @@ export const adminService = {
         auditLogs: auditCount,
       },
       operations: [
+        {
+          id: "runtime",
+          title: "生产就绪",
+          status: runtime.status === "ok" ? "ready" : runtime.status === "warn" ? "attention" : "needs-refresh",
+          metric: runtime.status.toUpperCase(),
+          detail: runtime.warnings[0] || `${runtime.checks.length} runtime checks passed`,
+          href: "/platform",
+          action: "查看拓扑",
+        },
         {
           id: "audit-logs",
           title: "审计日志",

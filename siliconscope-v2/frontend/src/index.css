@@ -5103,6 +5103,18 @@
   text-transform: none;
 }
 
+.admin-health-ok strong {
+  color: #12a875;
+}
+
+.admin-health-warn strong {
+  color: #f59f00;
+}
+
+.admin-health-error strong {
+  color: #e03131;
+}
+
 .admin-status-strip,
 .admin-summary {
   display: grid;
@@ -5271,6 +5283,66 @@
   font-size: 12px;
   font-style: normal;
   font-weight: 950;
+}
+
+.runtime-check-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.runtime-check {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dce5f2;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #f8fbff;
+}
+
+.runtime-check span {
+  width: max-content;
+  border-radius: 999px;
+  background: #edf3ff;
+  padding: 3px 8px;
+  color: #315fe8;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.runtime-check strong {
+  color: #0f1f3d;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.runtime-check p,
+.runtime-check small {
+  margin: 0;
+  color: #687895;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.runtime-check-warn {
+  border-color: #ffe2a3;
+  background: #fff9ea;
+}
+
+.runtime-check-warn span {
+  background: #fff0c2;
+  color: #b76e00;
+}
+
+.runtime-check-error {
+  border-color: #ffc9c9;
+  background: #fff5f5;
+}
+
+.runtime-check-error span {
+  background: #ffe3e3;
+  color: #c92a2a;
 }
 
 .admin-key-list,

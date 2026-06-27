@@ -45,6 +45,7 @@ import type {
   TopicReport,
   PlatformOverview,
   AdminOverview,
+  RuntimeHealth,
   AdminAuditLogResult,
 } from './types'
 
@@ -83,6 +84,11 @@ export const api = {
 
   async adminOverview() {
     const res = await axios.get<AdminOverview>('/api/admin/overview')
+    return res.data
+  },
+
+  async adminRuntime() {
+    const res = await axios.get<RuntimeHealth>('/api/admin/runtime')
     return res.data
   },
 

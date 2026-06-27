@@ -62,7 +62,7 @@ Third-party Services
 | Message queue | Not implemented | Add BullMQ/Redis or another queue for ingestion, enrichment, snapshots |
 | Payment | Not implemented | Add Stripe/Paddle first; China payments later |
 | Email/SMS/OAuth | Not implemented | Add email invite/login and optional OAuth |
-| Observability | Logs only | Add Sentry first; Prometheus/Grafana after production traffic |
+| Observability | Runtime health/readiness checks and logs | Add Sentry first; Prometheus/Grafana after production traffic |
 
 ## Migration Plan
 
@@ -88,6 +88,7 @@ Third-party Services
 - Keep the default app path unchanged so the private SQLite MVP continues to work.
 - Track the data-layer split in `docs/DATA_LAYER_MIGRATION.md`.
 - Introduce `backend/src/db/app-db.ts` as the app/business data adapter; it currently falls back to SQLite.
+- Add runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, and production adapter configuration.
 
 ## Design Principles
 

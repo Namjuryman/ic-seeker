@@ -28,6 +28,7 @@ import { topicReportService } from "../services/topic-report.service.js";
 import { platformService } from "../services/platform.service.js";
 import { adminService } from "../services/admin.service.js";
 import { adminAuditService } from "../services/admin-audit.service.js";
+import { runtimeHealthService } from "../services/runtime-health.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -43,6 +44,11 @@ router.get("/platform", requireAuth, async (_req, res) => {
 
 router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, res) => {
   res.json(await adminService.getOverview(req.user?.userId ?? 0));
+});
+
+router.get("/admin/runtime", requireAdmin, async (_req, res) => {
+  const runtime = runtimeHealthService.getHealth();
+  res.status(runtime.status === "error" ? 503 : 200).json(runtime);
 });
 
 router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {

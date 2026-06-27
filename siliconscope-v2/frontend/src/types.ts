@@ -328,6 +328,25 @@ export interface AdminOperation {
   action: string;
 }
 
+export interface RuntimeCheck {
+  id: string;
+  label: string;
+  status: 'ok' | 'warn' | 'error';
+  message: string;
+  detail?: string;
+}
+
+export interface RuntimeHealth {
+  status: 'ok' | 'warn' | 'error';
+  generatedAt: string;
+  uptimeSeconds: number;
+  nodeVersion: string;
+  environment: string;
+  topology: PlatformOverview['topology'];
+  checks: RuntimeCheck[];
+  warnings: string[];
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;
@@ -336,7 +355,10 @@ export interface AdminOverview {
     authMode: string;
     metadataDb: string;
     publicDir: string;
+    runtimeStatus?: 'ok' | 'warn' | 'error';
+    uptimeSeconds?: number;
   };
+  runtime?: RuntimeHealth;
   platform: PlatformOverview;
   summary: {
     papers: number;

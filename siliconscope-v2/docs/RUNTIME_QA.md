@@ -107,8 +107,22 @@ Verify these routes return `403 Admin access required` when auth is enabled and 
 - `DELETE /api/admin/identity/aliases/:type/:alias`
 - `GET /api/admin/api-keys`
 - `PUT /api/admin/api-keys/:provider`
+- `GET /api/admin/runtime`
 
-### 10. Build
+### 10. Runtime Health
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8751/api/health/live
+Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
+```
+
+- [ ] `/live` returns `status: ok`.
+- [ ] `/ready` returns a JSON object with `status`, `checks`, `warnings`, `topology`, and `uptimeSeconds`.
+- [ ] Metadata DB check reports a non-zero paper count.
+- [ ] Local development may return `status: warn` for local admin bypass, weak JWT, or missing production build.
+- [ ] Public deployment should target `status: ok` with `IC_SEEKER_REQUIRE_LOGIN=1`, `IC_SEEKER_LOCAL_ADMIN=0`, a strong `JWT_SECRET`, and exact `FRONTEND_ORIGINS`.
+
+### 11. Build
 
 ```powershell
 cd siliconscope-v2

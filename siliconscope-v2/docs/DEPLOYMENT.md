@@ -118,6 +118,19 @@ Before a Vercel deployment, migrate to:
 - Schedule regular database backups before running new crawls/imports.
 - Run IEEE/OpenAlex/Crossref sync and admin operations only from the backend/admin frontend, never from the public frontend.
 - Add rate limiting before public traffic or paid subscriptions.
+- Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
+- Check the independent admin console runtime panel before major imports or public announcements.
+
+## Health Checks
+
+The API exposes two production-friendly health endpoints:
+
+```text
+GET /api/health/live   -> lightweight process liveness
+GET /api/health/ready  -> runtime readiness: SQLite, app DB, cache, frontend build, auth, JWT, CORS, commercial adapters
+```
+
+`/api/health/ready` returns HTTP 503 only for hard errors. Warnings still return HTTP 200 so local/private deployments can keep running while clearly showing what must be hardened before public launch.
 
 ## Upgrade Path
 

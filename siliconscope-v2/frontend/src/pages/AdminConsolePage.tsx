@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
-import type { AdminOperation } from '../types'
+import type { AdminOperation, RuntimeCheck } from '../types'
 
 const statusText: Record<AdminOperation['status'], string> = {
   ready: '正常',
@@ -12,10 +12,24 @@ const statusText: Record<AdminOperation['status'], string> = {
   'needs-seed': '需导入',
 }
 
+const runtimeText: Record<RuntimeCheck['status'], string> = {
+  ok: 'OK',
+  warn: 'WARN',
+  error: 'ERROR',
+}
+
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB'
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024).toLocaleString()} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatUptime(seconds = 0) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '刚启动'
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
 function OperationCard({ item }: { item: AdminOperation }) {
@@ -29,6 +43,17 @@ function OperationCard({ item }: { item: AdminOperation }) {
       <p>{item.detail}</p>
       <em>{item.action}</em>
     </Link>
+  )
+}
+
+function RuntimeCheckRow({ check }: { check: RuntimeCheck }) {
+  return (
+    <div className={`runtime-check runtime-check-${check.status}`}>
+      <span>{runtimeText[check.status]}</span>
+      <strong>{check.label}</strong>
+      <p>{check.message}</p>
+      {check.detail && <small>{check.detail}</small>}
+    </div>
   )
 }
 
@@ -50,6 +75,7 @@ export default function AdminConsolePage() {
   const data = overview.data
   const summary = data.summary
   const topology = data.platform.topology
+  const runtime = data.runtime
 
   return (
     <div className="admin-page">
@@ -58,23 +84,23 @@ export default function AdminConsolePage() {
           <span>Admin Console</span>
           <h1>管理员控制台</h1>
           <p>
-            这里管理后端运行状态、缓存快照、审核队列、API key、PDF inbox、企业数据和数据质量任务。
-            平台中枢看产品路线，管理员控制台看日常运营。
+            面向独立后台域名的运营入口：查看生产就绪状态、缓存快照、审核队列、API key、PDF inbox、
+            企业数据、别名归一化、数据质量和管理员审计日志。
           </p>
         </div>
-        <div className="admin-health">
-          <strong>{data.health.backend}</strong>
-          <span>{data.health.authMode}</span>
+        <div className={`admin-health admin-health-${runtime?.status || 'warn'}`}>
+          <strong>{runtime?.status || data.health.backend}</strong>
+          <span>{data.health.authMode} · {formatUptime(data.health.uptimeSeconds)}</span>
         </div>
       </section>
 
       <section className="admin-status-strip">
         <div><span>Backend API</span><strong>{data.health.backend}</strong></div>
-        <div><span>Metadata DB</span><strong>{topology.metadataStore.provider}</strong></div>
+        <div><span>Runtime</span><strong>{runtime?.status || 'unknown'}</strong></div>
+        <div><span>Node</span><strong>{runtime?.nodeVersion || '-'}</strong></div>
         <div><span>App DB</span><strong>{topology.appStore.provider}</strong></div>
         <div><span>Cache</span><strong>{topology.cache.provider}</strong></div>
         <div><span>Search</span><strong>{topology.search.provider}</strong></div>
-        <div><span>Storage</span><strong>{topology.objectStorage.provider}</strong></div>
       </section>
 
       <section className="admin-summary">
@@ -82,7 +108,6 @@ export default function AdminConsolePage() {
         <div><span>快照缓存</span><strong>{summary.snapshots}</strong><small>{formatBytes(summary.snapshotBytes)}</small></div>
         <div><span>审核待处理</span><strong>{summary.moderationOpen}</strong><small>comments / reviews / reports</small></div>
         <div><span>API Key</span><strong>{summary.apiKeys}</strong><small>configured</small></div>
-        <div><span>PDF Inbox</span><strong>{summary.pdfInbox}</strong><small>local PDFs</small></div>
         <div><span>企业数据</span><strong>{summary.companies}</strong><small>companies</small></div>
         <div><span>审计日志</span><strong>{summary.auditLogs}</strong><small>admin events</small></div>
       </section>
@@ -104,17 +129,15 @@ export default function AdminConsolePage() {
         <aside className="admin-panel">
           <div className="admin-panel-head">
             <div>
-              <span>Secrets</span>
-              <h2>API Key 状态</h2>
+              <span>Runtime</span>
+              <h2>生产检查</h2>
             </div>
           </div>
-          <div className="admin-key-list">
-            {data.apiKeys.length ? data.apiKeys.map((key) => (
-              <div key={`${key.provider}-${key.source}`}>
-                <strong>{key.provider}</strong>
-                <span>{key.source} / {key.masked || 'empty'}</span>
-              </div>
-            )) : <p>暂未配置 API key。</p>}
+          <div className="runtime-check-list">
+            {(runtime?.checks || []).slice(0, 8).map((check) => (
+              <RuntimeCheckRow key={check.id} check={check} />
+            ))}
+            {!runtime?.checks?.length && <p className="learning-muted">暂无运行检查数据。</p>}
           </div>
         </aside>
       </section>
