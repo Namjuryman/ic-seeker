@@ -208,8 +208,10 @@ https://api.your-domain.com   -> backend API
 Before exposing the service:
 
 ```powershell
-copy deploy\production.env.example .env.production
+npm run deploy:init -- your-domain.com
 npm run deploy:check -- .env.production
+npm run build
+npm run deploy:doctor -- .env.production
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
@@ -221,10 +223,13 @@ Ready-to-edit independent-domain templates are included under `deploy/`:
 - `deploy/production.env.example` for production API environment variables.
 - `deploy/cloudflare-tunnel.example.yml` for API-only Cloudflare Tunnel ingress.
 - `deploy/DOMAIN_GO_LIVE.md` for the complete go-live checklist.
+- `npm run deploy:init -- your-domain.com` to generate `.env.production` with `www/admin/api` domains and strong random secrets.
 - `npm run deploy:doctor -- .env.production` to check env, frontend builds, and DNS readiness before going live.
 - `npm run backup:create -- pre-deploy --keep=10` before risky imports, schema work, or public deployments.
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
+
+The independent admin frontend includes a `/launch` page for production readiness: runtime blockers, backup status, maintenance freshness, DNS shape, and the exact command sequence for go-live.
 
 ## Private MVP Workflow
 

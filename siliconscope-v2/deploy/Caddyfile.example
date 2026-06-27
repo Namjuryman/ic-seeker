@@ -14,7 +14,9 @@ siliconscope.com, www.siliconscope.com {
 
 	header {
 		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		Cross-Origin-Opener-Policy same-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 }
@@ -27,7 +29,9 @@ admin.siliconscope.com {
 
 	header {
 		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 		Referrer-Policy no-referrer
+		Cross-Origin-Opener-Policy same-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 
@@ -41,7 +45,9 @@ api.siliconscope.com {
 
 	header {
 		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		Cross-Origin-Opener-Policy same-origin
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 	}
 }

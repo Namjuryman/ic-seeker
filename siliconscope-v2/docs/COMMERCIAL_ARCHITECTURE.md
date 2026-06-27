@@ -112,8 +112,10 @@ Third-party Services
   - `deploy/nginx.siliconscope.example.conf`.
   - `deploy/cloudflare-tunnel.example.yml`.
   - `deploy/DOMAIN_GO_LIVE.md`.
+  - `scripts/init-production-domain.mjs`.
   - `npm run deploy:check -- .env.production`.
   - `npm run deploy:doctor -- .env.production`.
+  - Admin `/launch` go-live console for runtime blockers, backup freshness, maintenance runs, and DNS cutover.
 
 ## Billing Boundary
 

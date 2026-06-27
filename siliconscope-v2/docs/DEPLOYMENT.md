@@ -29,7 +29,13 @@ The launcher sets `IC_SEEKER_LOCAL_ADMIN=1` for local development only. Never se
 Use this when you do not want to open inbound ports on the server.
 
 1. Point your domain to Cloudflare.
-2. On the server, clone the repo and create `.env`.
+2. On the server, clone the repo and generate production env:
+
+```powershell
+npm run deploy:init -- your-domain.com
+```
+
+Review `.env.production`, then copy selected values into `.env` only if your host workflow expects `.env`.
 3. Start the backend API:
 
 ```powershell
@@ -66,10 +72,11 @@ HOST=0.0.0.0
 PORT=8750
 ```
 
-Run the production guard:
+Run the production guard after `npm run build`:
 
 ```powershell
 npm run deploy:check -- .env.production
+npm run build
 npm run deploy:doctor -- .env.production
 ```
 
@@ -77,11 +84,14 @@ npm run deploy:doctor -- .env.production
 
 Use this when you are comfortable opening ports `80` and `443` on a VPS.
 
-1. Run `npm run build` so `frontend/dist` and `frontend-admin/dist` exist.
-2. Run `docker compose -f docker-compose.production.yml up -d --build`.
-3. The compose stack starts the API plus a Caddy edge proxy.
-4. Caddy hosts `frontend/dist` as `www.siliconscope.com`, `frontend-admin/dist` as `admin.siliconscope.com`, and reverse-proxies `api.siliconscope.com` to the API container.
-5. If you prefer a host-level reverse proxy, use `deploy/Caddyfile.example` or `deploy/nginx.siliconscope.example.conf` instead of the Caddy compose service.
+1. Run `npm run deploy:init -- your-domain.com` and review `.env.production`.
+2. Run `npm run deploy:check -- .env.production`.
+3. Run `npm run build` so `frontend/dist` and `frontend-admin/dist` exist.
+4. Run `npm run deploy:doctor -- .env.production`.
+5. Run `docker compose -f docker-compose.production.yml up -d --build`.
+6. The compose stack starts the API plus a Caddy edge proxy.
+7. Caddy hosts `frontend/dist` as `www.siliconscope.com`, `frontend-admin/dist` as `admin.siliconscope.com`, and reverse-proxies `api.siliconscope.com` to the API container.
+8. If you prefer a host-level reverse proxy, use `deploy/Caddyfile.example` or `deploy/nginx.siliconscope.example.conf` instead of the Caddy compose service.
 
 Ready-to-edit templates live in `deploy/`:
 
@@ -91,6 +101,7 @@ Ready-to-edit templates live in `deploy/`:
 - `deploy/production.env.example`: production environment variables for the API host.
 - `deploy/cloudflare-tunnel.example.yml`: API-only Cloudflare Tunnel ingress template.
 - `deploy/DOMAIN_GO_LIVE.md`: practical independent-domain checklist.
+- `scripts/init-production-domain.mjs`: generates `.env.production` with the standard `www/admin/api` split and strong random secrets.
 
 The intended production domain split is:
 
@@ -101,6 +112,8 @@ https://api.your-domain.com   -> backend API
 ```
 
 Keep the admin hostname behind Cloudflare Access, VPN, or another access-control layer even though the backend also checks admin privileges. Defense in depth matters once this leaves localhost.
+
+After logging into the independent admin frontend, open `/launch`. It summarizes runtime blockers, backup freshness, maintenance runs, DNS shape, and the exact go-live command sequence.
 
 ## Why Not Vercel Yet
 

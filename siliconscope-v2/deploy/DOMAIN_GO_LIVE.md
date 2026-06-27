@@ -14,9 +14,24 @@ For the first real deployment, use Cloudflare DNS + Cloudflare Access for admin.
 
 ## Minimal VPS Deployment
 
-1. Copy `deploy/production.env.example` to `.env.production`.
-2. Replace all `siliconscope.com` values with your real domain.
-3. Set strong secrets:
+1. Generate a production env file:
+
+```bash
+npm run deploy:init -- your-domain.com
+```
+
+This creates `.env.production` with:
+
+- `www.your-domain.com` for the public app.
+- `admin.your-domain.com` for the private admin console.
+- `api.your-domain.com` for the backend API.
+- A random `JWT_SECRET`.
+- A random `ADMIN_PASSWORD`.
+
+You can also copy `deploy/production.env.example` manually if you prefer.
+
+2. Review every generated value and set any private API keys.
+3. Keep the production safety flags enabled:
 
 ```env
 JWT_SECRET=generate-a-long-random-secret
@@ -29,17 +44,22 @@ Run the local production-env guard before deploying:
 
 ```bash
 npm run deploy:check -- .env.production
-npm run deploy:doctor -- .env.production
 ```
 
-4. Build the public and admin frontends, then start the API plus Caddy edge proxy:
+4. Build the public and admin frontends, then run the deploy doctor:
 
 ```bash
 npm run build
+npm run deploy:doctor -- .env.production
+```
+
+5. Start the API plus Caddy edge proxy:
+
+```bash
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
-5. If you do not use the Docker Caddy service, put a reverse proxy in front manually:
+6. If you do not use the Docker Caddy service, put a reverse proxy in front manually:
 
 ```bash
 # Caddy example
@@ -47,7 +67,7 @@ sudo cp deploy/Caddyfile.example /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
-6. Verify readiness:
+7. Verify readiness:
 
 ```bash
 curl https://api.your-domain.com/api/health/live
@@ -86,6 +106,8 @@ Do not expose the admin console as a normal public nav item. Use at least two la
 2. Backend admin login with `IC_SEEKER_REQUIRE_LOGIN=1` and a strong `ADMIN_PASSWORD`.
 
 The frontend is not the security boundary. The backend admin routes must continue to enforce `requireAdmin`.
+
+After login, open the admin frontend `/launch` page. It shows runtime blockers, backup readiness, maintenance job freshness, and the command sequence for independent-domain launch.
 
 ## DNS Records
 

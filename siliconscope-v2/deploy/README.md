@@ -20,6 +20,11 @@ Recommended first public setup:
 Before starting the VPS service:
 
 ```bash
+npm run deploy:init -- your-domain.com
 npm run deploy:check -- .env.production
 npm run deploy:doctor -- .env.production
 ```
+
+`deploy:init` creates `.env.production` with a strong random `JWT_SECRET`, `ADMIN_PASSWORD`, and the standard `www/admin/api` domain split. Review the generated file before copying it to a real server.
+
+The admin frontend now includes a Go Live page at `/launch` for runtime checks, backup status, maintenance status, and independent-domain launch steps.
