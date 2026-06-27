@@ -188,12 +188,13 @@ router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: Authenticate
     return;
   }
   try {
-    const job = ingestionJobService.updateStatus(id, {
-      status: req.body?.status,
-      counts: req.body?.counts,
-      error: req.body?.error,
-      notes: req.body?.notes,
-    });
+      const job = ingestionJobService.updateStatus(id, {
+        status: req.body?.status,
+        counts: req.body?.counts,
+        error: req.body?.error,
+        notes: req.body?.notes,
+        actorUserId: req.user?.userId ?? 0,
+      });
     adminAuditService.record({
       req,
       action: "ingestion.update",
@@ -206,6 +207,81 @@ router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: Authenticate
     adminAuditService.record({ req, action: "ingestion.update", resourceType: "ingestion_job", resourceId: id, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.post("/admin/ingestion/jobs/:id/start", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid ingestion job ID" });
+    return;
+  }
+  try {
+    const job = ingestionJobService.start(id, req.user?.userId ?? 0);
+    adminAuditService.record({
+      req,
+      action: "ingestion.start",
+      resourceType: "ingestion_job",
+      resourceId: id,
+      metadata: { status: job.status, provider: job.provider },
+    });
+    res.json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ingestion.start", resourceType: "ingestion_job", resourceId: id, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/ingestion/jobs/:id/cancel", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid ingestion job ID" });
+    return;
+  }
+  try {
+    const job = ingestionJobService.cancel(id, req.user?.userId ?? 0);
+    adminAuditService.record({
+      req,
+      action: "ingestion.cancel",
+      resourceType: "ingestion_job",
+      resourceId: id,
+      metadata: { status: job.status, provider: job.provider },
+    });
+    res.json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ingestion.cancel", resourceType: "ingestion_job", resourceId: id, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/ingestion/jobs/:id/retry", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid ingestion job ID" });
+    return;
+  }
+  try {
+    const job = ingestionJobService.retry(id, req.user?.userId ?? 0);
+    adminAuditService.record({
+      req,
+      action: "ingestion.retry",
+      resourceType: "ingestion_job",
+      resourceId: id,
+      metadata: { retryJobId: job.id, provider: job.provider },
+    });
+    res.status(201).json(job);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ingestion.retry", resourceType: "ingestion_job", resourceId: id, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/admin/ingestion/jobs/:id/events", requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid ingestion job ID" });
+    return;
+  }
+  res.json(ingestionJobService.events(id, req.query as Record<string, string>));
 });
 
 router.patch("/admin/scheduler/:jobId", requireAdmin, async (req: AuthenticatedRequest, res) => {

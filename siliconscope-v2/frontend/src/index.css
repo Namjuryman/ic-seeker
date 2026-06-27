@@ -7702,7 +7702,8 @@
 .ingestion-hero,
 .ingestion-form,
 .ingestion-policy,
-.ingestion-board {
+.ingestion-board,
+.ingestion-events {
   border: 1px solid var(--ss-border);
   background: var(--ss-surface);
   box-shadow: var(--ss-shadow-soft);
@@ -7769,9 +7770,17 @@
   gap: 18px;
 }
 
+.ingestion-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 18px;
+  align-items: start;
+}
+
 .ingestion-form,
 .ingestion-policy,
-.ingestion-board {
+.ingestion-board,
+.ingestion-events {
   border-radius: 24px;
   padding: 22px;
 }
@@ -7827,6 +7836,12 @@
   cursor: wait;
 }
 
+.ingestion-error {
+  margin: 0;
+  color: #b42318;
+  font-weight: 850;
+}
+
 .ingestion-policy ul {
   display: grid;
   gap: 12px;
@@ -7858,11 +7873,22 @@
 
 .ingestion-row {
   display: grid;
-  grid-template-columns: 170px 130px minmax(220px, 1fr) 210px 190px 150px;
+  grid-template-columns: 150px 130px minmax(220px, 1fr) 190px 190px minmax(220px, 260px);
   align-items: center;
   gap: 16px;
   padding: 16px 22px;
   border-bottom: 1px solid var(--ss-border);
+  cursor: pointer;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.ingestion-row:hover,
+.ingestion-row.is-selected {
+  background: #f8fbff;
+}
+
+.ingestion-row.is-selected {
+  box-shadow: inset 4px 0 0 var(--ss-blue);
 }
 
 .ingestion-row-head {
@@ -7884,6 +7910,134 @@
   display: block;
 }
 
+.pill {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  border: 1px solid var(--ss-border);
+  background: #f8fbff;
+  color: var(--ss-ink);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.pill-ok {
+  border-color: rgba(16, 185, 129, 0.24);
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.pill-running {
+  border-color: rgba(37, 99, 235, 0.28);
+  background: #eff6ff;
+  color: var(--ss-blue);
+}
+
+.pill-warning {
+  border-color: rgba(245, 158, 11, 0.32);
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.pill-error {
+  border-color: rgba(239, 68, 68, 0.28);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.ingestion-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ingestion-actions button,
+.ingestion-actions select {
+  min-height: 38px;
+  border: 1px solid var(--ss-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--ss-ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.ingestion-actions button {
+  background: var(--ss-blue);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.ingestion-actions button.subtle {
+  background: #ffffff;
+  color: var(--ss-ink);
+}
+
+.ingestion-actions button:disabled,
+.ingestion-actions select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ingestion-actions select {
+  grid-column: 1 / -1;
+  padding: 0 10px;
+}
+
+.ingestion-events {
+  position: sticky;
+  top: 18px;
+}
+
+.ingestion-event-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  max-height: min(620px, calc(100vh - 180px));
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.ingestion-event {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--ss-border);
+  border-radius: 16px;
+  background: #f8fbff;
+}
+
+.ingestion-event strong {
+  color: var(--ss-ink);
+  text-transform: capitalize;
+}
+
+.ingestion-event small,
+.ingestion-event p {
+  margin: 0;
+  color: var(--ss-muted);
+  line-height: 1.55;
+}
+
+.ingestion-event-running {
+  border-color: rgba(37, 99, 235, 0.26);
+  background: #eff6ff;
+}
+
+.ingestion-event-warning {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: #fffbeb;
+}
+
+.ingestion-event-error {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: #fef2f2;
+}
+
 @media (max-width: 1200px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7898,6 +8052,7 @@
   .observability-stats,
   .jobops-lanes,
   .ingestion-grid,
+  .ingestion-workbench,
   .scheduler-summary,
   .scheduler-card-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7912,7 +8067,7 @@
   }
 
   .ingestion-row {
-    grid-template-columns: 1fr 120px;
+    grid-template-columns: 1fr 150px;
   }
 
   .ingestion-row > * {
@@ -7945,6 +8100,7 @@
   .jobops-counts,
   .jobops-lanes,
   .ingestion-grid,
+  .ingestion-workbench,
   .ingestion-form-pair,
   .observability-row,
   .scheduler-summary,
@@ -7969,5 +8125,9 @@
 
   .ingestion-row {
     grid-template-columns: 1fr;
+  }
+
+  .ingestion-events {
+    position: static;
   }
 }

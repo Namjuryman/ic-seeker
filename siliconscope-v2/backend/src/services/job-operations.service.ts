@@ -100,7 +100,7 @@ export const jobOperationsService = {
         status: scheduler.enabled ? "ok" : "idle",
         metric: scheduler.enabled ? `${enabledSchedulerJobs}/${scheduler.jobs.length} enabled` : "manual",
         detail: scheduler.nextRunAt ? `Next run ${scheduler.nextRunAt}` : "Public server can enable SCHEDULER_ENABLED=1 after smoke tests.",
-        href: "/scheduler",
+        href: "/admin/scheduler",
       },
       {
         lane: "maintenance",
@@ -108,7 +108,7 @@ export const jobOperationsService = {
         status: runningRuns ? "running" : failedRuns ? "warning" : statusFromRun(latestRun),
         metric: `${maintenanceRuns.total} runs`,
         detail: latestRun ? `${latestRun.jobId}: ${latestRun.status}` : `${maintenanceJobs.length} maintenance jobs configured.`,
-        href: "/maintenance",
+        href: "/admin/maintenance",
       },
       {
         lane: "backup",
@@ -116,7 +116,7 @@ export const jobOperationsService = {
         status: backups.total ? "ok" : "warning",
         metric: `${backups.total} backups`,
         detail: backups.rows[0] ? `Latest ${backups.rows[0].createdAt}` : "Create a restore point before first public go-live.",
-        href: "/backups",
+        href: "/admin/backups",
       },
       {
         lane: "snapshot",
@@ -124,7 +124,7 @@ export const jobOperationsService = {
         status: snapshots.length ? "ok" : "warning",
         metric: `${snapshots.length} snapshots`,
         detail: `${Math.round(snapshotBytes / 1024).toLocaleString()} KB cached; latest ${latestSnapshot || "-"}`,
-        href: "/snapshots",
+        href: "/admin/snapshots",
       },
       {
         lane: "quality",
@@ -132,7 +132,7 @@ export const jobOperationsService = {
         status: failedRuns ? "warning" : "idle",
         metric: runtime.status.toUpperCase(),
         detail: runtime.warnings[0] || "Bounded quality scans are available from maintenance tasks.",
-        href: "/data-quality",
+        href: "/admin/data-quality",
       },
       {
         lane: "ingestion",
@@ -142,7 +142,7 @@ export const jobOperationsService = {
         detail: activeIngestion
           ? `${activeIngestion} queued/running ingestion jobs`
           : "IEEE/OpenAlex weekly imports can now be registered before workers are connected.",
-        href: "/journal-ingestion",
+        href: "/admin/ingestion",
       },
     ];
 
@@ -154,7 +154,7 @@ export const jobOperationsService = {
         status: statusFromRun(run),
         detail: runDetail(run),
         at: timeOrNull(run.startedAt),
-        href: "/maintenance",
+        href: "/admin/maintenance",
         sourceId: run.id,
       })),
       ...scheduler.jobs.map((job) => ({
@@ -164,7 +164,7 @@ export const jobOperationsService = {
         status: job.enabled ? statusFromText(job.lastStatus) : "idle" as const,
         detail: job.enabled ? `Next run ${job.nextRunAt || "-"}` : "Manual mode",
         at: timeOrNull(job.lastRunAt || job.updatedAt),
-        href: "/scheduler",
+        href: "/admin/scheduler",
         sourceId: job.id,
       })),
       ...backups.rows.slice(0, 8).map((backup) => ({
@@ -174,7 +174,7 @@ export const jobOperationsService = {
         status: "ok" as const,
         detail: `${Math.round(backup.dbBytes / 1024 / 1024)} MB database backup`,
         at: timeOrNull(backup.createdAt),
-        href: "/backups",
+        href: "/admin/backups",
         sourceId: backup.id,
       })),
       ...ingestionJobs.rows.map((job) => ({
@@ -190,7 +190,7 @@ export const jobOperationsService = {
               : "ok" as const,
         detail: `${job.counts.inserted} inserted, ${job.counts.updated} updated, ${job.counts.review} review`,
         at: timeOrNull(job.updatedAt || job.createdAt),
-        href: "/journal-ingestion",
+        href: "/admin/ingestion",
         sourceId: job.id,
       })),
     ].sort((a, b) => String(b.at || "").localeCompare(String(a.at || ""))).slice(0, 60);

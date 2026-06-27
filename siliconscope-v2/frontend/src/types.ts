@@ -658,8 +658,25 @@ export interface IngestionJob {
   updatedAt: string;
 }
 
+export interface IngestionJobEvent {
+  id: number;
+  jobId: number;
+  eventType: string;
+  message: string | null;
+  payload: Record<string, unknown>;
+  createdByUserId: number | null;
+  createdAt: string;
+}
+
 export interface IngestionJobResult {
   rows: IngestionJob[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface IngestionJobEventResult {
+  rows: IngestionJobEvent[];
   total: number;
   limit: number;
   offset: number;

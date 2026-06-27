@@ -67,6 +67,7 @@ import type {
   JobOperationsOverview,
   IngestionJob,
   IngestionJobResult,
+  IngestionJobEventResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -220,6 +221,26 @@ export const api = {
 
   async updateIngestionJob(id: number, body: { status?: string; counts?: Record<string, number>; error?: string | null; notes?: string | null }) {
     const res = await axios.patch<IngestionJob>(`/api/admin/ingestion/jobs/${id}`, body)
+    return res.data
+  },
+
+  async startIngestionJob(id: number) {
+    const res = await axios.post<IngestionJob>(`/api/admin/ingestion/jobs/${id}/start`)
+    return res.data
+  },
+
+  async cancelIngestionJob(id: number) {
+    const res = await axios.post<IngestionJob>(`/api/admin/ingestion/jobs/${id}/cancel`)
+    return res.data
+  },
+
+  async retryIngestionJob(id: number) {
+    const res = await axios.post<IngestionJob>(`/api/admin/ingestion/jobs/${id}/retry`)
+    return res.data
+  },
+
+  async ingestionJobEvents(id: number) {
+    const res = await axios.get<IngestionJobEventResult>(`/api/admin/ingestion/jobs/${id}/events`)
     return res.data
   },
 

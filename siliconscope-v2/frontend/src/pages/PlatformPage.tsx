@@ -74,7 +74,10 @@ export default function PlatformPage() {
         <div>
           <span>Platform Console</span>
           <h1>平台中枢</h1>
-          <p>把 SiliconScope v2 拆成长期可维护的科研、学习、产业、社区和商业基础设施模块。这里展示当前成熟度和接下来最值得做的硬任务。</p>
+          <p>
+            把 SiliconScope v2 拆成长期可维护的科研、学习、产业、社区和商业基础设施模块。
+            这里展示当前成熟度、已完成能力，以及接下来最值得继续打磨的硬任务。
+          </p>
         </div>
         <div className="platform-score">
           <strong>{data.summary.averageMaturity}%</strong>
@@ -113,11 +116,11 @@ export default function PlatformPage() {
           </div>
           <dl className="platform-infra">
             <div><dt>Metadata</dt><dd>{topology.metadataStore.provider}</dd></div>
-            <div><dt>App DB</dt><dd>{topology.appStore.provider} · {infraState(topology.appStore.configured)}</dd></div>
-            <div><dt>Cache</dt><dd>{topology.cache.provider} · {infraState(topology.cache.configured)}</dd></div>
-            <div><dt>Search</dt><dd>{topology.search.provider} · {infraState(topology.search.configured)}</dd></div>
-            <div><dt>Storage</dt><dd>{topology.objectStorage.provider} · {infraState(topology.objectStorage.configured)}</dd></div>
-            <div><dt>Queue</dt><dd>{topology.queue.provider} · {infraState(topology.queue.configured)}</dd></div>
+            <div><dt>App DB</dt><dd>{topology.appStore.provider} / {infraState(topology.appStore.configured)}</dd></div>
+            <div><dt>Cache</dt><dd>{topology.cache.provider} / {infraState(topology.cache.configured)}</dd></div>
+            <div><dt>Search</dt><dd>{topology.search.provider} / {infraState(topology.search.configured)}</dd></div>
+            <div><dt>Storage</dt><dd>{topology.objectStorage.provider} / {infraState(topology.objectStorage.configured)}</dd></div>
+            <div><dt>Queue</dt><dd>{topology.queue.provider} / {infraState(topology.queue.configured)}</dd></div>
           </dl>
         </div>
       </section>
@@ -142,9 +145,11 @@ export default function PlatformPage() {
             <h2>常用入口</h2>
           </div>
           <div className="platform-shortcuts">
-            <Link to="/snapshots">快照管理</Link>
-            <Link to="/data-quality">数据质量</Link>
-            <Link to="/identity">别名管理</Link>
+            <Link to="/admin/job-operations">运维台账</Link>
+            <Link to="/admin/ingestion">导入任务</Link>
+            <Link to="/admin/snapshots">快照管理</Link>
+            <Link to="/admin/data-quality">数据质量</Link>
+            <Link to="/admin/identity">别名管理</Link>
             <Link to="/venue-matrix">会议/期刊</Link>
             <Link to="/companies">企业情报</Link>
             <Link to="/learning-path">路线库</Link>

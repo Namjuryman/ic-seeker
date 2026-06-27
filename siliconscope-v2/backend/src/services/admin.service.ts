@@ -86,7 +86,7 @@ export const adminService = {
           status: scheduler.enabled || maintenanceRuns.total || ingestionJobs.total ? "ready" : "partial",
           metric: `${maintenanceRuns.total + ingestionJobs.total} runs`,
           detail: "Unified scheduler, maintenance, backup, snapshot, data-quality, and ingestion operations ledger.",
-          href: "/job-operations",
+          href: "/admin/job-operations",
           action: "Open ledger",
         },
         {
@@ -104,7 +104,7 @@ export const adminService = {
           status: auditCount ? "ready" : "planned",
           metric: `${auditCount} events`,
           detail: "Admin mutations, actor, resource, status, IP, and user-agent.",
-          href: "/audit-logs",
+          href: "/admin/audit-logs",
           action: "View trail",
         },
         {
@@ -113,7 +113,7 @@ export const adminService = {
           status: observability.totalErrors || observability.totalRateLimited ? "attention" : "ready",
           metric: `${observability.totalRequests} req`,
           detail: `${observability.requestsLastMinute}/min, avg ${observability.averageDurationMs}ms, errors ${observability.totalErrors}`,
-          href: "/observability",
+          href: "/admin/observability",
           action: "Inspect traffic",
         },
         {
@@ -122,7 +122,7 @@ export const adminService = {
           status: maintenanceRuns.rows[0]?.status === "failure" ? "attention" : "ready",
           metric: `${maintenanceRuns.total} runs`,
           detail: maintenanceRuns.rows[0] ? `${maintenanceRuns.rows[0].jobId} ${maintenanceRuns.rows[0].status}` : "No maintenance jobs have run yet.",
-          href: "/maintenance",
+          href: "/admin/maintenance",
           action: "Run task",
         },
         {
@@ -131,7 +131,7 @@ export const adminService = {
           status: scheduler.enabled ? "ready" : "planned",
           metric: scheduler.enabled ? "enabled" : "manual",
           detail: scheduler.nextRunAt ? `next ${scheduler.nextRunAt}` : `${scheduler.jobs.length} jobs configured; scheduler disabled.`,
-          href: "/scheduler",
+          href: "/admin/scheduler",
           action: "Configure jobs",
         },
         {
@@ -140,7 +140,7 @@ export const adminService = {
           status: ingestionJobs.total ? "partial" : "planned",
           metric: `${ingestionJobs.total} jobs`,
           detail: "Register IEEE/OpenAlex/Crossref/CSV/PDF import jobs before background workers are connected.",
-          href: "/journal-ingestion",
+          href: "/admin/ingestion",
           action: "Create job",
         },
         {
@@ -149,7 +149,7 @@ export const adminService = {
           status: backups.total ? "ready" : "attention",
           metric: `${backups.total} backups`,
           detail: backups.rows[0] ? `latest ${backups.rows[0].createdAt}` : "No backup has been created yet.",
-          href: "/backups",
+          href: "/admin/backups",
           action: "Create / prune",
         },
         {
@@ -176,7 +176,7 @@ export const adminService = {
           status: snapshots.length ? "ready" : "needs-refresh",
           metric: `${snapshots.length} snapshots`,
           detail: `${Math.round(snapshotBytes / 1024).toLocaleString()} KB cached payload.`,
-          href: "/snapshots",
+          href: "/admin/snapshots",
           action: "Refresh / clear",
         },
         {
@@ -185,7 +185,7 @@ export const adminService = {
           status: moderationOpen ? "attention" : "ready",
           metric: `${moderationOpen} open`,
           detail: `${moderation.totals?.comments || 0} comments, ${moderation.totals?.reviews || 0} reviews, ${moderation.totals?.reports || 0} reports.`,
-          href: "/moderation",
+          href: "/admin/moderation",
           action: "Review content",
         },
         {
@@ -212,7 +212,7 @@ export const adminService = {
           status: "partial",
           metric: `${stats.total.toLocaleString()} papers`,
           detail: "Duplicate DOI, topic confidence, aliases, and affiliations.",
-          href: "/data-quality",
+          href: "/admin/data-quality",
           action: "Run checks",
         },
         {
@@ -230,7 +230,7 @@ export const adminService = {
           status: "partial",
           metric: "manual aliases",
           detail: "Author and institution disambiguation.",
-          href: "/identity",
+          href: "/admin/identity",
           action: "Maintain aliases",
         },
         {
