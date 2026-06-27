@@ -51,6 +51,9 @@ import type {
   BillingPlan,
   BillingStatus,
   BillingUsageSummary,
+  AdminBillingOverview,
+  BillingUsersResult,
+  BillingUserRow,
   CheckoutResult,
 } from './types'
 
@@ -114,7 +117,17 @@ export const api = {
   },
 
   async adminBilling() {
-    const res = await axios.get('/api/admin/billing')
+    const res = await axios.get<AdminBillingOverview>('/api/admin/billing')
+    return res.data
+  },
+
+  async adminBillingUsers(params?: Record<string, string | number>) {
+    const res = await axios.get<BillingUsersResult>('/api/admin/billing/users', { params })
+    return res.data
+  },
+
+  async updateUserPlan(userId: number, body: { planId: string; reason?: string }) {
+    const res = await axios.patch<BillingUserRow>(`/api/admin/billing/users/${userId}/plan`, body)
     return res.data
   },
 

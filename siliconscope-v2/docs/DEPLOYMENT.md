@@ -70,21 +70,23 @@ Run the production guard:
 
 ```powershell
 npm run deploy:check -- .env.production
+npm run deploy:doctor -- .env.production
 ```
 
 ## Option B: VPS + Cloudflare DNS
 
 Use this when you are comfortable opening ports `80` and `443` on a VPS.
 
-1. Run the backend API with Docker Compose.
-2. Put Caddy or Nginx in front of `127.0.0.1:8750` as `api.siliconscope.com`.
-3. Host `frontend/dist` as `www.siliconscope.com`.
-4. Host `frontend-admin/dist` as `admin.siliconscope.com`.
-5. Enable HTTPS at the reverse proxy and static hosts.
+1. Run `npm run build` so `frontend/dist` and `frontend-admin/dist` exist.
+2. Run `docker compose -f docker-compose.production.yml up -d --build`.
+3. The compose stack starts the API plus a Caddy edge proxy.
+4. Caddy hosts `frontend/dist` as `www.siliconscope.com`, `frontend-admin/dist` as `admin.siliconscope.com`, and reverse-proxies `api.siliconscope.com` to the API container.
+5. If you prefer a host-level reverse proxy, use `deploy/Caddyfile.example` or `deploy/nginx.siliconscope.example.conf` instead of the Caddy compose service.
 
 Ready-to-edit templates live in `deploy/`:
 
 - `deploy/Caddyfile.example`: three independent HTTPS hostnames with SPA fallback.
+- `deploy/Caddyfile.docker`: the Caddy config mounted by production Docker Compose.
 - `deploy/nginx.siliconscope.example.conf`: equivalent Nginx virtual hosts.
 - `deploy/production.env.example`: production environment variables for the API host.
 - `deploy/cloudflare-tunnel.example.yml`: API-only Cloudflare Tunnel ingress template.
@@ -133,6 +135,7 @@ Before a Vercel deployment, migrate to:
 - Wire uptime/load-balancer probes to `GET /api/health/live` and `GET /api/health/ready`.
 - Check the independent admin console runtime panel before major imports or public announcements.
 - Run `npm run deploy:check -- .env.production` before every first-time public deploy or secret rotation.
+- Run `npm run deploy:doctor -- .env.production` after `npm run build` to verify env, frontend bundles, and DNS readiness.
 
 ## Health Checks
 

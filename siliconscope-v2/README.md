@@ -42,7 +42,7 @@ git lfs pull
 - Manual paper import for missing records
 - Favorites, reading status, private notes, and tags
 - Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
-- Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, and a payment-adapter boundary for future Stripe/Paddle integration
+- Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -206,10 +206,12 @@ docker compose -f docker-compose.production.yml up -d --build
 Ready-to-edit independent-domain templates are included under `deploy/`:
 
 - `deploy/Caddyfile.example` for the cleanest VPS + automatic HTTPS setup.
+- `deploy/Caddyfile.docker` for the production Docker Compose edge proxy.
 - `deploy/nginx.siliconscope.example.conf` for a classic Nginx reverse-proxy setup.
 - `deploy/production.env.example` for production API environment variables.
 - `deploy/cloudflare-tunnel.example.yml` for API-only Cloudflare Tunnel ingress.
 - `deploy/DOMAIN_GO_LIVE.md` for the complete go-live checklist.
+- `npm run deploy:doctor -- .env.production` to check env, frontend builds, and DNS readiness before going live.
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 

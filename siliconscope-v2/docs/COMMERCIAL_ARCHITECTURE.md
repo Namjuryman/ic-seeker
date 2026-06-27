@@ -52,7 +52,7 @@ Third-party Services
 | Layer | Current status | Gap |
 | --- | --- | --- |
 | Client | React + Vite web frontend and independent admin frontend | Mobile app not started; no SSR/BFF |
-| CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, and Nginx | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
+| CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, Nginx, and Dockerized Caddy edge | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
 | Frontend / BFF | Frontends directly call Express API; `VITE_API_BASE_URL` supports split API domains | Optional Next.js BFF layer for SaaS edition |
 | Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog | Payment checkout and email delivery missing |
 | Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
@@ -61,7 +61,7 @@ Third-party Services
 | Object storage | Local folders only | Add S3-compatible storage such as Cloudflare R2, MinIO, or OSS |
 | Search engine | SQLite/service search | Add Meilisearch first; OpenSearch later if scale requires |
 | Message queue | Not implemented | Add BullMQ/Redis or another queue for ingestion, enrichment, snapshots |
-| Payment | Plan catalog, entitlement metadata, usage ledger, partial quota enforcement, and checkout adapter boundary exist | Add Stripe/Paddle session creation and webhook handling; China payments later |
+| Payment | Plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and checkout adapter boundary exist | Add Stripe/Paddle session creation and webhook handling; China payments later |
 | Email/SMS/OAuth | Not implemented | Add email invite/login and optional OAuth |
 | Observability | Runtime health/readiness checks and logs | Add Sentry first; Prometheus/Grafana after production traffic |
 
@@ -89,15 +89,18 @@ Third-party Services
 - SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages.
 - Subscription and quota scaffold with `Free Preview`, `Research Pro`, `Lab`, `Enterprise`, and `Internal Admin` plans.
 - Billing API endpoints for plan catalog, current user entitlements, monthly usage summary, admin overview, and checkout-adapter placeholder.
+- Admin billing endpoints for listing users, inspecting usage, and manually changing a user's plan during private beta.
 - App-data tables for subscriptions, payment customers, billing events, and usage events.
 - Independent-domain scaffolding:
   - `PUBLIC_SITE_URL`, `ADMIN_SITE_URL`, `API_BASE_URL`, `VITE_API_BASE_URL`.
   - `docker-compose.production.yml`.
   - `deploy/Caddyfile.example`.
+  - `deploy/Caddyfile.docker`.
   - `deploy/nginx.siliconscope.example.conf`.
   - `deploy/cloudflare-tunnel.example.yml`.
   - `deploy/DOMAIN_GO_LIVE.md`.
   - `npm run deploy:check -- .env.production`.
+  - `npm run deploy:doctor -- .env.production`.
 
 ## Billing Boundary
 
@@ -107,6 +110,7 @@ The current billing layer deliberately does not call Stripe/Paddle yet. It provi
 - Current-user entitlement status from `users.subscription_plan`.
 - Usage ledger via `usage_events`.
 - Partial quota enforcement on watchlist and reading queue workflows.
+- Manual admin plan changes that write `subscriptions` and `billing_events`.
 - Admin-visible provider state from `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, and `PADDLE_API_KEY`.
 - A checkout endpoint that returns an explicit unavailable/not-implemented reason until provider-specific adapters are added.
 
@@ -115,7 +119,7 @@ Next work:
 1. Implement Stripe Checkout Session creation first, then Paddle if needed.
 2. Add webhook signature verification and idempotent event handling into `billing_events`.
 3. Enforce quota checks inside exports, alerts, AI reading, and API endpoints.
-4. Add admin controls for manually changing a user's plan during private beta.
+4. Add invoice/customer pages after Stripe/Paddle webhooks exist.
 5. Keep the public demo free and metadata-only; paid plans should unlock workflow limits, team functions, and private deployment features.
 
 ## Design Principles

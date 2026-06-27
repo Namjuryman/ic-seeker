@@ -1,0 +1,46 @@
+# SiliconScope one-VPS independent-domain runtime.
+# docker-compose.production.yml loads PUBLIC_DOMAIN, WWW_DOMAIN, ADMIN_DOMAIN, and API_DOMAIN
+# from .env.production. Keep admin protected by Cloudflare Access, VPN, or equivalent.
+
+{$PUBLIC_DOMAIN}, {$WWW_DOMAIN} {
+	root * /srv/siliconscope/frontend/dist
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+}
+
+{$ADMIN_DOMAIN} {
+	root * /srv/siliconscope/frontend-admin/dist
+	encode gzip zstd
+	try_files {path} /index.html
+	file_server
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+}
+
+{$API_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy siliconscope-api:8750 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+}

@@ -74,6 +74,51 @@ router.get("/admin/billing", requireAdmin, async (_req, res) => {
   res.json(billingService.getAdminBillingOverview());
 });
 
+router.get("/admin/billing/users", requireAdmin, async (req, res) => {
+  res.json(billingService.listBillingUsers(req.query));
+});
+
+router.get("/admin/billing/users/:id", requireAdmin, async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId)) {
+    res.status(400).json({ error: "Invalid user ID" });
+    return;
+  }
+  const user = billingService.getBillingUser(userId);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json(user);
+});
+
+router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId)) {
+    res.status(400).json({ error: "Invalid user ID" });
+    return;
+  }
+  try {
+    const result = billingService.updateUserPlan({
+      userId,
+      planId: String(req.body?.planId || ""),
+      reason: String(req.body?.reason || ""),
+      actorUserId: req.user?.userId ?? 0,
+    });
+    adminAuditService.record({
+      req,
+      action: "billing.update_plan",
+      resourceType: "user",
+      resourceId: userId,
+      metadata: { planId: req.body?.planId, reason: req.body?.reason },
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "billing.update_plan", resourceType: "user", resourceId: userId, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
   res.status(runtime.status === "error" ? 503 : 200).json(runtime);

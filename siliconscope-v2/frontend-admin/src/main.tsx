@@ -9,7 +9,7 @@ import type { AuthStatus } from '../../frontend/src/types'
 const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsolePage'))
 const AdminAuditPage = lazy(() => import('../../frontend/src/pages/AdminAuditPage'))
 const NotificationsPage = lazy(() => import('../../frontend/src/pages/NotificationsPage'))
-const BillingPage = lazy(() => import('../../frontend/src/pages/BillingPage'))
+const AdminBillingPage = lazy(() => import('../../frontend/src/pages/AdminBillingPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
@@ -154,7 +154,7 @@ function AdminApp() {
                 <Route path="/" element={<AdminConsolePage />} />
                 <Route path="/audit-logs" element={<AdminAuditPage />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/billing" element={<BillingPage />} />
+                <Route path="/billing" element={<AdminBillingPage />} />
                 <Route path="/companies" element={<CompanyAdminPage />} />
                 <Route path="/snapshots" element={<SnapshotAdminPage />} />
                 <Route path="/moderation" element={<ModerationPage />} />

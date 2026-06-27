@@ -29,15 +29,17 @@ Run the local production-env guard before deploying:
 
 ```bash
 npm run deploy:check -- .env.production
+npm run deploy:doctor -- .env.production
 ```
 
-4. Build and start the API:
+4. Build the public and admin frontends, then start the API plus Caddy edge proxy:
 
 ```bash
+npm run build
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
-5. Put a reverse proxy in front:
+5. If you do not use the Docker Caddy service, put a reverse proxy in front manually:
 
 ```bash
 # Caddy example
@@ -114,3 +116,4 @@ A api -> VPS IP
 - IEEE/AMiner/OpenAI keys are only in server environment variables.
 - Admin domain is protected by Cloudflare Access or VPN.
 - `docker compose -f docker-compose.production.yml ps` shows a healthy API.
+- `npm run deploy:doctor -- .env.production` passes after `npm run build`.

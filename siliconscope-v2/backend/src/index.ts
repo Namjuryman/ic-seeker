@@ -12,6 +12,10 @@ import { healthRouter } from "./routes/health.js";
 
 const app = express();
 
+if (appConfig.trustProxy) {
+  app.set("trust proxy", 1);
+}
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

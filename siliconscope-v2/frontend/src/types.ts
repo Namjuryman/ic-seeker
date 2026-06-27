@@ -430,6 +430,45 @@ export interface BillingUsageSummary {
   items: BillingUsageItem[];
 }
 
+export interface BillingUserRow {
+  id: number;
+  email: string;
+  nickname: string | null;
+  roleHint: string;
+  verificationLevel: string;
+  subscriptionPlan: BillingPlan['id'];
+  planName: string;
+  createdAt: string;
+  usage: BillingUsageSummary;
+  subscription?: Record<string, unknown> | null;
+}
+
+export interface AdminBillingOverview {
+  paymentProvider: string;
+  paymentConfigured: boolean;
+  plans: BillingPlan[];
+  totals: {
+    users: number;
+    subscriptions: number;
+    usageEvents: number;
+    billingEvents: number;
+  };
+  rollout: {
+    publicSignup: boolean;
+    checkoutAdapter: string;
+    entitlementEnforcement: string;
+    notes: string[];
+  };
+}
+
+export interface BillingUsersResult {
+  rows: BillingUserRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  plans: BillingPlan[];
+}
+
 export interface AdminOverview {
   appName: string;
   generatedAt: string;

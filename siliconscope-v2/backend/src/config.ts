@@ -14,6 +14,7 @@ export const appConfig = {
   adminSiteUrl: process.env.ADMIN_SITE_URL || "",
   apiBaseUrl: process.env.API_BASE_URL || "",
   deploymentMode: process.env.DEPLOYMENT_MODE || "local",
+  trustProxy: process.env.TRUST_PROXY === "1" || process.env.DEPLOYMENT_MODE === "production",
   
   dbPath: process.env.DATABASE_URL || path.resolve(__dirname, "../../ic_database/ic_papers.sqlite"),
   csvPath: process.env.IC_SEEKER_CSV || path.resolve(__dirname, "../../ic_database/ic_chipseeker.csv"),

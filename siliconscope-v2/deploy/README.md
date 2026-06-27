@@ -4,6 +4,7 @@ This folder contains deployment templates for taking SiliconScope from localhost
 
 - `production.env.example`: copy to `.env.production` on the server.
 - `Caddyfile.example`: HTTPS reverse proxy and static SPA hosting.
+- `Caddyfile.docker`: the Caddy config used by `docker-compose.production.yml`.
 - `nginx.siliconscope.example.conf`: Nginx equivalent.
 - `cloudflare-tunnel.example.yml`: Cloudflare Tunnel ingress shape.
 - `DOMAIN_GO_LIVE.md`: practical go-live runbook.
@@ -20,4 +21,5 @@ Before starting the VPS service:
 
 ```bash
 npm run deploy:check -- .env.production
+npm run deploy:doctor -- .env.production
 ```

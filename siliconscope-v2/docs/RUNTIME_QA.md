@@ -122,6 +122,8 @@ Invoke-RestMethod http://127.0.0.1:8751/api/health/ready
 - [ ] Metadata DB check reports a non-zero paper count.
 - [ ] Local development may return `status: warn` for local admin bypass, weak JWT, or missing production build.
 - [ ] Public deployment should target `status: ok` with `IC_SEEKER_REQUIRE_LOGIN=1`, `IC_SEEKER_LOCAL_ADMIN=0`, a strong `JWT_SECRET`, and exact `FRONTEND_ORIGINS`.
+- [ ] `npm run deploy:doctor -- .env.production` passes after `npm run build`.
+- [ ] Docker production stack exposes `www`, `admin`, and `api` hostnames through Caddy or an equivalent external reverse proxy.
 
 ### 11. Notification Center
 
@@ -142,8 +144,10 @@ Invoke-RestMethod http://127.0.0.1:8751/api/notifications/unread-count
 - [ ] Adding a new watchlist item checks `watchlistItems`; adding a saved search also checks `savedSearches`.
 - [ ] Moving a paper into a non-`unread` reading state checks `readingQueueItems`.
 - [ ] `GET /api/admin/billing` is admin-only and exposes provider readiness without leaking secrets.
+- [ ] `GET /api/admin/billing/users` lists users with plan and enforced quota usage.
+- [ ] `PATCH /api/admin/billing/users/:id/plan` updates `users.subscription_plan`, inserts a manual `subscriptions` row, inserts a `billing_events` row, and writes an admin audit log.
 - [ ] The frontend `/billing` page renders plan cards and current entitlements.
-- [ ] The admin frontend `/billing` route renders the same commercial control surface behind admin login.
+- [ ] The admin frontend `/billing` route renders user billing operations behind admin login.
 - [ ] `POST /api/notifications/:id/read` marks one notification read.
 - [ ] `POST /api/notifications/read-all` clears unread state for the user.
 - [ ] Admin can create user notifications with `POST /api/admin/notifications`.

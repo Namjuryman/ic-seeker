@@ -33,6 +33,10 @@ for (const key of ["PUBLIC_SITE_URL", "ADMIN_SITE_URL", "API_BASE_URL", "FRONTEN
   if (isBlank(env[key])) errors.push(`${key} must be set to your real production value.`);
 }
 
+for (const key of ["PUBLIC_DOMAIN", "WWW_DOMAIN", "ADMIN_DOMAIN", "API_DOMAIN"]) {
+  if (isBlank(env[key])) warnings.push(`${key} is not set. Docker+Caddy one-VPS deployment needs it.`);
+}
+
 if (isBlank(env.JWT_SECRET) || env.JWT_SECRET.length < 32) {
   errors.push("JWT_SECRET must be a real random value with at least 32 characters.");
 }
@@ -47,6 +51,10 @@ if (env.IC_SEEKER_REQUIRE_LOGIN !== "1") {
 
 if (env.IC_SEEKER_LOCAL_ADMIN === "1") {
   errors.push("IC_SEEKER_LOCAL_ADMIN must be 0 or unset in production.");
+}
+
+if (env.TRUST_PROXY !== "1") {
+  warnings.push("TRUST_PROXY should be 1 when running behind Caddy, Nginx, Cloudflare, or a load balancer.");
 }
 
 if (!env.FRONTEND_ORIGINS?.includes(env.PUBLIC_SITE_URL)) {

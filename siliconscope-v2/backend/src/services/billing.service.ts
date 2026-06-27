@@ -41,6 +41,18 @@ export type BillingStatus = {
   usage: BillingUsageSummary;
 };
 
+export type BillingUserRow = {
+  id: number;
+  email: string;
+  nickname: string | null;
+  roleHint: string;
+  verificationLevel: string;
+  subscriptionPlan: BillingPlanId;
+  planName: string;
+  createdAt: string;
+  usage: BillingUsageSummary;
+};
+
 export type UsageMetric = "savedSearches" | "watchlistItems" | "readingQueueItems" | "aiSummariesPerMonth" | "exportsPerMonth" | "alerts" | "apiRequestsPerMonth" | "privatePdfStorageGb";
 
 export type BillingUsageItem = {
@@ -266,6 +278,25 @@ function usageItem(
   };
 }
 
+function makeId(prefix: string) {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function activeSubscription(userId: number) {
+  return appSqlite
+    .prepare(
+      `
+      SELECT id, user_id, plan_id, status, provider, provider_customer_id, provider_subscription_id,
+             current_period_start, current_period_end, cancel_at_period_end, metadata_json, created_at, updated_at
+      FROM subscriptions
+      WHERE user_id = ? AND status IN ('active', 'trialing', 'manual')
+      ORDER BY updated_at DESC
+      LIMIT 1
+    `
+    )
+    .get(userId) as Record<string, unknown> | undefined;
+}
+
 export const billingService = {
   getPlans(): BillingPlan[] {
     return plans;
@@ -368,6 +399,12 @@ export const billingService = {
       paymentProvider: appConfig.paymentProvider,
       paymentConfigured: configured,
       plans,
+      totals: {
+        users: countScalar("SELECT COUNT(*) as count FROM users"),
+        subscriptions: countScalar("SELECT COUNT(*) as count FROM subscriptions"),
+        usageEvents: countScalar("SELECT COUNT(*) as count FROM usage_events"),
+        billingEvents: countScalar("SELECT COUNT(*) as count FROM billing_events"),
+      },
       rollout: {
         publicSignup: false,
         checkoutAdapter: configured ? "configured" : "not-configured",
@@ -380,6 +417,152 @@ export const billingService = {
         ],
       },
     };
+  },
+
+  listBillingUsers(params: Record<string, unknown> = {}) {
+    const limit = Math.min(100, Math.max(1, Number(params.limit || 40)));
+    const offset = Math.max(0, Number(params.offset || 0));
+    const q = String(params.q || "").trim().toLowerCase();
+    const plan = String(params.plan || "").trim().toLowerCase();
+    const where: string[] = [];
+    const values: Array<string | number> = [];
+
+    if (q) {
+      where.push("(LOWER(email) LIKE ? OR LOWER(COALESCE(nickname, '')) LIKE ?)");
+      values.push(`%${q}%`, `%${q}%`);
+    }
+    if (plan) {
+      where.push("LOWER(subscription_plan) = ?");
+      values.push(plan);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const total = countScalar(`SELECT COUNT(*) as count FROM users ${whereSql}`, values);
+    const rows = appSqlite
+      .prepare(
+        `
+        SELECT id, email, nickname, verification_level, subscription_plan, created_at
+        FROM users
+        ${whereSql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ? OFFSET ?
+      `
+      )
+      .all(...values, limit, offset) as Array<{
+        id: number;
+        email: string;
+        nickname: string | null;
+        verification_level: string;
+        subscription_plan: string;
+        created_at: string;
+      }>;
+
+    return {
+      rows: rows.map((row): BillingUserRow => {
+        const subscriptionPlan = normalizePlanId(row.subscription_plan);
+        return {
+          id: row.id,
+          email: row.email,
+          nickname: row.nickname,
+          roleHint: row.verification_level === "admin" ? "admin" : "user",
+          verificationLevel: row.verification_level,
+          subscriptionPlan,
+          planName: getPlan(subscriptionPlan).name,
+          createdAt: row.created_at,
+          usage: this.getUsageSummary(row.id),
+        };
+      }),
+      total,
+      limit,
+      offset,
+      plans,
+    };
+  },
+
+  getBillingUser(userId: number) {
+    const row = appSqlite
+      .prepare(
+        `
+        SELECT id, email, nickname, verification_level, subscription_plan, created_at
+        FROM users
+        WHERE id = ?
+      `
+      )
+      .get(userId) as {
+        id: number;
+        email: string;
+        nickname: string | null;
+        verification_level: string;
+        subscription_plan: string;
+        created_at: string;
+      } | undefined;
+    if (!row) return null;
+    const subscriptionPlan = normalizePlanId(row.subscription_plan);
+    return {
+      id: row.id,
+      email: row.email,
+      nickname: row.nickname,
+      roleHint: row.verification_level === "admin" ? "admin" : "user",
+      verificationLevel: row.verification_level,
+      subscriptionPlan,
+      planName: getPlan(subscriptionPlan).name,
+      createdAt: row.created_at,
+      usage: this.getUsageSummary(row.id),
+      subscription: activeSubscription(row.id) || null,
+    };
+  },
+
+  updateUserPlan(input: {
+    userId: number;
+    planId: string;
+    actorUserId?: number;
+    reason?: string;
+  }) {
+    const plan = getPlan(input.planId);
+    const existing = this.getBillingUser(input.userId);
+    if (!existing) throw new Error("User not found");
+    const now = new Date().toISOString();
+    const subscriptionId = makeId("sub_manual");
+
+    appSqlite.transaction(() => {
+      appSqlite
+        .prepare("UPDATE users SET subscription_plan = ? WHERE id = ?")
+        .run(plan.id, input.userId);
+      appSqlite
+        .prepare("UPDATE subscriptions SET status = 'replaced', updated_at = ? WHERE user_id = ? AND status IN ('active', 'trialing', 'manual')")
+        .run(now, input.userId);
+      appSqlite
+        .prepare(
+          `
+          INSERT INTO subscriptions (id, user_id, plan_id, status, provider, current_period_start, metadata_json, created_at, updated_at)
+          VALUES (?, ?, ?, 'manual', 'manual', ?, ?, ?, ?)
+        `
+        )
+        .run(
+          subscriptionId,
+          input.userId,
+          plan.id,
+          now,
+          JSON.stringify({ reason: input.reason || "manual admin update", actorUserId: input.actorUserId ?? null }),
+          now,
+          now
+        );
+      appSqlite
+        .prepare(
+          `
+          INSERT INTO billing_events (user_id, provider, event_type, plan_id, status, payload_json, created_at)
+          VALUES (?, 'manual', 'subscription.plan_changed', ?, 'recorded', ?, ?)
+        `
+        )
+        .run(
+          input.userId,
+          plan.id,
+          JSON.stringify({ from: existing.subscriptionPlan, to: plan.id, reason: input.reason || "", actorUserId: input.actorUserId ?? null }),
+          now
+        );
+    })();
+
+    return this.getBillingUser(input.userId);
   },
 
   createCheckoutSession(userId: number, planId: string) {
