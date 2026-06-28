@@ -72,6 +72,8 @@ import type {
   SiteSettingRow,
   AccessRequestResult,
   AccessRequestRow,
+  LearningContentOverview,
+  LearningContentSyncResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -524,6 +526,16 @@ export const api = {
 
   async clearSnapshots(body: { key?: string; prefix?: string } = {}) {
     const res = await axios.post<SnapshotClearResult>('/api/admin/snapshots/clear', body)
+    return res.data
+  },
+
+  async learningContentAdmin() {
+    const res = await axios.get<LearningContentOverview>('/api/admin/learning-content')
+    return res.data
+  },
+
+  async syncLearningSeed() {
+    const res = await axios.post<LearningContentSyncResult>('/api/admin/learning-content/sync-seed')
     return res.data
   },
 

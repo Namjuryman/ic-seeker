@@ -292,6 +292,27 @@ export const learningProgress = sqliteTable("learning_progress", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const learningContentItems = sqliteTable("learning_content_items", {
+  itemKind: text("item_kind").notNull(),
+  itemId: text("item_id").notNull(),
+  title: text("title").notNull().default(""),
+  status: text("status").notNull().default("published"),
+  source: text("source").notNull().default("seed"),
+  sourceVersion: text("source_version").notNull().default("seed-v1"),
+  payloadJson: text("payload_json").notNull(),
+  payloadHash: text("payload_hash").notNull().default(""),
+  bytes: integer("bytes", { mode: "number" }).notNull().default(0),
+  syncedAt: text("synced_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedByUserId: integer("updated_by_user_id", { mode: "number" }),
+}, (table) => [
+  primaryKey({ columns: [table.itemKind, table.itemId] }),
+]);
+
 // Company / Employer Intelligence tables
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),

@@ -89,7 +89,7 @@ This starts Postgres, Redis, Meilisearch, MinIO, and Mailpit for development. Th
 **Important notes:**
 
 - **SiliconScope v2 is the canonical React + backend edition.** Legacy `ic_seeker` is kept only for reference.
-- **Learning catalog canonical source is `backend/src/data/learning-catalog.ts`.**
+- **Learning catalog seed source is `backend/src/data/learning-catalog.ts`; production reads prefer published rows in `learning_content_items` and fall back to the seed catalog if the database registry is empty.**
 - **Journal Ingestion is disabled until background jobs are implemented.**
 - **Data Quality analysis is manual-run only.** Open the Data Quality page and click "Run analysis" when needed.
 
@@ -278,6 +278,7 @@ This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`
 ### Admin Operations
 
 - Create, edit, and delete companies from the independent admin frontend (`frontend-admin`, local `http://localhost:5176`).
+- Sync the learning route/daily-lesson seed catalog into the database-backed learning content registry from the independent admin frontend.
 - CSV bulk import is planned but not yet implemented.
 - All `/api/admin/*` endpoints require admin role (`requireAdmin`). In local development, the launcher sets `IC_SEEKER_LOCAL_ADMIN=1`; public deployments must keep that flag disabled and require login.
 
@@ -324,9 +325,11 @@ Current scope:
 
 - Roadmaps and daily lessons are curated seed data, not generated long-form course chapters.
 - The current seed catalog contains 24 route maps and 35 daily circuit lessons.
+- Public learning APIs read published rows from the `learning_content_items` registry first, then fall back to the TypeScript seed catalog.
+- The independent admin app has a Learning Content page for seed-to-database sync, content-health checks, stale rows, and out-of-sync rows.
 - Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
-- Future work should move learning content into editable database tables, add reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
+- Future work should add structured editing and publish workflow on top of the registry, plus reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
 
 ## Rebuild The Database
 

@@ -40,7 +40,7 @@ import { ingestionJobService } from "../services/ingestion-job.service.js";
 import { siteSettingsService } from "../services/site-settings.service.js";
 import { exportService, type ExportFormat } from "../services/export.service.js";
 import { accessRequestService } from "../services/access-request.service.js";
-import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
+import { learningContentService } from "../services/learning-content.service.js";
 
 const router = Router();
 
@@ -671,11 +671,11 @@ router.get("/learning", requireAuth, async (_req, res) => {
 });
 
 router.get("/learning/route-families", requireAuth, async (_req, res) => {
-  res.json(routeFamilies);
+  res.json(learningService.listRouteFamilies());
 });
 
 router.get("/learning/foundations", requireAuth, async (_req, res) => {
-  res.json(commonFoundations);
+  res.json(learningService.listFoundations());
 });
 
 router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
@@ -1089,6 +1089,34 @@ router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: Authe
 
 router.get("/admin/snapshots", requireAdmin, async (_req, res) => {
   res.json(snapshotService.list());
+});
+
+router.get("/admin/learning-content", requireAdmin, async (_req, res) => {
+  res.json(learningContentService.adminOverview());
+});
+
+router.post("/admin/learning-content/sync-seed", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = learningContentService.syncSeedToDatabase(req.user?.userId ?? null);
+    adminAuditService.record({
+      req,
+      action: "learning_content.sync_seed",
+      resourceType: "learning_content",
+      resourceId: learningContentService.sourceVersion,
+      metadata: result,
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({
+      req,
+      action: "learning_content.sync_seed",
+      resourceType: "learning_content",
+      resourceId: learningContentService.sourceVersion,
+      status: "failure",
+      error: err,
+    });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.post("/admin/snapshots/refresh", requireAdmin, async (req: AuthenticatedRequest, res) => {

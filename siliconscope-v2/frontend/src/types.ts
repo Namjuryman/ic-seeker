@@ -1043,6 +1043,51 @@ export interface LearningDashboard {
   commonFoundations?: FoundationGroup[];
 }
 
+export type LearningContentKind = 'roadmap' | 'lesson' | 'route_family' | 'foundation_group';
+export type LearningContentStatus = 'published' | 'draft' | 'archived';
+
+export interface LearningContentRow {
+  itemKind: LearningContentKind;
+  itemId: string;
+  title: string;
+  status: LearningContentStatus;
+  source: string;
+  sourceVersion: string;
+  payloadHash: string;
+  bytes: number;
+  syncedAt: string;
+  updatedAt: string;
+  updatedByUserId?: number | null;
+}
+
+export interface LearningContentOverview {
+  generatedAt: string;
+  sourceVersion: string;
+  summary: {
+    dbItems: number;
+    published: number;
+    seedItems: number;
+    roadmaps: number;
+    lessons: number;
+    routeFamilies: number;
+    foundationGroups: number;
+    bytes: number;
+  };
+  byKind: Record<string, number>;
+  validation: { errors: string[]; warnings: string[] };
+  staleRows: LearningContentRow[];
+  outOfSyncRows: LearningContentRow[];
+  rows: LearningContentRow[];
+}
+
+export interface LearningContentSyncResult {
+  ok: boolean;
+  sourceVersion: string;
+  seedItems: number;
+  changedRows: number;
+  summary: LearningContentOverview['summary'];
+}
+
 export interface CompanyRow {
   id: string;
   name: string;

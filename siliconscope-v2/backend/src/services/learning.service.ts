@@ -1,6 +1,11 @@
-import { dailyLessons, learningRoadmaps, routeFamilies, commonFoundations } from "../data/learning-catalog.js";
+import {
+  dailyLessons as seedDailyLessons,
+  learningRoadmaps as seedLearningRoadmaps,
+  routeFamilies as seedRouteFamilies,
+} from "../data/learning-catalog.js";
 import type { DailyLessonSeed, LearningRoadmapSeed } from "../data/learning-catalog.js";
 import { searchService } from "./search.service.js";
+import { learningContentService } from "./learning-content.service.js";
 
 const slugAliases: Record<string, string> = {
   "analog-foundations": "analog-mixed-signal",
@@ -15,17 +20,21 @@ function resolveSlug(slug: string): string {
   return slugAliases[slug] || slug;
 }
 
-function summarizeRoadmap(roadmap: LearningRoadmapSeed) {
+function activeContent() {
+  return learningContentService.activeContent();
+}
+
+function summarizeRoadmap(roadmap: LearningRoadmapSeed, lessons: DailyLessonSeed[]) {
   return {
     ...roadmap,
     stageCount: roadmap.stages.length,
     moduleCount: roadmap.stages.reduce((sum, stage) => sum + stage.modules.length, 0),
-    lessonCount: dailyLessons.filter((lesson) => lesson.roadmapSlug === roadmap.slug).length,
+    lessonCount: lessons.filter((lesson) => lesson.roadmapSlug === roadmap.slug).length,
   };
 }
 
-function lessonWithRoadmap(lesson: DailyLessonSeed) {
-  const roadmap = learningRoadmaps.find((item) => item.slug === lesson.roadmapSlug);
+function lessonWithRoadmap(lesson: DailyLessonSeed, roadmaps: LearningRoadmapSeed[]) {
+  const roadmap = roadmaps.find((item) => item.slug === lesson.roadmapSlug);
   return {
     ...lesson,
     roadmap: roadmap ? {
@@ -43,11 +52,11 @@ function lessonWithRoadmap(lesson: DailyLessonSeed) {
 function validateLearningCatalog() {
   const errors: string[] = [];
   const warnings: string[] = [];
-  const allSlugs = new Set(learningRoadmaps.map((r) => r.slug));
+  const allSlugs = new Set(seedLearningRoadmaps.map((r) => r.slug));
 
   // 0. slug duplicate check (fatal)
   const slugCounts = new Map<string, number>();
-  for (const roadmap of learningRoadmaps) {
+  for (const roadmap of seedLearningRoadmaps) {
     slugCounts.set(roadmap.slug, (slugCounts.get(roadmap.slug) || 0) + 1);
   }
   for (const [slug, count] of slugCounts) {
@@ -57,7 +66,7 @@ function validateLearningCatalog() {
   }
 
   // 1. title / slug / stages non-empty; relatedVenues/relatedTopics/lessonPlaceholders warnings
-  for (const roadmap of learningRoadmaps) {
+  for (const roadmap of seedLearningRoadmaps) {
     if (!roadmap.title || !roadmap.title.trim()) {
       errors.push(`Roadmap "${roadmap.slug}" has no title`);
     }
@@ -83,7 +92,7 @@ function validateLearningCatalog() {
   }
 
   // 2. routeFamilies reference valid route slugs
-  for (const family of routeFamilies) {
+  for (const family of seedRouteFamilies) {
     for (const routeId of family.routeIds) {
       if (!allSlugs.has(routeId)) {
         errors.push(`Route family "${family.id}" references unknown slug: "${routeId}"`);
@@ -92,14 +101,14 @@ function validateLearningCatalog() {
   }
 
   // 3. dailyLessons reference valid roadmap slugs
-  for (const lesson of dailyLessons) {
+  for (const lesson of seedDailyLessons) {
     if (!allSlugs.has(lesson.roadmapSlug)) {
       errors.push(`Daily lesson "${lesson.id}" references unknown roadmapSlug: "${lesson.roadmapSlug}"`);
     }
   }
 
   // 4. roadmap stage/module ids unique
-  for (const roadmap of learningRoadmaps) {
+  for (const roadmap of seedLearningRoadmaps) {
     const ids = new Set<string>();
     for (const stage of roadmap.stages) {
       if (ids.has(stage.id)) {
@@ -116,7 +125,7 @@ function validateLearningCatalog() {
   }
 
   // 5. paperQuery fallback (warning only — title is used as fallback in relatedPapersForRoadmap)
-  for (const roadmap of learningRoadmaps) {
+  for (const roadmap of seedLearningRoadmaps) {
     if (!roadmap.paperQuery && !roadmap.relatedSearchQueries?.length) {
       warnings.push(`Roadmap "${roadmap.slug}" has no paperQuery and no relatedSearchQueries (will use title as fallback)`);
     }
@@ -140,6 +149,7 @@ validateLearningCatalog();
 
 export const learningService = {
   getDashboard() {
+    const { roadmaps, lessons, routeFamilies, commonFoundations } = activeContent();
     const today = this.getTodayLesson();
     return {
       generatedAt: new Date().toISOString(),
@@ -149,65 +159,80 @@ export const learningService = {
         intelligence: "Related papers, authors, institutions, and venues are generated from metadata-based search and may be incomplete or noisy.",
       },
       summary: {
-        roadmaps: learningRoadmaps.length,
-        dailyLessons: dailyLessons.length,
-        linkedTopics: new Set(learningRoadmaps.flatMap((roadmap) => roadmap.relatedTopics)).size,
-        linkedVenues: new Set(learningRoadmaps.flatMap((roadmap) => roadmap.relatedVenues)).size,
+        roadmaps: roadmaps.length,
+        dailyLessons: lessons.length,
+        linkedTopics: new Set(roadmaps.flatMap((roadmap) => roadmap.relatedTopics)).size,
+        linkedVenues: new Set(roadmaps.flatMap((roadmap) => roadmap.relatedVenues)).size,
       },
-      featuredRoadmap: summarizeRoadmap(learningRoadmaps.find((roadmap) => roadmap.slug === "pmic") ?? learningRoadmaps[0]),
+      featuredRoadmap: summarizeRoadmap(roadmaps.find((roadmap) => roadmap.slug === "pmic") ?? roadmaps[0], lessons),
       today,
-      roadmaps: learningRoadmaps.map(summarizeRoadmap),
+      roadmaps: roadmaps.map((roadmap) => summarizeRoadmap(roadmap, lessons)),
       routeFamilies,
       commonFoundations,
     };
   },
 
   listRoadmaps() {
-    return learningRoadmaps.map(summarizeRoadmap);
+    const { roadmaps, lessons } = activeContent();
+    return roadmaps.map((roadmap) => summarizeRoadmap(roadmap, lessons));
   },
 
   getRoadmap(slug: string) {
+    const { roadmaps, lessons } = activeContent();
     const resolved = resolveSlug(slug);
-    const roadmap = learningRoadmaps.find((item) => item.slug === resolved);
+    const roadmap = roadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
     return {
-      ...summarizeRoadmap(roadmap),
+      ...summarizeRoadmap(roadmap, lessons),
       canonicalSlug: roadmap.slug,
-      lessons: dailyLessons.filter((lesson) => lesson.roadmapSlug === resolved).map(lessonWithRoadmap),
+      lessons: lessons.filter((lesson) => lesson.roadmapSlug === resolved).map((lesson) => lessonWithRoadmap(lesson, roadmaps)),
     };
   },
 
   listLessons(params: Record<string, string> = {}) {
+    const { roadmaps, lessons } = activeContent();
     const roadmapSlug = params.roadmapSlug || params.roadmap;
-    const rows = roadmapSlug ? dailyLessons.filter((lesson) => lesson.roadmapSlug === roadmapSlug) : dailyLessons;
-    return rows.map(lessonWithRoadmap);
+    const rows = roadmapSlug ? lessons.filter((lesson) => lesson.roadmapSlug === roadmapSlug) : lessons;
+    return rows.map((lesson) => lessonWithRoadmap(lesson, roadmaps));
   },
 
   getLesson(id: string) {
-    const lesson = dailyLessons.find((item) => item.id === id);
-    return lesson ? lessonWithRoadmap(lesson) : null;
+    const { roadmaps, lessons } = activeContent();
+    const lesson = lessons.find((item) => item.id === id);
+    return lesson ? lessonWithRoadmap(lesson, roadmaps) : null;
   },
 
   getTodayLesson(date = new Date()) {
-    if (dailyLessons.length === 0) return null;
+    const { roadmaps, lessons } = activeContent();
+    if (lessons.length === 0) return null;
     const start = Date.UTC(2026, 0, 1);
     const now = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     const day = Math.max(0, Math.floor((now - start) / 86_400_000));
-    return lessonWithRoadmap(dailyLessons[day % dailyLessons.length]);
+    return lessonWithRoadmap(lessons[day % lessons.length], roadmaps);
   },
 
   relatedPapersForRoadmap(slug: string, userId = 0, limit = 8) {
+    const { roadmaps } = activeContent();
     const resolved = resolveSlug(slug);
-    const roadmap = learningRoadmaps.find((item) => item.slug === resolved);
+    const roadmap = roadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
     const q = roadmap.paperQuery || roadmap.relatedSearchQueries[0] || roadmap.title;
     return searchService.search({ q, field: roadmap.relatedTopics[0], semantic: "1", limit: String(limit), sort: "relevance" }, userId);
   },
 
   relatedPapersForLesson(id: string, userId = 0, limit = 8) {
-    const lesson = dailyLessons.find((item) => item.id === id);
+    const { lessons } = activeContent();
+    const lesson = lessons.find((item) => item.id === id);
     if (!lesson) return null;
     const q = lesson.relatedSearchQueries[0] || lesson.title;
     return searchService.search({ q, field: lesson.relatedTopics[0], semantic: "1", limit: String(limit), sort: "relevance" }, userId);
+  },
+
+  listRouteFamilies() {
+    return activeContent().routeFamilies;
+  },
+
+  listFoundations() {
+    return activeContent().commonFoundations;
   },
 };

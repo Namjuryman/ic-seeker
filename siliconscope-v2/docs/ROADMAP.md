@@ -186,11 +186,11 @@ Current v2 implementation:
 - `/learning/today` chooses a deterministic daily lesson from the local seed catalog.
 - `/learning/lessons/:lessonId` shows a structured lesson shell and related papers.
 - The route catalog now has 24 routes and 35 daily lessons. The first expansion split broad IC buckets into finer routes for ADC/DAC, PLL/clocking, SerDes, image/display IC, analog layout/PEX, digital backend/signoff, equipment/materials, and automotive reliability/safety.
+- Learning content now has a database-backed registry (`learning_content_items`). Public APIs prefer published database rows and fall back to the TypeScript seed catalog; the independent admin console can sync seed content into the registry and inspect content health.
 
 Next learning milestones:
 
-- Move learning seed data from TypeScript files into editable database tables.
-- Add an editor workflow for route nodes, prerequisites, equations, paper lists, and design-project prompts.
+- Turn the learning registry into a real structured editor for route nodes, prerequisites, equations, paper lists, and design-project prompts.
 - Add route-level representative diagrams: signal chain blocks, converter timing sketches, PLL noise-transfer views, SerDes eye/equalization views, floorplan/signoff flows, and process/packaging stack diagrams.
 - Add user progress, review queue, saved route plans, and lesson completion state.
 - Add manually authored circuit diagrams and short Chinese/English explanations.

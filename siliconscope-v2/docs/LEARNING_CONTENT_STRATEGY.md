@@ -17,6 +17,14 @@ The canonical source is:
 backend/src/data/learning-catalog.ts
 ```
 
+The runtime source is now layered:
+
+```text
+learning_content_items published rows -> TypeScript seed fallback
+```
+
+The independent admin app can sync the seed catalog into the database registry and inspect stale or out-of-sync content rows. This is the first step toward an editable learning CMS.
+
 ## Route Families
 
 ### Circuit Design
@@ -109,8 +117,7 @@ The current 35 lessons cover seed topics for ADC, PLL, SerDes, layout, backend, 
 
 Short term:
 
-- Move route and lesson content from TypeScript seed files into editable database tables.
-- Add an admin editor for routes, stages, prerequisites, lessons, diagrams, and reading lists.
+- Build structured editing on top of the `learning_content_items` registry for routes, stages, prerequisites, lessons, diagrams, and reading lists.
 - Add route-level representative diagrams and thumbnails.
 - Add progress placeholders: mark completed, review later, and add related papers to reading queue.
 
