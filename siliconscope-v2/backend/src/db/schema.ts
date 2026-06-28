@@ -281,16 +281,20 @@ export const papersFts = sqliteTable("papers_fts", {
   doi: text("doi").notNull().default(""),
 });
 
-// Coming soon: lightweight user learning progress (reserved table; no backend logic yet)
+// User learning progress across lessons and roadmap-level planning.
 export const learningProgress = sqliteTable("learning_progress", {
-  id: text("id").primaryKey(),
   userId: integer("user_id", { mode: "number" }).notNull().default(0),
-  lessonId: text("lesson_id").notNull(),
+  targetType: text("target_type").notNull().default("lesson"),
+  targetId: text("target_id").notNull(),
   status: text("status").notNull().default("not_started"), // not_started | reading | completed | review_later
+  lastAction: text("last_action").notNull().default(""),
+  relatedPapersQueued: integer("related_papers_queued", { mode: "number" }).notNull().default(0),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.targetType, table.targetId] }),
+]);
 
 export const learningContentItems = sqliteTable("learning_content_items", {
   itemKind: text("item_kind").notNull(),

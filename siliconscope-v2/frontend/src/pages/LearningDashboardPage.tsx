@@ -6,11 +6,19 @@ import { lessonPath, roadmapPath, searchPath, todayLessonPath } from '../utils/r
 
 export default function LearningDashboardPage() {
   const dashboard = useQuery({ queryKey: ['learning-dashboard'], queryFn: () => api.learningDashboard() })
+  const progress = useQuery({ queryKey: ['learning-progress'], queryFn: () => api.learningProgressList() })
 
   if (dashboard.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading learning workspace...</p></div>
   if (dashboard.isError || !dashboard.data) return <div className="ss-empty-state">Learning workspace failed to load.</div>
 
   const data = dashboard.data
+  const progressRows = progress.data || []
+  const progressSummary = {
+    inProgress: progressRows.filter((row) => row.status === 'in_progress').length,
+    completed: progressRows.filter((row) => row.status === 'completed').length,
+    reviewLater: progressRows.filter((row) => row.status === 'review_later').length,
+    queued: progressRows.reduce((sum, row) => sum + (row.relatedPapersQueued || 0), 0),
+  }
 
   return (
     <div className="learning-page learning-workbench">
@@ -163,15 +171,20 @@ export default function LearningDashboardPage() {
       <section className="learning-section">
         <div className="learning-section-head">
           <div>
-            <span>Progress placeholders</span>
-            <h3>Personal learning actions</h3>
+            <span>Personal progress</span>
+            <h3>学习状态总览</h3>
           </div>
-          <p>UI only for now; these controls reserve space for a future user progress table and reading queue.</p>
+          <p>Progress is stored per user and can drive future spaced review, recommendations, and reading queues.</p>
         </div>
-        <div className="learning-progress-actions">
-          <button type="button">Mark completed</button>
-          <button type="button">Review later</button>
-          <button type="button">Add related papers to reading queue</button>
+        <div className="learning-stat-strip compact">
+          <div><span>Learning</span><strong>{progressSummary.inProgress}</strong></div>
+          <div><span>Completed</span><strong>{progressSummary.completed}</strong></div>
+          <div><span>Review later</span><strong>{progressSummary.reviewLater}</strong></div>
+          <div><span>Queued papers</span><strong>{progressSummary.queued}</strong></div>
+        </div>
+        <div className="learning-progress-actions" style={{ marginTop: '1rem' }}>
+          <Link to={todayLessonPath()}>Open today's circuit</Link>
+          <Link to="/reading-queue">Open reading queue</Link>
         </div>
       </section>
 

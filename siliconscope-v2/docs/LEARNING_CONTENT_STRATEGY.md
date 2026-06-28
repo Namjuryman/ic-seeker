@@ -133,7 +133,7 @@ Short term:
 - Build structured editing on top of the `learning_content_items` registry for routes, stages, prerequisites, lessons, diagrams, and reading lists.
 - Expand projection tables for route stages, modules, resources, practice prompts, and diagram assets after the editor is stable.
 - Add route-level representative diagrams and thumbnails.
-- Add progress placeholders: mark completed, review later, and add related papers to reading queue.
+- Expand the new `learning_progress` workflow into spaced review: review due dates, reminders, saved study plans, and per-route completion ratios.
 
 Medium term:
 

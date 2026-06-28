@@ -319,6 +319,10 @@ GET /api/learning/lessons
 GET /api/learning/today
 GET /api/learning/lessons/:lessonId
 GET /api/learning/lessons/:lessonId/related-papers
+GET /api/learning/progress
+GET /api/learning/progress/:targetType/:targetId
+POST /api/learning/progress/:targetType/:targetId
+POST /api/learning/progress/:targetType/:targetId/queue-related
 ```
 
 Current scope:
@@ -330,9 +334,10 @@ Current scope:
   - `learning_content_items` stores the versioned source payload, publication state, hash, and admin edits.
   - `learning_routes`, `learning_lessons`, `learning_route_families`, `learning_foundations`, `learning_route_family_members`, and `learning_terms` are normalized projection tables for search, analytics, graph traversal, and future recommendation jobs.
 - The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, and projection-table health.
+- User progress is stored in `learning_progress` for both roadmap and lesson targets. Route and lesson pages can mark started/completed/review-later and add related papers to the reading queue.
 - Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
-- Future work should add type-specific structured editing forms on top of the registry, plus reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
+- Future work should add type-specific structured editing forms on top of the registry, plus spaced review scheduling, saved learning plans, and weekly paper recommendations per route.
 
 ## Rebuild The Database
 

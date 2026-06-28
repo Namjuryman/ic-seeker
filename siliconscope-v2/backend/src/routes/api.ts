@@ -41,6 +41,7 @@ import { siteSettingsService } from "../services/site-settings.service.js";
 import { exportService, type ExportFormat } from "../services/export.service.js";
 import { accessRequestService } from "../services/access-request.service.js";
 import { learningContentService } from "../services/learning-content.service.js";
+import { learningProgressService } from "../services/learning-progress.service.js";
 
 const router = Router();
 
@@ -706,6 +707,45 @@ router.get("/learning/lessons", requireAuth, async (req, res) => {
 
 router.get("/learning/today", requireAuth, async (_req, res) => {
   res.json(learningService.getTodayLesson());
+});
+
+router.get("/learning/progress", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(learningProgressService.list(req.user?.userId ?? 0));
+});
+
+router.get("/learning/progress/:targetType/:targetId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    res.json(learningProgressService.get(req.user?.userId ?? 0, req.params.targetType, decodeURIComponent(req.params.targetId)));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/learning/progress/:targetType/:targetId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    res.json(learningProgressService.update(
+      req.user?.userId ?? 0,
+      req.params.targetType,
+      decodeURIComponent(req.params.targetId),
+      String(req.body?.status || "in_progress"),
+    ));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/learning/progress/:targetType/:targetId/queue-related", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = learningProgressService.addRelatedPapersToQueue(
+      req.user?.userId ?? 0,
+      req.params.targetType,
+      decodeURIComponent(req.params.targetId),
+      Number(req.body?.limit || 5),
+    );
+    res.status(result.ok ? 200 : 207).json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/learning/lessons/:lessonId", requireAuth, async (req, res) => {

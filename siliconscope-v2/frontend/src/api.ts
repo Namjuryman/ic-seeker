@@ -75,6 +75,8 @@ import type {
   LearningContentOverview,
   LearningContentRow,
   LearningContentSyncResult,
+  LearningProgress,
+  LearningQueueResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -665,6 +667,26 @@ export const api = {
 
   async updateReadingQueue(paperId: number, status: string) {
     const res = await axios.post<{ ok: boolean }>(`/api/reading-queue/${paperId}`, { status })
+    return res.data
+  },
+
+  async learningProgress(targetType: 'roadmap' | 'lesson', targetId: string) {
+    const res = await axios.get<LearningProgress>(`/api/learning/progress/${targetType}/${encodeURIComponent(targetId)}`)
+    return res.data
+  },
+
+  async learningProgressList() {
+    const res = await axios.get<LearningProgress[]>('/api/learning/progress')
+    return res.data
+  },
+
+  async updateLearningProgress(targetType: 'roadmap' | 'lesson', targetId: string, status: string) {
+    const res = await axios.post<LearningProgress>(`/api/learning/progress/${targetType}/${encodeURIComponent(targetId)}`, { status })
+    return res.data
+  },
+
+  async queueLearningRelatedPapers(targetType: 'roadmap' | 'lesson', targetId: string, limit = 5) {
+    const res = await axios.post<LearningQueueResult>(`/api/learning/progress/${targetType}/${encodeURIComponent(targetId)}/queue-related`, { limit })
     return res.data
   },
 

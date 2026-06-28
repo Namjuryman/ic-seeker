@@ -40,6 +40,8 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_learning_route_family_members_family ON learning_route_family_members(family_id, display_order)",
   "CREATE INDEX IF NOT EXISTS idx_learning_terms_target ON learning_terms(target_kind, target_id, term_kind)",
   "CREATE INDEX IF NOT EXISTS idx_learning_terms_term ON learning_terms(term_kind, value)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_progress_user_status ON learning_progress(user_id, status, updated_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_progress_target ON learning_progress(target_type, target_id)",
 ];
 
 function tableColumns(sqlite: any, table: string): string[] {
@@ -371,7 +373,47 @@ function ensureLearningContentTables(sqlite: any) {
       display_order INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (target_kind, target_id, term_kind, value)
     );
+
+    CREATE TABLE IF NOT EXISTS learning_progress (
+      user_id INTEGER NOT NULL DEFAULT 0,
+      target_type TEXT NOT NULL DEFAULT 'lesson',
+      target_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'not_started',
+      last_action TEXT NOT NULL DEFAULT '',
+      related_papers_queued INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, target_type, target_id)
+    );
   `);
+
+  const columns = tableColumns(sqlite, "learning_progress");
+  if (columns.includes("lesson_id") && !columns.includes("target_type")) {
+    sqlite.exec(`
+      ALTER TABLE learning_progress RENAME TO learning_progress_old_lesson_only;
+      CREATE TABLE learning_progress (
+        user_id INTEGER NOT NULL DEFAULT 0,
+        target_type TEXT NOT NULL DEFAULT 'lesson',
+        target_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'not_started',
+        last_action TEXT NOT NULL DEFAULT '',
+        related_papers_queued INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, target_type, target_id)
+      );
+      INSERT OR IGNORE INTO learning_progress (
+        user_id, target_type, target_id, status, updated_at
+      )
+      SELECT
+        COALESCE(user_id, 0),
+        'lesson',
+        lesson_id,
+        COALESCE(status, 'not_started'),
+        COALESCE(updated_at, CURRENT_TIMESTAMP)
+      FROM learning_progress_old_lesson_only
+      WHERE lesson_id IS NOT NULL AND lesson_id <> '';
+      DROP TABLE learning_progress_old_lesson_only;
+    `);
+  }
 }
 
 export function applyPerformanceSettings(sqlite: any) {

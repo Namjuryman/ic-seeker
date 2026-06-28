@@ -1024,12 +1024,23 @@ export interface DailyLesson {
 
 export type LearningProgressAction = 'mark_completed' | 'review_later' | 'add_related_papers_to_queue';
 
-export interface LearningProgressPlaceholder {
+export type LearningProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'review_later';
+
+export interface LearningProgress {
   targetType: 'roadmap' | 'lesson';
   targetId: string;
-  action: LearningProgressAction;
-  enabled: false;
-  note: string;
+  status: LearningProgressStatus;
+  lastAction: LearningProgressStatus | 'add_related_papers_to_queue' | '';
+  relatedPapersQueued: number;
+  updatedAt: string | null;
+}
+
+export interface LearningQueueResult {
+  ok: boolean;
+  target: LearningProgress;
+  queuedPaperIds: number[];
+  queuedCount: number;
+  errors: Array<{ paperId: number; error: string }>;
 }
 
 export interface LearningDashboard {

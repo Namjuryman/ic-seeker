@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
 import { PaperLink } from '../components/PaperLink'
+import { LearningProgressActions } from '../components/LearningProgressActions'
 import { roadmapPath, searchPath } from '../utils/routes'
 
 function getSuitableCompanyTypes(domain: string): string[] {
@@ -112,20 +113,7 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
         </div>
       </section>
 
-      <section className="learning-section">
-        <div className="learning-section-head">
-          <div>
-            <span>Progress placeholders</span>
-            <h3>Review actions</h3>
-          </div>
-          <p>These buttons are UI placeholders for a future progress, review, and reading-queue model.</p>
-        </div>
-        <div className="learning-progress-actions">
-          <button type="button">Mark completed</button>
-          <button type="button">Review later</button>
-          <button type="button">Add related papers to reading queue</button>
-        </div>
-      </section>
+      <LearningProgressActions targetType="lesson" targetId={lesson.id} />
 
       <section className="learning-two-column wide">
         <article className="learning-section">
@@ -212,7 +200,7 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
                 <PaperLink id={paper.id} title={paper.title} />
                 <button
                   className="text-xs px-2 py-0.5 rounded border border-line hover:bg-surface-elevated shrink-0"
-                  onClick={() => addToQueue.mutate({ paperId: paper.id, status: 'unread' })}
+                  onClick={() => addToQueue.mutate({ paperId: paper.id, status: 'review_later' })}
                   disabled={addToQueue.isPending}
                   title="Add to reading queue"
                 >
