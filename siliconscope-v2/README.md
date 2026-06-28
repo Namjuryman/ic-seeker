@@ -75,7 +75,7 @@ git lfs pull
 
 ## Commercial Architecture Track
 
-SiliconScope v2 is still runnable as a local/private SQLite MVP, but the target product architecture is tracked in [`docs/COMMERCIAL_ARCHITECTURE.md`](docs/COMMERCIAL_ARCHITECTURE.md). The SQLite-to-Postgres data split is tracked in [`docs/DATA_LAYER_MIGRATION.md`](docs/DATA_LAYER_MIGRATION.md), and the module roadmap is tracked in [`docs/PLATFORM_MODULES.md`](docs/PLATFORM_MODULES.md).
+SiliconScope v2 is still runnable as a local/private SQLite MVP, but the target product architecture is tracked in [`docs/COMMERCIAL_ARCHITECTURE.md`](docs/COMMERCIAL_ARCHITECTURE.md). The SQLite-to-Postgres data split is tracked in [`docs/DATA_LAYER_MIGRATION.md`](docs/DATA_LAYER_MIGRATION.md), the module roadmap is tracked in [`docs/PLATFORM_MODULES.md`](docs/PLATFORM_MODULES.md), and the content-quality expansion plan is tracked in [`docs/CONTENT_EXPANSION_PLAN.md`](docs/CONTENT_EXPANSION_PLAN.md).
 
 Optional local infrastructure for the future commercial stack can be started with:
 

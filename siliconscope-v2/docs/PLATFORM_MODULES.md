@@ -12,6 +12,7 @@ This document records the current product modules and the next high-value improv
 | Company Intelligence | Partial | Connects IC papers, roadmaps, companies, jobs, and supply chain. | Add job/news/source ingestion and confidence review workflow. |
 | Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. Current seed catalog has 24 route maps and 35 daily lessons, with a DB-backed content registry, admin sync/editing, normalized projection tables, per-user progress state, and reading queue handoff. | Add type-specific structured editors, spaced review scheduling, route diagrams, and completion analytics. |
 | Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and topic classification. |
+| Content Quality and Knowledge Graph | Planned | Turns raw metadata into trusted product content: topic taxonomy, provenance, confidence, and weekly diffs. | Add content-quality checks, topic hierarchy, source-backed claims, and report templates. |
 | Data Operations | Partial | Keeps weekly updates manageable. | Add scheduled ingestion jobs and snapshot diff reports. |
 | Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, billing catalog, usage ledger, partial quota enforcement, admin plan management, local backup operations, maintenance task records, and optional search-index controls are in place. | Connect PostgreSQL, Redis, object storage, payment checkout/webhooks, email, realtime delivery, and observability. |
 
@@ -54,6 +55,18 @@ Give users an admin queue for questionable data:
 - papers with missing affiliations
 - topic classification disagreements
 - venue/rank overrides
+
+### Content Quality and Knowledge Graph
+
+The next content layer should be a first-class module rather than scattered TODOs. It should track:
+
+- content maturity from raw imported metadata to monetizable curated reports
+- topic taxonomy and aliases such as `PMIC > DC-DC`, `ADC > SAR`, `PLL > Fractional-N`, `RF > PA/LNA`, and `Memory > SRAM/CIM`
+- source-backed claims for authors, institutions, companies, and venue policy
+- weekly content diffs after ingestion and snapshot rebuilds
+- report templates for topic, institution, company, and mentor intelligence
+
+The detailed plan is in [`CONTENT_EXPANSION_PLAN.md`](CONTENT_EXPANSION_PLAN.md).
 
 ### Unified Entity Search
 
