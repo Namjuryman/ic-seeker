@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -48,6 +49,9 @@ export const readingStatus = sqliteTable("reading_status", {
   userId: integer("user_id", { mode: "number" }).notNull().default(0),
   paperId: integer("paper_id", { mode: "number" }).notNull(),
   status: text("status").notNull().default("unread"),
+  readingState: text("reading_state").notNull().default("unread"),
+  important: integer("important", { mode: "boolean" }).notNull().default(false),
+  useCasesJson: text("use_cases_json"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -408,6 +412,13 @@ export const companies = sqliteTable("companies", {
   employeeCountRange: text("employee_count_range"), // exact | range | estimated | unknown
   stockTicker: text("stock_ticker"),
   exchange: text("exchange"),
+  marketCapUsd: text("market_cap_usd"),
+  marketCapLabel: text("market_cap_label"),
+  stockPrice: text("stock_price"),
+  stockCurrency: text("stock_currency"),
+  stockChangePercent: real("stock_change_percent"),
+  marketDataSource: text("market_data_source"),
+  marketDataAsOf: text("market_data_as_of"),
   description: text("description"),
   productLinesJson: text("product_lines_json"),
   domainsJson: text("domains_json"),

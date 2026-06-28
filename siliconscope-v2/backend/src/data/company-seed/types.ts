@@ -37,6 +37,13 @@ export interface RawCompanySeed {
   foundedYear?: number;
   ticker?: string;
   exchange?: string;
+  marketCapUsd?: string;
+  marketCapLabel?: string;
+  stockPrice?: string;
+  stockCurrency?: string;
+  stockChangePercent?: number;
+  marketDataSource?: string;
+  marketDataAsOf?: string;
   description: string;
   specialties: string[];
   domains?: string[];

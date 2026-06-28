@@ -22,6 +22,8 @@ This starts:
 - Public frontend: `http://localhost:5173`
 - Admin frontend: `http://localhost:5176`
 
+See [`PORTS.md`](PORTS.md) for the canonical port policy. In short: local development uses backend `8751`, Docker containers use internal API `8750`, and public production should expose only HTTPS hostnames.
+
 The launcher sets `IC_SEEKER_LOCAL_ADMIN=1` for local development only. Never set that flag on a public server.
 
 ## Option A: Cloudflare Tunnel
@@ -50,10 +52,10 @@ www.siliconscope.com -> Cloudflare Pages public frontend
 admin.siliconscope.com -> Cloudflare Pages admin frontend protected by Cloudflare Access
 ```
 
-If you run `cloudflared` outside Docker on the host, map the API hostname to:
+If you run `cloudflared` outside Docker on the host, map the API hostname to the port your host backend actually uses. With `npm start` that is usually:
 
 ```text
-http://127.0.0.1:8750
+http://127.0.0.1:8751
 ```
 
 5. Before exposing publicly, enable login:

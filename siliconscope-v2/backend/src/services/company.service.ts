@@ -6,6 +6,7 @@ import { learningRoadmaps } from "../data/learning-catalog.js";
 const ORDER_BY_COLUMNS: Record<string, string> = {
   name: "name",
   dataConfidence: "data_confidence",
+  stockChangePercent: "stock_change_percent",
   lastEnrichedAt: "last_enriched_at",
   createdAt: "created_at",
 };
@@ -65,6 +66,13 @@ function enrichCompany(row: Record<string, any>): Record<string, any> {
     employeeCountRange: row.employee_count_range ?? row.employeeCountRange,
     stockTicker: row.stock_ticker ?? row.stockTicker,
     exchange: row.exchange,
+    marketCapUsd: row.market_cap_usd ?? row.marketCapUsd,
+    marketCapLabel: row.market_cap_label ?? row.marketCapLabel,
+    stockPrice: row.stock_price ?? row.stockPrice,
+    stockCurrency: row.stock_currency ?? row.stockCurrency,
+    stockChangePercent: row.stock_change_percent ?? row.stockChangePercent,
+    marketDataSource: row.market_data_source ?? row.marketDataSource,
+    marketDataAsOf: row.market_data_as_of ?? row.marketDataAsOf,
     description: row.description,
     productLines: parseJson(row.product_lines_json ?? row.productLinesJson),
     domains: parseJson(row.domains_json ?? row.domainsJson),
@@ -208,11 +216,12 @@ export const companyService = {
       INSERT INTO companies (
         id, name, legal_name, aliases_json, country, city, website, company_type,
         status, founded_year, registered_capital, employee_count, employee_count_range,
-        stock_ticker, exchange, description, product_lines_json, domains_json,
+        stock_ticker, exchange, market_cap_usd, market_cap_label, stock_price, stock_currency,
+        stock_change_percent, market_data_source, market_data_as_of, description, product_lines_json, domains_json,
         technology_keywords_json, application_markets_json, career_roles_json, hiring_signals_json,
         data_confidence, last_enriched_at
       ) VALUES (
-        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
     `).run(
       id,
@@ -230,6 +239,13 @@ export const companyService = {
       cleanText(body.employeeCountRange),
       cleanText(body.stockTicker),
       cleanText(body.exchange),
+      cleanText(body.marketCapUsd),
+      cleanText(body.marketCapLabel),
+      cleanText(body.stockPrice),
+      cleanText(body.stockCurrency),
+      cleanNumber(body.stockChangePercent),
+      cleanText(body.marketDataSource),
+      cleanText(body.marketDataAsOf),
       cleanText(body.description),
       toJson(Array.isArray(body.productLines) ? body.productLines.map(String) : []),
       toJson(Array.isArray(body.domains) ? body.domains.map(String) : []),
@@ -303,6 +319,13 @@ export const companyService = {
     add("employee_count_range", cleanText(body.employeeCountRange));
     add("stock_ticker", cleanText(body.stockTicker));
     add("exchange", cleanText(body.exchange));
+    add("market_cap_usd", cleanText(body.marketCapUsd));
+    add("market_cap_label", cleanText(body.marketCapLabel));
+    add("stock_price", cleanText(body.stockPrice));
+    add("stock_currency", cleanText(body.stockCurrency));
+    add("stock_change_percent", cleanNumber(body.stockChangePercent));
+    add("market_data_source", cleanText(body.marketDataSource));
+    add("market_data_as_of", cleanText(body.marketDataAsOf));
     add("description", cleanText(body.description));
     add("data_confidence", cleanNumber(body.dataConfidence));
     add("last_enriched_at", new Date().toISOString());

@@ -43,8 +43,8 @@ export default function BillingPage() {
           <span className="eyebrow">COMMERCIAL BOUNDARY</span>
           <h1>订阅与配额</h1>
           <p>
-            SiliconScope 的核心搜索、学习路线、基础对比、关注列表和阅读队列应保持免费。
-            未来收费重点放在 AI 结构化报告、高级导出、批量分析和团队工作区，而不是售卖论文 PDF 或封闭基础检索。
+            SiliconScope 的核心工作区保持免费：学术搜索、学习路线、阅读队列、关注列表和基础对比都不应该被锁死。
+            未来收费只放在效率层，例如 AI 结构化报告、高级导出、团队空间、私有/实验室工作区和受控 API。
           </p>
         </div>
         <div className="billing-current">
@@ -56,24 +56,22 @@ export default function BillingPage() {
 
       <section className="billing-status-strip">
         <div>
-          <span>Payment provider</span>
+          <span>支付提供商</span>
           <strong>{data.paymentProvider}</strong>
         </div>
         <div>
           <span>Checkout</span>
-          <strong>{data.checkoutAvailable ? 'Ready' : 'Adapter pending'}</strong>
+          <strong>{data.checkoutAvailable ? 'Ready' : '待接入'}</strong>
         </div>
         <div>
-          <span>Paid layer</span>
+          <span>收费边界</span>
           <strong>AI / Export / Team</strong>
         </div>
       </section>
 
       <section className="billing-note">
-        <strong>{data.paymentConfigured ? 'Payment credentials detected' : 'Payment credentials not configured'}</strong>
-        <p>
-          {data.checkoutReason} Until a real payment provider and billing terms are connected, upgrade buttons are product placeholders.
-        </p>
+        <strong>{data.paymentConfigured ? '已检测到支付配置' : '尚未配置真实支付凭证'}</strong>
+        <p>{data.checkoutReason} 在支付服务和正式商业条款接入前，升级按钮只作为产品占位，不会向用户收费。</p>
         {message && <em>{message}</em>}
       </section>
 
@@ -127,9 +125,7 @@ export default function BillingPage() {
               <h2>{plan.name}</h2>
               <strong>{money(plan)}</strong>
               <p>{plan.description}</p>
-              <ul>
-                {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
-              </ul>
+              <ul>{plan.features.map((feature) => <li key={feature}>{feature}</li>)}</ul>
               <div className="billing-plan-limits">
                 <span>Watchlist {limitText(plan.limits.watchlistItems)}</span>
                 <span>AI reports {limitText(plan.limits.aiSummariesPerMonth, '/mo')}</span>
@@ -147,9 +143,10 @@ export default function BillingPage() {
       </section>
 
       <section className="billing-note">
-        <strong>Policy</strong>
+        <strong>商业策略</strong>
         <p>
-          Billing should monetize workflow efficiency and AI-assisted reports, not copyrighted PDFs, hidden data, or absolute rankings of mentors, schools, or companies.
+          搜索、学习路线、基础 compare 和阅读管理不收费；收费项集中在 AI 生成报告、批量导出、团队协作、私有部署、实验室空间和受控 API。
+          也不要把出版商 PDF、隐藏数据或导师/学校/公司的绝对排名包装成付费商品。
         </p>
       </section>
     </div>

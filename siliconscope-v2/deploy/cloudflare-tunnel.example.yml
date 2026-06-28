@@ -3,7 +3,8 @@ credentials-file: /etc/cloudflared/siliconscope.json
 
 ingress:
   - hostname: api.siliconscope.com
-    service: http://127.0.0.1:8750
+    # Host-level backend default. Docker Compose can route through the compose Caddy service instead.
+    service: http://127.0.0.1:8751
   # Recommended: host www/admin as static Cloudflare Pages projects.
   # Only route them through the tunnel if you also run Caddy/Nginx static hosting on the VPS.
   - service: http_status:404

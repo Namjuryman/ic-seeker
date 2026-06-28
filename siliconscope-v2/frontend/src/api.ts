@@ -43,6 +43,7 @@ import type {
   AuthorCompareResult,
   MentorCompareResult,
   TopicReport,
+  TopicTaxonomy,
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
@@ -624,6 +625,11 @@ export const api = {
     return res.data
   },
 
+  async topicTaxonomy() {
+    const res = await axios.get<TopicTaxonomy>('/api/topic-taxonomy')
+    return res.data
+  },
+
   async exportFile(kind: string, params: Record<string, string>) {
     const path = kind === 'topic-report' ? '/api/exports/topic-report' : `/api/exports/${encodeURIComponent(kind)}`
     const res = await axios.get<Blob>(path, { params, responseType: 'blob' })
@@ -673,12 +679,16 @@ export const api = {
   },
 
   async readingQueueStatus(paperId: number) {
-    const res = await axios.get<{ status: string }>(`/api/reading-queue/${paperId}`)
+    const res = await axios.get<{ status: string; readingStatus?: string; important?: boolean; flags?: string[]; useCases?: string[] }>(`/api/reading-queue/${paperId}`)
     return res.data
   },
 
-  async updateReadingQueue(paperId: number, status: string) {
-    const res = await axios.post<{ ok: boolean }>(`/api/reading-queue/${paperId}`, { status })
+  async updateReadingQueue(
+    paperId: number,
+    payload: string | { readingStatus?: string; readingState?: string; status?: string; important?: boolean; flags?: string[]; useCases?: string[] }
+  ) {
+    const body = typeof payload === 'string' ? { status: payload } : payload
+    const res = await axios.post<{ ok: boolean }>(`/api/reading-queue/${paperId}`, body)
     return res.data
   },
 

@@ -81,9 +81,14 @@ Paid features should monetize workflow efficiency and AI assistance, not copyrig
 - [x] Add admin-managed site settings for private beta, maintenance, paid-feature gates, community features, and data-readiness copy.
 - [x] Add Export Center MVP for topic reports and compare pages with quota-aware Markdown/CSV/JSON output.
 - [x] Add public `/request-access` outside the login wall and admin-only `/access-requests` approval queue.
+- [x] Clarify local/container/public port policy in `docs/PORTS.md`.
+- [x] Split Reading Queue service model into `readingStatus`, `flags`, and `useCases` while keeping legacy `status` compatibility.
+- [x] Add topic taxonomy API seed for hierarchical IC topics and future `paper_topic_edges`.
+- [x] Add company market-data fields with explicit stale/source caveats and no fake real-time quotes.
 - [ ] Run full runtime QA with a real non-LFS-pointer SQLite database.
 - [ ] Record results in `docs/RUNTIME_QA_RESULTS.md`.
-- [ ] Split Reading Queue long-term model into `readingStatus`, `flags`, and `useCases`.
+- [ ] Persist topic taxonomy into `topic_nodes`, `topic_aliases`, and `paper_topic_edges` with confidence scoring and manual correction.
+- [ ] Add a compliant market-data connector or admin CSV import for market cap, price, and change fields.
 - [ ] Design the first paid AI report pipeline with input snapshot, sources, caveats, generatedAt, prompt/model version, quota, and feedback.
 
 ## Runtime QA Must Prove
@@ -112,3 +117,5 @@ The current app includes draft public pages for:
 - Community and Review Policy
 
 Before public launch, these drafts need legal review and a contact/takedown path.
+
+The app now also includes draft routes for contact/takedown, mentor review policy, company data source policy, and service limits. They are product guardrails and still need legal review before real public launch.

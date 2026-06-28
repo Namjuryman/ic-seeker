@@ -12,6 +12,7 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_paper_tags_user_paper ON paper_tags(user_id, paper_id)",
   "CREATE INDEX IF NOT EXISTS idx_paper_tags_user_tag ON paper_tags(user_id, tag_id)",
   "CREATE INDEX IF NOT EXISTS idx_reading_status_user_status ON reading_status(user_id, status)",
+  "CREATE INDEX IF NOT EXISTS idx_reading_status_user_state ON reading_status(user_id, reading_state)",
   "CREATE INDEX IF NOT EXISTS idx_notes_user_paper ON notes(user_id, paper_id)",
   "CREATE INDEX IF NOT EXISTS idx_paper_comments_paper_status_created ON paper_comments(paper_id, moderation_status, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_paper_comments_status_created ON paper_comments(moderation_status, created_at DESC)",
@@ -416,6 +417,43 @@ function ensureLearningContentTables(sqlite: any) {
   }
 }
 
+function migrateReadingQueueModel(sqlite: any) {
+  if (!hasTable(sqlite, "reading_status")) return;
+  const columns = tableColumns(sqlite, "reading_status");
+  if (!columns.includes("reading_state")) {
+    sqlite.exec("ALTER TABLE reading_status ADD COLUMN reading_state TEXT NOT NULL DEFAULT 'unread'");
+  }
+  if (!columns.includes("important")) {
+    sqlite.exec("ALTER TABLE reading_status ADD COLUMN important INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!columns.includes("use_cases_json")) {
+    sqlite.exec("ALTER TABLE reading_status ADD COLUMN use_cases_json TEXT");
+  }
+
+  sqlite.exec(`
+    UPDATE reading_status
+    SET
+      reading_state = CASE
+        WHEN status IN ('reading', 'read', 'review_later', 'skip', 'unread') THEN status
+        WHEN status IN ('important', 'use_for_literature_review', 'use_for_application', 'use_for_project') THEN 'reading'
+        ELSE COALESCE(NULLIF(reading_state, ''), 'unread')
+      END,
+      important = CASE
+        WHEN status = 'important' THEN 1
+        ELSE COALESCE(important, 0)
+      END,
+      use_cases_json = CASE
+        WHEN status = 'use_for_literature_review' THEN '["literature_review"]'
+        WHEN status = 'use_for_application' THEN '["application"]'
+        WHEN status = 'use_for_project' THEN '["project"]'
+        ELSE use_cases_json
+      END
+    WHERE reading_state IS NULL
+       OR reading_state = ''
+       OR status IN ('important', 'use_for_literature_review', 'use_for_application', 'use_for_project');
+  `);
+}
+
 export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
@@ -424,6 +462,7 @@ export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("busy_timeout = 5000");
 
   migrateUserScopedTables(sqlite);
+  migrateReadingQueueModel(sqlite);
   ensureIdentityTables(sqlite);
   ensureSnapshotTables(sqlite);
   ensureAdminAuditTables(sqlite);

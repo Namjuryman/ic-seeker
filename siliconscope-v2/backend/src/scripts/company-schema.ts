@@ -1,5 +1,15 @@
 import Database from "better-sqlite3";
 
+function tableColumns(sqlite: ReturnType<typeof Database>, table: string): string[] {
+  return sqlite.prepare(`PRAGMA table_info(${table})`).all().map((row: any) => String(row.name));
+}
+
+function ensureColumn(sqlite: ReturnType<typeof Database>, table: string, name: string, ddl: string): void {
+  if (!tableColumns(sqlite, table).includes(name)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  }
+}
+
 export function ensureCompanyTables(sqlite: ReturnType<typeof Database>): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS companies (
@@ -18,6 +28,13 @@ export function ensureCompanyTables(sqlite: ReturnType<typeof Database>): void {
       employee_count_range TEXT,
       stock_ticker TEXT,
       exchange TEXT,
+      market_cap_usd TEXT,
+      market_cap_label TEXT,
+      stock_price TEXT,
+      stock_currency TEXT,
+      stock_change_percent REAL,
+      market_data_source TEXT,
+      market_data_as_of TEXT,
       description TEXT,
       product_lines_json TEXT,
       domains_json TEXT,
@@ -97,4 +114,13 @@ export function ensureCompanyTables(sqlite: ReturnType<typeof Database>): void {
     CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlist_items(user_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_user_target ON watchlist_items(user_id, target_type, target_id);
   `);
+
+  ensureColumn(sqlite, "companies", "market_cap_usd", "market_cap_usd TEXT");
+  ensureColumn(sqlite, "companies", "market_cap_label", "market_cap_label TEXT");
+  ensureColumn(sqlite, "companies", "stock_price", "stock_price TEXT");
+  ensureColumn(sqlite, "companies", "stock_currency", "stock_currency TEXT");
+  ensureColumn(sqlite, "companies", "stock_change_percent", "stock_change_percent REAL");
+  ensureColumn(sqlite, "companies", "market_data_source", "market_data_source TEXT");
+  ensureColumn(sqlite, "companies", "market_data_as_of", "market_data_as_of TEXT");
+  sqlite.exec("CREATE INDEX IF NOT EXISTS idx_companies_stock ON companies(exchange, stock_ticker)");
 }

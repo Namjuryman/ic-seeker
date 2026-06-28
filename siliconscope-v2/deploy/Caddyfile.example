@@ -4,7 +4,8 @@
 # Expected layout on the server after `npm run build`:
 # - /srv/siliconscope/frontend/dist
 # - /srv/siliconscope/frontend-admin/dist
-# - backend API listening on 127.0.0.1:8750
+# - host backend API listening on 127.0.0.1:8751 when run outside Docker
+# - Docker Compose uses deploy/Caddyfile.docker and talks to siliconscope-api:8750
 
 siliconscope.com, www.siliconscope.com {
 	root * /srv/siliconscope/frontend/dist
@@ -41,7 +42,7 @@ admin.siliconscope.com {
 
 api.siliconscope.com {
 	encode gzip zstd
-	reverse_proxy 127.0.0.1:8750
+	reverse_proxy 127.0.0.1:8751
 
 	header {
 		X-Content-Type-Options nosniff

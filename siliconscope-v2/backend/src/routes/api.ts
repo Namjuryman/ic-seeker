@@ -5,6 +5,7 @@ import { searchService } from "../services/search.service.js";
 import { paperService } from "../services/paper.service.js";
 import { profileService } from "../services/profile.service.js";
 import { topicService } from "../services/topic.service.js";
+import { topicTaxonomyService } from "../services/topic-taxonomy.service.js";
 import { geoService } from "../services/geo.service.js";
 import { venueMatrixService } from "../services/venue-matrix.service.js";
 import { mentorService } from "../services/mentor.service.js";
@@ -53,6 +54,10 @@ router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
 
 router.get("/platform", requireAuth, async (_req, res) => {
   res.json(platformService.getOverview());
+});
+
+router.get("/topic-taxonomy", requireAuth, async (_req, res) => {
+  res.json(topicTaxonomyService.list());
 });
 
 router.get("/site-settings", requireAuth, async (_req, res) => {
@@ -1089,17 +1094,20 @@ router.get("/reading-queue/:paperId", requireAuth, async (req: AuthenticatedRequ
     res.status(400).json({ error: 'Invalid paperId' });
     return;
   }
-  res.json({ status: readingQueueService.getPaperStatus(req.user?.userId ?? 0, paperId) });
+  res.json(readingQueueService.getPaperStatus(req.user?.userId ?? 0, paperId));
 });
 
 router.post("/reading-queue/:paperId", requireAuth, async (req: AuthenticatedRequest, res) => {
   const paperId = Number(req.params.paperId);
-  const { status } = req.body as { status: string };
-  if (!Number.isFinite(paperId) || !status) {
-    res.status(400).json({ error: 'paperId and status are required' });
+  const body = req.body as Record<string, unknown>;
+  const payload = body?.readingStatus || body?.readingState || body?.status
+    ? body
+    : null;
+  if (!Number.isFinite(paperId) || !payload) {
+    res.status(400).json({ error: 'paperId and reading status payload are required' });
     return;
   }
-  const result = readingQueueService.updateReadingStatus(req.user?.userId ?? 0, paperId, status);
+  const result = readingQueueService.updateReadingStatus(req.user?.userId ?? 0, paperId, payload as any);
   if (result.error) {
     res.status(400).json(result);
     return;

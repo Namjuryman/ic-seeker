@@ -1,30 +1,25 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import type { ReadingQueueGroup } from '../types'
 
-const statusActions: Record<string, string[]> = {
-  unread: ['reading', 'important', 'skip'],
-  reading: ['read', 'important', 'skip'],
-  read: ['important', 'review_later', 'skip'],
-  important: ['read', 'review_later', 'skip'],
-  skip: ['reading', 'unread'],
-  review_later: ['reading', 'unread'],
-  use_for_literature_review: ['read', 'important'],
-  use_for_application: ['read', 'important'],
-  use_for_project: ['read', 'important'],
-}
+const readingStateActions = [
+  { value: 'reading', label: '正在读' },
+  { value: 'read', label: '已读' },
+  { value: 'review_later', label: '稍后复习' },
+  { value: 'skip', label: '跳过' },
+  { value: 'unread', label: '移出队列' },
+]
 
-const actionLabels: Record<string, string> = {
-  unread: '标记未读',
-  reading: '在读',
-  read: '已读',
-  important: '重点',
-  skip: '跳过',
-  review_later: '稍后复习',
-  use_for_literature_review: '用于文献综述',
-  use_for_application: '用于应用',
-  use_for_project: '用于项目',
+const useCaseActions = [
+  { value: 'literature_review', label: '文献综述' },
+  { value: 'application', label: '应用参考' },
+  { value: 'project', label: '项目使用' },
+]
+
+function toggleValue(values: string[] = [], value: string) {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
 }
 
 export default function ReadingQueuePage() {
@@ -37,28 +32,28 @@ export default function ReadingQueuePage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ paperId, status }: { paperId: number; status: string }) =>
-      api.updateReadingQueue(paperId, status),
+    mutationFn: ({ paperId, payload }: {
+      paperId: number
+      payload: string | { readingStatus?: string; important?: boolean; useCases?: string[] }
+    }) => api.updateReadingQueue(paperId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reading-queue'] })
-      setMessage('已更新')
+      setMessage('已更新阅读队列')
       setTimeout(() => setMessage(''), 1200)
     },
   })
 
-  const data = queue.data || []
+  const data: ReadingQueueGroup[] = queue.data || []
   const totalPapers = data.reduce((sum, g) => sum + g.count, 0)
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-        <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Reading Queue</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">阅读队列</h1>
-          <p className="text-sm text-ink-muted mt-1">
-            共 {totalPapers} 篇论文。按阅读状态组织，不干扰 Watchlist 的长期关注。
-          </p>
-        </div>
+        <p className="text-xs font-semibold text-brand uppercase tracking-wide">Reading Queue</p>
+        <h1 className="text-2xl font-bold text-ink-text mt-0.5">阅读队列</h1>
+        <p className="text-sm text-ink-muted mt-1">
+          共 {totalPapers} 篇论文。阅读状态、重要标记和用途已经拆开，后面迁移到用户系统时不会互相覆盖。
+        </p>
       </section>
 
       {message && (
@@ -71,7 +66,7 @@ export default function ReadingQueuePage() {
 
       {!queue.isLoading && totalPapers === 0 && (
         <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm text-sm text-ink-muted">
-          阅读队列为空。在论文详情页或相关论文列表中添加到阅读队列。
+          阅读队列为空。你可以在论文详情页、学习路线页或相关论文列表里加入待读论文。
         </div>
       )}
 
@@ -85,32 +80,75 @@ export default function ReadingQueuePage() {
               </div>
               <span className="text-xs text-ink-muted">{group.count} 篇</span>
             </div>
+
             <div className="divide-y divide-line-subtle">
-              {group.papers.map(({ paper, status }) => (
-                <div key={paper.id} className="flex items-center gap-4 py-3 hover:bg-surface-elevated transition-colors px-2 rounded-lg group">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-ink-text">
-                      <PaperLink id={paper.id} title={paper.title} />
+              {group.papers.map((item) => {
+                const { paper } = item
+                const currentState = item.readingStatus || item.readingState || item.status
+                const useCases = item.useCases || []
+                return (
+                  <div key={paper.id} className="reading-queue-item group">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-ink-text">
+                        <PaperLink id={paper.id} title={paper.title} />
+                      </div>
+                      <div className="text-xs text-ink-muted truncate">
+                        {paper.venue} · {paper.year} · {paper.rank} · {paper.field} · score {paper.score}
+                      </div>
+                      <div className="reading-queue-badges">
+                        {item.important && <span className="important">重要</span>}
+                        {useCases.map((useCase) => (
+                          <span key={useCase}>{useCaseActions.find((u) => u.value === useCase)?.label || useCase}</span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="text-xs text-ink-muted truncate">
-                      {paper.venue} · {paper.year} · {paper.rank} · {paper.field} · score {paper.score}
+
+                    <div className="reading-queue-actions">
+                      <div>
+                        {readingStateActions.map((action) => (
+                          <button
+                            key={action.value}
+                            className={currentState === action.value ? 'active' : ''}
+                            onClick={() => updateMutation.mutate({ paperId: paper.id, payload: action.value })}
+                            disabled={updateMutation.isPending}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div>
+                        <button
+                          className={item.important ? 'active important' : ''}
+                          onClick={() => updateMutation.mutate({
+                            paperId: paper.id,
+                            payload: { readingStatus: currentState, important: !item.important, useCases },
+                          })}
+                          disabled={updateMutation.isPending}
+                        >
+                          重要
+                        </button>
+                        {useCaseActions.map((action) => (
+                          <button
+                            key={action.value}
+                            className={useCases.includes(action.value) ? 'active' : ''}
+                            onClick={() => updateMutation.mutate({
+                              paperId: paper.id,
+                              payload: {
+                                readingStatus: currentState,
+                                important: Boolean(item.important),
+                                useCases: toggleValue(useCases, action.value),
+                              },
+                            })}
+                            disabled={updateMutation.isPending}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {(statusActions[status] || []).map((nextStatus) => (
-                      <button
-                        key={nextStatus}
-                        className="text-xs px-2 py-1 rounded border border-line hover:bg-surface-elevated"
-                        onClick={() => updateMutation.mutate({ paperId: paper.id, status: nextStatus })}
-                        disabled={updateMutation.isPending}
-                        title={actionLabels[nextStatus] || nextStatus}
-                      >
-                        {actionLabels[nextStatus] || nextStatus}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </section>
         )

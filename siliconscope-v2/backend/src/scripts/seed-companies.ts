@@ -26,6 +26,13 @@ type CompanyPayload = {
   employeeCountRange: "exact" | "range" | "estimated" | "unknown";
   stockTicker?: string;
   exchange?: string;
+  marketCapUsd?: string;
+  marketCapLabel?: string;
+  stockPrice?: string;
+  stockCurrency?: string;
+  stockChangePercent?: number;
+  marketDataSource?: string;
+  marketDataAsOf?: string;
   description: string;
   productLines: string[];
   domains: string[];
@@ -120,6 +127,13 @@ function toPayload(seed: RawCompanySeed): CompanyPayload {
     employeeCountRange: inferEmployeeRange(seed.employees),
     stockTicker: seed.ticker,
     exchange: seed.exchange,
+    marketCapUsd: seed.marketCapUsd,
+    marketCapLabel: seed.marketCapLabel,
+    stockPrice: seed.stockPrice,
+    stockCurrency: seed.stockCurrency,
+    stockChangePercent: seed.stockChangePercent,
+    marketDataSource: seed.marketDataSource,
+    marketDataAsOf: seed.marketDataAsOf,
     description: seed.description,
     productLines: seed.specialties,
     domains: seed.domains || [],
@@ -228,10 +242,12 @@ function rawUpsertCompany(sqlite: BetterSqliteDatabase, seed: RawCompanySeed, pa
   sqlite.prepare(`
     INSERT INTO companies (
       id, name, legal_name, aliases_json, country, city, website, company_type, status,
-      founded_year, employee_count, employee_count_range, stock_ticker, exchange, description,
+      founded_year, employee_count, employee_count_range, stock_ticker, exchange,
+      market_cap_usd, market_cap_label, stock_price, stock_currency, stock_change_percent,
+      market_data_source, market_data_as_of, description,
       product_lines_json, domains_json, technology_keywords_json, application_markets_json,
       career_roles_json, hiring_signals_json, data_confidence, last_enriched_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
       legal_name = excluded.legal_name,
@@ -246,6 +262,13 @@ function rawUpsertCompany(sqlite: BetterSqliteDatabase, seed: RawCompanySeed, pa
       employee_count_range = excluded.employee_count_range,
       stock_ticker = excluded.stock_ticker,
       exchange = excluded.exchange,
+      market_cap_usd = excluded.market_cap_usd,
+      market_cap_label = excluded.market_cap_label,
+      stock_price = excluded.stock_price,
+      stock_currency = excluded.stock_currency,
+      stock_change_percent = excluded.stock_change_percent,
+      market_data_source = excluded.market_data_source,
+      market_data_as_of = excluded.market_data_as_of,
       description = excluded.description,
       product_lines_json = excluded.product_lines_json,
       domains_json = excluded.domains_json,
@@ -271,6 +294,13 @@ function rawUpsertCompany(sqlite: BetterSqliteDatabase, seed: RawCompanySeed, pa
     payload.employeeCountRange,
     payload.stockTicker || null,
     payload.exchange || null,
+    payload.marketCapUsd || null,
+    payload.marketCapLabel || null,
+    payload.stockPrice || null,
+    payload.stockCurrency || null,
+    payload.stockChangePercent ?? null,
+    payload.marketDataSource || null,
+    payload.marketDataAsOf || null,
     payload.description,
     JSON.stringify(payload.productLines),
     JSON.stringify(payload.domains),

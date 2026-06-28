@@ -26,7 +26,7 @@ const docs: LegalDoc[] = [
   {
     slug: 'privacy',
     title: 'Privacy Policy',
-    summary: 'This placeholder defines the data categories SiliconScope expects to process before public launch.',
+    summary: 'This draft defines the data categories SiliconScope expects to process before public launch.',
     sections: [
       {
         heading: 'User workspace data',
@@ -35,6 +35,10 @@ const docs: LegalDoc[] = [
       {
         heading: 'Admin separation',
         body: 'Administrative workflows are separated into the private admin application and should be protected by login plus an external access layer such as Cloudflare Access, VPN, or equivalent controls.',
+      },
+      {
+        heading: 'Deletion and export',
+        body: 'Before public launch, SiliconScope should provide a clear request channel for account deletion, personal data export, review removal, and correction of user-submitted workspace data.',
       },
     ],
   },
@@ -49,7 +53,7 @@ const docs: LegalDoc[] = [
       },
       {
         heading: 'Takedown and correction',
-        body: 'A public deployment should provide a contact channel for metadata corrections, copyright complaints, source attribution issues, and removal requests.',
+        body: 'A public deployment should provide a contact channel for metadata corrections, copyright complaints, source attribution issues, and removal requests. Requests should record requester contact, target URL, reason, and resolution status.',
       },
     ],
   },
@@ -80,6 +84,66 @@ const docs: LegalDoc[] = [
       {
         heading: 'Mentor reviews',
         body: 'Mentor review summaries should use approved reviews only, apply sample-size thresholds, avoid small-sample free-text exposure, and present fit-oriented signals rather than blacklists or rankings.',
+      },
+    ],
+  },
+  {
+    slug: 'contact-takedown',
+    title: 'Contact, Correction, and Takedown',
+    summary: 'Operational policy for correction requests, takedown notices, source disputes, and data removal.',
+    sections: [
+      {
+        heading: 'Request intake',
+        body: 'Production should expose a contact address or form for copyright complaints, metadata corrections, source attribution problems, profile correction, and data deletion requests.',
+      },
+      {
+        heading: 'Resolution workflow',
+        body: 'Each request should be tracked with target URL, requester contact, category, status, decision, timestamp, and admin notes. Urgent privacy or safety issues should be hidden first and reviewed later.',
+      },
+    ],
+  },
+  {
+    slug: 'mentor-review-policy',
+    title: 'Mentor Review Policy',
+    summary: 'Mentor content should be moderated, thresholded, and fit-oriented rather than used as a blacklist.',
+    sections: [
+      {
+        heading: 'Visibility thresholds',
+        body: 'Public mentor summaries should require enough approved reviews before showing aggregate claims. Small-sample free text should stay hidden or heavily summarized.',
+      },
+      {
+        heading: 'Allowed review focus',
+        body: 'Reviews should focus on mentoring style, research fit, communication, workload, and lab practices. Personal attacks, doxxing, discrimination, and unverifiable accusations should be removed or hidden.',
+      },
+    ],
+  },
+  {
+    slug: 'company-data-policy',
+    title: 'Company Data Source Policy',
+    summary: 'Company Intelligence is a curated public-metadata directory, not an automated surveillance or investment recommendation system.',
+    sections: [
+      {
+        heading: 'Allowed sources',
+        body: 'Company facts should come from official websites, public filings, manually reviewed CSV imports, official registries, SEC EDGAR, Companies House, OpenCorporates when terms allow, and admin-reviewed source URLs.',
+      },
+      {
+        heading: 'Market data caveat',
+        body: 'Ticker, market cap, stock price, and change fields are source-stamped reference fields. They may be stale, incomplete, or unavailable, and should never be treated as financial advice.',
+      },
+    ],
+  },
+  {
+    slug: 'service-limits',
+    title: 'Service Limits and Liability',
+    summary: 'SiliconScope should be presented as a research workspace with explicit limits.',
+    sections: [
+      {
+        heading: 'No professional advice',
+        body: 'SiliconScope does not provide legal, financial, admission, employment, immigration, or publication advice. Users should verify decisions against official sources and professional counsel where needed.',
+      },
+      {
+        heading: 'Data uncertainty',
+        body: 'Rankings, classifications, entity matching, company profiles, topic reports, and AI summaries can be incomplete or wrong. Production pages should show source, confidence, and correction paths.',
       },
     ],
   },

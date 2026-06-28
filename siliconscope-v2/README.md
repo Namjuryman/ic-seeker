@@ -133,6 +133,8 @@ The dev launcher starts:
 - Public frontend: `http://localhost:5173`
 - Independent admin frontend: `http://localhost:5176`
 
+Port policy is documented in [`docs/PORTS.md`](docs/PORTS.md): local backend uses `8751`, Docker/container API uses `8750`, and public production should use HTTPS domains rather than raw ports.
+
 The launcher sets `IC_SEEKER_LOCAL_ADMIN=1` only for local development so the admin app can be opened on your machine. Do not enable this flag on a public server.
 
 Or run the production-style build from this folder:

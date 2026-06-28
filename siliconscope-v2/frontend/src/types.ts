@@ -1149,6 +1149,13 @@ export interface CompanyRow {
   employeeCountRange?: string;
   stockTicker?: string;
   exchange?: string;
+  marketCapUsd?: string;
+  marketCapLabel?: string;
+  stockPrice?: string;
+  stockCurrency?: string;
+  stockChangePercent?: number;
+  marketDataSource?: string;
+  marketDataAsOf?: string;
   description?: string;
   productLines?: string[];
   domains?: string[];
@@ -1227,9 +1234,19 @@ export interface CompanyCompareResult {
 
 export interface ReadingQueueGroup {
   status: string
+  readingStatus?: string
   label: string
   count: number
-  papers: Array<{ paper: PaperRow; status: string; updatedAt: string | null }>
+  papers: Array<{
+    paper: PaperRow
+    status: string
+    readingStatus?: string
+    readingState?: string
+    important?: boolean
+    flags?: string[]
+    useCases?: string[]
+    updatedAt: string | null
+  }>
 }
 
 export interface InstitutionCompareItem {
@@ -1324,6 +1341,24 @@ export interface TopicReport {
   relatedCompanies: Array<{ id: string; name: string; domains: string[]; confidence: number | null }>
   relatedRoadmaps: Array<{ slug: string; title: string }>
   suggestedSearches: Array<{ label: string; params: Record<string, string> }>
+  caveat: string
+}
+
+export interface TopicTaxonomyNode {
+  id: string
+  label: string
+  parentId?: string
+  aliases: string[]
+  positiveKeywords: string[]
+  negativeKeywords: string[]
+  domain: string
+}
+
+export interface TopicTaxonomy {
+  version: string
+  generatedAt: string
+  nodes: TopicTaxonomyNode[]
+  tree: Array<TopicTaxonomyNode & { children: TopicTaxonomyNode[] }>
   caveat: string
 }
 

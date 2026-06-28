@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import type { CompanyRow } from '../types'
 import { companyPath } from '../utils/routes'
 
 const PAGE_SIZE = 20
@@ -11,8 +12,8 @@ const typeLabels: Record<string, string> = {
   Foundry: '晶圆代工',
   IDM: 'IDM',
   'OSAT / Packaging': '封装测试',
-  Equipment: '半导体设备',
-  Materials: '半导体材料',
+  Equipment: '设备',
+  Materials: '材料',
   'Semiconductor IP': 'IP',
   EDA: 'EDA',
 }
@@ -21,6 +22,25 @@ function pageWindow(page: number, pages: number) {
   const start = Math.max(1, page - 2)
   const end = Math.min(pages, page + 2)
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+}
+
+function marketTone(change?: number) {
+  if (change === undefined || change === null || Number.isNaN(change)) return 'market-flat'
+  return change >= 0 ? 'market-up' : 'market-down'
+}
+
+function marketSummary(company: CompanyRow) {
+  const ticker = [company.exchange, company.stockTicker].filter(Boolean).join(' · ')
+  if (company.marketCapLabel || company.stockPrice) {
+    return {
+      primary: company.marketCapLabel || company.marketCapUsd || '市值待换算',
+      secondary: `${company.stockCurrency || ''} ${company.stockPrice || ''}`.trim() || ticker || '行情已接入',
+    }
+  }
+  return {
+    primary: ticker || '未上市/未收录',
+    secondary: ticker ? '行情待接入' : '暂无公开行情字段',
+  }
 }
 
 export default function CompaniesPage() {
@@ -36,7 +56,7 @@ export default function CompaniesPage() {
     queryKey: ['companies', q, domain, page],
     queryFn: () => {
       const params: Record<string, string | number> = { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
-      if (q) params.q = q
+      if (q.trim()) params.q = q.trim()
       if (domain) params.domain = domain
       return api.companies(params)
     },
@@ -71,7 +91,7 @@ export default function CompaniesPage() {
   const rows = companies.data?.rows || []
   const total = companies.data?.total || 0
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const topCountries = useMemo(() => [...new Set(rows.map((row) => row.country).filter(Boolean))].slice(0, 6), [rows])
+  const topCountries = useMemo(() => [...new Set(rows.map((row) => row.country).filter(Boolean))].slice(0, 8), [rows])
   const watchedSet = watchedIds.data || new Set<string>()
 
   function submit(nextPage = 1) {
@@ -94,7 +114,7 @@ export default function CompaniesPage() {
         <div>
           <span>Company Intelligence</span>
           <h1>半导体企业情报</h1>
-          <p>按产业链、国家地区和技术方向浏览主要 IC 公司，后续可接岗位、论文、学习路线、新闻和供应链关系。</p>
+          <p>按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。当前行情字段为可接入结构，不构成投资建议。</p>
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
@@ -105,7 +125,7 @@ export default function CompaniesPage() {
         <div><span>公司总数</span><strong>{total.toLocaleString()}</strong></div>
         <div><span>当前页</span><strong>{rows.length}</strong></div>
         <div><span>覆盖地区</span><strong>{topCountries.length || '-'}</strong></div>
-        <div><span>数据状态</span><strong>Seeded</strong></div>
+        <div><span>行情状态</span><strong>待接入</strong></div>
       </section>
 
       <div className="company-layout">
@@ -159,8 +179,9 @@ export default function CompaniesPage() {
           <div className="company-list">
             {rows.map((company) => {
               const isWatched = watchedSet.has(company.id)
+              const market = marketSummary(company)
               return (
-                <div className="company-row" key={company.id}>
+                <article className="company-row" key={company.id}>
                   <Link to={companyPath(company.id)} className="company-row-link">
                     <div className="company-avatar">{(company.legalName || company.name || 'C').slice(0, 1)}</div>
                     <div className="company-row-main">
@@ -178,6 +199,17 @@ export default function CompaniesPage() {
                         )}
                       </div>
                     </div>
+                    <div className="company-market">
+                      <span>{market.primary}</span>
+                      <small>{market.secondary}</small>
+                      {company.stockChangePercent !== undefined && company.stockChangePercent !== null && (
+                        <b className={marketTone(company.stockChangePercent)}>
+                          {company.stockChangePercent >= 0 ? '+' : ''}{company.stockChangePercent.toFixed(2)}%
+                        </b>
+                      )}
+                      {!company.stockChangePercent && <b className="market-flat">行情待接入</b>}
+                      {company.marketDataAsOf && <i>as of {company.marketDataAsOf}</i>}
+                    </div>
                     <div className="company-row-side">
                       <span>{company.dataConfidence ?? '-'}%</span>
                       <small>confidence</small>
@@ -194,7 +226,7 @@ export default function CompaniesPage() {
                   >
                     {isWatched ? '已关注' : '关注'}
                   </button>
-                </div>
+                </article>
               )
             })}
           </div>
@@ -204,9 +236,7 @@ export default function CompaniesPage() {
               {total === 0 ? (
                 <div>
                   <p>还没有企业数据。</p>
-                  <p className="mt-2">
-                    运行 <code>npm run companies:seed</code>，或从独立管理后台手动添加。
-                  </p>
+                  <p className="mt-2">运行 <code>npm run companies:seed</code>，或从独立管理后台手动添加。</p>
                 </div>
               ) : (
                 '没有匹配的企业。'
