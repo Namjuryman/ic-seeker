@@ -325,11 +325,14 @@ Current scope:
 
 - Roadmaps and daily lessons are curated seed data, not generated long-form course chapters.
 - The current seed catalog contains 24 route maps and 35 daily circuit lessons.
-- Public learning APIs read published rows from the `learning_content_items` registry first, then fall back to the TypeScript seed catalog.
-- The independent admin app has a Learning Content page for seed-to-database sync, content-health checks, stale rows, and out-of-sync rows.
+- Public learning APIs read published rows from the `learning_content_items` registry first, then fall back to the TypeScript seed catalog only when the registry is not initialized.
+- Learning content now uses a hybrid database model:
+  - `learning_content_items` stores the versioned source payload, publication state, hash, and admin edits.
+  - `learning_routes`, `learning_lessons`, `learning_route_families`, `learning_foundations`, `learning_route_family_members`, and `learning_terms` are normalized projection tables for search, analytics, graph traversal, and future recommendation jobs.
+- The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, and projection-table health.
 - Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
-- Future work should add structured editing and publish workflow on top of the registry, plus reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
+- Future work should add type-specific structured editing forms on top of the registry, plus reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
 
 ## Rebuild The Database
 

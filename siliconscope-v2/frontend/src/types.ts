@@ -1053,6 +1053,7 @@ export interface LearningContentRow {
   status: LearningContentStatus;
   source: string;
   sourceVersion: string;
+  payloadJson?: string;
   payloadHash: string;
   bytes: number;
   syncedAt: string;
@@ -1072,6 +1073,14 @@ export interface LearningContentOverview {
     routeFamilies: number;
     foundationGroups: number;
     bytes: number;
+  };
+  projection: {
+    routes: number;
+    lessons: number;
+    routeFamilies: number;
+    foundations: number;
+    familyMembers: number;
+    terms: number;
   };
   byKind: Record<string, number>;
   validation: { errors: string[]; warnings: string[] };

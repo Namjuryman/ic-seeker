@@ -313,6 +313,80 @@ export const learningContentItems = sqliteTable("learning_content_items", {
   primaryKey({ columns: [table.itemKind, table.itemId] }),
 ]);
 
+export const learningRoutes = sqliteTable("learning_routes", {
+  slug: text("slug").primaryKey(),
+  title: text("title").notNull().default(""),
+  shortTitle: text("short_title").notNull().default(""),
+  domain: text("domain").notNull().default(""),
+  level: text("level").notNull().default("intermediate"),
+  family: text("family").notNull().default(""),
+  accent: text("accent"),
+  subtitle: text("subtitle"),
+  description: text("description").notNull().default(""),
+  paperQuery: text("paper_query"),
+  status: text("status").notNull().default("published"),
+  stageCount: integer("stage_count", { mode: "number" }).notNull().default(0),
+  moduleCount: integer("module_count", { mode: "number" }).notNull().default(0),
+  lessonCount: integer("lesson_count", { mode: "number" }).notNull().default(0),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const learningLessons = sqliteTable("learning_lessons", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  roadmapSlug: text("roadmap_slug").notNull().default(""),
+  moduleId: text("module_id").notNull().default(""),
+  level: text("level").notNull().default("core"),
+  estimatedMinutes: integer("estimated_minutes", { mode: "number" }).notNull().default(0),
+  status: text("status").notNull().default("published"),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const learningRouteFamilies = sqliteTable("learning_route_families", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  description: text("description").notNull().default(""),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const learningFoundations = sqliteTable("learning_foundations", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  note: text("note").notNull().default(""),
+  itemsJson: text("items_json").notNull().default("[]"),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const learningRouteFamilyMembers = sqliteTable("learning_route_family_members", {
+  familyId: text("family_id").notNull(),
+  routeSlug: text("route_slug").notNull(),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.familyId, table.routeSlug] }),
+]);
+
+export const learningTerms = sqliteTable("learning_terms", {
+  targetKind: text("target_kind").notNull(),
+  targetId: text("target_id").notNull(),
+  termKind: text("term_kind").notNull(),
+  value: text("value").notNull(),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+}, (table) => [
+  primaryKey({ columns: [table.targetKind, table.targetId, table.termKind, table.value] }),
+]);
+
 // Company / Employer Intelligence tables
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),

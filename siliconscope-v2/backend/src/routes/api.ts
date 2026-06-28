@@ -1095,6 +1095,50 @@ router.get("/admin/learning-content", requireAdmin, async (_req, res) => {
   res.json(learningContentService.adminOverview());
 });
 
+router.get("/admin/learning-content/:kind/:id", requireAdmin, async (req, res) => {
+  try {
+    const item = learningContentService.getItem(req.params.kind, decodeURIComponent(req.params.id));
+    if (!item) {
+      res.status(404).json({ error: "Learning content item not found" });
+      return;
+    }
+    res.json(item);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch("/admin/learning-content/:kind/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const kind = req.params.kind;
+  const itemId = decodeURIComponent(req.params.id);
+  try {
+    const item = learningContentService.updateItem(kind, itemId, {
+      status: req.body?.status,
+      title: req.body?.title,
+      payloadJson: req.body?.payloadJson,
+      actorUserId: req.user?.userId ?? null,
+    });
+    adminAuditService.record({
+      req,
+      action: "learning_content.update",
+      resourceType: "learning_content",
+      resourceId: `${kind}:${itemId}`,
+      metadata: { status: item.status, title: item.title, bytes: item.bytes },
+    });
+    res.json(item);
+  } catch (err) {
+    adminAuditService.record({
+      req,
+      action: "learning_content.update",
+      resourceType: "learning_content",
+      resourceId: `${kind}:${itemId}`,
+      status: "failure",
+      error: err,
+    });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.post("/admin/learning-content/sync-seed", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const result = learningContentService.syncSeedToDatabase(req.user?.userId ?? null);

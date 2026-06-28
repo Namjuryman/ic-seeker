@@ -26,6 +26,7 @@ Implemented in v2:
 - venue policy and hidden/downweighted broad-journal handling
 - learning workspace with `/learning`, roadmap detail pages, today's circuit, lesson pages, and related-paper suggestions
 - learning seed catalog for analog, PMIC, ADC/DAC, PLL, RF/mmWave, SerDes, memory/CIM, EDA/CAD/AI, and digital/accelerator routes
+- learning CMS registry with admin seed sync, JSON editing, publish/draft/archive state, and normalized projection tables for routes, lessons, families, foundations, and searchable terms
 
 Still provisional:
 
@@ -34,6 +35,7 @@ Still provisional:
 - institution affiliation membership is inferred from metadata and needs verification
 - city-level geo hotspots are illustrative until institution geocoding is connected
 - learning lessons are structured placeholders, not polished course content
+- learning route stages/modules/resources are still embedded in payload JSON; future structured editors should project them into dedicated tables
 
 The product can have three editions:
 

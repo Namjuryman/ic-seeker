@@ -35,6 +35,11 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_access_requests_email_created ON access_requests(email, created_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_learning_content_kind_status ON learning_content_items(item_kind, status, updated_at DESC)",
   "CREATE INDEX IF NOT EXISTS idx_learning_content_source ON learning_content_items(source, synced_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_routes_family_status ON learning_routes(family, status, display_order)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_lessons_roadmap_status ON learning_lessons(roadmap_slug, status, display_order)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_route_family_members_family ON learning_route_family_members(family_id, display_order)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_terms_target ON learning_terms(target_kind, target_id, term_kind)",
+  "CREATE INDEX IF NOT EXISTS idx_learning_terms_term ON learning_terms(term_kind, value)",
 ];
 
 function tableColumns(sqlite: any, table: string): string[] {
@@ -301,6 +306,70 @@ function ensureLearningContentTables(sqlite: any) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_by_user_id INTEGER,
       PRIMARY KEY (item_kind, item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_routes (
+      slug TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      short_title TEXT NOT NULL DEFAULT '',
+      domain TEXT NOT NULL DEFAULT '',
+      level TEXT NOT NULL DEFAULT 'intermediate',
+      family TEXT NOT NULL DEFAULT '',
+      accent TEXT,
+      subtitle TEXT,
+      description TEXT NOT NULL DEFAULT '',
+      paper_query TEXT,
+      status TEXT NOT NULL DEFAULT 'published',
+      stage_count INTEGER NOT NULL DEFAULT 0,
+      module_count INTEGER NOT NULL DEFAULT 0,
+      lesson_count INTEGER NOT NULL DEFAULT 0,
+      display_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_lessons (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      roadmap_slug TEXT NOT NULL DEFAULT '',
+      module_id TEXT NOT NULL DEFAULT '',
+      level TEXT NOT NULL DEFAULT 'core',
+      estimated_minutes INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'published',
+      display_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_route_families (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      display_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_foundations (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      items_json TEXT NOT NULL DEFAULT '[]',
+      display_order INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_route_family_members (
+      family_id TEXT NOT NULL,
+      route_slug TEXT NOT NULL,
+      display_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (family_id, route_slug)
+    );
+
+    CREATE TABLE IF NOT EXISTS learning_terms (
+      target_kind TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      term_kind TEXT NOT NULL,
+      value TEXT NOT NULL,
+      display_order INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (target_kind, target_id, term_kind, value)
     );
   `);
 }

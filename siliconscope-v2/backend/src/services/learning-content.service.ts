@@ -31,6 +31,13 @@ type LearningContentRow = {
   updatedByUserId: number | null;
 };
 
+type LearningContentUpdateInput = {
+  status?: string;
+  payloadJson?: string;
+  title?: string;
+  actorUserId?: number | null;
+};
+
 type SeedItem = {
   itemKind: LearningItemKind;
   itemId: string;
@@ -46,6 +53,16 @@ function stableJson(payload: unknown) {
 
 function hashPayload(json: string) {
   return createHash("sha256").update(json).digest("hex");
+}
+
+function normalizeKind(kind: string): LearningItemKind {
+  if (kind === "roadmap" || kind === "lesson" || kind === "route_family" || kind === "foundation_group") return kind;
+  throw new Error("itemKind must be roadmap, lesson, route_family, or foundation_group");
+}
+
+function normalizeStatus(status: string): LearningItemStatus {
+  if (status === "published" || status === "draft" || status === "archived") return status;
+  throw new Error("status must be published, draft, or archived");
 }
 
 function foundationId(group: FoundationGroupSeed, index: number) {
@@ -101,6 +118,53 @@ function mapRow(row: any): LearningContentRow {
   };
 }
 
+function rowById(kind: string, itemId: string): LearningContentRow | null {
+  const row = appSqlite.prepare(`
+    SELECT
+      item_kind AS itemKind,
+      item_id AS itemId,
+      title,
+      status,
+      source,
+      source_version AS sourceVersion,
+      payload_json AS payloadJson,
+      payload_hash AS payloadHash,
+      bytes,
+      synced_at AS syncedAt,
+      updated_at AS updatedAt,
+      updated_by_user_id AS updatedByUserId
+    FROM learning_content_items
+    WHERE item_kind = ? AND item_id = ?
+  `).get(normalizeKind(kind), itemId) as any | undefined;
+  return row ? mapRow(row) : null;
+}
+
+function payloadIdentity(kind: LearningItemKind, payload: any): { id: string; title: string } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("payloadJson must be a JSON object");
+  }
+  if (kind === "roadmap") {
+    if (!payload.slug || typeof payload.slug !== "string") throw new Error("roadmap payload requires string slug");
+    if (!payload.title || typeof payload.title !== "string") throw new Error("roadmap payload requires string title");
+    if (!Array.isArray(payload.stages)) throw new Error("roadmap payload requires stages array");
+    return { id: payload.slug, title: payload.title };
+  }
+  if (kind === "lesson") {
+    if (!payload.id || typeof payload.id !== "string") throw new Error("lesson payload requires string id");
+    if (!payload.title || typeof payload.title !== "string") throw new Error("lesson payload requires string title");
+    if (!payload.roadmapSlug || typeof payload.roadmapSlug !== "string") throw new Error("lesson payload requires string roadmapSlug");
+    return { id: payload.id, title: payload.title };
+  }
+  if (kind === "route_family") {
+    if (!payload.id || typeof payload.id !== "string") throw new Error("route_family payload requires string id");
+    if (!payload.title || typeof payload.title !== "string") throw new Error("route_family payload requires string title");
+    if (!Array.isArray(payload.routeIds)) throw new Error("route_family payload requires routeIds array");
+    return { id: payload.id, title: payload.title };
+  }
+  if (!payload.title || typeof payload.title !== "string") throw new Error("foundation_group payload requires string title");
+  return { id: "", title: payload.title };
+}
+
 function listRows(params: { kind?: LearningItemKind; status?: string } = {}): LearningContentRow[] {
   const where: string[] = [];
   const values: unknown[] = [];
@@ -143,10 +207,12 @@ function listRows(params: { kind?: LearningItemKind; status?: string } = {}): Le
 }
 
 function parsePayloads<T>(kind: LearningItemKind): T[] | null {
-  const rows = listRows({ kind, status: "published" });
+  const rows = listRows({ kind });
   if (!rows.length) return null;
   try {
-    return rows.map((row) => JSON.parse(row.payloadJson) as T);
+    return rows
+      .filter((row) => row.status === "published")
+      .map((row) => JSON.parse(row.payloadJson) as T);
   } catch (err) {
     console.warn(`[learning-content] failed to parse ${kind} rows, falling back to seed catalog`, err);
     return null;
@@ -159,6 +225,167 @@ function activeContent() {
   const routeFamilies = parsePayloads<RouteFamilySeed>("route_family") ?? seedRouteFamilies;
   const commonFoundations = parsePayloads<FoundationGroupSeed>("foundation_group") ?? seedFoundations;
   return { roadmaps, lessons, routeFamilies, commonFoundations };
+}
+
+function countModules(roadmap: LearningRoadmapSeed) {
+  return roadmap.stages.reduce((sum, stage) => sum + stage.modules.length, 0);
+}
+
+function insertTerms(targetKind: string, targetId: string, termKind: string, values: string[] | undefined, orderOffset = 0) {
+  if (!values?.length) return;
+  const insert = appSqlite.prepare(`
+    INSERT OR IGNORE INTO learning_terms (target_kind, target_id, term_kind, value, display_order)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  values.forEach((value, index) => {
+    if (String(value || "").trim()) insert.run(targetKind, targetId, termKind, String(value).trim(), orderOffset + index);
+  });
+}
+
+function refreshProjections() {
+  const { roadmaps, lessons, routeFamilies, commonFoundations } = activeContent();
+  const activeRouteSlugs = new Set(roadmaps.map((roadmap) => roadmap.slug));
+  const routeStatus = new Map(listRows({ kind: "roadmap" }).map((row) => [row.itemId, row.status]));
+  const lessonStatus = new Map(listRows({ kind: "lesson" }).map((row) => [row.itemId, row.status]));
+  const familyStatus = new Map(listRows({ kind: "route_family" }).map((row) => [row.itemId, row.status]));
+  const foundationStatus = new Map(listRows({ kind: "foundation_group" }).map((row) => [row.itemId, row.status]));
+
+  const clearTerms = appSqlite.prepare("DELETE FROM learning_terms");
+  const upsertRoute = appSqlite.prepare(`
+    INSERT INTO learning_routes (
+      slug, title, short_title, domain, level, family, accent, subtitle, description,
+      paper_query, status, stage_count, module_count, lesson_count, display_order, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(slug) DO UPDATE SET
+      title = excluded.title,
+      short_title = excluded.short_title,
+      domain = excluded.domain,
+      level = excluded.level,
+      family = excluded.family,
+      accent = excluded.accent,
+      subtitle = excluded.subtitle,
+      description = excluded.description,
+      paper_query = excluded.paper_query,
+      status = excluded.status,
+      stage_count = excluded.stage_count,
+      module_count = excluded.module_count,
+      lesson_count = excluded.lesson_count,
+      display_order = excluded.display_order,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const upsertLesson = appSqlite.prepare(`
+    INSERT INTO learning_lessons (
+      id, title, roadmap_slug, module_id, level, estimated_minutes, status, display_order, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      roadmap_slug = excluded.roadmap_slug,
+      module_id = excluded.module_id,
+      level = excluded.level,
+      estimated_minutes = excluded.estimated_minutes,
+      status = excluded.status,
+      display_order = excluded.display_order,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const upsertFamily = appSqlite.prepare(`
+    INSERT INTO learning_route_families (id, title, description, display_order, updated_at)
+    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      description = excluded.description,
+      display_order = excluded.display_order,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const upsertFoundation = appSqlite.prepare(`
+    INSERT INTO learning_foundations (id, title, note, items_json, display_order, updated_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(id) DO UPDATE SET
+      title = excluded.title,
+      note = excluded.note,
+      items_json = excluded.items_json,
+      display_order = excluded.display_order,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const insertMember = appSqlite.prepare(`
+    INSERT OR REPLACE INTO learning_route_family_members (family_id, route_slug, display_order)
+    VALUES (?, ?, ?)
+  `);
+  clearTerms.run();
+  appSqlite.prepare("DELETE FROM learning_route_family_members").run();
+  appSqlite.prepare("DELETE FROM learning_routes").run();
+  appSqlite.prepare("DELETE FROM learning_lessons").run();
+  appSqlite.prepare("DELETE FROM learning_route_families").run();
+  appSqlite.prepare("DELETE FROM learning_foundations").run();
+
+  routeFamilies.forEach((family, index) => {
+    if ((familyStatus.get(family.id) || "published") === "archived") return;
+    upsertFamily.run(family.id, family.title, family.description, index);
+    family.routeIds
+      .filter((routeId) => activeRouteSlugs.has(routeId))
+      .forEach((routeId, memberIndex) => insertMember.run(family.id, routeId, memberIndex));
+  });
+
+  commonFoundations.forEach((group, index) => {
+    const id = foundationId(group, index);
+    if ((foundationStatus.get(id) || "published") === "archived") return;
+    upsertFoundation.run(id, group.title, group.note, JSON.stringify(group.items || []), index);
+  });
+
+  roadmaps.forEach((roadmap, index) => {
+    const status = routeStatus.get(roadmap.slug) || "published";
+    upsertRoute.run(
+      roadmap.slug,
+      roadmap.title,
+      roadmap.shortTitle,
+      roadmap.domain,
+      roadmap.level,
+      roadmap.family || "",
+      roadmap.accent || null,
+      roadmap.subtitle || null,
+      roadmap.description,
+      roadmap.paperQuery || roadmap.relatedSearchQueries?.[0] || roadmap.title,
+      status,
+      roadmap.stages.length,
+      countModules(roadmap),
+      lessons.filter((lesson) => lesson.roadmapSlug === roadmap.slug).length,
+      index,
+    );
+    insertTerms("roadmap", roadmap.slug, "topic", roadmap.relatedTopics, 0);
+    insertTerms("roadmap", roadmap.slug, "venue", roadmap.relatedVenues, 1000);
+    insertTerms("roadmap", roadmap.slug, "search_query", roadmap.relatedSearchQueries, 2000);
+    insertTerms("roadmap", roadmap.slug, "outcome", roadmap.outcomes, 3000);
+  });
+
+  lessons.forEach((lesson, index) => {
+    const status = lessonStatus.get(lesson.id) || "published";
+    upsertLesson.run(
+      lesson.id,
+      lesson.title,
+      lesson.roadmapSlug,
+      lesson.moduleId,
+      lesson.level,
+      lesson.estimatedMinutes,
+      status,
+      index,
+    );
+    insertTerms("lesson", lesson.id, "topic", lesson.relatedTopics, 0);
+    insertTerms("lesson", lesson.id, "venue", lesson.relatedVenues, 1000);
+    insertTerms("lesson", lesson.id, "search_query", lesson.relatedSearchQueries, 2000);
+  });
+}
+
+function projectionSummary() {
+  const one = (sql: string) => Number((appSqlite.prepare(sql).get() as any)?.count || 0);
+  return {
+    routes: one("SELECT COUNT(*) AS count FROM learning_routes"),
+    lessons: one("SELECT COUNT(*) AS count FROM learning_lessons"),
+    routeFamilies: one("SELECT COUNT(*) AS count FROM learning_route_families"),
+    foundations: one("SELECT COUNT(*) AS count FROM learning_foundations"),
+    familyMembers: one("SELECT COUNT(*) AS count FROM learning_route_family_members"),
+    terms: one("SELECT COUNT(*) AS count FROM learning_terms"),
+  };
 }
 
 function validateActiveContent() {
@@ -182,6 +409,14 @@ function validateActiveContent() {
   }
 
   return { errors, warnings };
+}
+
+function prettyPayload(json: string) {
+  try {
+    return JSON.stringify(JSON.parse(json), null, 2);
+  } catch {
+    return json;
+  }
 }
 
 export const learningContentService = {
@@ -234,12 +469,87 @@ export const learningContentService = {
         foundationGroups: active.commonFoundations.length,
         bytes: rows.reduce((sum, row) => sum + row.bytes, 0),
       },
+      projection: projectionSummary(),
       byKind,
       validation,
       staleRows: staleRows.slice(0, 30),
       outOfSyncRows: outOfSyncRows.slice(0, 30),
       rows,
     };
+  },
+
+  getItem(kind: string, itemId: string) {
+    const row = rowById(kind, itemId);
+    if (!row) return null;
+    return { ...row, payloadJson: prettyPayload(row.payloadJson) };
+  },
+
+  updateItem(kindInput: string, itemId: string, input: LearningContentUpdateInput) {
+    const kind = normalizeKind(kindInput);
+    const current = rowById(kind, itemId);
+    if (!current) {
+      throw new Error("Learning content item not found");
+    }
+
+    const nextStatus = input.status == null ? current.status : normalizeStatus(input.status);
+    let nextPayloadJson = current.payloadJson;
+    let nextTitle = typeof input.title === "string" && input.title.trim() ? input.title.trim() : current.title;
+
+    if (typeof input.payloadJson === "string") {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(input.payloadJson);
+      } catch (err) {
+        throw new Error(`payloadJson is not valid JSON: ${(err as Error).message}`);
+      }
+      const identity = payloadIdentity(kind, parsed);
+      if (kind !== "foundation_group" && identity.id !== itemId) {
+        throw new Error(`payload id "${identity.id}" must match item id "${itemId}"`);
+      }
+      nextTitle = identity.title || nextTitle;
+      nextPayloadJson = stableJson(parsed);
+    }
+
+    const update = appSqlite.prepare(`
+      UPDATE learning_content_items
+      SET
+        title = ?,
+        status = ?,
+        source = CASE WHEN source = 'seed' THEN 'admin' ELSE source END,
+        source_version = ?,
+        payload_json = ?,
+        payload_hash = ?,
+        bytes = ?,
+        updated_at = CURRENT_TIMESTAMP,
+        updated_by_user_id = ?
+      WHERE item_kind = ? AND item_id = ?
+    `);
+
+    const tx = appSqlite.transaction(() => {
+      update.run(
+        nextTitle,
+        nextStatus,
+        `${SOURCE_VERSION}:admin-edit`,
+        nextPayloadJson,
+        hashPayload(nextPayloadJson),
+        Buffer.byteLength(nextPayloadJson, "utf8"),
+        input.actorUserId ?? null,
+        kind,
+        itemId,
+      );
+      if (nextStatus === "published") {
+        const validation = validateActiveContent();
+        if (validation.errors.length) {
+          throw new Error(`Published learning content would be invalid: ${validation.errors.join("; ")}`);
+        }
+      }
+      refreshProjections();
+    });
+    tx();
+
+    const next = this.getItem(kind, itemId);
+    if (!next) throw new Error("Learning content item disappeared after update");
+    return next;
   },
 
   syncSeedToDatabase(actorUserId: number | null = null) {
@@ -296,6 +606,7 @@ export const learningContentService = {
           archiveOne.run(actorUserId, row.itemKind, row.itemId);
         }
       }
+      refreshProjections();
     });
     tx();
 

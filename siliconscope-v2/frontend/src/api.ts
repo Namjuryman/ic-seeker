@@ -73,6 +73,7 @@ import type {
   AccessRequestResult,
   AccessRequestRow,
   LearningContentOverview,
+  LearningContentRow,
   LearningContentSyncResult,
 } from './types'
 
@@ -536,6 +537,16 @@ export const api = {
 
   async syncLearningSeed() {
     const res = await axios.post<LearningContentSyncResult>('/api/admin/learning-content/sync-seed')
+    return res.data
+  },
+
+  async learningContentItem(kind: string, id: string) {
+    const res = await axios.get<LearningContentRow>(`/api/admin/learning-content/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async updateLearningContentItem(kind: string, id: string, body: { status?: string; title?: string; payloadJson?: string }) {
+    const res = await axios.patch<LearningContentRow>(`/api/admin/learning-content/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, body)
     return res.data
   },
 

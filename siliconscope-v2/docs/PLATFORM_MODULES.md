@@ -10,7 +10,7 @@ This document records the current product modules and the next high-value improv
 | Scholar and Institution Profiles | Partial | Turns paper metadata into people/institution intelligence. | Merge IEEE affiliations, ORCID, faculty pages, and manual aliases. |
 | Mentor Intelligence | Partial | Builds a mentor/institution view for applicants and students. | Add verified reviews, abuse controls, and career timeline enrichment. |
 | Company Intelligence | Partial | Connects IC papers, roadmaps, companies, jobs, and supply chain. | Add job/news/source ingestion and confidence review workflow. |
-| Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. Current seed catalog has 24 route maps and 35 daily lessons, with a DB-backed learning content registry and admin sync. | Add structured content editing, progress tracking, spaced review, route diagrams, and reading queue handoff. |
+| Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. Current seed catalog has 24 route maps and 35 daily lessons, with a DB-backed content registry, admin sync/editing, and normalized projection tables for routes, lessons, families, foundations, and terms. | Add type-specific structured editors, progress tracking, spaced review, route diagrams, and reading queue handoff. |
 | Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and topic classification. |
 | Data Operations | Partial | Keeps weekly updates manageable. | Add scheduled ingestion jobs and snapshot diff reports. |
 | Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, billing catalog, usage ledger, partial quota enforcement, admin plan management, local backup operations, and maintenance task records are in place. | Connect PostgreSQL, Redis, object storage, search engine, payment checkout/webhooks, email, realtime delivery, and observability. |
@@ -24,6 +24,12 @@ The current backend now has explicit adapter boundaries:
 - `cacheDb`: computed snapshots and ranking payloads.
 
 The SQLite fallback remains intentional for private/local use. Public deployment should move app/business tables first, then snapshots, then full search.
+
+The learning CMS now follows the same direction:
+
+- `learning_content_items` keeps the mutable source payload and publication state.
+- `learning_routes`, `learning_lessons`, `learning_route_families`, `learning_foundations`, `learning_route_family_members`, and `learning_terms` provide a queryable projection layer.
+- Future Postgres migration can move these tables without rewriting the public learning pages, because the service boundary already hides the storage model.
 
 ## Suggested New Modules
 

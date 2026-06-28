@@ -32,12 +32,27 @@ function statusClass(status: string) {
   return 'bg-surface-elevated text-ink-muted border-line-subtle'
 }
 
-function RowList({ rows }: { rows: LearningContentRow[] }) {
+function RowList({
+  rows,
+  selectedKey,
+  onSelect,
+}: {
+  rows: LearningContentRow[]
+  selectedKey: string
+  onSelect: (row: LearningContentRow) => void
+}) {
   if (!rows.length) return <p className="text-sm text-ink-muted">No items.</p>
   return (
     <div className="space-y-2 max-h-[560px] overflow-auto">
       {rows.map((row) => (
-        <div key={`${row.itemKind}:${row.itemId}`} className="grid lg:grid-cols-[140px_1fr_120px_120px_170px] gap-2 items-center rounded-lg border border-line p-3 text-sm">
+        <button
+          key={`${row.itemKind}:${row.itemId}`}
+          type="button"
+          onClick={() => onSelect(row)}
+          className={`w-full text-left grid lg:grid-cols-[140px_1fr_120px_120px_170px] gap-2 items-center rounded-lg border p-3 text-sm transition ${
+            selectedKey === `${row.itemKind}:${row.itemId}` ? 'border-brand-400 bg-brand-50/60' : 'border-line hover:border-brand-200 hover:bg-surface-elevated'
+          }`}
+        >
           <span className="text-xs font-semibold text-brand-700">{kindLabel(row.itemKind)}</span>
           <div>
             <div className="font-semibold text-ink-text">{row.title || row.itemId}</div>
@@ -46,7 +61,7 @@ function RowList({ rows }: { rows: LearningContentRow[] }) {
           <span className={`w-fit rounded-full border px-2 py-0.5 text-xs ${statusClass(row.status)}`}>{row.status}</span>
           <span className="text-ink-muted">{formatBytes(row.bytes)}</span>
           <span className="text-xs text-ink-muted">{formatDate(row.updatedAt)}</span>
-        </div>
+        </button>
       ))}
     </div>
   )
@@ -59,6 +74,11 @@ export default function LearningContentAdminPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [selected, setSelected] = useState<LearningContentRow | null>(null)
+  const [editorTitle, setEditorTitle] = useState('')
+  const [editorStatus, setEditorStatus] = useState('published')
+  const [payloadText, setPayloadText] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const rows = useMemo(() => {
     const all = data?.rows || []
@@ -97,11 +117,62 @@ export default function LearningContentAdminPage() {
     }
   }
 
+  async function openItem(row: LearningContentRow) {
+    setLoading(true)
+    setError('')
+    setMessage('')
+    try {
+      const item = await api.learningContentItem(row.itemKind, row.itemId)
+      setSelected(item)
+      setEditorTitle(item.title || '')
+      setEditorStatus(item.status || 'published')
+      setPayloadText(item.payloadJson || '')
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err.message || 'Failed to load learning content item.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function formatPayload() {
+    try {
+      setPayloadText(JSON.stringify(JSON.parse(payloadText), null, 2))
+      setError('')
+    } catch (err: any) {
+      setError(`JSON format failed: ${err.message}`)
+    }
+  }
+
+  async function saveItem() {
+    if (!selected) return
+    setSaving(true)
+    setError('')
+    setMessage('')
+    try {
+      const item = await api.updateLearningContentItem(selected.itemKind, selected.itemId, {
+        title: editorTitle,
+        status: editorStatus,
+        payloadJson: payloadText,
+      })
+      setSelected(item)
+      setEditorTitle(item.title || '')
+      setEditorStatus(item.status || 'published')
+      setPayloadText(item.payloadJson || '')
+      setMessage(`Saved ${kindLabel(item.itemKind)} / ${item.itemId}.`)
+      await load()
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err.message || 'Failed to save learning content item.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   useEffect(() => {
     load()
   }, [])
 
   const summary = data?.summary
+  const projection = data?.projection
   const hasProblems = Boolean(data?.validation.errors.length || data?.outOfSyncRows.length || data?.staleRows.length)
 
   return (
@@ -162,7 +233,7 @@ export default function LearningContentAdminPage() {
         </div>
       </section>
 
-      <section className="grid lg:grid-cols-3 gap-4">
+      <section className="grid lg:grid-cols-4 gap-4">
         <article className="bg-surface-panel border border-line rounded-xl p-4">
           <h2 className="font-semibold text-ink-text">By kind</h2>
           <div className="mt-3 space-y-2">
@@ -189,34 +260,121 @@ export default function LearningContentAdminPage() {
             <p><strong>{data?.outOfSyncRows.length || 0}</strong> seed rows differ from the current TypeScript catalog.</p>
             <p><strong>{data?.staleRows.length || 0}</strong> old seed rows are no longer in the catalog.</p>
             <p><strong>{formatBytes(summary?.bytes || 0)}</strong> stored payload size.</p>
-            <p className="text-ink-muted">Next step: add structured editing and publish workflow on top of this registry.</p>
+            <p className="text-ink-muted">Structured forms should sit on top of this JSON editor next.</p>
           </div>
+        </article>
+        <article className="bg-surface-panel border border-line rounded-xl p-4">
+          <h2 className="font-semibold text-ink-text">Projection layer</h2>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-lg border border-line-subtle bg-surface-elevated px-3 py-2">
+              <div className="text-xs text-ink-muted">routes</div>
+              <strong>{projection?.routes ?? '-'}</strong>
+            </div>
+            <div className="rounded-lg border border-line-subtle bg-surface-elevated px-3 py-2">
+              <div className="text-xs text-ink-muted">lessons</div>
+              <strong>{projection?.lessons ?? '-'}</strong>
+            </div>
+            <div className="rounded-lg border border-line-subtle bg-surface-elevated px-3 py-2">
+              <div className="text-xs text-ink-muted">families</div>
+              <strong>{projection?.routeFamilies ?? '-'}</strong>
+            </div>
+            <div className="rounded-lg border border-line-subtle bg-surface-elevated px-3 py-2">
+              <div className="text-xs text-ink-muted">terms</div>
+              <strong>{projection?.terms ?? '-'}</strong>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-ink-muted">
+            Public pages keep the rich payload, while search and analytics can read normalized tables.
+          </p>
         </article>
       </section>
 
-      <section className="bg-surface-panel border border-line rounded-xl p-4 shadow-sm">
-        <div className="flex justify-between gap-3 items-center mb-3 flex-wrap">
-          <div>
-            <h2 className="font-semibold text-ink-text">Content registry</h2>
-            <p className="text-sm text-ink-muted">{rows.length} visible item(s)</p>
+      <section className="grid xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)] gap-4">
+        <article className="bg-surface-panel border border-line rounded-xl p-4 shadow-sm">
+          <div className="flex justify-between gap-3 items-center mb-3 flex-wrap">
+            <div>
+              <h2 className="font-semibold text-ink-text">Content registry</h2>
+              <p className="text-sm text-ink-muted">{rows.length} visible item(s)</p>
+            </div>
+            <div className="flex gap-2">
+              <select value={kind} onChange={(event) => setKind(event.target.value)} className="px-3 py-2 rounded-lg border border-line text-sm bg-white">
+                <option value="all">All kinds</option>
+                <option value="route_family">Route families</option>
+                <option value="foundation_group">Common base</option>
+                <option value="roadmap">Route maps</option>
+                <option value="lesson">Daily lessons</option>
+              </select>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="px-3 py-2 rounded-lg border border-line text-sm"
+                placeholder="Filter title or id"
+              />
+            </div>
           </div>
-          <div className="flex gap-2">
-            <select value={kind} onChange={(event) => setKind(event.target.value)} className="px-3 py-2 rounded-lg border border-line text-sm bg-white">
-              <option value="all">All kinds</option>
-              <option value="route_family">Route families</option>
-              <option value="foundation_group">Common base</option>
-              <option value="roadmap">Route maps</option>
-              <option value="lesson">Daily lessons</option>
-            </select>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              className="px-3 py-2 rounded-lg border border-line text-sm"
-              placeholder="Filter title or id"
-            />
+          <RowList rows={rows} selectedKey={selected ? `${selected.itemKind}:${selected.itemId}` : ''} onSelect={openItem} />
+        </article>
+
+        <aside className="bg-surface-panel border border-line rounded-xl p-4 shadow-sm xl:sticky xl:top-4 self-start">
+          <div className="flex justify-between gap-3 items-start">
+            <div>
+              <h2 className="font-semibold text-ink-text">Editor</h2>
+              <p className="text-sm text-ink-muted">
+                {selected ? `${kindLabel(selected.itemKind)} / ${selected.itemId}` : 'Select an item to edit JSON payload and publish state.'}
+              </p>
+            </div>
+            {selected && <span className={`w-fit rounded-full border px-2 py-0.5 text-xs ${statusClass(editorStatus)}`}>{editorStatus}</span>}
           </div>
-        </div>
-        <RowList rows={rows} />
+
+          {!selected ? (
+            <div className="mt-4 rounded-xl border border-dashed border-line p-6 text-sm text-ink-muted">
+              The next commercial step is structured forms for each content type. This JSON editor is the safe operator layer before that.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <label className="block text-sm">
+                <span className="text-xs font-semibold text-ink-muted">Title</span>
+                <input
+                  value={editorTitle}
+                  onChange={(event) => setEditorTitle(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-line text-sm"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-xs font-semibold text-ink-muted">Publish status</span>
+                <select
+                  value={editorStatus}
+                  onChange={(event) => setEditorStatus(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 rounded-lg border border-line text-sm bg-white"
+                >
+                  <option value="published">published</option>
+                  <option value="draft">draft</option>
+                  <option value="archived">archived</option>
+                </select>
+              </label>
+              <label className="block text-sm">
+                <span className="text-xs font-semibold text-ink-muted">Payload JSON</span>
+                <textarea
+                  value={payloadText}
+                  onChange={(event) => setPayloadText(event.target.value)}
+                  spellCheck={false}
+                  className="mt-1 w-full min-h-[460px] font-mono text-xs px-3 py-2 rounded-lg border border-line bg-surface-elevated"
+                />
+              </label>
+              <div className="flex gap-2 justify-end">
+                <button onClick={formatPayload} disabled={saving} className="px-3 py-2 rounded-lg border border-line bg-white text-sm disabled:opacity-50">
+                  Format JSON
+                </button>
+                <button onClick={saveItem} disabled={saving} className="px-3 py-2 rounded-lg bg-brand-600 text-white text-sm disabled:opacity-50">
+                  {saving ? 'Saving...' : 'Save item'}
+                </button>
+              </div>
+              <p className="text-xs text-ink-muted">
+                Published saves run catalog validation. Draft and archived items are excluded from public learning APIs.
+              </p>
+            </div>
+          )}
+        </aside>
       </section>
     </div>
   )

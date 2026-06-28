@@ -20,10 +20,23 @@ backend/src/data/learning-catalog.ts
 The runtime source is now layered:
 
 ```text
-learning_content_items published rows -> TypeScript seed fallback
+learning_content_items published rows -> TypeScript seed fallback when the registry is empty
 ```
 
-The independent admin app can sync the seed catalog into the database registry and inspect stale or out-of-sync content rows. This is the first step toward an editable learning CMS.
+The independent admin app can sync the seed catalog into the database registry, edit JSON payloads, publish/draft/archive rows, and inspect stale or out-of-sync content rows. This is the first step toward an editable learning CMS.
+
+## Database Model
+
+Learning content now uses a hybrid model instead of keeping everything as opaque JSON:
+
+- `learning_content_items` is the source-of-truth registry. It stores item kind, item id, publication status, source version, payload hash, raw JSON payload, update metadata, and admin-edited rows.
+- `learning_routes`, `learning_lessons`, `learning_route_families`, and `learning_foundations` are projection tables rebuilt from the published registry after seed sync or admin updates.
+- `learning_route_family_members` stores route-family membership as queryable edges.
+- `learning_terms` stores route and lesson topics, venues, search queries, and outcomes as indexable terms.
+
+This keeps the rich nested roadmap payload for rendering, while giving search, dashboards, route recommendations, and future graph jobs a normalized layer. Draft and archived rows are excluded from public learning APIs and from projections, so the admin publish state is real instead of cosmetic.
+
+The next database upgrade should split route stages, modules, resources, and practice projects into additional projection tables once the editor moves from JSON editing to structured forms.
 
 ## Route Families
 
@@ -118,6 +131,7 @@ The current 35 lessons cover seed topics for ADC, PLL, SerDes, layout, backend, 
 Short term:
 
 - Build structured editing on top of the `learning_content_items` registry for routes, stages, prerequisites, lessons, diagrams, and reading lists.
+- Expand projection tables for route stages, modules, resources, practice prompts, and diagram assets after the editor is stable.
 - Add route-level representative diagrams and thumbnails.
 - Add progress placeholders: mark completed, review later, and add related papers to reading queue.
 
