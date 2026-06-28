@@ -42,6 +42,7 @@ import { exportService, type ExportFormat } from "../services/export.service.js"
 import { accessRequestService } from "../services/access-request.service.js";
 import { learningContentService } from "../services/learning-content.service.js";
 import { learningProgressService } from "../services/learning-progress.service.js";
+import { searchIndexService, type SearchIndexTarget } from "../services/search-index.service.js";
 
 const router = Router();
 
@@ -202,6 +203,48 @@ router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: Authenti
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
   res.status(runtime.status === "error" ? 503 : 200).json(runtime);
+});
+
+router.get("/admin/search-index", requireAdmin, async (_req, res) => {
+  res.json(await searchIndexService.status());
+});
+
+router.post("/admin/search-index/rebuild", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const target = String(req.body?.target || "all");
+  const allowedTargets = ["all", "papers", "companies", "learning_routes"];
+  if (!allowedTargets.includes(target)) {
+    adminAuditService.record({
+      req,
+      action: "search_index.rebuild",
+      resourceType: "search_index",
+      resourceId: target,
+      status: "failure",
+      error: new Error("Unknown search index"),
+    });
+    res.status(400).json({ error: "Unknown search index" });
+    return;
+  }
+  try {
+    const result = await searchIndexService.rebuild(target as SearchIndexTarget);
+    adminAuditService.record({
+      req,
+      action: "search_index.rebuild",
+      resourceType: "search_index",
+      resourceId: target,
+      metadata: result,
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({
+      req,
+      action: "search_index.rebuild",
+      resourceType: "search_index",
+      resourceId: target,
+      status: "failure",
+      error: err,
+    });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/admin/observability", requireAdmin, async (_req, res) => {

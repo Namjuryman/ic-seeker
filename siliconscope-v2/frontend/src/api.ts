@@ -46,6 +46,8 @@ import type {
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
+  SearchIndexStatus,
+  SearchIndexRebuildResult,
   ObservabilitySnapshot,
   NotificationResult,
   AdminAuditLogResult,
@@ -165,6 +167,16 @@ export const api = {
 
   async adminRuntime() {
     const res = await axios.get<RuntimeHealth>('/api/admin/runtime')
+    return res.data
+  },
+
+  async searchIndexStatus() {
+    const res = await axios.get<SearchIndexStatus>('/api/admin/search-index')
+    return res.data
+  },
+
+  async rebuildSearchIndex(target: string) {
+    const res = await axios.post<SearchIndexRebuildResult>('/api/admin/search-index/rebuild', { target })
     return res.data
   },
 

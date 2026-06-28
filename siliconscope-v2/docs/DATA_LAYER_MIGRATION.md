@@ -13,7 +13,7 @@ SiliconScope v2 currently uses one local SQLite database for both paper metadata
 | Companies and aliases | SQLite | PostgreSQL | Business/admin data; needs auditing and enrichment |
 | API keys and admin settings | SQLite | PostgreSQL plus secret manager later | Operational state should not live in metadata DB |
 | Computed snapshots/rankings | SQLite | Redis cache plus Postgres snapshot registry | Avoid expensive recompute; allow invalidation |
-| Search index | SQLite FTS | Meilisearch first, OpenSearch later if needed | Better relevance and cross-entity search |
+| Search index | SQLite FTS plus optional Meilisearch adapter | Meilisearch first, OpenSearch later if needed | Better relevance and cross-entity search; rebuildable read model |
 | Files: avatars, PDFs, company logos, attachments | Local folders | S3-compatible object storage | Public deployment and backups |
 
 ## Migration Phases
@@ -41,6 +41,7 @@ Current Phase 1 status:
 - `profile.service.ts`, `mentor.service.ts`, `author-compare.service.ts`, and `institution-compare.service.ts` are explicitly metadata-first because they derive live rankings from the paper corpus.
 - `mentor-compare.service.ts` reads mentor-review aggregates through `appDb`.
 - `snapshot.service.ts` now uses `cacheDb`/`cacheSqlite`, a cache adapter that falls back to SQLite today and leaves a Redis path open.
+- `search-index.service.ts` now provides an optional Meilisearch adapter for `papers`, `companies`, and `learning_routes`; SQLite search remains the fallback until public search is routed through it.
 
 ### Phase 2: App database adapter
 
@@ -73,7 +74,7 @@ Recommended service migration order:
 3. Paper user-state methods and search enrichment. Done for `paper.service.ts`, `search.service.ts`, and `stats.service.ts`.
 4. Auth and user profile. Initial password-admin user now uses `appDb`; full multi-user auth is still pending.
 5. Company/admin data. Initial company service and identity alias split done.
-6. Search and ranking only after Meilisearch/Redis are introduced.
+6. Search and ranking only after Meilisearch/Redis are introduced. Initial Meilisearch indexing now exists for papers, companies, and learning routes.
 
 ## Current Adapter Usage
 
@@ -98,6 +99,7 @@ Recommended service migration order:
 | `institution-compare.service.ts` | Yes | No | Institution comparison is corpus-derived and uses `metadataDb`. |
 | `mentor-compare.service.ts` | No | Yes | Anonymous mentor-review comparison uses `appDb`. |
 | `snapshot.service.ts` | No | Cache | Computed snapshots use `cacheDb`/`cacheSqlite`; currently SQLite fallback, Redis planned. |
+| `search-index.service.ts` | Yes | Yes | Rebuildable Meilisearch read model for corpus, company, and learning-route search; disabled unless configured. |
 | `topic-report.service.ts` | Yes | Yes | Topic facts come from metadata services; related companies come from `appDb`. |
 
 ## Remaining Split Work
@@ -109,9 +111,26 @@ Recommended service migration order:
 
 ### Phase 4: Search engine and cache
 
-- Index `papers`, `authors`, `institutions`, `companies`, `roadmaps`, and `venues` in Meilisearch.
+- Index `papers`, `companies`, and `roadmaps` in Meilisearch. Initial adapter and admin rebuild controls exist.
+- Add `authors`, `institutions`, `venues`, and `topics` after identity resolution is stronger.
+- Route public search through the search adapter when Meilisearch is healthy, while preserving SQLite fallback for local/private mode.
 - Store expensive ranking/snapshot payloads in Redis or Postgres-backed snapshot tables.
 - Keep weekly rebuild scripts idempotent.
+
+### Recommended Advanced Schema Shape
+
+Use source tables for truth, projection tables for fast reads, and rebuildable indexes for search.
+
+| Layer | Example tables/models | Update cadence |
+| --- | --- | --- |
+| Raw import | `paper_import_runs`, `paper_sources`, `raw_provider_payloads` | Per crawl/import |
+| Canonical metadata | `papers`, `paper_authors`, `paper_institutions`, `venues`, `doi_aliases` | Per import with upserts |
+| Manual curation | `author_aliases`, `institution_aliases`, `venue_overrides`, `company_aliases` | Admin edits |
+| Read projections | `author_profile_snapshots`, `institution_strength_snapshots`, `geo_strength_snapshots`, `learning_routes` | Weekly or on-demand |
+| Search indexes | Meilisearch `papers`, `companies`, `learning_routes`, later `authors` and `institutions` | After projections refresh |
+| User/product state | `users`, `notes`, `favorites`, `comments`, `reviews`, `billing_events` | Realtime writes |
+
+This avoids making every page run live joins across the full corpus. Hot pages should read one or two projection rows plus an indexed search result.
 
 ### Phase 5: Object storage
 

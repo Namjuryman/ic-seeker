@@ -183,11 +183,13 @@ export const runtimeHealthService = {
     runCheck(checks, () => ({
       id: "commercial-adapters",
       label: "Commercial adapters",
-      status: appConfig.postgresUrl || appConfig.redisUrl || appConfig.meilisearchHost ? "warn" : "ok",
-      message: appConfig.postgresUrl || appConfig.redisUrl || appConfig.meilisearchHost
-        ? "configured but adapters are still fallback/planned"
+      status: appConfig.postgresUrl || appConfig.redisUrl || appConfig.objectStorageEndpoint ? "warn" : "ok",
+      message: appConfig.meilisearchHost
+        ? "Meilisearch adapter configured"
+        : appConfig.postgresUrl || appConfig.redisUrl || appConfig.objectStorageEndpoint
+        ? "some adapters configured but still fallback/planned"
         : "private SQLite mode",
-      detail: "Postgres, Redis, Meilisearch, and object storage are optional until adapters are implemented.",
+      detail: "Meilisearch indexing is available; Postgres, Redis, and object storage remain optional migration targets.",
     }));
 
     const warnings = checks

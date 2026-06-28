@@ -14,6 +14,7 @@ import { observabilityService } from "./observability.service.js";
 import { schedulerService } from "./scheduler.service.js";
 import { ingestionJobService } from "./ingestion-job.service.js";
 import { siteSettingsService } from "./site-settings.service.js";
+import { searchIndexService } from "./search-index.service.js";
 
 function bytesTotal(rows: Array<{ bytes?: number }>) {
   return rows.reduce((sum, row) => sum + Number(row.bytes || 0), 0);
@@ -38,6 +39,7 @@ export const adminService = {
     const scheduler = schedulerService.status();
     const ingestionJobs = ingestionJobService.list({ limit: 1 });
     const siteSettings = siteSettingsService.summary();
+    const searchIndex = await searchIndexService.status();
 
     const configuredApiKeys = apiKeys.filter((key) => key.masked).length;
     const snapshotBytes = bytesTotal(snapshots);
@@ -182,6 +184,17 @@ export const adminService = {
           detail: billing.checkoutReason,
           href: "/billing",
           action: "View plans",
+        },
+        {
+          id: "search-index",
+          title: "Search Index",
+          status: searchIndex.configured ? searchIndex.reachable ? "partial" : "attention" : "planned",
+          metric: searchIndex.configured ? searchIndex.reachable ? "meili online" : "meili offline" : "sqlite",
+          detail: searchIndex.configured
+            ? `${searchIndex.indexes.map((index: any) => `${index.uid}:${index.documents || 0}`).join(", ")}`
+            : "Optional Meilisearch adapter is not configured; SQLite search remains active.",
+          href: "/admin/search-index",
+          action: "Inspect / rebuild",
         },
         {
           id: "snapshots",

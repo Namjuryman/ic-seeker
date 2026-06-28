@@ -20,6 +20,7 @@ const AdminBillingPage = lazy(() => import('../../frontend/src/pages/AdminBillin
 const BackupAdminPage = lazy(() => import('../../frontend/src/pages/BackupAdminPage'))
 const CompanyAdminPage = lazy(() => import('../../frontend/src/pages/CompanyAdminPage'))
 const SnapshotAdminPage = lazy(() => import('../../frontend/src/pages/SnapshotAdminPage'))
+const SearchIndexAdminPage = lazy(() => import('../../frontend/src/pages/SearchIndexAdminPage'))
 const LearningContentAdminPage = lazy(() => import('../../frontend/src/pages/LearningContentAdminPage'))
 const ModerationPage = lazy(() => import('../../frontend/src/pages/ModerationPage'))
 const IdentityPage = lazy(() => import('../../frontend/src/pages/IdentityPage'))
@@ -54,6 +55,7 @@ const adminNav = [
       { to: '/maintenance', label: 'Maintenance', icon: 'T' },
       { to: '/backups', label: 'Backups', icon: 'R' },
       { to: '/snapshots', label: 'Snapshots', icon: 'K' },
+      { to: '/search-index', label: 'Search index', icon: 'X' },
     ],
   },
   {
@@ -214,6 +216,7 @@ function AdminRoutes() {
       <Route path="/backups" element={<BackupAdminPage />} />
       <Route path="/companies" element={<CompanyAdminPage />} />
       <Route path="/snapshots" element={<SnapshotAdminPage />} />
+      <Route path="/search-index" element={<SearchIndexAdminPage />} />
       <Route path="/learning-content" element={<LearningContentAdminPage />} />
       <Route path="/moderation" element={<ModerationPage />} />
       <Route path="/identity" element={<IdentityPage />} />

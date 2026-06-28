@@ -59,7 +59,7 @@ Third-party Services
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
 | Redis | Optional infra compose only | Needed for production cache, sessions, rate limits, queues |
 | Object storage | Local folders only | Add S3-compatible storage such as Cloudflare R2, MinIO, or OSS |
-| Search engine | SQLite/service search | Add Meilisearch first; OpenSearch later if scale requires |
+| Search engine | SQLite fallback plus optional Meilisearch index adapter | Route public search through Meilisearch when healthy; add authors, institutions, venues, and topics |
 | Message queue | Not implemented | Add BullMQ/Redis or another queue for ingestion, enrichment, snapshots |
 | Payment | Plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and checkout adapter boundary exist | Add Stripe/Paddle session creation and webhook handling; China payments later |
 | Email/SMS/OAuth | Not implemented | Add email invite/login and optional OAuth |
@@ -85,6 +85,7 @@ Third-party Services
 ## Implemented Production Scaffolding
 
 - Optional commercial infrastructure compose: Postgres, Redis, Meilisearch, MinIO, and Mailpit.
+- Optional Meilisearch adapter and admin rebuild console for `papers`, `companies`, and `learning_routes`.
 - Runtime health/readiness checks for API liveness, metadata DB, app DB, cache, auth mode, JWT, CORS, production URLs, and commercial adapter configuration.
 - SQLite-backed Notification Center with user notifications, unread counts, mark-read actions, and admin-created messages.
 - Subscription and quota scaffold with `Free Preview`, `Research Pro`, `Lab`, `Enterprise`, and `Internal Admin` plans.
@@ -175,3 +176,17 @@ Next work:
 - Keep large paper metadata and user-generated business data separable.
 - Compute expensive rankings/snapshots offline where possible.
 - Use public DOI/metadata links by default; do not redistribute publisher PDFs.
+
+## Database Shape Target
+
+The advanced form is not one bigger database. It is a small set of purpose-built stores with clear ownership:
+
+| Store | Role | First production choice | Notes |
+| --- | --- | --- | --- |
+| Corpus store | Imported paper metadata, DOI/source IDs, raw venue/year imports | SQLite metadata cache first; later mirrored to Postgres partitions | Optimized for weekly bulk import and reproducible snapshots |
+| App store | Users, roles, comments, reviews, notes, companies, billing, admin audit | PostgreSQL | Strong constraints, transactional writes, backups, row-level permissions later |
+| Search store | Fast cross-entity keyword/semantic-ish lookup | Meilisearch | Rebuildable read model; never the source of truth |
+| Snapshot/cache store | Rankings, geo summaries, profile payloads, facets | Redis plus Postgres snapshot registry | Removes live heavy aggregation from hot pages |
+| Object store | PDFs, avatars, logos, attachments | S3-compatible storage | Keeps large binary files out of the relational database |
+
+Weekly update flow should be: ingest metadata, normalize aliases and projections, refresh snapshots, rebuild search indexes, run data-quality checks, then publish the refreshed read models.

@@ -381,6 +381,31 @@ export interface RuntimeHealth {
   warnings: string[];
 }
 
+export interface SearchIndexStatus {
+  provider: 'sqlite' | 'meilisearch';
+  configured: boolean;
+  host: string;
+  reachable: boolean;
+  message: string;
+  indexes: Array<{
+    uid: 'papers' | 'companies' | 'learning_routes';
+    primaryKey: string;
+    label: string;
+    exists: boolean;
+    documents: number;
+    isIndexing?: boolean;
+  }>;
+}
+
+export interface SearchIndexRebuildResult {
+  ok: boolean;
+  provider: string;
+  target: string;
+  indexed: Record<string, number>;
+  tasks: Record<string, unknown>;
+  generatedAt: string;
+}
+
 export interface ObservedRoute {
   key: string;
   method: string;

@@ -33,6 +33,7 @@ git lfs pull
 ## Features
 
 - Local SQLite + FTS5 search over title, abstract, authors, venue, domain, and DOI
+- Optional Meilisearch search-index adapter for production-style indexing of papers, companies, and learning routes
 - Private admin login with a signed HTTP-only cookie
 - Lightweight semantic search through IC-domain alias expansion
 - Venue, domain, rank, year, local-PDF, and sort filters
@@ -82,7 +83,29 @@ Optional local infrastructure for the future commercial stack can be started wit
 docker compose -f docker-compose.infra.yml up -d
 ```
 
-This starts Postgres, Redis, Meilisearch, MinIO, and Mailpit for development. The current app does not require these services until the corresponding adapters are implemented.
+This starts Postgres, Redis, Meilisearch, MinIO, and Mailpit for development. The app still works without these services. The first optional adapter now available is Meilisearch indexing for papers, companies, and learning routes.
+
+To enable the search-index adapter:
+
+```powershell
+$env:SEARCH_ENGINE="meilisearch"
+$env:MEILISEARCH_HOST="http://127.0.0.1:7700"
+$env:MEILISEARCH_API_KEY="<same value as MEILI_MASTER_KEY if your Meili instance requires it>"
+```
+
+Then open the independent admin app and use **Search index** to inspect or rebuild the index.
+
+## Data Architecture Direction
+
+The current local database remains convenient for private research, but the product path is a split data layer:
+
+- **Metadata corpus**: paper records, venue data, imported bibliographic metadata, and local FTS stay in SQLite during the crawling/import phase.
+- **App database**: users, comments, reviews, companies, notes, watchlists, billing state, and admin logs should move to PostgreSQL first.
+- **Search index**: cross-entity search moves to Meilisearch first, with OpenSearch/Elasticsearch only if scale demands it.
+- **Cache/snapshots**: expensive rankings, profile summaries, geo views, and leaderboard payloads should be weekly computed into Redis or a snapshot registry instead of recalculated on every page load.
+- **Object storage**: professor photos, institution/company logos, PDFs, and attachments should move to S3-compatible storage such as Cloudflare R2 or MinIO.
+
+This keeps weekly data refreshes simple: import/update the corpus, rebuild normalized projections, refresh snapshots, rebuild search indexes, then publish.
 
 ## Quick Start
 
