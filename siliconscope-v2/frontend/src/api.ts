@@ -70,6 +70,8 @@ import type {
   IngestionJobEventResult,
   SiteSettingsResult,
   SiteSettingRow,
+  AccessRequestResult,
+  AccessRequestRow,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -108,6 +110,11 @@ export const api = {
 
   async publicSiteSettings() {
     const res = await axios.get<Record<string, boolean | string | number>>('/api/site-settings')
+    return res.data
+  },
+
+  async createAccessRequest(body: { email: string; name?: string; affiliation?: string; intendedUse?: string; planInterest?: string }) {
+    const res = await axios.post<{ row: AccessRequestRow; duplicate: boolean }>('/api/access-requests', body)
     return res.data
   },
 
@@ -223,6 +230,16 @@ export const api = {
 
   async updateSiteSetting(key: string, value: boolean | string | number) {
     const res = await axios.patch<SiteSettingRow>(`/api/admin/site-settings/${encodeURIComponent(key)}`, { value })
+    return res.data
+  },
+
+  async accessRequests(params?: Record<string, string | number>) {
+    const res = await axios.get<AccessRequestResult>('/api/admin/access-requests', { params })
+    return res.data
+  },
+
+  async updateAccessRequest(id: number, body: { status: string; notes?: string }) {
+    const res = await axios.patch<AccessRequestRow>(`/api/admin/access-requests/${id}`, body)
     return res.data
   },
 

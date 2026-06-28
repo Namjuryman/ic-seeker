@@ -283,6 +283,40 @@ export interface AuthStatus {
   user?: { userId: number; email: string; role: string };
 }
 
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected' | 'invited';
+
+export interface AccessRequestRow {
+  id: number;
+  email: string;
+  name: string;
+  affiliation: string;
+  intendedUse: string;
+  planInterest: string;
+  status: AccessRequestStatus;
+  source: string;
+  notes: string | null;
+  reviewedByUserId: number | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccessRequestStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  invited: number;
+}
+
+export interface AccessRequestResult {
+  rows: AccessRequestRow[];
+  total: number;
+  limit: number;
+  offset: number;
+  stats: AccessRequestStats;
+}
+
 export interface PlatformModule {
   id: string;
   name: string;

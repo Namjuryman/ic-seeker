@@ -80,6 +80,7 @@ Paid features should monetize workflow efficiency and AI assistance, not copyrig
 - [x] Add draft legal and product boundary pages.
 - [x] Add admin-managed site settings for private beta, maintenance, paid-feature gates, community features, and data-readiness copy.
 - [x] Add Export Center MVP for topic reports and compare pages with quota-aware Markdown/CSV/JSON output.
+- [x] Add public `/request-access` outside the login wall and admin-only `/access-requests` approval queue.
 - [ ] Run full runtime QA with a real non-LFS-pointer SQLite database.
 - [ ] Record results in `docs/RUNTIME_QA_RESULTS.md`.
 - [ ] Split Reading Queue long-term model into `readingStatus`, `flags`, and `useCases`.
@@ -98,6 +99,7 @@ Build success is not enough. Before public beta, verify with the real database:
 - payment disabled state is explicit and does not pretend real checkout is available.
 - site settings reflect the intended launch mode and every mutation appears in admin audit logs.
 - export endpoints produce metadata-only files and increment export usage.
+- public access requests can be submitted without login, while review/approval remains admin-only.
 
 ## Legal / Policy Pages Needed
 

@@ -10,6 +10,7 @@ const AdminConsolePage = lazy(() => import('../../frontend/src/pages/AdminConsol
 const LaunchAdminPage = lazy(() => import('../../frontend/src/pages/LaunchAdminPage'))
 const JobOperationsPage = lazy(() => import('../../frontend/src/pages/JobOperationsPage'))
 const SiteSettingsAdminPage = lazy(() => import('../../frontend/src/pages/SiteSettingsAdminPage'))
+const AccessRequestsAdminPage = lazy(() => import('../../frontend/src/pages/AccessRequestsAdminPage'))
 const SchedulerAdminPage = lazy(() => import('../../frontend/src/pages/SchedulerAdminPage'))
 const MaintenanceAdminPage = lazy(() => import('../../frontend/src/pages/MaintenanceAdminPage'))
 const ObservabilityPage = lazy(() => import('../../frontend/src/pages/ObservabilityPage'))
@@ -40,6 +41,7 @@ const adminNav = [
       { to: '/launch', label: 'Launch checklist', icon: 'G' },
       { to: '/job-operations', label: 'Operations ledger', icon: 'J' },
       { to: '/site-settings', label: 'Site settings', icon: 'F' },
+      { to: '/access-requests', label: 'Access requests', icon: 'U' },
       { to: '/observability', label: 'Observability', icon: 'O' },
     ],
   },
@@ -200,6 +202,7 @@ function AdminRoutes() {
       <Route path="/launch" element={<LaunchAdminPage />} />
       <Route path="/job-operations" element={<JobOperationsPage />} />
       <Route path="/site-settings" element={<SiteSettingsAdminPage />} />
+      <Route path="/access-requests" element={<AccessRequestsAdminPage />} />
       <Route path="/scheduler" element={<SchedulerAdminPage />} />
       <Route path="/maintenance" element={<MaintenanceAdminPage />} />
       <Route path="/observability" element={<ObservabilityPage />} />

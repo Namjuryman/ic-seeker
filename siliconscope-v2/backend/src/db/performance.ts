@@ -31,6 +31,8 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_institution_aliases_canonical ON institution_aliases(canonical_name)",
   "CREATE INDEX IF NOT EXISTS idx_author_aliases_canonical ON author_aliases(canonical_name)",
   "CREATE INDEX IF NOT EXISTS idx_site_settings_group ON site_settings(group_name, display_order)",
+  "CREATE INDEX IF NOT EXISTS idx_access_requests_status_created ON access_requests(status, created_at DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_access_requests_email_created ON access_requests(email, created_at DESC)",
 ];
 
 function tableColumns(sqlite: any, table: string): string[] {
@@ -261,6 +263,26 @@ function ensureSiteSettingsTables(sqlite: any) {
   `);
 }
 
+function ensureAccessRequestTables(sqlite: any) {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS access_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      affiliation TEXT NOT NULL DEFAULT '',
+      intended_use TEXT NOT NULL DEFAULT '',
+      plan_interest TEXT NOT NULL DEFAULT 'research',
+      status TEXT NOT NULL DEFAULT 'pending',
+      source TEXT NOT NULL DEFAULT 'public',
+      notes TEXT,
+      reviewed_by_user_id INTEGER,
+      reviewed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+}
+
 export function applyPerformanceSettings(sqlite: any) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
@@ -275,6 +297,7 @@ export function applyPerformanceSettings(sqlite: any) {
   ensureNotificationTables(sqlite);
   ensureBillingTables(sqlite);
   ensureSiteSettingsTables(sqlite);
+  ensureAccessRequestTables(sqlite);
 
   for (const statement of PERFORMANCE_INDEXES) {
     sqlite.exec(statement);

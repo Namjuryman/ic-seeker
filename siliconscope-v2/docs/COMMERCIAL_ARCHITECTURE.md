@@ -54,7 +54,7 @@ Third-party Services
 | Client | React + Vite web frontend and independent admin frontend | Mobile app not started; no SSR/BFF |
 | CDN / WAF / Load Balancer | Deployment templates added for Cloudflare, Caddy, Nginx, and Dockerized Caddy edge | Real domain, WAF policy, and admin Access rule still need to be configured outside the repo |
 | Frontend / BFF | Frontends directly call Express API; `VITE_API_BASE_URL` supports split API domains | Optional Next.js BFF layer for SaaS edition |
-| Backend API | Express API with auth, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog, site settings, backup operations, maintenance task runs, scheduled operations, ingestion job records, and a unified operations ledger | Payment checkout, email delivery, and real ingestion workers missing |
+| Backend API | Express API with auth, access requests, search, admin, moderation, comments, notifications, watchlist, reading queue, companies, billing catalog, site settings, backup operations, maintenance task runs, scheduled operations, ingestion job records, and a unified operations ledger | Payment checkout, email delivery, and real ingestion workers missing |
 | Realtime | Pull-based notification center implemented | Add Socket.IO or WebSocket gateway later |
 | Core database | SQLite | Migrate multi-user data to PostgreSQL; keep SQLite metadata import as source/cache if useful |
 | Redis | Optional infra compose only | Needed for production cache, sessions, rate limits, queues |
@@ -96,6 +96,12 @@ Third-party Services
   - `GET /api/admin/site-settings` lists the full operations/commercial configuration.
   - `PATCH /api/admin/site-settings/:key` updates one setting and writes an admin audit log.
   - Admin `/site-settings` controls private beta mode, maintenance mode, paid-feature gates, community surfaces, company intelligence, topic reports, and weekly ingestion readiness.
+- Private beta access request funnel:
+  - Public `/request-access` is outside the login wall and collects controlled beta requests.
+  - `POST /api/access-requests` creates or updates a pending request without exposing admin data.
+  - `GET /api/admin/access-requests` lists requests for the independent admin app only.
+  - `PATCH /api/admin/access-requests/:id` moves a request through `pending`, `approved`, `invited`, or `rejected` and writes an admin audit log.
+  - Admin `/access-requests` is the manual approval queue until email invitation delivery and account provisioning are automated.
 - Export Center MVP:
   - `GET /api/exports/topic-report?field=...&format=markdown|csv|json`.
   - `GET /api/exports/company-compare?ids=...&format=...`.
@@ -159,7 +165,8 @@ Next work:
 2. Add webhook signature verification and idempotent event handling into `billing_events`.
 3. Extend quota checks to alerts, AI reading, and API endpoints.
 4. Add invoice/customer pages after Stripe/Paddle webhooks exist.
-5. Keep the public demo free and metadata-only; paid plans should unlock workflow limits, team functions, and private deployment features.
+5. Connect approved access requests to email invitations and account creation before enabling public registration.
+6. Keep the public demo free and metadata-only; paid plans should unlock workflow limits, team functions, and private deployment features.
 
 ## Design Principles
 

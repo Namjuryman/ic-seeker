@@ -1,6 +1,6 @@
 ﻿import { Suspense, lazy, useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from './api'
 import type { AuthStatus } from './types'
 
@@ -32,6 +32,7 @@ const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
 const PlatformPage = lazy(() => import('./pages/PlatformPage'))
 const LegalPage = lazy(() => import('./pages/LegalPage'))
 const AdminRedirectPage = lazy(() => import('./pages/AdminRedirectPage'))
+const AccessRequestPage = lazy(() => import('./pages/AccessRequestPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
@@ -104,6 +105,7 @@ function LoginGate({ children }: { children: React.ReactNode }) {
           <button disabled={loading || !password} onClick={login}>
             {loading ? '登录中...' : '登录'}
           </button>
+          <Link className="ss-login-link" to="/request-access">申请私测访问</Link>
         </div>
       </div>
     )
@@ -168,52 +170,61 @@ function Layout({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <LoginGate>
-        <BrowserRouter>
-          <Layout>
-            <Suspense fallback={<div className="ss-loading">Loading page...</div>}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/papers/:id" element={<PaperDetailPage />} />
-                <Route path="/learning" element={<LearningDashboardPage />} />
-                <Route path="/learning/roadmaps/:slug" element={<RoadmapDetailPage />} />
-                <Route path="/learning/today" element={<DailyLessonPage today />} />
-                <Route path="/learning/lessons/:lessonId" element={<DailyLessonPage />} />
-                <Route path="/learning-path" element={<LearningPathPage />} />
-                <Route path="/topics" element={<TopicsPage />} />
-                <Route path="/geo" element={<GeoPage />} />
-                <Route path="/authors" element={<AuthorsPage />} />
-                <Route path="/authors/*" element={<AuthorsPage />} />
-                <Route path="/institutions" element={<InstitutionsPage />} />
-                <Route path="/institutions/*" element={<InstitutionsPage />} />
-                <Route path="/mentors" element={<MentorsPage />} />
-                <Route path="/mentors/*" element={<MentorsPage />} />
-                <Route path="/venue-matrix" element={<VenueMatrixPage />} />
-                <Route path="/companies" element={<CompaniesPage />} />
-                <Route path="/companies/:companyId" element={<CompanyProfilePage />} />
-                <Route path="/watchlist" element={<WatchlistPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/billing" element={<BillingPage />} />
-                <Route path="/reading-queue" element={<ReadingQueuePage />} />
-                <Route path="/compare/companies" element={<CompanyComparePage />} />
-                <Route path="/compare" element={<ComparePage />} />
-                <Route path="/compare/institutions" element={<InstitutionComparePage />} />
-                <Route path="/compare/authors" element={<AuthorComparePage />} />
-                <Route path="/compare/mentors" element={<MentorComparePage />} />
-                <Route path="/exports" element={<ExportCenterPage />} />
-                <Route path="/reports" element={<TopicReportPage />} />
-                <Route path="/platform" element={<PlatformPage />} />
-                <Route path="/reports/topics" element={<TopicReportPage />} />
-                <Route path="/reports/topics/:field" element={<TopicReportPage />} />
-                <Route path="/legal" element={<LegalPage />} />
-                <Route path="/legal/:slug" element={<LegalPage />} />
-                <Route path="/admin/*" element={<AdminRedirectPage />} />
-              </Routes>
-            </Suspense>
-          </Layout>
-        </BrowserRouter>
-      </LoginGate>
+      <BrowserRouter>
+        <Suspense fallback={<div className="ss-loading">Loading page...</div>}>
+          <Routes>
+            <Route path="/request-access" element={<AccessRequestPage />} />
+            <Route path="/legal" element={<LegalPage />} />
+            <Route path="/legal/:slug" element={<LegalPage />} />
+            <Route path="/*" element={<ProtectedApp />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
     </QueryClientProvider>
+  )
+}
+
+function ProtectedApp() {
+  return (
+    <LoginGate>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/papers/:id" element={<PaperDetailPage />} />
+          <Route path="/learning" element={<LearningDashboardPage />} />
+          <Route path="/learning/roadmaps/:slug" element={<RoadmapDetailPage />} />
+          <Route path="/learning/today" element={<DailyLessonPage today />} />
+          <Route path="/learning/lessons/:lessonId" element={<DailyLessonPage />} />
+          <Route path="/learning-path" element={<LearningPathPage />} />
+          <Route path="/topics" element={<TopicsPage />} />
+          <Route path="/geo" element={<GeoPage />} />
+          <Route path="/authors" element={<AuthorsPage />} />
+          <Route path="/authors/*" element={<AuthorsPage />} />
+          <Route path="/institutions" element={<InstitutionsPage />} />
+          <Route path="/institutions/*" element={<InstitutionsPage />} />
+          <Route path="/mentors" element={<MentorsPage />} />
+          <Route path="/mentors/*" element={<MentorsPage />} />
+          <Route path="/venue-matrix" element={<VenueMatrixPage />} />
+          <Route path="/companies" element={<CompaniesPage />} />
+          <Route path="/companies/:companyId" element={<CompanyProfilePage />} />
+          <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/billing" element={<BillingPage />} />
+          <Route path="/reading-queue" element={<ReadingQueuePage />} />
+          <Route path="/compare/companies" element={<CompanyComparePage />} />
+          <Route path="/compare" element={<ComparePage />} />
+          <Route path="/compare/institutions" element={<InstitutionComparePage />} />
+          <Route path="/compare/authors" element={<AuthorComparePage />} />
+          <Route path="/compare/mentors" element={<MentorComparePage />} />
+          <Route path="/exports" element={<ExportCenterPage />} />
+          <Route path="/reports" element={<TopicReportPage />} />
+          <Route path="/platform" element={<PlatformPage />} />
+          <Route path="/reports/topics" element={<TopicReportPage />} />
+          <Route path="/reports/topics/:field" element={<TopicReportPage />} />
+          <Route path="/admin/*" element={<AdminRedirectPage />} />
+        </Routes>
+      </Layout>
+    </LoginGate>
   )
 }
 

@@ -39,6 +39,7 @@ import { jobOperationsService } from "../services/job-operations.service.js";
 import { ingestionJobService } from "../services/ingestion-job.service.js";
 import { siteSettingsService } from "../services/site-settings.service.js";
 import { exportService, type ExportFormat } from "../services/export.service.js";
+import { accessRequestService } from "../services/access-request.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -54,6 +55,22 @@ router.get("/platform", requireAuth, async (_req, res) => {
 
 router.get("/site-settings", requireAuth, async (_req, res) => {
   res.json(siteSettingsService.publicSettings());
+});
+
+router.post("/access-requests", async (req, res) => {
+  try {
+    const result = accessRequestService.create({
+      email: req.body?.email,
+      name: req.body?.name,
+      affiliation: req.body?.affiliation,
+      intendedUse: req.body?.intendedUse,
+      planInterest: req.body?.planInterest,
+      source: "public-form",
+    });
+    res.status(result.duplicate ? 200 : 201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/billing/plans", requireAuth, async (_req, res) => {
@@ -228,6 +245,39 @@ router.patch("/admin/site-settings/:key", requireAdmin, async (req: Authenticate
     res.json(row);
   } catch (err) {
     adminAuditService.record({ req, action: "site_settings.update", resourceType: "site_setting", resourceId: key, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/admin/access-requests", requireAdmin, async (req, res) => {
+  res.json(accessRequestService.list(req.query as Record<string, unknown>));
+});
+
+router.patch("/admin/access-requests/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const id = Number(req.params.id);
+  try {
+    const row = accessRequestService.updateStatus(id, {
+      status: req.body?.status,
+      notes: req.body?.notes,
+      actorUserId: req.user?.userId ?? null,
+    });
+    adminAuditService.record({
+      req,
+      action: "access_request.update_status",
+      resourceType: "access_request",
+      resourceId: id,
+      metadata: { status: row.status, email: row.email },
+    });
+    res.json(row);
+  } catch (err) {
+    adminAuditService.record({
+      req,
+      action: "access_request.update_status",
+      resourceType: "access_request",
+      resourceId: Number.isFinite(id) ? id : req.params.id,
+      status: "failure",
+      error: err,
+    });
     res.status(400).json({ error: (err as Error).message });
   }
 });

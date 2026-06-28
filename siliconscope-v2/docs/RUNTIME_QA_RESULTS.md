@@ -36,6 +36,7 @@ npm run dev
 | learning dashboard | `/api/learning` | pending | |
 | companies | `/api/companies` | pending | |
 | public site settings | `/api/site-settings` | pending | |
+| public access request | `POST /api/access-requests` | pending | should work before login |
 | company detail | `/api/companies/:id` | pending | |
 | related papers | `/api/companies/:id/related-papers` | pending | |
 | watchlist | `/api/watchlist` | pending | |
@@ -49,6 +50,7 @@ npm run dev
 | export institution compare | `/api/exports/institution-compare?names=Tsinghua%20University,University%20of%20Macau&format=csv` | pending | |
 | admin snapshots | `/api/admin/snapshots` | pending | |
 | admin site settings | `/api/admin/site-settings` | pending | |
+| admin access requests | `/api/admin/access-requests` | pending | admin-only |
 | admin audit logs | `/api/admin/audit-logs` | pending | |
 
 ## Page Smoke
@@ -74,9 +76,11 @@ npm run dev
 | `/reports/topics/Power%20Management` | pending | |
 | `/billing` | pending | |
 | `/legal` | pending | |
+| `/request-access` | pending | public page outside login wall |
 | `/admin/anything` on public frontend | pending | should show external admin handoff only |
 | admin `/` | pending | |
 | admin `/site-settings` | pending | |
+| admin `/access-requests` | pending | |
 | admin `/journal-ingestion` | pending | |
 | admin `/moderation` | pending | |
 | admin `/snapshots` | pending | |
@@ -99,6 +103,7 @@ npm run dev
 | scheduler manual run | pending | |
 | ingestion job create/start/cancel/retry | pending | |
 | site setting toggle | pending | should write admin audit log |
+| access request approval | pending | should write admin audit log |
 | export download | pending | should write `exportsPerMonth` usage event |
 | admin audit log after mutation | pending | |
 
