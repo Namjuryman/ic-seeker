@@ -45,6 +45,8 @@ npm run dev
 | mentor compare | `/api/compare/mentors` | pending | |
 | company compare | `/api/compare/companies` | pending | |
 | topic report | `/api/reports/topics/Power%20Management` | pending | |
+| export topic report | `/api/exports/topic-report?field=Power%20Management&format=markdown` | pending | |
+| export institution compare | `/api/exports/institution-compare?names=Tsinghua%20University,University%20of%20Macau&format=csv` | pending | |
 | admin snapshots | `/api/admin/snapshots` | pending | |
 | admin site settings | `/api/admin/site-settings` | pending | |
 | admin audit logs | `/api/admin/audit-logs` | pending | |
@@ -67,6 +69,7 @@ npm run dev
 | `/compare/authors` | pending | |
 | `/compare/mentors` | pending | |
 | `/compare/companies` | pending | |
+| `/exports` | pending | |
 | `/reports` | pending | |
 | `/reports/topics/Power%20Management` | pending | |
 | `/billing` | pending | |
@@ -96,6 +99,7 @@ npm run dev
 | scheduler manual run | pending | |
 | ingestion job create/start/cancel/retry | pending | |
 | site setting toggle | pending | should write admin audit log |
+| export download | pending | should write `exportsPerMonth` usage event |
 | admin audit log after mutation | pending | |
 
 ## Findings

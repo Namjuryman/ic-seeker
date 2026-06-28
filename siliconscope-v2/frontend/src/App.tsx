@@ -27,6 +27,7 @@ const ComparePage = lazy(() => import('./pages/ComparePage'))
 const InstitutionComparePage = lazy(() => import('./pages/InstitutionComparePage'))
 const AuthorComparePage = lazy(() => import('./pages/AuthorComparePage'))
 const MentorComparePage = lazy(() => import('./pages/MentorComparePage'))
+const ExportCenterPage = lazy(() => import('./pages/ExportCenterPage'))
 const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
 const PlatformPage = lazy(() => import('./pages/PlatformPage'))
 const LegalPage = lazy(() => import('./pages/LegalPage'))
@@ -48,6 +49,7 @@ const navItems = [
   { to: '/billing', label: '订阅配额', icon: 'B', section: '探索' },
   { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
   { to: '/compare', label: '对比中心', icon: '≋', section: '探索' },
+  { to: '/exports', label: '导出中心', icon: 'E', section: '探索' },
   { to: '/reports', label: '报告中心', icon: 'P', section: '探索' },
   { to: '/legal', label: '政策边界', icon: '§', section: '探索' },
   { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
@@ -198,6 +200,7 @@ function App() {
                 <Route path="/compare/institutions" element={<InstitutionComparePage />} />
                 <Route path="/compare/authors" element={<AuthorComparePage />} />
                 <Route path="/compare/mentors" element={<MentorComparePage />} />
+                <Route path="/exports" element={<ExportCenterPage />} />
                 <Route path="/reports" element={<TopicReportPage />} />
                 <Route path="/platform" element={<PlatformPage />} />
                 <Route path="/reports/topics" element={<TopicReportPage />} />

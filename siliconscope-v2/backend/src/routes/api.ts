@@ -38,6 +38,7 @@ import { schedulerService, type SchedulerJobId } from "../services/scheduler.ser
 import { jobOperationsService } from "../services/job-operations.service.js";
 import { ingestionJobService } from "../services/ingestion-job.service.js";
 import { siteSettingsService } from "../services/site-settings.service.js";
+import { exportService, type ExportFormat } from "../services/export.service.js";
 import { routeFamilies, commonFoundations } from "../data/learning-catalog.js";
 
 const router = Router();
@@ -75,6 +76,56 @@ router.post("/billing/checkout", requireAuth, async (req: AuthenticatedRequest, 
   }
   const result = billingService.createCheckoutSession(req.user?.userId ?? 0, planId);
   res.status(result.checkoutAvailable ? 501 : 400).json(result);
+});
+
+function exportFormat(value: unknown): ExportFormat {
+  const format = String(value || "markdown").toLowerCase();
+  if (format === "json" || format === "markdown" || format === "csv") return format;
+  throw new Error("format must be one of json, markdown, csv");
+}
+
+function sendExport(req: AuthenticatedRequest, res: any, create: (format: ExportFormat) => ReturnType<typeof exportService.exportTopicReport>) {
+  const userId = req.user?.userId ?? 0;
+  const quota = billingService.checkQuota(userId, "exportsPerMonth", 1);
+  if (!quota.allowed) {
+    res.status(402).json({ error: quota.reason || "Export quota exceeded", quota });
+    return;
+  }
+
+  const payload = create(exportFormat(req.query.format));
+  billingService.recordUsageEvent({
+    userId,
+    metric: "exportsPerMonth",
+    source: "export-center",
+    resourceType: payload.kind,
+    resourceId: payload.filename,
+    metadata: { format: payload.format, source: payload.source },
+  });
+
+  res.setHeader("content-type", payload.contentType);
+  res.setHeader("content-disposition", `attachment; filename="${payload.filename}"`);
+  res.send(payload.content);
+}
+
+router.get("/exports/topic-report", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    sendExport(req, res, (format) => exportService.exportTopicReport(req.query as Record<string, unknown>, format));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/exports/:kind", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const kind = String(req.params.kind || "");
+    if (!["company-compare", "institution-compare", "author-compare", "mentor-compare"].includes(kind)) {
+      res.status(404).json({ error: "Unknown export kind" });
+      return;
+    }
+    sendExport(req, res, (format) => exportService.exportCompare(kind as any, req.query as Record<string, unknown>, format));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, res) => {

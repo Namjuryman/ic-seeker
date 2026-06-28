@@ -96,6 +96,14 @@ Third-party Services
   - `GET /api/admin/site-settings` lists the full operations/commercial configuration.
   - `PATCH /api/admin/site-settings/:key` updates one setting and writes an admin audit log.
   - Admin `/site-settings` controls private beta mode, maintenance mode, paid-feature gates, community surfaces, company intelligence, topic reports, and weekly ingestion readiness.
+- Export Center MVP:
+  - `GET /api/exports/topic-report?field=...&format=markdown|csv|json`.
+  - `GET /api/exports/company-compare?ids=...&format=...`.
+  - `GET /api/exports/institution-compare?names=...&format=...`.
+  - `GET /api/exports/author-compare?names=...&format=...`.
+  - `GET /api/exports/mentor-compare?names=...&format=...`.
+  - Exports record `exportsPerMonth` usage and never include publisher PDFs.
+  - Public `/exports` page provides a quota-aware preview before paid checkout is connected.
 - Local backup operations:
   - `GET /api/admin/backups`.
   - `POST /api/admin/backups`.
@@ -140,7 +148,7 @@ The current billing layer deliberately does not call Stripe/Paddle yet. It provi
 - Stable plan IDs and quota metadata.
 - Current-user entitlement status from `users.subscription_plan`.
 - Usage ledger via `usage_events`.
-- Partial quota enforcement on watchlist and reading queue workflows.
+- Partial quota enforcement on watchlist, reading queue, and export workflows.
 - Manual admin plan changes that write `subscriptions` and `billing_events`.
 - Admin-visible provider state from `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, and `PADDLE_API_KEY`.
 - A checkout endpoint that returns an explicit unavailable/not-implemented reason until provider-specific adapters are added.
@@ -149,7 +157,7 @@ Next work:
 
 1. Implement Stripe Checkout Session creation first, then Paddle if needed.
 2. Add webhook signature verification and idempotent event handling into `billing_events`.
-3. Enforce quota checks inside exports, alerts, AI reading, and API endpoints.
+3. Extend quota checks to alerts, AI reading, and API endpoints.
 4. Add invoice/customer pages after Stripe/Paddle webhooks exist.
 5. Keep the public demo free and metadata-only; paid plans should unlock workflow limits, team functions, and private deployment features.
 

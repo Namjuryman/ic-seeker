@@ -570,6 +570,14 @@ export const api = {
     return res.data
   },
 
+  async exportFile(kind: string, params: Record<string, string>) {
+    const path = kind === 'topic-report' ? '/api/exports/topic-report' : `/api/exports/${encodeURIComponent(kind)}`
+    const res = await axios.get<Blob>(path, { params, responseType: 'blob' })
+    const disposition = String(res.headers['content-disposition'] || '')
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] || `siliconscope-${kind}.${params.format || 'md'}`
+    return { blob: res.data, filename }
+  },
+
   async createCompany(body: Record<string, unknown>) {
     const res = await axios.post<CompanyRow>('/api/admin/companies', body)
     return res.data

@@ -173,6 +173,7 @@ export default function PlatformPage() {
             <Link to="/venue-matrix">会议/期刊</Link>
             <Link to="/companies">企业情报</Link>
             <Link to="/learning-path">路线库</Link>
+            <Link to="/exports">导出中心</Link>
           </div>
         </div>
       </section>
