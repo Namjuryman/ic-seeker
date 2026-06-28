@@ -290,9 +290,10 @@ curated SiliconScope summary rather than a verbatim mirror:
 - General IC learning-map structure and research-direction framing are referenced.
 - Fudan-specific course tables, FDU course pages, and Fudan-specific mentor lists are intentionally excluded.
 - The page now organizes IC study into route families: circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary directions.
-- Current tracks include analog/mixed-signal, RF/mmWave, power management, biomedical/sensor interfaces, digital ASIC/SoC, verification/DFT, computer architecture accelerators, FPGA, devices/process, power devices, advanced packaging, EDA tools, hardware security, memory/CIM, silicon photonics, and quantum/neuromorphic IC.
+- Current tracks have been expanded from broad buckets into 24 route maps, including analog/mixed-signal, ADC/DAC, PLL/clocking, SerDes, RF/mmWave, power management, biomedical/sensor interfaces, image sensors/display drivers, digital ASIC/SoC, digital backend/signoff, verification/DFT, computer architecture accelerators, FPGA, devices/process, equipment/materials, power devices, advanced packaging, analog layout/PEX, EDA tools, hardware security, automotive reliability/safety, memory/CIM, silicon photonics, and quantum/neuromorphic IC.
 - Each track includes common foundations, route-specific prerequisites, staged learning goals, representative resources, paper-search links, and small practice projects.
 - External books, courses, tools, and guide links keep their original source attribution.
+- The content strategy and future taxonomy work are tracked in [`docs/LEARNING_CONTENT_STRATEGY.md`](docs/LEARNING_CONTENT_STRATEGY.md).
 - Future work: turn the static roadmap into a local editable database, connect each roadmap node to curated reading lists and local PDF folders, add user progress tracking, and let weekly database refreshes recommend new papers for each route.
 
 ## Learning And Daily Circuit Workspace
@@ -322,6 +323,7 @@ GET /api/learning/lessons/:lessonId/related-papers
 Current scope:
 
 - Roadmaps and daily lessons are curated seed data, not generated long-form course chapters.
+- The current seed catalog contains 24 route maps and 35 daily circuit lessons.
 - Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
 - Future work should move learning content into editable database tables, add reading progress, spaced review, saved learning plans, and weekly paper recommendations per route.
