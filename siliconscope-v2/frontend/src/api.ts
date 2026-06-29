@@ -24,6 +24,9 @@ import type {
   SnapshotRow,
   SnapshotRefreshResult,
   SnapshotClearResult,
+  PaperAiOverview,
+  PaperAiAnnotationList,
+  PaperAiRunResult,
   JournalFilterConfig,
   JournalFilterEvaluation,
   IdentityAliasInput,
@@ -544,6 +547,29 @@ export const api = {
 
   async clearSnapshots(body: { key?: string; prefix?: string } = {}) {
     const res = await axios.post<SnapshotClearResult>('/api/admin/snapshots/clear', body)
+    return res.data
+  },
+
+  async paperAiOverview() {
+    const res = await axios.get<PaperAiOverview>('/api/admin/ai-enrichment/overview')
+    return res.data
+  },
+
+  async paperAiAnnotations(params?: { limit?: number; needsReview?: boolean }) {
+    const res = await axios.get<PaperAiAnnotationList>('/api/admin/ai-enrichment/annotations', { params })
+    return res.data
+  },
+
+  async runPaperAiEnrichment(body: {
+    mode?: string
+    limit?: number
+    provider?: string
+    model?: string
+    dryRun?: boolean
+    writeTopicEdges?: boolean
+    minTopicConfidence?: number
+  }) {
+    const res = await axios.post<PaperAiRunResult>('/api/admin/ai-enrichment/run', body)
     return res.data
   },
 

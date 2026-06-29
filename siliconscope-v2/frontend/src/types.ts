@@ -899,6 +899,101 @@ export interface SnapshotClearResult {
   deleted: number;
 }
 
+export interface PaperAiAnnotationJob {
+  id: number;
+  scope: string;
+  provider: string;
+  model: string;
+  prompt_version?: string;
+  promptVersion?: string;
+  status: string;
+  queued: number;
+  processed: number;
+  failed: number;
+  skipped: number;
+  estimated_cost_usd?: number;
+  actual_cost_usd?: number;
+  options_json?: string;
+  error?: string | null;
+  started_at?: string | null;
+  finished_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PaperAiOverview {
+  annotations: number;
+  annotatedPapers: number;
+  totalPapers: number;
+  coverage: number;
+  needsReview: number;
+  latestJob?: PaperAiAnnotationJob | null;
+  provider: string;
+  model: string;
+  promptVersion: string;
+}
+
+export interface PaperAiTopicHit {
+  topicId: string;
+  label: string;
+  confidence: number;
+  evidence: string[];
+}
+
+export interface PaperAiAnnotationRow {
+  id: number;
+  paper_id: number;
+  paperId?: number;
+  provider: string;
+  model: string;
+  prompt_version?: string;
+  input_hash?: string;
+  summary_zh?: string;
+  summary_en?: string;
+  primary_domain?: string;
+  topics_json?: string;
+  metrics_json?: string;
+  confidence: number;
+  needs_review?: number | boolean;
+  status: string;
+  error?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  title: string;
+  year: number | null;
+  venue: string;
+  domain: string;
+}
+
+export interface PaperAiAnnotationList {
+  rows: PaperAiAnnotationRow[];
+  total: number;
+}
+
+export interface PaperAiRunResult {
+  ok: boolean;
+  dryRun: boolean;
+  jobId: number | null;
+  mode: string;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  queued: number;
+  processed: number;
+  failed: number;
+  skipped: number;
+  topicEdgesWritten: number;
+  samples: Array<{
+    paperId: number;
+    title: string;
+    confidence: number;
+    topics: PaperAiTopicHit[];
+    needsReview: boolean;
+  }>;
+  errors: string[];
+  job?: PaperAiAnnotationJob | null;
+}
+
 
 export interface IdentityAliasRow {
   alias: string;
