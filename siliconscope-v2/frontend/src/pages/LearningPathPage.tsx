@@ -165,7 +165,7 @@ export default function LearningPathPage() {
           <h1>IC 学习路线库</h1>
           <p>
             这里把 IC 的主流方向拆成可执行路线：先补数学、器件、电路、系统和 EDA 工具基础，
-            再进入模拟、射频、电源、数字 SoC、验证、架构、器件工艺、封装、EDA、硬件安全和前沿交叉方向。
+            再进入模拟、数模混合、ADC/DAC、PLL、RF/mmWave、SerDes、PMIC、数字 SoC、验证、架构、器件工艺、封装、EDA、安全和前沿交叉方向。
             每条路线都绑定 SiliconScope 的论文检索入口，后续可以继续接入阅读队列、课程笔记和本地 PDF 库。
           </p>
           <div className="learning-hero-actions">

@@ -6,8 +6,8 @@ SiliconScope learning content should not be a loose course list. It should becom
 
 The current backend seed catalog v3 contains:
 
-- 23 IC learning routes
-- 38 daily circuit lessons
+- 24 IC learning routes
+- 39 daily circuit lessons
 - 5 route families
 - route-specific prerequisites, staged goals, reading queries, venues, foundations, outcomes, and project prompts
 
@@ -49,11 +49,12 @@ The next database upgrade should split route stages, modules, resources, and pra
 
 ## Route Families
 
-### Circuit Design
+### IC Design
 
-This family covers transistor-level and signal-chain design:
+This family is the first-class IC design column. It covers transistor-level circuits, mixed-signal integration, high-speed interfaces, power, sensing, and memory macros:
 
 - Analog & Mixed-Signal
+- Mixed-Signal Integration / digitally assisted analog / AMS verification
 - Data Converters / ADC / DAC
 - Clocking / PLL / Frequency Synthesis
 - High-Speed Wireline / SerDes
@@ -61,8 +62,9 @@ This family covers transistor-level and signal-chain design:
 - Power Management
 - Biomedical / Sensor / MEMS Interfaces
 - Image Sensors / Display Driver IC
+- Memory / Compute-in-Memory
 
-Why it was expanded: analog, ADC, PLL, SerDes, RF, PMIC, and sensor IC use different metrics, design loops, papers, and interview questions. Keeping them in one analog bucket makes the roadmap too vague.
+Why it was expanded: analog, mixed-signal integration, ADC, PLL, SerDes, RF, PMIC, sensor IC, and memory macros use different metrics, design loops, papers, and interview questions. Keeping them in one analog bucket makes the roadmap too vague, while hiding mixed-signal integration makes real SoC bring-up look easier than it is.
 
 ### Digital Systems
 
@@ -87,7 +89,7 @@ This family connects IC design to physical technology:
 
 Why it was expanded: manufacturing, equipment, process, devices, and packaging increasingly affect circuit performance. This route family is also useful for company intelligence and job-market mapping.
 
-### Tools, Security, And Reliability
+### Tools, Quality, And Security
 
 This family covers engineering infrastructure and product trust:
 
@@ -102,11 +104,10 @@ Why it was expanded: layout, signoff, reliability, safety, and security are not 
 
 This family covers long-term interdisciplinary directions:
 
-- Memory / Compute-in-Memory
 - Silicon Photonics
 - Quantum / Neuromorphic / Emerging IC
 
-Why it remains compact: these areas are important, but SiliconScope should first make core IC routes deep and reliable. Frontier routes can later be split by memory type, photonics link type, and emerging device stack.
+Why it remains compact: these areas are important, but SiliconScope should first make core IC routes deep and reliable. Frontier routes can later be split by photonics link type, cryogenic controller type, and emerging device stack.
 
 ## Content Depth Targets
 
@@ -133,7 +134,7 @@ Daily lessons should be short, visual, and database-connected. Each lesson shoul
 - Which papers are worth reading next?
 - Which route does this lesson belong to?
 
-The current 38 lessons cover seed topics for analog basics, ADC, PLL, SerDes, layout, backend, verification, process, reliability, PMIC, RF, memory, device routes, chiplets, EDA, hardware security, silicon photonics, and frontier cryogenic/neuromorphic topics. The next expansion should add reviewed diagrams and short Chinese/English explanations.
+The current 39 lessons cover seed topics for analog basics, mixed-signal boundaries, ADC, PLL, SerDes, layout, backend, verification, process, reliability, PMIC, RF, memory, device routes, chiplets, EDA, hardware security, silicon photonics, and frontier cryogenic/neuromorphic topics. The next expansion should add reviewed diagrams and short Chinese/English explanations.
 
 ## Next Content Work
 
@@ -149,6 +150,8 @@ Medium term:
 
 - Add verified paper bundles for each route.
 - Add route-to-company and route-to-job matching.
+- Add per-route concept maps: subtopics, common paper claims, standard metrics, representative figures, and known traps.
+- Add bilingual route pages with Chinese explanations for core concepts and English terms for search.
 - Add difficulty ladders without labeling routes as "better" or "worse".
 - Add bilingual content fields so Chinese and English pages can diverge naturally where needed.
 

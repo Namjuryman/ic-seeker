@@ -28,7 +28,7 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 | Paper corpus | Large local metadata corpus with heuristic ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and rankings defensible |
 | Topic taxonomy | Hierarchical seed, DB projection, and heuristic paper-topic edges exist | Sample review, manual correction, and UI exposure for topic confidence | Fixes misclassification and enables better filters |
 | AI enrichment | Not yet implemented | Low-cost offline model pass for summaries, labels, topic paths, metrics, and review flags | Gives the product semantic understanding without expensive per-page inference |
-| Learning routes | 23 routes and 38 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
+| Learning routes | 24 routes and 39 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
 | Mentor profiles | Inferred professor pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
 | Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield strength and trend explanations | Makes school ranking less noisy |
 | Company intelligence | Seeded company directory exists | Product-node mapping, fab/process nodes, EDA/IP/tool stack, job signals, related papers, public sources per field | Connects research to jobs and industry |
@@ -39,9 +39,10 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 
 ## IC Taxonomy Expansion
 
-### Circuit And System Routes
+### IC Design Routes
 
 - Analog fundamentals: op-amp, comparator, reference, bias, LDO, oscillator, filter, layout matching, noise.
+- Mixed-signal integration: digitally assisted analog, calibration, trim/register maps, CDC/reset boundaries, AMS verification, silicon bring-up.
 - Data converters: SAR ADC, pipelined ADC, delta-sigma ADC, time-domain ADC, DAC, calibration, FoM interpretation.
 - Clocking: integer/fractional-N PLL, ADPLL, DLL, CDR, jitter/noise transfer, DTC/TDC, injection locking.
 - PMIC: buck, boost, buck-boost, switched-capacitor converter, hybrid converter, LDO, charger, energy harvesting.
@@ -51,6 +52,16 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 - Sensor/Bio/Imaging: AFE, neural interface, ultrasound, MEMS, image sensor, display driver.
 - Digital SoC: RTL, microarchitecture, NoC, accelerator, memory hierarchy, low-power design.
 - Backend/verification: synthesis, place-route, timing closure, DFT, CDC/RDC, formal, UVM.
+
+### Entity And Place Content
+
+The paper database should gradually connect every high-value entity to source-backed facts instead of only inferred strings:
+
+- Mentor profiles: current affiliation, title, lab page, scholar page, photo URL, ORCID/IEEE author ID when available, verified source links, inferred career stage, research topics, yearly activity, collaborators, and representative papers.
+- Institution profiles: canonical name, aliases, school/lab/department split, city, country/region, coordinates, homepage, logo, short introduction, field strengths, yearly trends, and uncertainty notes.
+- Geo profiles: country/region/city summaries, coordinates, top institutions, subfield mix, yearly strength change, data coverage, and geocoding confidence.
+- Venue profiles: official name, aliases, rank policy, hidden/low-weight rationale, year completeness, DOI/source coverage, and topic mix.
+- Company profiles: stock ticker, exchange, market cap or valuation bucket when public, public-source timestamp, product lines, specialties, related papers, related routes, and hiring signals.
 
 ### Device, Manufacturing, And Packaging
 
