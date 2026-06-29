@@ -1,7 +1,7 @@
 import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
 import { toPaperRow } from "./paper-row.js";
-import { learningRoadmaps } from "../data/learning-catalog.js";
+import { learningRoadmaps } from "../data/learning-catalog-v3.js";
 
 const ORDER_BY_COLUMNS: Record<string, string> = {
   name: "name",

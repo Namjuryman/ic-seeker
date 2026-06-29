@@ -8,15 +8,22 @@ import { companyPath } from '../utils/routes'
 const PAGE_SIZE = 20
 
 const typeLabels: Record<string, string> = {
-  'Fabless IC Design': 'IC 设计',
+  'Fabless IC Design': 'Fabless 设计',
   Foundry: '晶圆代工',
   IDM: 'IDM',
-  'OSAT / Packaging': '封装测试',
+  'OSAT / Packaging': '封测',
   Equipment: '设备',
   Materials: '材料',
-  'Semiconductor IP': 'IP',
+  'Semiconductor IP': '半导体 IP',
   EDA: 'EDA',
 }
+
+const sortOptions = [
+  { value: 'name:asc', label: '名称 A-Z' },
+  { value: 'dataConfidence:desc', label: '可信度优先' },
+  { value: 'stockChangePercent:desc', label: '涨幅优先' },
+  { value: 'lastEnrichedAt:desc', label: '最近更新' },
+]
 
 function pageWindow(page: number, pages: number) {
   const start = Math.max(1, page - 2)
@@ -24,40 +31,79 @@ function pageWindow(page: number, pages: number) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
-function marketTone(change?: number) {
+function marketTone(change?: number | null) {
   if (change === undefined || change === null || Number.isNaN(change)) return 'market-flat'
   return change >= 0 ? 'market-up' : 'market-down'
 }
 
 function marketSummary(company: CompanyRow) {
   const ticker = [company.exchange, company.stockTicker].filter(Boolean).join(' · ')
-  if (company.marketCapLabel || company.stockPrice) {
-    return {
-      primary: company.marketCapLabel || company.marketCapUsd || '市值待换算',
-      secondary: `${company.stockCurrency || ''} ${company.stockPrice || ''}`.trim() || ticker || '行情已接入',
-    }
+  const price = [company.stockCurrency, company.stockPrice].filter(Boolean).join(' ')
+  const primary = company.marketCapLabel || company.marketCapUsd || '市值待接入'
+  const secondary = price || ticker || (company.status === 'private' ? '未上市 / 私有公司' : '行情待接入')
+  return { primary, secondary, ticker }
+}
+
+function formatChange(change?: number | null) {
+  if (change === undefined || change === null || Number.isNaN(change)) return '行情待接入'
+  return `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`
+}
+
+function looksMojibake(value?: string) {
+  if (!value) return false
+  const suspicious = value.match(/[鑻楂鍗鍙扮闊绉鑱杈浠€�]/g)
+  return (suspicious?.length || 0) >= 2
+}
+
+function companyTitle(company: CompanyRow) {
+  const primary = looksMojibake(company.name) && company.legalName ? company.legalName : company.name
+  const secondary = primary === company.name ? company.legalName : company.name
+  return { primary: primary || company.legalName || 'Unknown company', secondary }
+}
+
+function cleanDescription(company: CompanyRow) {
+  if (!company.description || looksMojibake(company.description)) {
+    const type = typeLabels[company.companyType || ''] || company.companyType || 'semiconductor'
+    const domains = company.domains?.slice(0, 2).join(' / ')
+    return `${company.legalName || company.name} is a ${type} company${domains ? ` focused on ${domains}` : ''}.`
   }
-  return {
-    primary: ticker || '未上市/未收录',
-    secondary: ticker ? '行情待接入' : '暂无公开行情字段',
-  }
+  return company.description
+}
+
+function buildParams(q: string, domain: string, companyType: string, sort: string, page: number) {
+  const params: Record<string, string> = {}
+  if (q.trim()) params.q = q.trim()
+  if (domain) params.domain = domain
+  if (companyType) params.companyType = companyType
+  const [orderBy, direction] = sort.split(':')
+  if (orderBy && orderBy !== 'name') params.orderBy = orderBy
+  if (direction && direction !== 'asc') params.direction = direction
+  if (page > 1) params.page = String(page)
+  return params
 }
 
 export default function CompaniesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [q, setQ] = useState(searchParams.get('q') || '')
   const [domain, setDomain] = useState(searchParams.get('domain') || '')
+  const [companyType, setCompanyType] = useState(searchParams.get('companyType') || '')
+  const initialSort = `${searchParams.get('orderBy') || 'name'}:${searchParams.get('direction') || 'asc'}`
+  const [sort, setSort] = useState(sortOptions.some((item) => item.value === initialSort) ? initialSort : 'name:asc')
   const [message, setMessage] = useState('')
   const queryClient = useQueryClient()
 
   const page = Math.max(1, Number(searchParams.get('page') || 1))
+  const [orderBy, direction] = sort.split(':')
 
   const companies = useQuery({
-    queryKey: ['companies', q, domain, page],
+    queryKey: ['companies', q, domain, companyType, orderBy, direction, page],
     queryFn: () => {
       const params: Record<string, string | number> = { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }
       if (q.trim()) params.q = q.trim()
       if (domain) params.domain = domain
+      if (companyType) params.companyType = companyType
+      if (orderBy && orderBy !== 'name') params.orderBy = orderBy
+      if (direction && direction !== 'asc') params.direction = direction
       return api.companies(params)
     },
   })
@@ -65,6 +111,11 @@ export default function CompaniesPage() {
   const domains = useQuery({
     queryKey: ['company-domains'],
     queryFn: () => api.companyDomains(),
+  })
+
+  const companyTypes = useQuery({
+    queryKey: ['company-types'],
+    queryFn: () => api.companyTypes(),
   })
 
   const watchedIds = useQuery({
@@ -93,18 +144,17 @@ export default function CompaniesPage() {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const topCountries = useMemo(() => [...new Set(rows.map((row) => row.country).filter(Boolean))].slice(0, 8), [rows])
   const watchedSet = watchedIds.data || new Set<string>()
+  const marketCoverage = rows.filter((row) => row.marketCapLabel || row.marketCapUsd || row.stockPrice || row.stockTicker).length
 
   function submit(nextPage = 1) {
-    const params: Record<string, string> = {}
-    if (q.trim()) params.q = q.trim()
-    if (domain) params.domain = domain
-    if (nextPage > 1) params.page = String(nextPage)
-    setSearchParams(params)
+    setSearchParams(buildParams(q, domain, companyType, sort, nextPage))
   }
 
   function clearFilters() {
     setQ('')
     setDomain('')
+    setCompanyType('')
+    setSort('name:asc')
     setSearchParams({})
   }
 
@@ -114,7 +164,7 @@ export default function CompaniesPage() {
         <div>
           <span>Company Intelligence</span>
           <h1>半导体企业情报</h1>
-          <p>按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。当前行情字段为可接入结构，不构成投资建议。</p>
+          <p>按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。行情、市值和涨跌只作为公司画像信号，不构成投资建议。</p>
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
@@ -125,7 +175,7 @@ export default function CompaniesPage() {
         <div><span>公司总数</span><strong>{total.toLocaleString()}</strong></div>
         <div><span>当前页</span><strong>{rows.length}</strong></div>
         <div><span>覆盖地区</span><strong>{topCountries.length || '-'}</strong></div>
-        <div><span>行情状态</span><strong>待接入</strong></div>
+        <div><span>行情字段</span><strong>{marketCoverage}/{rows.length || 0}</strong></div>
       </section>
 
       <div className="company-layout">
@@ -150,10 +200,27 @@ export default function CompaniesPage() {
           </label>
 
           <label>
+            <span>产业链类型</span>
+            <select value={companyType} onChange={(event) => setCompanyType(event.target.value)}>
+              <option value="">全部类型</option>
+              {companyTypes.data?.map((item) => (
+                <option key={item} value={item}>{typeLabels[item] || item}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
             <span>技术方向</span>
             <select value={domain} onChange={(event) => setDomain(event.target.value)}>
               <option value="">全部方向</option>
               {domains.data?.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+
+          <label>
+            <span>排序</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              {sortOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </label>
 
@@ -180,16 +247,17 @@ export default function CompaniesPage() {
             {rows.map((company) => {
               const isWatched = watchedSet.has(company.id)
               const market = marketSummary(company)
+              const title = companyTitle(company)
               return (
                 <article className="company-row" key={company.id}>
                   <Link to={companyPath(company.id)} className="company-row-link">
-                    <div className="company-avatar">{(company.legalName || company.name || 'C').slice(0, 1)}</div>
+                    <div className="company-avatar">{(title.primary || 'C').slice(0, 1)}</div>
                     <div className="company-row-main">
                       <div className="company-row-title">
-                        <strong>{company.name}</strong>
-                        {company.legalName && <span>{company.legalName}</span>}
+                        <strong>{title.primary}</strong>
+                        {title.secondary && !looksMojibake(title.secondary) && <span>{title.secondary}</span>}
                       </div>
-                      <p>{company.description || '暂无简介，后续可由官网、财报、招聘页和新闻源补全。'}</p>
+                      <p>{cleanDescription(company)}</p>
                       <div className="company-tags">
                         <em>{typeLabels[company.companyType || ''] || company.companyType || 'Company'}</em>
                         <em>{company.country || '-'}</em>
@@ -202,12 +270,8 @@ export default function CompaniesPage() {
                     <div className="company-market">
                       <span>{market.primary}</span>
                       <small>{market.secondary}</small>
-                      {company.stockChangePercent !== undefined && company.stockChangePercent !== null && (
-                        <b className={marketTone(company.stockChangePercent)}>
-                          {company.stockChangePercent >= 0 ? '+' : ''}{company.stockChangePercent.toFixed(2)}%
-                        </b>
-                      )}
-                      {!company.stockChangePercent && <b className="market-flat">行情待接入</b>}
+                      <b className={marketTone(company.stockChangePercent)}>{formatChange(company.stockChangePercent)}</b>
+                      {market.ticker && <i>{market.ticker}</i>}
                       {company.marketDataAsOf && <i>as of {company.marketDataAsOf}</i>}
                     </div>
                     <div className="company-row-side">
