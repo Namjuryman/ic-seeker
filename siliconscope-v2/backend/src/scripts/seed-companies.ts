@@ -100,15 +100,14 @@ function inferCareerRoles(seed: RawCompanySeed): string[] {
 function inferMarkets(seed: RawCompanySeed): string[] {
   const text = `${seed.description} ${seed.specialties.join(" ")}`.toLowerCase();
   const markets = new Set<string>();
-  if (text.includes("automotive") || text.includes("车")) markets.add("Automotive");
+  if (text.includes("automotive") || text.includes("vehicle") || text.includes("car") || text.includes("车")) markets.add("Automotive");
   if (text.includes("data center") || text.includes("server") || text.includes("hpc")) markets.add("Data Center");
   if (text.includes("mobile") || text.includes("phone")) markets.add("Mobile");
   if (text.includes("iot") || text.includes("wearable")) markets.add("IoT / Wearables");
-  if (text.includes("industrial") || text.includes("工业")) markets.add("Industrial");
+  if (text.includes("industrial") || text.includes("factory") || text.includes("工业")) markets.add("Industrial");
   if (text.includes("consumer") || text.includes("tv") || text.includes("audio")) markets.add("Consumer Electronics");
   return [...markets];
 }
-
 function toPayload(seed: RawCompanySeed): CompanyPayload {
   const companyType = COMPANY_TYPE_MAP[seed.type];
   const country = REGION_COUNTRY_MAP[seed.region];

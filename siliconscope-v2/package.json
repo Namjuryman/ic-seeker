@@ -18,6 +18,7 @@
     "start": "npm --workspace siliconscope-v2-backend run start",
     "test": "npm --workspace siliconscope-v2-backend run test",
     "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed",
+    "companies:market-refresh": "npm --workspace siliconscope-v2-backend run companies:market-refresh --",
     "backup:create": "npm --workspace siliconscope-v2-backend run backup:create --",
     "deploy:init": "node scripts/init-production-domain.mjs",
     "deploy:check": "node scripts/check-production-env.mjs",

@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "companies:seed": "tsx src/scripts/seed-companies.ts",
+    "companies:market-refresh": "tsx src/scripts/refresh-company-market-data.ts",
     "import:papers": "tsx src/scripts/import-papers-multisource.ts",
     "ai:annotate-papers": "tsx src/scripts/annotate-papers-ai.ts",
     "learning:sync": "tsx src/scripts/sync-learning-content.ts",

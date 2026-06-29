@@ -16,6 +16,11 @@ const typeLabels: Record<string, string> = {
   Materials: '材料',
   'Semiconductor IP': '半导体 IP',
   EDA: 'EDA',
+  Memory: '存储',
+  'Power Semiconductor': '功率半导体',
+  'Analog / Mixed-Signal': '模拟/混合信号',
+  'RF / Wireless': '射频/无线',
+  'AI Accelerator / SoC': 'AI/SoC',
 }
 
 const sortOptions = [
@@ -36,38 +41,30 @@ function marketTone(change?: number | null) {
   return change >= 0 ? 'market-up' : 'market-down'
 }
 
+function formatChange(change?: number | null) {
+  if (change === undefined || change === null || Number.isNaN(change)) return '行情待接入'
+  return `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`
+}
+
 function marketSummary(company: CompanyRow) {
-  const ticker = [company.exchange, company.stockTicker].filter(Boolean).join(' · ')
+  const ticker = [company.exchange, company.stockTicker].filter(Boolean).join(' / ')
   const price = [company.stockCurrency, company.stockPrice].filter(Boolean).join(' ')
   const primary = company.marketCapLabel || company.marketCapUsd || '市值待接入'
   const secondary = price || ticker || (company.status === 'private' ? '未上市 / 私有公司' : '行情待接入')
   return { primary, secondary, ticker }
 }
 
-function formatChange(change?: number | null) {
-  if (change === undefined || change === null || Number.isNaN(change)) return '行情待接入'
-  return `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`
-}
-
-function looksMojibake(value?: string) {
-  if (!value) return false
-  const suspicious = value.match(/[鑻楂鍗鍙扮闊绉鑱杈浠€�]/g)
-  return (suspicious?.length || 0) >= 2
-}
-
 function companyTitle(company: CompanyRow) {
-  const primary = looksMojibake(company.name) && company.legalName ? company.legalName : company.name
-  const secondary = primary === company.name ? company.legalName : company.name
-  return { primary: primary || company.legalName || 'Unknown company', secondary }
+  const primary = company.name || company.legalName || 'Unknown company'
+  const secondary = company.legalName && company.legalName !== primary ? company.legalName : ''
+  return { primary, secondary }
 }
 
 function cleanDescription(company: CompanyRow) {
-  if (!company.description || looksMojibake(company.description)) {
-    const type = typeLabels[company.companyType || ''] || company.companyType || 'semiconductor'
-    const domains = company.domains?.slice(0, 2).join(' / ')
-    return `${company.legalName || company.name} is a ${type} company${domains ? ` focused on ${domains}` : ''}.`
-  }
-  return company.description
+  if (company.description) return company.description
+  const type = typeLabels[company.companyType || ''] || company.companyType || 'semiconductor'
+  const domains = company.domains?.slice(0, 2).join(' / ')
+  return `${company.legalName || company.name} is a ${type} company${domains ? ` focused on ${domains}` : ''}.`
 }
 
 function buildParams(q: string, domain: string, companyType: string, sort: string, page: number) {
@@ -164,7 +161,10 @@ export default function CompaniesPage() {
         <div>
           <span>Company Intelligence</span>
           <h1>半导体企业情报</h1>
-          <p>按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。行情、市值和涨跌只作为公司画像信号，不构成投资建议。</p>
+          <p>
+            按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。
+            市值、股价和涨跌只作为公司画像信号，不构成投资建议。
+          </p>
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
@@ -251,11 +251,11 @@ export default function CompaniesPage() {
               return (
                 <article className="company-row" key={company.id}>
                   <Link to={companyPath(company.id)} className="company-row-link">
-                    <div className="company-avatar">{(title.primary || 'C').slice(0, 1)}</div>
+                    <div className="company-avatar">{(title.primary || 'C').slice(0, 1).toUpperCase()}</div>
                     <div className="company-row-main">
                       <div className="company-row-title">
                         <strong>{title.primary}</strong>
-                        {title.secondary && !looksMojibake(title.secondary) && <span>{title.secondary}</span>}
+                        {title.secondary && <span>{title.secondary}</span>}
                       </div>
                       <p>{cleanDescription(company)}</p>
                       <div className="company-tags">
