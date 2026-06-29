@@ -27,7 +27,7 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 | --- | --- | --- | --- |
 | Paper corpus | Large local metadata corpus with heuristic ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and rankings defensible |
 | Topic taxonomy | Broad IC domains exist | Hierarchical topic tree: `PMIC > DC-DC > Hybrid SC`, `ADC > SAR`, `PLL > Fractional-N`, `RF > PA/LNA/Mixer`, `Memory > SRAM/CIM/MRAM` | Fixes misclassification and enables better filters |
-| Learning routes | 24 routes and daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
+| Learning routes | 23 routes and 38 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
 | Mentor profiles | Inferred professor pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
 | Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield strength and trend explanations | Makes school ranking less noisy |
 | Company intelligence | Seeded company directory exists | Product-node mapping, fab/process nodes, EDA/IP/tool stack, job signals, related papers, public sources per field | Connects research to jobs and industry |

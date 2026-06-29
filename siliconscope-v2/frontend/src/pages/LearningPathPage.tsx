@@ -12,11 +12,11 @@ import type {
 import { learningSource } from '../data/learningRoadmaps'
 
 const kindLabel: Record<LearningResource['kind'], string> = {
-  course: '课程',
-  book: '书籍',
-  tool: '工具',
-  paper: '论文入口',
-  guide: '指南',
+  course: 'Course',
+  book: 'Book',
+  tool: 'Tool',
+  paper: 'Paper entry',
+  guide: 'Guide',
 }
 
 function ResourceCard({ resource }: { resource: LearningResource }) {
@@ -96,7 +96,7 @@ function FamilyCard({
       className={`learning-family-card ${active ? 'active' : ''}`}
       onClick={onPick}
     >
-      <span>{routes.length} 条路线</span>
+      <span>{routes.length} routes</span>
       <strong>{family.title}</strong>
       <p>{family.description}</p>
     </button>
@@ -162,17 +162,14 @@ export default function LearningPathPage() {
       <section className="learning-hero">
         <div>
           <p className="profile-kicker">Learning roadmap</p>
-          <h1>IC 学习路线</h1>
+          <h1>IC 学习路线库</h1>
           <p>
-            这页把 IC 的主流方向拆成可执行的学习地图：先补数学、器件、电路、系统和 EDA
-            工具基础，再进入模拟、射频、电源、数字 SoC、验证、架构、器件工艺、封装、EDA
-            与硬件安全等分支。每个分支都绑定 SiliconScope 的论文检索入口，后续可以继续接入
-            阅读清单、课程笔记和本地 PDF 库。
+            这里把 IC 的主流方向拆成可执行路线：先补数学、器件、电路、系统和 EDA 工具基础，
+            再进入模拟、射频、电源、数字 SoC、验证、架构、器件工艺、封装、EDA、硬件安全和前沿交叉方向。
+            每条路线都绑定 SiliconScope 的论文检索入口，后续可以继续接入阅读队列、课程笔记和本地 PDF 库。
           </p>
           <div className="learning-hero-actions">
-            <Link to="/learning">
-              Daily Circuit workspace
-            </Link>
+            <Link to="/learning">Daily Circuit workspace</Link>
             {active && (
               <Link to={`/?q=${encodeURIComponent(active.paperQuery || '')}&scope=all&semantic=1`}>
                 搜索当前方向论文
@@ -257,7 +254,7 @@ export default function LearningPathPage() {
         <aside className="learning-rail">
           <div className="learning-rail-title">
             {activeFamily?.title ?? 'All routes'}
-            <small>{visibleRoadmaps.length} 条细分路线</small>
+            <small>{visibleRoadmaps.length} routes</small>
           </div>
           {visibleRoadmaps.length === 0 && !roadmapsQuery.isLoading && (
             <p className="learning-muted" style={{ padding: '1rem' }}>No routes available.</p>
@@ -281,7 +278,7 @@ export default function LearningPathPage() {
           {active ? (
             <section className="learning-overview" style={{ '--learning-accent': active.accent } as CSSProperties}>
               <div>
-                <span>{activeFamily?.title ?? '当前路线'}</span>
+                <span>{activeFamily?.title ?? 'Current route'}</span>
                 <h2>{active.title}</h2>
                 <p>{active.subtitle}</p>
                 <div className="learning-outcome-list">
@@ -299,7 +296,7 @@ export default function LearningPathPage() {
           ) : (
             <section className="learning-overview">
               <div>
-                <span>—</span>
+                <span>Empty</span>
                 <h2>No route selected</h2>
                 <p>Select a route from the sidebar or check back later.</p>
               </div>
@@ -362,7 +359,7 @@ export default function LearningPathPage() {
             <div className="learning-section-head">
               <div>
                 <span>Practice</span>
-                <h3>可做的小项目</h3>
+                <h3>可以直接做的小项目</h3>
               </div>
             </div>
             <div className="learning-project-list">

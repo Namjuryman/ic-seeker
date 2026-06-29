@@ -2,8 +2,8 @@ import {
   dailyLessons as seedDailyLessons,
   learningRoadmaps as seedLearningRoadmaps,
   routeFamilies as seedRouteFamilies,
-} from "../data/learning-catalog.js";
-import type { DailyLessonSeed, LearningRoadmapSeed } from "../data/learning-catalog.js";
+} from "../data/learning-catalog-v3.js";
+import type { DailyLessonSeed, LearningRoadmapSeed } from "../data/learning-catalog-v3.js";
 import { searchService } from "./search.service.js";
 import { learningContentService } from "./learning-content.service.js";
 

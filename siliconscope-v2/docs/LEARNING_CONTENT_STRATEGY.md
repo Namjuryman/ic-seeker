@@ -4,17 +4,17 @@ SiliconScope learning content should not be a loose course list. It should becom
 
 ## Current Coverage
 
-The current backend seed catalog contains:
+The current backend seed catalog v3 contains:
 
-- 24 IC learning routes
-- 35 daily circuit lessons
+- 23 IC learning routes
+- 38 daily circuit lessons
 - 5 route families
 - route-specific prerequisites, staged goals, reading queries, venues, foundations, outcomes, and project prompts
 
 The canonical source is:
 
 ```text
-backend/src/data/learning-catalog.ts
+backend/src/data/learning-catalog-v3.ts
 ```
 
 The runtime source is now layered:
@@ -24,6 +24,15 @@ learning_content_items published rows -> TypeScript seed fallback when the regis
 ```
 
 The independent admin app can sync the seed catalog into the database registry, edit JSON payloads, publish/draft/archive rows, and inspect stale or out-of-sync content rows. This is the first step toward an editable learning CMS.
+
+For command-line operations:
+
+```bash
+cd backend
+npm run learning:sync
+```
+
+This syncs the v3 seed catalog into `learning_content_items`, rebuilds the normalized projection tables, and prints a content-quality score. The current v3 seed is designed to pass the built-in quality gate with route coverage, lesson coverage, search hooks, venue hooks, project outputs, and stage/module checks.
 
 ## Database Model
 
@@ -124,7 +133,7 @@ Daily lessons should be short, visual, and database-connected. Each lesson shoul
 - Which papers are worth reading next?
 - Which route does this lesson belong to?
 
-The current 35 lessons cover seed topics for ADC, PLL, SerDes, layout, backend, process, reliability, PMIC, RF, memory, and device routes. The next expansion should add hand-drawn or generated diagrams and short Chinese/English explanations.
+The current 38 lessons cover seed topics for analog basics, ADC, PLL, SerDes, layout, backend, verification, process, reliability, PMIC, RF, memory, device routes, chiplets, EDA, hardware security, silicon photonics, and frontier cryogenic/neuromorphic topics. The next expansion should add reviewed diagrams and short Chinese/English explanations.
 
 ## Next Content Work
 
@@ -132,6 +141,7 @@ Short term:
 
 - Build structured editing on top of the `learning_content_items` registry for routes, stages, prerequisites, lessons, diagrams, and reading lists.
 - Expand projection tables for route stages, modules, resources, practice prompts, and diagram assets after the editor is stable.
+- Persist content-quality findings so weekly syncs create an auditable review queue instead of only printing a transient score.
 - Add route-level representative diagrams and thumbnails.
 - Expand the new `learning_progress` workflow into spaced review: review due dates, reminders, saved study plans, and per-route completion ratios.
 

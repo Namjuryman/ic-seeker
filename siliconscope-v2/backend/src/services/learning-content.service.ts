@@ -5,13 +5,13 @@ import {
   dailyLessons as seedLessons,
   learningRoadmaps as seedRoadmaps,
   routeFamilies as seedRouteFamilies,
-} from "../data/learning-catalog.js";
+} from "../data/learning-catalog-v3.js";
 import type {
   DailyLessonSeed,
   FoundationGroupSeed,
   LearningRoadmapSeed,
   RouteFamilySeed,
-} from "../data/learning-catalog.js";
+} from "../data/learning-catalog-v3.js";
 
 type LearningItemKind = "roadmap" | "lesson" | "route_family" | "foundation_group";
 type LearningItemStatus = "published" | "draft" | "archived";
@@ -45,7 +45,7 @@ type SeedItem = {
   payload: unknown;
 };
 
-const SOURCE_VERSION = "learning-catalog-v2.1";
+const SOURCE_VERSION = "learning-catalog-v3.0";
 
 function stableJson(payload: unknown) {
   return JSON.stringify(payload);
@@ -411,6 +411,71 @@ function validateActiveContent() {
   return { errors, warnings };
 }
 
+function contentQualityReport() {
+  const { roadmaps, lessons, routeFamilies, commonFoundations } = activeContent();
+  const issues: Array<{ severity: "high" | "medium" | "low"; target: string; message: string }> = [];
+  const roadmapSlugs = new Set(roadmaps.map((roadmap) => roadmap.slug));
+  const lessonRoadmaps = new Map<string, number>();
+  for (const lesson of lessons) {
+    lessonRoadmaps.set(lesson.roadmapSlug, (lessonRoadmaps.get(lesson.roadmapSlug) || 0) + 1);
+  }
+
+  let possible = 0;
+  let earned = 0;
+  const addCheck = (ok: boolean, weight: number, severity: "high" | "medium" | "low", target: string, message: string) => {
+    possible += weight;
+    if (ok) {
+      earned += weight;
+    } else {
+      issues.push({ severity, target, message });
+    }
+  };
+
+  for (const roadmap of roadmaps) {
+    const target = `roadmap:${roadmap.slug}`;
+    addCheck(Boolean(roadmap.description && roadmap.description.length > 80), 2, "medium", target, "Description is too thin for a public product route.");
+    addCheck((roadmap.stages?.length || 0) >= 3, 3, "high", target, "Route should have at least three learning stages.");
+    addCheck(roadmap.stages.every((stage) => (stage.modules?.length || 0) > 0), 2, "high", target, "Every stage needs at least one module.");
+    addCheck((roadmap.relatedSearchQueries?.length || 0) >= 4 || Boolean(roadmap.paperQuery), 2, "medium", target, "Route needs enough search hooks for paper discovery.");
+    addCheck((roadmap.relatedVenues?.length || 0) >= 3, 1, "low", target, "Route should link to representative venues.");
+    addCheck((roadmap.outcomes?.length || 0) >= 3, 1, "low", target, "Route needs concrete learning outcomes.");
+    addCheck((roadmap.projectIdeas?.length || 0) >= 2, 1, "low", target, "Route should include practical project outputs.");
+    addCheck((lessonRoadmaps.get(roadmap.slug) || 0) >= 1, 2, "medium", target, "Route has no daily lesson entry.");
+  }
+
+  for (const lesson of lessons) {
+    const target = `lesson:${lesson.id}`;
+    addCheck(roadmapSlugs.has(lesson.roadmapSlug), 3, "high", target, "Lesson points to a missing roadmap.");
+    addCheck((lesson.relatedSearchQueries?.length || 0) >= 1, 1, "medium", target, "Lesson needs at least one paper search query.");
+    addCheck((lesson.relatedTopics?.length || 0) >= 1, 1, "medium", target, "Lesson needs at least one topic link.");
+    addCheck((lesson.relatedVenues?.length || 0) >= 1, 1, "low", target, "Lesson should include representative venues.");
+    addCheck(lesson.estimatedMinutes >= 10 && lesson.estimatedMinutes <= 45, 1, "low", target, "Lesson time estimate should be realistic.");
+  }
+
+  addCheck(routeFamilies.length >= 5, 2, "medium", "route_families", "Route library should preserve at least five route families.");
+  addCheck(commonFoundations.length >= 4, 2, "medium", "foundation_groups", "Common base should cover math, physics, circuits, and tools.");
+
+  const score = possible > 0 ? Math.round((earned / possible) * 100) : 0;
+  return {
+    score,
+    grade: score >= 90 ? "A" : score >= 75 ? "B" : score >= 60 ? "C" : "D",
+    possible,
+    earned,
+    issues: issues.slice(0, 80),
+    issueCounts: issues.reduce<Record<string, number>>((acc, issue) => {
+      acc[issue.severity] = (acc[issue.severity] || 0) + 1;
+      return acc;
+    }, {}),
+    coverage: {
+      roadmaps: roadmaps.length,
+      lessons: lessons.length,
+      routesWithLessons: roadmaps.filter((roadmap) => (lessonRoadmaps.get(roadmap.slug) || 0) > 0).length,
+      routeFamilies: routeFamilies.length,
+      foundations: commonFoundations.length,
+    },
+  };
+}
+
 function prettyPayload(json: string) {
   try {
     return JSON.stringify(JSON.parse(json), null, 2);
@@ -470,6 +535,7 @@ export const learningContentService = {
         bytes: rows.reduce((sum, row) => sum + row.bytes, 0),
       },
       projection: projectionSummary(),
+      quality: contentQualityReport(),
       byKind,
       validation,
       staleRows: staleRows.slice(0, 30),

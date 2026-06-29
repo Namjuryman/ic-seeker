@@ -112,7 +112,7 @@ This keeps weekly data refreshes simple: import/update the corpus, rebuild norma
 **Important notes:**
 
 - **SiliconScope v2 is the canonical React + backend edition.** Legacy `ic_seeker` is kept only for reference.
-- **Learning catalog seed source is `backend/src/data/learning-catalog.ts`; production reads prefer published rows in `learning_content_items` and fall back to the seed catalog if the database registry is empty.**
+- **Learning catalog seed source is `backend/src/data/learning-catalog-v3.ts`; production reads prefer published rows in `learning_content_items` and fall back to the seed catalog if the database registry is empty.**
 - **Journal Ingestion is disabled until background jobs are implemented.**
 - **Data Quality analysis is manual-run only.** Open the Data Quality page and click "Run analysis" when needed.
 
@@ -316,7 +316,7 @@ curated SiliconScope summary rather than a verbatim mirror:
 - General IC learning-map structure and research-direction framing are referenced.
 - Fudan-specific course tables, FDU course pages, and Fudan-specific mentor lists are intentionally excluded.
 - The page now organizes IC study into route families: circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary directions.
-- Current tracks have been expanded from broad buckets into 24 route maps, including analog/mixed-signal, ADC/DAC, PLL/clocking, SerDes, RF/mmWave, power management, biomedical/sensor interfaces, image sensors/display drivers, digital ASIC/SoC, digital backend/signoff, verification/DFT, computer architecture accelerators, FPGA, devices/process, equipment/materials, power devices, advanced packaging, analog layout/PEX, EDA tools, hardware security, automotive reliability/safety, memory/CIM, silicon photonics, and quantum/neuromorphic IC.
+- Current tracks have been expanded from broad buckets into 23 route maps, including analog/mixed-signal, ADC/DAC, PLL/clocking, SerDes, RF/mmWave, power management, biomedical/sensor interfaces, digital ASIC/SoC, digital backend/physical design, verification/DFT, computer architecture accelerators, FPGA, devices/process, manufacturing equipment/materials, power devices, advanced packaging, analog layout/PEX, EDA tools, hardware security, automotive reliability/safety, memory/CIM, silicon photonics, and quantum/neuromorphic IC.
 - Each track includes common foundations, route-specific prerequisites, staged learning goals, representative resources, paper-search links, and small practice projects.
 - External books, courses, tools, and guide links keep their original source attribution.
 - The content strategy and future taxonomy work are tracked in [`docs/LEARNING_CONTENT_STRATEGY.md`](docs/LEARNING_CONTENT_STRATEGY.md).
@@ -353,15 +353,23 @@ POST /api/learning/progress/:targetType/:targetId/queue-related
 Current scope:
 
 - Roadmaps and daily lessons are curated seed data, not generated long-form course chapters.
-- The current seed catalog contains 24 route maps and 35 daily circuit lessons.
+- The current seed catalog contains 23 route maps and 38 daily circuit lessons.
 - Public learning APIs read published rows from the `learning_content_items` registry first, then fall back to the TypeScript seed catalog only when the registry is not initialized.
 - Learning content now uses a hybrid database model:
   - `learning_content_items` stores the versioned source payload, publication state, hash, and admin edits.
   - `learning_routes`, `learning_lessons`, `learning_route_families`, `learning_foundations`, `learning_route_family_members`, and `learning_terms` are normalized projection tables for search, analytics, graph traversal, and future recommendation jobs.
-- The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, and projection-table health.
+- The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, projection-table health, and the route/lesson quality score.
 - User progress is stored in `learning_progress` for both roadmap and lesson targets. Route and lesson pages can mark started/completed/review-later and add related papers to the reading queue.
 - Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
+
+Seed sync can also be run from the command line:
+
+```bash
+npm --workspace siliconscope-v2-backend run learning:sync
+```
+
+The sync prints the seed version, row counts, projection coverage, and a product-content quality score so weekly updates can fail loudly before the public pages drift.
 - Future work should add type-specific structured editing forms on top of the registry, plus spaced review scheduling, saved learning plans, and weekly paper recommendations per route.
 
 ## Rebuild The Database

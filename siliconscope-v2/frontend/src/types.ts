@@ -1118,6 +1118,25 @@ export interface LearningContentOverview {
     familyMembers: number;
     terms: number;
   };
+  quality: {
+    score: number;
+    grade: string;
+    possible: number;
+    earned: number;
+    issueCounts: Record<string, number>;
+    coverage: {
+      roadmaps: number;
+      lessons: number;
+      routesWithLessons: number;
+      routeFamilies: number;
+      foundations: number;
+    };
+    issues: Array<{
+      severity: 'high' | 'medium' | 'low';
+      target: string;
+      message: string;
+    }>;
+  };
   byKind: Record<string, number>;
   validation: { errors: string[]; warnings: string[] };
   staleRows: LearningContentRow[];

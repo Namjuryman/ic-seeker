@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+﻿import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
@@ -81,7 +81,7 @@ export default function LearningDashboardPage() {
           </div>
           {data.today ? (
             <>
-              <p className="learning-muted">{data.today.estimatedMinutes} min · {data.today.roadmap?.shortTitle}</p>
+              <p className="learning-muted">{data.today.estimatedMinutes} min / {data.today.roadmap?.shortTitle}</p>
               <div className="learning-chip-row">
                 {data.today.relatedVenues.map((venue) => (
                   <EntityLink key={venue} kind="venue" value={venue}>{venue}</EntityLink>
@@ -120,7 +120,7 @@ export default function LearningDashboardPage() {
           ))}
         </div>
         <div className="learning-progress-actions" style={{ marginTop: '1rem' }}>
-          <Link to="/learning-path">View full route library →</Link>
+          <Link to="/learning-path">View full route library</Link>
         </div>
       </section>
 
@@ -129,13 +129,13 @@ export default function LearningDashboardPage() {
           <div className="learning-section-head">
             <div>
               <span>Route families</span>
-              <h3>IC 方向大类</h3>
+              <h3>IC route families</h3>
             </div>
           </div>
           <div className="learning-family-grid">
             {data.routeFamilies?.map((family) => (
               <Link className="learning-family-card" key={family.id} to="/learning-path">
-                <span>{family.routeIds.length} 条路线</span>
+                <span>{family.routeIds.length} routes</span>
                 <strong>{family.title}</strong>
                 <p>{family.description}</p>
               </Link>
@@ -149,7 +149,7 @@ export default function LearningDashboardPage() {
           <div className="learning-section-head">
             <div>
               <span>Common foundations</span>
-              <h3>公共前置知识</h3>
+              <h3>Common foundations</h3>
             </div>
           </div>
           <div className="learning-foundation-grid">
@@ -172,7 +172,7 @@ export default function LearningDashboardPage() {
         <div className="learning-section-head">
           <div>
             <span>Personal progress</span>
-            <h3>学习状态总览</h3>
+            <h3>Learning progress overview</h3>
           </div>
           <p>Progress is stored per user and can drive future spaced review, recommendations, and reading queues.</p>
         </div>
@@ -197,7 +197,7 @@ export default function LearningDashboardPage() {
         </div>
         <p className="learning-muted">Connect learning directions to industry employers.</p>
         <div className="learning-progress-actions" style={{ marginTop: '0.75rem' }}>
-          <Link to="/companies">Explore IC companies →</Link>
+          <Link to="/companies">Explore IC companies</Link>
         </div>
       </section>
     </div>

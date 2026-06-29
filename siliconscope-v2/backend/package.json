@@ -10,6 +10,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "companies:seed": "tsx src/scripts/seed-companies.ts",
+    "learning:sync": "tsx src/scripts/sync-learning-content.ts",
     "snapshots:refresh": "tsx src/scripts/refresh-snapshots.ts",
     "backup:create": "tsx src/scripts/create-backup.ts",
     "test": "vitest"

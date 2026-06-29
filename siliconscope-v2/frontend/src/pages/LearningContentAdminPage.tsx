@@ -173,6 +173,7 @@ export default function LearningContentAdminPage() {
 
   const summary = data?.summary
   const projection = data?.projection
+  const quality = data?.quality
   const hasProblems = Boolean(data?.validation.errors.length || data?.outOfSyncRows.length || data?.staleRows.length)
 
   return (
@@ -231,6 +232,51 @@ export default function LearningContentAdminPage() {
             {data?.validation.errors.length || 0} errors · {data?.validation.warnings.length || 0} warnings
           </div>
         </div>
+      </section>
+
+      <section className="grid lg:grid-cols-[280px_minmax(0,1fr)] gap-4">
+        <article className={`border rounded-xl p-4 ${quality && quality.score >= 80 ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+          <div className="text-xs text-ink-subtle">Product content score</div>
+          <div className="flex items-end gap-2 mt-1">
+            <strong className={`text-4xl ${quality && quality.score >= 80 ? 'text-green-700' : 'text-amber-700'}`}>
+              {quality?.score ?? '-'}
+            </strong>
+            <span className="text-sm text-ink-muted pb-1">grade {quality?.grade ?? '-'}</span>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg bg-white/70 border border-line-subtle px-2 py-1">
+              Routes with lessons <strong>{quality?.coverage.routesWithLessons ?? 0}/{quality?.coverage.roadmaps ?? 0}</strong>
+            </div>
+            <div className="rounded-lg bg-white/70 border border-line-subtle px-2 py-1">
+              Issues <strong>{quality?.issues.length ?? 0}</strong>
+            </div>
+          </div>
+        </article>
+        <article className="bg-surface-panel border border-line rounded-xl p-4">
+          <div className="flex justify-between gap-3 items-start">
+            <div>
+              <h2 className="font-semibold text-ink-text">Content product gaps</h2>
+              <p className="text-sm text-ink-muted">Quality checks look for thin route descriptions, missing stages, missing search hooks, missing venues, and lesson coverage.</p>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <span className="rounded-full bg-red-50 text-red-700 border border-red-100 px-2 py-1">high {quality?.issueCounts.high ?? 0}</span>
+              <span className="rounded-full bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1">medium {quality?.issueCounts.medium ?? 0}</span>
+              <span className="rounded-full bg-surface-elevated text-ink-muted border border-line px-2 py-1">low {quality?.issueCounts.low ?? 0}</span>
+            </div>
+          </div>
+          <div className="mt-3 grid md:grid-cols-2 gap-2 text-sm max-h-48 overflow-auto">
+            {(quality?.issues || []).slice(0, 12).map((issue) => (
+              <div key={`${issue.target}-${issue.message}`} className="rounded-lg border border-line-subtle bg-surface-elevated px-3 py-2">
+                <div className="flex justify-between gap-2">
+                  <strong className="text-ink-text">{issue.target}</strong>
+                  <span className={issue.severity === 'high' ? 'text-red-700' : issue.severity === 'medium' ? 'text-amber-700' : 'text-ink-muted'}>{issue.severity}</span>
+                </div>
+                <p className="text-ink-muted mt-1">{issue.message}</p>
+              </div>
+            ))}
+            {quality && quality.issues.length === 0 && <p className="text-green-700">No product-quality gaps detected.</p>}
+          </div>
+        </article>
       </section>
 
       <section className="grid lg:grid-cols-4 gap-4">

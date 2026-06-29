@@ -187,7 +187,7 @@ Current v2 implementation:
 - `/learning/roadmaps/:slug` shows route stages, prerequisites, practice projects, linked SiliconScope searches, and related local papers.
 - `/learning/today` chooses a deterministic daily lesson from the local seed catalog.
 - `/learning/lessons/:lessonId` shows a structured lesson shell and related papers.
-- The route catalog now has 24 routes and 35 daily lessons. The first expansion split broad IC buckets into finer routes for ADC/DAC, PLL/clocking, SerDes, image/display IC, analog layout/PEX, digital backend/signoff, equipment/materials, and automotive reliability/safety.
+- The route catalog now has 23 routes and 38 daily lessons. The v3 expansion splits broad IC buckets into finer routes for ADC/DAC, PLL/clocking, SerDes, RF/mmWave, power management, digital backend/physical design, verification/DFT, equipment/materials, advanced packaging, hardware security, automotive reliability/safety, and frontier silicon systems.
 - Learning content now has a database-backed registry (`learning_content_items`). Public APIs prefer published database rows and fall back to the TypeScript seed catalog; the independent admin console can sync seed content into the registry and inspect content health.
 - User learning progress is stored in `learning_progress` for roadmap and lesson targets. Route and lesson pages can mark progress and add related papers to the reading queue.
 
