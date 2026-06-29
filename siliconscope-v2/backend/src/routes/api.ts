@@ -1178,6 +1178,54 @@ router.get("/data-quality", requireAuth, async (req, res) => {
   res.json(memoCache(`data-quality:${scanLimit}:${sampleLimit}`, 120_000, () => dataQualityService.getReport({ scanLimit, sampleLimit })));
 });
 
+router.get("/admin/content-quality/findings", requireAdmin, async (req, res) => {
+  res.json(dataQualityService.listFindings({
+    status: req.query.status as string,
+    type: req.query.type as string,
+    severity: req.query.severity as string,
+    limit: Number(req.query.limit || 50),
+    offset: Number(req.query.offset || 0),
+  }));
+});
+
+router.post("/admin/content-quality/sync", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = dataQualityService.syncFindings({
+      scanLimit: Number(req.body?.scanLimit || 12000),
+      sampleLimit: Number(req.body?.sampleLimit || 50),
+    });
+    adminAuditService.record({
+      req,
+      action: "content_quality.sync",
+      resourceType: "content_quality_findings",
+      metadata: { scanLimit: req.body?.scanLimit, sampleLimit: req.body?.sampleLimit, total: result.total },
+    });
+    clearCache("data-quality");
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "content_quality.sync", resourceType: "content_quality_findings", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch("/admin/content-quality/findings/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const id = Number(req.params.id);
+    const result = dataQualityService.updateFinding(id, { status: String(req.body?.status || "") });
+    adminAuditService.record({
+      req,
+      action: `content_quality.${req.body?.status || "update"}`,
+      resourceType: "content_quality_finding",
+      resourceId: id,
+    });
+    clearCache("data-quality");
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "content_quality.update", resourceType: "content_quality_finding", resourceId: req.params.id, status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.get("/journal-filters", requireAuth, async (_req, res) => {
   res.json(await memoCacheAsync("journal-filters", 300_000, () => journalFilterService.getConfig()));
 });

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { db as metadataDb } from "../db/connection.js";
+import { createHash } from "node:crypto";
+import { db as metadataDb, sqlite } from "../db/connection.js";
 
 function normalizeKey(value: unknown) {
   return String(value || "")
@@ -36,7 +37,298 @@ function addSample<T>(entry: { count: number; samples: T[] }, sample: T, limit =
   if (entry.samples.length < limit) entry.samples.push(sample);
 }
 
+type FindingInput = {
+  type: string;
+  severity: "low" | "medium" | "high";
+  targetType: string;
+  targetId: string;
+  title: string;
+  summary: string;
+  evidence: unknown;
+};
+
+function findingFingerprint(input: FindingInput) {
+  return createHash("sha256")
+    .update([input.type, input.targetType, input.targetId, input.title].join("|"))
+    .digest("hex");
+}
+
+function parseEvidence(value: unknown) {
+  try {
+    return JSON.parse(String(value || "{}"));
+  } catch {
+    return {};
+  }
+}
+
+function makeFinding(input: FindingInput) {
+  return {
+    ...input,
+    fingerprint: findingFingerprint(input),
+    evidenceJson: JSON.stringify(input.evidence ?? {}),
+  };
+}
+
+function pushFinding(items: FindingInput[], input: FindingInput) {
+  items.push(input);
+}
+
 export const dataQualityService = {
+  listFindings(options: { status?: string; type?: string; severity?: string; limit?: number; offset?: number } = {}) {
+    const limit = Math.min(Math.max(Number(options.limit || 50), 1), 200);
+    const offset = Math.max(Number(options.offset || 0), 0);
+    const where: string[] = [];
+    const params: Record<string, string | number> = { limit, offset };
+
+    if (options.status && options.status !== "all") {
+      where.push("status = @status");
+      params.status = options.status;
+    }
+    if (options.type && options.type !== "all") {
+      where.push("finding_type = @type");
+      params.type = options.type;
+    }
+    if (options.severity && options.severity !== "all") {
+      where.push("severity = @severity");
+      params.severity = options.severity;
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const total = sqlite.prepare(`SELECT COUNT(*) AS total FROM content_quality_findings ${whereSql}`).get(params) as { total: number };
+    const rows = sqlite.prepare(`
+      SELECT
+        id,
+        fingerprint,
+        finding_type AS findingType,
+        severity,
+        status,
+        target_type AS targetType,
+        target_id AS targetId,
+        title,
+        summary,
+        evidence_json AS evidenceJson,
+        source,
+        first_seen_at AS firstSeenAt,
+        last_seen_at AS lastSeenAt,
+        resolved_at AS resolvedAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+      FROM content_quality_findings
+      ${whereSql}
+      ORDER BY
+        CASE severity WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
+        last_seen_at DESC,
+        id DESC
+      LIMIT @limit OFFSET @offset
+    `).all(params).map((row: any) => ({ ...row, evidence: parseEvidence(row.evidenceJson) }));
+
+    const summary = sqlite.prepare(`
+      SELECT status, severity, COUNT(*) AS count
+      FROM content_quality_findings
+      GROUP BY status, severity
+      ORDER BY status, severity
+    `).all();
+
+    const types = sqlite.prepare(`
+      SELECT finding_type AS type, COUNT(*) AS count
+      FROM content_quality_findings
+      GROUP BY finding_type
+      ORDER BY count DESC
+    `).all();
+
+    return { rows, total: total?.total ?? 0, limit, offset, summary, types };
+  },
+
+  updateFinding(id: number, input: { status: string }) {
+    const nextStatus = String(input.status || "").trim();
+    if (!["open", "ignored", "resolved"].includes(nextStatus)) {
+      throw new Error("status must be open, ignored, or resolved");
+    }
+    const resolvedAt = nextStatus === "resolved" ? new Date().toISOString() : null;
+    sqlite.prepare(`
+      UPDATE content_quality_findings
+      SET status = @status,
+          resolved_at = @resolvedAt,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `).run({ id, status: nextStatus, resolvedAt });
+    return sqlite.prepare("SELECT * FROM content_quality_findings WHERE id = ?").get(id);
+  },
+
+  syncFindings(options: { scanLimit?: number; sampleLimit?: number } = {}) {
+    const report = dataQualityService.getReport(options);
+    const findings: FindingInput[] = [];
+
+    for (const row of report.duplicateDoi) {
+      pushFinding(findings, {
+        type: "duplicate_doi",
+        severity: "high",
+        targetType: "doi",
+        targetId: row.key,
+        title: `Duplicate DOI: ${row.key}`,
+        summary: `${row.count} papers share the same DOI.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.duplicateTitleYear) {
+      pushFinding(findings, {
+        type: "duplicate_title_year",
+        severity: "medium",
+        targetType: "paper_group",
+        targetId: row.key,
+        title: "Duplicate title/year candidate",
+        summary: `${row.count} papers share the same normalized title and year.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.unknownVenues) {
+      pushFinding(findings, {
+        type: "unknown_venue",
+        severity: "medium",
+        targetType: "venue",
+        targetId: String(row.venue || "empty"),
+        title: `Weak venue mapping: ${row.venue || "(empty)"}`,
+        summary: `${row.count} papers have unknown, user, empty, or zero-score venue metadata.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.lowConfidenceTopics) {
+      pushFinding(findings, {
+        type: "low_confidence_topic",
+        severity: "medium",
+        targetType: "topic",
+        targetId: String(row.field || "empty"),
+        title: `Low-confidence topic group: ${row.field || "(empty)"}`,
+        summary: `${row.count} papers have weak topic evidence in this group.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.venuePublicationMismatches || []) {
+      pushFinding(findings, {
+        type: "venue_publication_mismatch",
+        severity: "high",
+        targetType: "paper",
+        targetId: String(row.id),
+        title: `Venue mismatch: ${row.venue} vs ${row.publicationTitle}`,
+        summary: "The normalized venue label conflicts with the source publication title.",
+        evidence: row,
+      });
+    }
+
+    for (const row of report.aiReviewQueue || []) {
+      pushFinding(findings, {
+        type: "ai_annotation_review",
+        severity: Number(row.confidence || 0) < 0.35 ? "high" : "medium",
+        targetType: "paper",
+        targetId: String(row.paperId),
+        title: `AI annotation review: ${row.title}`,
+        summary: `Confidence ${Math.round(Number(row.confidence || 0) * 100)}%, primary domain ${row.primaryDomain || "-"}.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.institutionVariants) {
+      pushFinding(findings, {
+        type: "institution_alias_candidate",
+        severity: "medium",
+        targetType: "institution",
+        targetId: row.key,
+        title: `Institution alias candidate: ${row.key}`,
+        summary: `${row.variants.length} variants across ${row.count} sampled appearances.`,
+        evidence: row,
+      });
+    }
+
+    for (const row of report.ambiguousAuthors) {
+      pushFinding(findings, {
+        type: "ambiguous_author_name",
+        severity: "medium",
+        targetType: "author",
+        targetId: row.key,
+        title: `Ambiguous author name: ${row.key}`,
+        summary: `${row.count} papers span ${row.variants.length} name variants and ${row.venues.length} venues.`,
+        evidence: row,
+      });
+    }
+
+    if (report.missingAffiliations > 0) {
+      pushFinding(findings, {
+        type: "missing_affiliations",
+        severity: "low",
+        targetType: "database",
+        targetId: "papers.affiliations",
+        title: "Papers missing affiliation metadata",
+        summary: `${report.missingAffiliations} scanned papers have no affiliation string.`,
+        evidence: { count: report.missingAffiliations, scannedRows: report.scannedRows },
+      });
+    }
+
+    const stmt = sqlite.prepare(`
+      INSERT INTO content_quality_findings (
+        fingerprint,
+        finding_type,
+        severity,
+        status,
+        target_type,
+        target_id,
+        title,
+        summary,
+        evidence_json,
+        source,
+        first_seen_at,
+        last_seen_at,
+        created_at,
+        updated_at
+      ) VALUES (
+        @fingerprint,
+        @type,
+        @severity,
+        'open',
+        @targetType,
+        @targetId,
+        @title,
+        @summary,
+        @evidenceJson,
+        'data-quality',
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP,
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT(fingerprint) DO UPDATE SET
+        finding_type = excluded.finding_type,
+        severity = excluded.severity,
+        target_type = excluded.target_type,
+        target_id = excluded.target_id,
+        title = excluded.title,
+        summary = excluded.summary,
+        evidence_json = excluded.evidence_json,
+        status = CASE
+          WHEN content_quality_findings.status = 'resolved' THEN 'open'
+          ELSE content_quality_findings.status
+        END,
+        last_seen_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+
+    const transaction = sqlite.transaction((items: FindingInput[]) => {
+      for (const input of items) stmt.run(makeFinding(input));
+    });
+    transaction(findings);
+
+    const openCount = sqlite.prepare("SELECT COUNT(*) AS total FROM content_quality_findings WHERE status = 'open'").get() as { total: number };
+    return {
+      generatedAt: report.generatedAt,
+      total: findings.length,
+      open: openCount?.total ?? 0,
+      summary: dataQualityService.listFindings({ status: "all", limit: 1 }).summary,
+    };
+  },
+
   getReport(options: { scanLimit?: number; sampleLimit?: number } = {}) {
     const scanLimit = Math.min(Math.max(Number(options.scanLimit || 12000), 1000), 50000);
     const sampleLimit = Math.min(Math.max(Number(options.sampleLimit || 50), 10), 200);
@@ -51,7 +343,7 @@ export const dataQualityService = {
       HAVING COUNT(*) > 1
       ORDER BY COUNT(*) DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{ key: string; count: number; samples: string }>;
 
     const duplicateTitleYear = metadataDb.all(sql`
       SELECT LOWER(TRIM(title)) || '|' || year AS key, COUNT(*) AS count,
@@ -62,7 +354,7 @@ export const dataQualityService = {
       HAVING COUNT(*) > 1
       ORDER BY COUNT(*) DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{ key: string; count: number; samples: string }>;
 
     const unknownVenues = metadataDb.all(sql`
       SELECT venue, venue_rank AS rank, COUNT(*) AS count, ROUND(AVG(quality_score), 1) AS avgScore
@@ -71,7 +363,7 @@ export const dataQualityService = {
       GROUP BY venue, venue_rank
       ORDER BY COUNT(*) DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{ venue: string; rank: string; count: number; avgScore: number }>;
 
     const lowConfidenceTopics = metadataDb.all(sql`
       SELECT domain AS field, COUNT(*) AS count,
@@ -82,7 +374,7 @@ export const dataQualityService = {
       GROUP BY domain
       ORDER BY COUNT(*) DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{ field: string; count: number; avgHits: number; samples: string }>;
 
     const venuePublicationMismatches = metadataDb.all(sql`
       SELECT id, title, year, venue, publication_title AS publicationTitle, domain, domain_hits AS domainHits
@@ -98,7 +390,7 @@ export const dataQualityService = {
         )
       ORDER BY year DESC, id DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{ id: number; title: string; year: number; venue: string; publicationTitle: string; domain: string; domainHits: number }>;
 
     const aiReviewQueue = metadataDb.all(sql`
       SELECT
@@ -133,7 +425,22 @@ export const dataQualityService = {
         )
       ORDER BY a.needs_review DESC, a.confidence ASC, a.updated_at DESC
       LIMIT ${sampleLimit}
-    `);
+    `) as Array<{
+      annotationId: number;
+      paperId: number;
+      title: string;
+      year: number;
+      venue: string;
+      publicationTitle: string;
+      provider: string;
+      model: string;
+      primaryDomain: string;
+      confidence: number;
+      needsReview: number;
+      topicsJson: string;
+      summary: string;
+      updatedAt: string;
+    }>;
 
     const rows = metadataDb.all<{ id: number; title: string; authors: string; affiliations: string; venue: string; year: number }>(sql`
       SELECT id, title, authors, affiliations, venue, year FROM papers ORDER BY year DESC LIMIT ${scanLimit}

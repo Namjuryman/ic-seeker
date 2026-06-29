@@ -229,6 +229,33 @@ export const contentReports = sqliteTable("content_reports", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const contentQualityFindings = sqliteTable("content_quality_findings", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  fingerprint: text("fingerprint").notNull().unique(),
+  findingType: text("finding_type").notNull(),
+  severity: text("severity").notNull().default("medium"),
+  status: text("status").notNull().default("open"),
+  targetType: text("target_type").notNull(),
+  targetId: text("target_id").notNull(),
+  title: text("title").notNull().default(""),
+  summary: text("summary").notNull().default(""),
+  evidenceJson: text("evidence_json").notNull().default("{}"),
+  source: text("source").notNull().default("data-quality"),
+  firstSeenAt: text("first_seen_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  lastSeenAt: text("last_seen_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  resolvedAt: text("resolved_at"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const moderationLogs = sqliteTable("moderation_logs", {
   id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
   targetType: text("target_type").notNull(),

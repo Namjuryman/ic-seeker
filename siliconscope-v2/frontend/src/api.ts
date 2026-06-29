@@ -19,6 +19,8 @@ import type {
   PdfInboxInfo,
   AuthStatus,
   DataQualityReport,
+  ContentQualityFindingResult,
+  ContentQualitySyncResult,
   ModerationQueue,
   ModerationAction,
   SnapshotRow,
@@ -512,6 +514,21 @@ export const api = {
 
   async dataQuality(params?: { scanLimit?: number; sampleLimit?: number }) {
     const res = await axios.get<DataQualityReport>('/api/data-quality', { params })
+    return res.data
+  },
+
+  async contentQualityFindings(params?: { status?: string; type?: string; severity?: string; limit?: number; offset?: number }) {
+    const res = await axios.get<ContentQualityFindingResult>('/api/admin/content-quality/findings', { params })
+    return res.data
+  },
+
+  async syncContentQualityFindings(body?: { scanLimit?: number; sampleLimit?: number }) {
+    const res = await axios.post<ContentQualitySyncResult>('/api/admin/content-quality/sync', body || {})
+    return res.data
+  },
+
+  async updateContentQualityFinding(id: number, body: { status: 'open' | 'ignored' | 'resolved' }) {
+    const res = await axios.patch(`/api/admin/content-quality/findings/${id}`, body)
     return res.data
   },
 

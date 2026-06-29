@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '../api'
-import type { DataQualityReport } from '../types'
+import type { ContentQualityFindingResult, DataQualityReport } from '../types'
 
 function Card({ title, value, hint }: { title: string; value: string | number; hint?: string }) {
   return (
@@ -47,10 +47,25 @@ function SmallTable({ rows, columns }: { rows: any[]; columns: Array<{ key: stri
 
 export default function DataQualityPage() {
   const [report, setReport] = useState<DataQualityReport | null>(null)
+  const [findings, setFindings] = useState<ContentQualityFindingResult | null>(null)
   const [error, setError] = useState('')
+  const [syncMessage, setSyncMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [scanLimit, setScanLimit] = useState(12000)
   const [sampleLimit, setSampleLimit] = useState(50)
+
+  const loadFindings = async () => {
+    try {
+      setFindings(await api.contentQualityFindings({ status: 'open', limit: 40 }))
+    } catch (err) {
+      console.warn('Failed to load content-quality findings', err)
+    }
+  }
+
+  useEffect(() => {
+    loadFindings()
+  }, [])
 
   const runAnalysis = async () => {
     setLoading(true)
@@ -64,14 +79,33 @@ export default function DataQualityPage() {
     }
   }
 
+  const syncFindings = async () => {
+    setSyncing(true)
+    setError('')
+    setSyncMessage('')
+    try {
+      const result = await api.syncContentQualityFindings({ scanLimit, sampleLimit })
+      setSyncMessage(`Synced ${result.total} current issues. Open queue: ${result.open}.`)
+      await loadFindings()
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const updateFinding = async (id: number, status: 'open' | 'ignored' | 'resolved') => {
+    await api.updateContentQualityFinding(id, { status })
+    await loadFindings()
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-ink-text">Data Quality</h1>
         <p className="text-sm text-ink-muted mt-1">
-          This page scans the local paper database on demand. Use it to inspect duplicates, weak topics,
-          venue/publication-title mismatches, affiliation gaps, institution aliases, author ambiguity,
-          and AI-enrichment review samples.
+          Scan the local paper database, then sync important issues into a persistent review queue.
+          This covers duplicates, weak topics, venue mismatches, affiliation gaps, aliases, and AI labels.
         </p>
       </div>
 
@@ -91,16 +125,49 @@ export default function DataQualityPage() {
         <button onClick={runAnalysis} disabled={loading} className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm disabled:opacity-50">
           {loading ? 'Running analysis...' : 'Run analysis'}
         </button>
-        {report && <span className="text-xs text-ink-muted">Latest: {report.generatedAt} · scanned {report.scannedRows ?? '-'} rows</span>}
+        <button onClick={syncFindings} disabled={syncing} className="px-4 py-2 rounded-lg border border-line bg-white text-sm text-ink-text disabled:opacity-50">
+          {syncing ? 'Syncing findings...' : 'Sync findings'}
+        </button>
+        {report && <span className="text-xs text-ink-muted">Latest: {report.generatedAt} / scanned {report.scannedRows ?? '-'} rows</span>}
       </section>
 
       {error && <div className="rounded-xl border p-3 text-sm bg-red-50 text-red-700 border-red-100">{error}</div>}
+      {syncMessage && <div className="rounded-xl border p-3 text-sm bg-emerald-50 text-emerald-700 border-emerald-100">{syncMessage}</div>}
       {!report && !loading && !error && (
         <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">
           No report has been generated yet. Click Run analysis when you want a bounded database scan.
         </div>
       )}
       {loading && <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">Analyzing database... large datasets may take a few seconds.</div>}
+
+      <Section title={`Persistent findings${findings ? ` (${findings.total} open)` : ''}`}>
+        {!findings?.rows.length ? (
+          <p className="text-sm text-ink-muted">No open persistent findings yet. Run Sync findings after an analysis pass.</p>
+        ) : (
+          <div className="space-y-2">
+            {findings.rows.map((item) => (
+              <div key={item.id} className="rounded-lg border border-line p-3 bg-white flex flex-col md:flex-row md:items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-[11px] px-2 py-1 rounded-full font-semibold ${item.severity === 'high' ? 'bg-red-50 text-red-700' : item.severity === 'medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {item.severity}
+                    </span>
+                    <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold">{item.findingType}</span>
+                    <span className="text-xs text-ink-muted">{item.targetType}:{item.targetId}</span>
+                  </div>
+                  <div className="text-sm font-semibold text-ink-text mt-2 break-words">{item.title}</div>
+                  <div className="text-xs text-ink-secondary mt-1 break-words">{item.summary}</div>
+                  <div className="text-[11px] text-ink-muted mt-1">Last seen {item.lastSeenAt}</div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => updateFinding(item.id, 'ignored')} className="px-3 py-1.5 rounded-lg border border-line text-xs bg-white">Ignore</button>
+                  <button onClick={() => updateFinding(item.id, 'resolved')} className="px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs">Resolve</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
 
       {report && (
         <>

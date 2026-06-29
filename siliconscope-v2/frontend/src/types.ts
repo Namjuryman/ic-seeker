@@ -883,6 +883,42 @@ export interface DataQualityReport {
   recommendations: string[];
 }
 
+export interface ContentQualityFinding {
+  id: number;
+  fingerprint: string;
+  findingType: string;
+  severity: 'low' | 'medium' | 'high';
+  status: 'open' | 'ignored' | 'resolved';
+  targetType: string;
+  targetId: string;
+  title: string;
+  summary: string;
+  evidenceJson: string;
+  evidence?: Record<string, any>;
+  source: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ContentQualityFindingResult {
+  rows: ContentQualityFinding[];
+  total: number;
+  limit: number;
+  offset: number;
+  summary: Array<{ status: string; severity: string; count: number }>;
+  types: Array<{ type: string; count: number }>;
+}
+
+export interface ContentQualitySyncResult {
+  generatedAt: string;
+  total: number;
+  open: number;
+  summary: Array<{ status: string; severity: string; count: number }>;
+}
+
 export interface ModerationQueue {
   comments: Array<Record<string, any>>;
   reviews: Array<Record<string, any>>;
