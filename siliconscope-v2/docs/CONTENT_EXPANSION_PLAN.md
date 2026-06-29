@@ -27,6 +27,7 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 | --- | --- | --- | --- |
 | Paper corpus | Large local metadata corpus with heuristic ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and rankings defensible |
 | Topic taxonomy | Hierarchical seed, DB projection, and heuristic paper-topic edges exist | Sample review, manual correction, and UI exposure for topic confidence | Fixes misclassification and enables better filters |
+| AI enrichment | Not yet implemented | Low-cost offline model pass for summaries, labels, topic paths, metrics, and review flags | Gives the product semantic understanding without expensive per-page inference |
 | Learning routes | 23 routes and 38 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
 | Mentor profiles | Inferred professor pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
 | Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield strength and trend explanations | Makes school ranking less noisy |
@@ -88,6 +89,8 @@ Recommended new projection tables after the current registry stabilizes:
 
 - `topic_nodes`, `topic_aliases`, `topic_keyword_rules`: implemented DB projection for the curated IC hierarchy and matching hints.
 - `paper_topic_edges`: implemented heuristic-v1 classifier output with confidence and evidence JSON; next step is review UI and manual correction.
+- `paper_ai_annotations`: low-cost AI output for paper summaries, labels, topic paths, metrics, and review flags.
+- `paper_ai_annotation_jobs`: batch runs, provider/model version, cost estimates, and failure tracking.
 - `entity_source_claims`: source-backed facts for authors, institutions, and companies.
 - `content_quality_findings`: review queue for missing abstracts, conflicting aliases, suspicious affiliations, and low-confidence topics.
 - `report_templates`: reusable deterministic report sections.
@@ -96,19 +99,20 @@ Recommended new projection tables after the current registry stabilizes:
 
 1. Add a content-quality dashboard that counts missing abstracts, unknown affiliations, low-confidence topics, duplicate authors, duplicate institutions, and company profiles without sources.
 2. Review `paper_topic_edges` samples for obvious cases such as DC-DC/PMIC, PLL/clocking, SAR ADC/data converters, SRAM/CIM/memory, and PA/LNA/RF.
-3. Add admin manual correction for topic aliases, keyword rules, and paper-topic edges.
-4. Add representative paper bundles to each learning route and expose them as a reading queue action.
-5. Add source-backed company facts: website, headquarters, employee count, product lines, and confidence.
-6. Add venue-year completeness warnings so rankings show whether a missing year is a data gap.
-7. Add mentor/institution verification queues before treating inferred affiliations as final.
-8. Add report templates for topic, institution, company, and mentor comparison pages.
+3. Add an AI enrichment layer for cheap offline paper summaries, tags, topic paths, metrics, and review flags. See [`AI_PAPER_ENRICHMENT_PLAN.md`](AI_PAPER_ENRICHMENT_PLAN.md).
+4. Add admin manual correction for topic aliases, keyword rules, and paper-topic edges.
+5. Add representative paper bundles to each learning route and expose them as a reading queue action.
+6. Add source-backed company facts: website, headquarters, employee count, product lines, and confidence.
+7. Add venue-year completeness warnings so rankings show whether a missing year is a data gap.
+8. Add mentor/institution verification queues before treating inferred affiliations as final.
+9. Add report templates for topic, institution, company, and mentor comparison pages.
 
 ## What Should Wait
 
 - Full professor biography, photos, and career movement should wait for IEEE/API plus faculty-homepage crawling.
 - Paid report exports should wait until source/provenance display is good.
 - Public review/community growth should wait until moderation, rate limits, and abuse handling are stricter.
-- AI reading and summarization should wait until metadata provenance, PDF policy, and API cost controls are stable.
+- Expensive AI reading and long-form summarization should wait until metadata provenance, PDF policy, and API cost controls are stable. Cheap metadata-only tagging can start earlier as an offline enrichment job.
 
 ## Weekly Content Refresh Flow
 
