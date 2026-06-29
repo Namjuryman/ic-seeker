@@ -860,6 +860,23 @@ export interface DataQualityReport {
   duplicateTitleYear: Array<{ key: string; count: number; samples: string }>;
   unknownVenues: Array<{ venue: string; rank: string; count: number; avgScore: number }>;
   lowConfidenceTopics: Array<{ field: string; count: number; avgHits: number; samples: string }>;
+  venuePublicationMismatches: Array<{ id: number; title: string; year: number; venue: string; publicationTitle: string; domain: string; domainHits: number }>;
+  aiReviewQueue: Array<{
+    annotationId: number;
+    paperId: number;
+    title: string;
+    year: number;
+    venue: string;
+    publicationTitle: string;
+    provider: string;
+    model: string;
+    primaryDomain: string;
+    confidence: number;
+    needsReview: number;
+    topicsJson: string;
+    summary: string;
+    updatedAt: string;
+  }>;
   institutionVariants: Array<{ key: string; count: number; variants: string[]; samples: Array<{ id: number; title: string; raw: string }> }>;
   ambiguousAuthors: Array<{ key: string; count: number; variants: string[]; venues: string[]; samples: Array<{ id: number; title: string; name: string; venue: string; year: number }> }>;
   missingAffiliations: number;

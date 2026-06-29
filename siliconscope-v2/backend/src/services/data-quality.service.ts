@@ -84,6 +84,57 @@ export const dataQualityService = {
       LIMIT ${sampleLimit}
     `);
 
+    const venuePublicationMismatches = metadataDb.all(sql`
+      SELECT id, title, year, venue, publication_title AS publicationTitle, domain, domain_hits AS domainHits
+      FROM papers
+      WHERE COALESCE(publication_title, '') != ''
+        AND (
+          (venue = 'JSSC' AND LOWER(publication_title) NOT LIKE '%solid-state circuits%')
+          OR (venue = 'ISSCC' AND LOWER(publication_title) NOT LIKE '%solid-state circuits%')
+          OR (venue = 'CICC' AND LOWER(publication_title) NOT LIKE '%custom integrated circuits%')
+          OR (venue = 'VLSI' AND LOWER(publication_title) NOT LIKE '%vlsi%' AND LOWER(publication_title) NOT LIKE '%very large scale integration%')
+          OR (venue = 'TCAD' AND LOWER(publication_title) NOT LIKE '%computer-aided design%' AND LOWER(publication_title) NOT LIKE '%tcad%')
+          OR (venue = 'IEDM' AND LOWER(publication_title) NOT LIKE '%electron devices%')
+        )
+      ORDER BY year DESC, id DESC
+      LIMIT ${sampleLimit}
+    `);
+
+    const aiReviewQueue = metadataDb.all(sql`
+      SELECT
+        a.id AS annotationId,
+        a.paper_id AS paperId,
+        p.title,
+        p.year,
+        p.venue,
+        p.publication_title AS publicationTitle,
+        a.provider,
+        a.model,
+        a.primary_domain AS primaryDomain,
+        a.confidence,
+        a.needs_review AS needsReview,
+        a.topics_json AS topicsJson,
+        a.summary_zh AS summary,
+        a.updated_at AS updatedAt
+      FROM paper_ai_annotations a
+      JOIN papers p ON p.id = a.paper_id
+      WHERE a.id = (
+        SELECT latest.id
+        FROM paper_ai_annotations latest
+        WHERE latest.paper_id = a.paper_id
+        ORDER BY latest.updated_at DESC, latest.id DESC
+        LIMIT 1
+      )
+        AND (
+          a.needs_review = 1
+          OR a.confidence < 0.55
+          OR a.topics_json IS NULL
+          OR a.topics_json = '[]'
+        )
+      ORDER BY a.needs_review DESC, a.confidence ASC, a.updated_at DESC
+      LIMIT ${sampleLimit}
+    `);
+
     const rows = metadataDb.all<{ id: number; title: string; authors: string; affiliations: string; venue: string; year: number }>(sql`
       SELECT id, title, authors, affiliations, venue, year FROM papers ORDER BY year DESC LIMIT ${scanLimit}
     `);
@@ -138,6 +189,8 @@ export const dataQualityService = {
       duplicateTitleYear,
       unknownVenues,
       lowConfidenceTopics,
+      venuePublicationMismatches,
+      aiReviewQueue,
       institutionVariants,
       ambiguousAuthors,
       missingAffiliations,
@@ -146,7 +199,9 @@ export const dataQualityService = {
         "Move broad-journal filters into data/venue_filters/journal_extensions.json and log relevance evidence.",
         "Normalize institutions before treating regional maps and institution rankings as serious intelligence.",
         "Do not auto-merge ambiguous authors by name only; use IDs, affiliations, coauthors, topics, and manual overrides.",
-        "Use review queues for broad-journal papers near the relevance threshold."
+        "Use review queues for broad-journal papers near the relevance threshold.",
+        "Review venue/publication-title mismatches before trusting venue rank, score, and institution rankings.",
+        "Use the AI enrichment review queue to find non-IC leakage, missing topic edges, and low-confidence labels."
       ]
     };
   }
