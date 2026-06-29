@@ -4,6 +4,7 @@ import * as schema from "./schema.js";
 import { appConfig } from "../config.js";
 import { applyPerformanceSettings } from "./performance.js";
 import { ensureCompanyTables } from "../scripts/company-schema.js";
+import { ensureTopicTaxonomyTables } from "../scripts/topic-taxonomy-schema.js";
 
 export const sqlite = new Database(appConfig.dbPath);
 
@@ -12,6 +13,7 @@ applyPerformanceSettings(sqlite);
 
 // Ensure company intelligence tables exist on startup
 ensureCompanyTables(sqlite);
+ensureTopicTaxonomyTables(sqlite);
 
 export const db = drizzle(sqlite, { schema });
 

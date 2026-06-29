@@ -304,6 +304,7 @@ This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`
 
 - Create, edit, and delete companies from the independent admin frontend (`frontend-admin`, local `http://localhost:5176`).
 - Sync the learning route/daily-lesson seed catalog into the database-backed learning content registry from the independent admin frontend.
+- Sync the IC topic taxonomy seed into database projection tables from the independent admin frontend, or run `npm --workspace siliconscope-v2-backend run topic-taxonomy:sync`.
 - CSV bulk import is planned but not yet implemented.
 - All `/api/admin/*` endpoints require admin role (`requireAdmin`). In local development, the launcher sets `IC_SEEKER_LOCAL_ADMIN=1`; public deployments must keep that flag disabled and require login.
 

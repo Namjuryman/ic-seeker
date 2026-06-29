@@ -1375,10 +1375,40 @@ export interface TopicTaxonomyNode {
 
 export interface TopicTaxonomy {
   version: string
+  source?: 'seed' | 'database'
   generatedAt: string
+  summary?: {
+    nodes: number
+    rootNodes: number
+    aliases: number
+    keywordRules: number
+    paperEdges: number
+  }
   nodes: TopicTaxonomyNode[]
   tree: Array<TopicTaxonomyNode & { children: TopicTaxonomyNode[] }>
   caveat: string
+}
+
+export interface TopicTaxonomyAdminOverview {
+  sourceVersion: string
+  generatedAt: string
+  seed: {
+    nodes: number
+    aliases: number
+    keywordRules: number
+  }
+  database: {
+    nodes: number
+    aliases: number
+    keywordRules: number
+    paperEdges: number
+  }
+  drift: {
+    missingInDb: string[]
+    extraInDb: string[]
+    inSync: boolean
+  }
+  next: string[]
 }
 
 export type CompanyJobSignal = {

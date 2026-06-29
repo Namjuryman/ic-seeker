@@ -60,6 +60,21 @@ router.get("/topic-taxonomy", requireAuth, async (_req, res) => {
   res.json(topicTaxonomyService.list());
 });
 
+router.get("/admin/topic-taxonomy", requireAdmin, async (_req, res) => {
+  res.json(topicTaxonomyService.adminOverview());
+});
+
+router.post("/admin/topic-taxonomy/sync", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const result = topicTaxonomyService.syncSeedToDatabase();
+  adminAuditService.record({
+    req,
+    action: "topic-taxonomy.sync",
+    resourceType: "topic_taxonomy",
+    metadata: { nodes: result.database.nodes, aliases: result.database.aliases, keywordRules: result.database.keywordRules },
+  });
+  res.json(result);
+});
+
 router.get("/site-settings", requireAuth, async (_req, res) => {
   res.json(siteSettingsService.publicSettings());
 });

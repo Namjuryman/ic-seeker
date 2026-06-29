@@ -11,6 +11,7 @@
     "db:studio": "drizzle-kit studio",
     "companies:seed": "tsx src/scripts/seed-companies.ts",
     "learning:sync": "tsx src/scripts/sync-learning-content.ts",
+    "topic-taxonomy:sync": "tsx src/scripts/sync-topic-taxonomy.ts",
     "snapshots:refresh": "tsx src/scripts/refresh-snapshots.ts",
     "backup:create": "tsx src/scripts/create-backup.ts",
     "test": "vitest"

@@ -44,6 +44,7 @@ import type {
   MentorCompareResult,
   TopicReport,
   TopicTaxonomy,
+  TopicTaxonomyAdminOverview,
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
@@ -627,6 +628,16 @@ export const api = {
 
   async topicTaxonomy() {
     const res = await axios.get<TopicTaxonomy>('/api/topic-taxonomy')
+    return res.data
+  },
+
+  async topicTaxonomyAdmin() {
+    const res = await axios.get<TopicTaxonomyAdminOverview>('/api/admin/topic-taxonomy')
+    return res.data
+  },
+
+  async syncTopicTaxonomy() {
+    const res = await axios.post<TopicTaxonomyAdminOverview>('/api/admin/topic-taxonomy/sync')
     return res.data
   },
 

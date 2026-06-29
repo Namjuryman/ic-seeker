@@ -395,6 +395,54 @@ export const learningTerms = sqliteTable("learning_terms", {
   primaryKey({ columns: [table.targetKind, table.targetId, table.termKind, table.value] }),
 ]);
 
+// Topic taxonomy and future paper-level topic graph
+export const topicNodes = sqliteTable("topic_nodes", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull().default(""),
+  parentId: text("parent_id"),
+  domain: text("domain").notNull().default(""),
+  status: text("status").notNull().default("active"),
+  sourceVersion: text("source_version").notNull().default(""),
+  displayOrder: integer("display_order", { mode: "number" }).notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const topicAliases = sqliteTable("topic_aliases", {
+  id: text("id").primaryKey(),
+  topicId: text("topic_id").notNull().default(""),
+  alias: text("alias").notNull().default(""),
+  aliasKind: text("alias_kind").notNull().default("alias"),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(90),
+  source: text("source").notNull().default("seed"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const topicKeywordRules = sqliteTable("topic_keyword_rules", {
+  id: text("id").primaryKey(),
+  topicId: text("topic_id").notNull().default(""),
+  keyword: text("keyword").notNull().default(""),
+  polarity: text("polarity").notNull().default("positive"),
+  weight: integer("weight", { mode: "number" }).notNull().default(1),
+  source: text("source").notNull().default("seed"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const paperTopicEdges = sqliteTable("paper_topic_edges", {
+  paperId: integer("paper_id", { mode: "number" }).notNull(),
+  topicId: text("topic_id").notNull().default(""),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  method: text("method").notNull().default("heuristic"),
+  evidenceJson: text("evidence_json"),
+  overrideStatus: text("override_status").notNull().default("auto"),
+  reviewedAt: text("reviewed_at"),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  primaryKey({ columns: [table.paperId, table.topicId] }),
+]);
+
 // Company / Employer Intelligence tables
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),
