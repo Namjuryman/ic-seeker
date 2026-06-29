@@ -443,6 +443,67 @@ export const paperTopicEdges = sqliteTable("paper_topic_edges", {
   primaryKey({ columns: [table.paperId, table.topicId] }),
 ]);
 
+export const paperAiAnnotations = sqliteTable("paper_ai_annotations", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  paperId: integer("paper_id", { mode: "number" }).notNull(),
+  provider: text("provider").notNull().default("rule-local"),
+  model: text("model").notNull().default("heuristic-v1"),
+  promptVersion: text("prompt_version").notNull().default("paper-ai-v1"),
+  inputHash: text("input_hash").notNull(),
+  language: text("language").notNull().default("zh-en"),
+  summaryZh: text("summary_zh").notNull().default(""),
+  summaryEn: text("summary_en").notNull().default(""),
+  primaryDomain: text("primary_domain").notNull().default(""),
+  labelsJson: text("labels_json").notNull().default("[]"),
+  topicsJson: text("topics_json").notNull().default("[]"),
+  entitiesJson: text("entities_json").notNull().default("{}"),
+  metricsJson: text("metrics_json").notNull().default("[]"),
+  confidence: real("confidence").notNull().default(0),
+  costEstimateUsd: real("cost_estimate_usd").notNull().default(0),
+  tokenInput: integer("token_input", { mode: "number" }).notNull().default(0),
+  tokenOutput: integer("token_output", { mode: "number" }).notNull().default(0),
+  needsReview: integer("needs_review", { mode: "boolean" }).notNull().default(false),
+  status: text("status").notNull().default("ok"),
+  error: text("error"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const paperAiAnnotationJobs = sqliteTable("paper_ai_annotation_jobs", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  scope: text("scope").notNull().default("missing"),
+  provider: text("provider").notNull().default("rule-local"),
+  model: text("model").notNull().default("heuristic-v1"),
+  promptVersion: text("prompt_version").notNull().default("paper-ai-v1"),
+  status: text("status").notNull().default("queued"),
+  queued: integer("queued", { mode: "number" }).notNull().default(0),
+  processed: integer("processed", { mode: "number" }).notNull().default(0),
+  failed: integer("failed", { mode: "number" }).notNull().default(0),
+  skipped: integer("skipped", { mode: "number" }).notNull().default(0),
+  estimatedCostUsd: real("estimated_cost_usd").notNull().default(0),
+  actualCostUsd: real("actual_cost_usd").notNull().default(0),
+  optionsJson: text("options_json").notNull().default("{}"),
+  error: text("error"),
+  startedAt: text("started_at"),
+  finishedAt: text("finished_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const paperAiAnnotationReviews = sqliteTable("paper_ai_annotation_reviews", {
+  paperId: integer("paper_id", { mode: "number" }).notNull(),
+  annotationId: integer("annotation_id", { mode: "number" }).notNull(),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  reviewer: text("reviewer"),
+  correctionJson: text("correction_json"),
+  notes: text("notes"),
+  reviewedAt: text("reviewed_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  primaryKey({ columns: [table.paperId, table.annotationId] }),
+]);
+
 // Company / Employer Intelligence tables
 export const companies = sqliteTable("companies", {
   id: text("id").primaryKey(),

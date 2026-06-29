@@ -49,6 +49,7 @@ git lfs pull
 - Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
 - Admin job operations ledger for independent-domain deployments, unifying scheduler, maintenance, backup, snapshot, data-quality, and future ingestion activity
 - Admin ingestion job registry for IEEE/OpenAlex/Crossref/CSV/PDF metadata imports, with provider, scope, status, counts, and audit trail before background workers are connected
+- Offline paper AI-enrichment pipeline with versioned annotation tables, a `rule-local` no-cost provider, batch jobs, admin API, and optional derived topic-edge writes
 - Backend API-key storage with masked display
 - Author/professor leaderboard
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
@@ -184,6 +185,25 @@ Policy:
 - AMiner is supported through licensed/exported JSON input by default. Do not run paid all-corpus AMiner enrichment as a weekly job.
 - Imported rows are merged by DOI, OpenAlex ID, IEEE article number, then normalized title plus year.
 - A lightweight IC relevance gate is enabled by default to drop obvious non-IC hits from noisy keyword searches. Add `--include-low-relevance` only for audit runs.
+
+### Offline Paper AI Enrichment
+
+SiliconScope can now run a cheap metadata-only enrichment pass after imports. The current provider is `rule-local`, so it costs nothing and does not call an external model. It creates versioned annotation rows and can also write derived `paper_topic_edges`.
+
+```powershell
+cd backend
+
+# Inspect candidates without writing rows
+npm run ai:annotate-papers -- --mode=weak --limit=50 --dry-run
+
+# Weekly-style metadata annotation pass
+npm run ai:annotate-papers -- --mode=missing --limit=500 --min-topic-confidence=55
+
+# Revisit rows whose title/abstract/venue/DOI hash changed
+npm run ai:annotate-papers -- --mode=stale --limit=500
+```
+
+See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md) for the provider boundary, table model, and future low-cost API adapter plan.
 
 For manual development, run backend and frontend separately:
 
@@ -340,7 +360,7 @@ This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`
 - Sync the learning route/daily-lesson seed catalog into the database-backed learning content registry from the independent admin frontend.
 - Sync the IC topic taxonomy seed into database projection tables from the independent admin frontend, or run `npm --workspace siliconscope-v2-backend run topic-taxonomy:sync`.
 - Refresh precomputed paper-topic edges with `npm --workspace siliconscope-v2-backend run paper-topics:refresh -- --limit=50000 --min-confidence=45`.
-- Planned AI enrichment should run offline and write versioned annotations instead of doing expensive per-page inference; see [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md).
+- AI enrichment now has backend tables, a CLI, and admin API. The current `rule-local` provider is a no-cost metadata annotator; a real cheap-model provider and admin review UI are next. See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md).
 - CSV bulk import is planned but not yet implemented.
 - All `/api/admin/*` endpoints require admin role (`requireAdmin`). In local development, the launcher sets `IC_SEEKER_LOCAL_ADMIN=1`; public deployments must keep that flag disabled and require login.
 

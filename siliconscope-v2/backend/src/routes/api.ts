@@ -44,6 +44,7 @@ import { accessRequestService } from "../services/access-request.service.js";
 import { learningContentService } from "../services/learning-content.service.js";
 import { learningProgressService } from "../services/learning-progress.service.js";
 import { searchIndexService, type SearchIndexTarget } from "../services/search-index.service.js";
+import { paperAiEnrichmentService } from "../services/paper-ai-enrichment.service.js";
 
 const router = Router();
 
@@ -1216,6 +1217,48 @@ router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: Authe
 
 router.get("/admin/snapshots", requireAdmin, async (_req, res) => {
   res.json(snapshotService.list());
+});
+
+router.get("/admin/ai-enrichment/overview", requireAdmin, async (_req, res) => {
+  res.json(paperAiEnrichmentService.overview());
+});
+
+router.get("/admin/ai-enrichment/annotations", requireAdmin, async (req, res) => {
+  res.json(paperAiEnrichmentService.listAnnotations({
+    limit: Number(req.query.limit || 50),
+    needsReview: req.query.needsReview === "1" || req.query.needsReview === "true",
+  }));
+});
+
+router.post("/admin/ai-enrichment/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = paperAiEnrichmentService.runBatch({
+      mode: req.body?.mode,
+      limit: req.body?.limit,
+      provider: req.body?.provider,
+      model: req.body?.model,
+      dryRun: Boolean(req.body?.dryRun),
+      writeTopicEdges: req.body?.writeTopicEdges !== false,
+      minTopicConfidence: req.body?.minTopicConfidence,
+    });
+    adminAuditService.record({
+      req,
+      action: "ai_enrichment.run",
+      resourceType: "paper_ai_annotations",
+      metadata: {
+        mode: result.mode,
+        queued: result.queued,
+        processed: result.processed,
+        failed: result.failed,
+        dryRun: result.dryRun,
+        topicEdgesWritten: result.topicEdgesWritten,
+      },
+    });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "ai_enrichment.run", resourceType: "paper_ai_annotations", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get("/admin/learning-content", requireAdmin, async (_req, res) => {

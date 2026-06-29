@@ -169,15 +169,43 @@ If validation fails, store the error and do not update derived edges.
 
 ## First Implementation Milestone
 
-1. Add DB tables and schema.
-2. Add provider-neutral mock adapter that reads no external API.
-3. Add CLI command:
+Status: implemented as a local rule-based MVP. This creates the durable versioned annotation layer first, without spending API budget or making page render depend on model calls.
+
+Implemented:
+
+1. DB tables and Drizzle schema:
+   - `paper_ai_annotations`
+   - `paper_ai_annotation_jobs`
+   - `paper_ai_annotation_reviews`
+2. Provider-neutral `rule-local` service that reads only title, abstract, venue, year, DOI, current domain, and the local topic taxonomy.
+3. CLI command:
 
 ```powershell
 npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --limit=200 --mode=missing
 ```
 
-4. Add admin page showing job history, cost estimate, failed rows, and samples.
-5. Add one real provider adapter only after API key, budget limit, and prompt validation are ready.
+Useful variants:
+
+```powershell
+# Inspect candidates without writing rows
+npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=weak --limit=50 --dry-run
+
+# Annotate weakly classified papers and also write derived paper_topic_edges
+npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=weak --limit=500 --min-topic-confidence=55
+
+# Revisit rows whose source metadata changed since the previous prompt version/hash
+npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=stale --limit=500
+```
+
+4. Admin API:
+   - `GET /api/admin/ai-enrichment/overview`
+   - `GET /api/admin/ai-enrichment/annotations`
+   - `POST /api/admin/ai-enrichment/run`
+
+Remaining:
+
+1. Add the independent-admin UI page for job history, cost estimate, failed rows, and samples.
+2. Add one real provider adapter only after API key, budget limit, and prompt validation are ready.
+3. Add review tools to approve/correct generated topic paths and metric extraction.
 
 This keeps the product cheap and scalable: old papers get one bulk annotation pass, and weekly imports only annotate new or changed rows.

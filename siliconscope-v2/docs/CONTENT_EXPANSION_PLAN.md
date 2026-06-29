@@ -27,7 +27,7 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 | --- | --- | --- | --- |
 | Paper corpus | Large local metadata corpus with heuristic ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and rankings defensible |
 | Topic taxonomy | Hierarchical seed, DB projection, and heuristic paper-topic edges exist | Sample review, manual correction, and UI exposure for topic confidence | Fixes misclassification and enables better filters |
-| AI enrichment | Not yet implemented | Low-cost offline model pass for summaries, labels, topic paths, metrics, and review flags | Gives the product semantic understanding without expensive per-page inference |
+| AI enrichment | Local rule-based MVP tables, CLI, and admin API exist | Add provider adapter, admin review UI, validation dashboard, and search/report integration | Gives the product semantic understanding without expensive per-page inference |
 | Learning routes | 24 routes and 39 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
 | Mentor profiles | Inferred professor pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
 | Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield strength and trend explanations | Makes school ranking less noisy |
@@ -100,8 +100,8 @@ Recommended new projection tables after the current registry stabilizes:
 
 - `topic_nodes`, `topic_aliases`, `topic_keyword_rules`: implemented DB projection for the curated IC hierarchy and matching hints.
 - `paper_topic_edges`: implemented heuristic-v1 classifier output with confidence and evidence JSON; next step is review UI and manual correction.
-- `paper_ai_annotations`: low-cost AI output for paper summaries, labels, topic paths, metrics, and review flags.
-- `paper_ai_annotation_jobs`: batch runs, provider/model version, cost estimates, and failure tracking.
+- `paper_ai_annotations`: implemented versioned output for paper summaries, labels, topic paths, metrics, and review flags. The first provider is `rule-local`; cheap external model adapters can be added behind the same service.
+- `paper_ai_annotation_jobs`: implemented batch runs, provider/model version, cost estimates, and failure tracking.
 - `entity_source_claims`: source-backed facts for authors, institutions, and companies.
 - `content_quality_findings`: review queue for missing abstracts, conflicting aliases, suspicious affiliations, and low-confidence topics.
 - `report_templates`: reusable deterministic report sections.
@@ -110,10 +110,10 @@ Recommended new projection tables after the current registry stabilizes:
 
 1. Add a content-quality dashboard that counts missing abstracts, unknown affiliations, low-confidence topics, duplicate authors, duplicate institutions, and company profiles without sources.
 2. Review `paper_topic_edges` samples for obvious cases such as DC-DC/PMIC, PLL/clocking, SAR ADC/data converters, SRAM/CIM/memory, and PA/LNA/RF.
-3. Add an AI enrichment layer for cheap offline paper summaries, tags, topic paths, metrics, and review flags. See [`AI_PAPER_ENRICHMENT_PLAN.md`](AI_PAPER_ENRICHMENT_PLAN.md).
-4. Add admin manual correction for topic aliases, keyword rules, and paper-topic edges.
+3. Add the independent-admin UI for AI enrichment jobs and review samples; the backend tables, CLI, and admin API already exist. See [`AI_PAPER_ENRICHMENT_PLAN.md`](AI_PAPER_ENRICHMENT_PLAN.md).
+4. Add admin manual correction for topic aliases, keyword rules, paper-topic edges, and generated AI topic paths.
 5. Add representative paper bundles to each learning route and expose them as a reading queue action.
-6. Add source-backed company facts: website, headquarters, employee count, product lines, and confidence.
+6. Add source-backed company facts: website, headquarters, employee count, product lines, market-cap/valuation bucket for public companies, stock-style up/down indicators where legally safe, and confidence.
 7. Add venue-year completeness warnings so rankings show whether a missing year is a data gap.
 8. Add mentor/institution verification queues before treating inferred affiliations as final.
 9. Add report templates for topic, institution, company, and mentor comparison pages.
@@ -131,10 +131,12 @@ Recommended new projection tables after the current registry stabilizes:
 1. Create SQLite backup
 2. Import new metadata by venue/year/provider
 3. Normalize DOI, venue, aliases, topics, affiliations, and companies
-4. Run content-quality checks and produce a diff
-5. Refresh snapshots and rankings
-6. Rebuild Meilisearch indexes
-7. Publish dashboard summary and admin review queues
+4. Run `paper-topics:refresh` for deterministic topic edges
+5. Run `ai:annotate-papers` for missing/stale/weak metadata-only annotations
+6. Run content-quality checks and produce a diff
+7. Refresh snapshots and rankings
+8. Rebuild Meilisearch indexes
+9. Publish dashboard summary and admin review queues
 ```
 
 This flow keeps the private workflow fast while making the public product trustworthy enough for paid research, learning, and industry-intelligence features.
