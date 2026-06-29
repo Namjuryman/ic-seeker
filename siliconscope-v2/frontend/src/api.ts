@@ -45,6 +45,7 @@ import type {
   TopicReport,
   TopicTaxonomy,
   TopicTaxonomyAdminOverview,
+  PaperTopicRefreshResult,
   PlatformOverview,
   AdminOverview,
   RuntimeHealth,
@@ -638,6 +639,11 @@ export const api = {
 
   async syncTopicTaxonomy() {
     const res = await axios.post<TopicTaxonomyAdminOverview>('/api/admin/topic-taxonomy/sync')
+    return res.data
+  },
+
+  async refreshPaperTopicEdges(payload: { limit?: number; minConfidence?: number; reset?: boolean } = {}) {
+    const res = await axios.post<PaperTopicRefreshResult>('/api/admin/topic-taxonomy/paper-edges/refresh', payload)
     return res.data
   },
 

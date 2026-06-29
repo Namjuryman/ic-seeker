@@ -14,7 +14,7 @@ export const topicNodes: TopicNode[] = [
   { id: "pmic-buck", parentId: "pmic", label: "Buck Converter", domain: "Power Management", aliases: ["step-down converter"], positiveKeywords: ["buck", "step-down", "down converter"], negativeKeywords: [] },
   { id: "pmic-boost", parentId: "pmic", label: "Boost Converter", domain: "Power Management", aliases: ["step-up converter"], positiveKeywords: ["boost", "step-up"], negativeKeywords: [] },
   { id: "pmic-switched-cap", parentId: "pmic", label: "Switched-Capacitor Converter", domain: "Power Management", aliases: ["SC converter", "charge pump converter"], positiveKeywords: ["switched-capacitor", "switched capacitor", "charge pump"], negativeKeywords: [] },
-  { id: "pmic-hybrid", parentId: "pmic", label: "Hybrid Converter", domain: "Power Management", aliases: ["hybrid SC converter", "dual-path hybrid"], positiveKeywords: ["hybrid converter", "dual-path", "dph", "hybrid switched"], negativeKeywords: [] },
+  { id: "pmic-hybrid", parentId: "pmic", label: "Hybrid Converter", domain: "Power Management", aliases: ["hybrid SC converter", "dual-path hybrid"], positiveKeywords: ["hybrid converter", "dual-path", "dph", "hybrid switched"], negativeKeywords: ["side-channel", "residual network", "neural network"] },
   { id: "pmic-digital-ldo", parentId: "pmic", label: "Digital LDO", domain: "Power Management", aliases: ["DLDO"], positiveKeywords: ["digital ldo", "dldo"], negativeKeywords: [] },
   { id: "pmic-3d-power", parentId: "pmic", label: "3D Power Delivery", domain: "Power Management", aliases: ["integrated voltage regulator", "IVR"], positiveKeywords: ["3d power", "integrated voltage regulator", "ivr", "power delivery"], negativeKeywords: [] },
 

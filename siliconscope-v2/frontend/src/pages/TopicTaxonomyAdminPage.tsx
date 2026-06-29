@@ -28,6 +28,13 @@ export default function TopicTaxonomyAdminPage() {
       queryClient.invalidateQueries({ queryKey: ['topic-taxonomy'] })
     },
   })
+  const refreshEdges = useMutation({
+    mutationFn: () => api.refreshPaperTopicEdges({ limit: 50000, minConfidence: 45, reset: true }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['topic-taxonomy-admin'] })
+      queryClient.invalidateQueries({ queryKey: ['topic-taxonomy'] })
+    },
+  })
 
   const data = overview.data
   const tree = taxonomy.data?.tree || []
@@ -49,15 +56,21 @@ export default function TopicTaxonomyAdminPage() {
         </div>
       </section>
 
-      {sync.isError && (
+      {(sync.isError || refreshEdges.isError) && (
         <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
-          {(sync.error as Error)?.message || 'Topic taxonomy sync failed.'}
+          {(sync.error as Error)?.message || (refreshEdges.error as Error)?.message || 'Topic taxonomy operation failed.'}
         </div>
       )}
 
       {sync.data && (
         <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-sm text-green-700">
           Synced {sync.data.database.nodes} nodes, {sync.data.database.aliases} aliases, and {sync.data.database.keywordRules} keyword rules.
+        </div>
+      )}
+
+      {refreshEdges.data && (
+        <div className="rounded-xl border border-green-100 bg-green-50 p-3 text-sm text-green-700">
+          Refreshed {refreshEdges.data.writtenEdges.toLocaleString()} paper-topic edges from {refreshEdges.data.scannedPapers.toLocaleString()} scanned papers.
         </div>
       )}
 
@@ -77,6 +90,9 @@ export default function TopicTaxonomyAdminPage() {
             </div>
             <button type="button" onClick={() => sync.mutate()} disabled={sync.isPending}>
               {sync.isPending ? 'Syncing...' : 'Sync seed to DB'}
+            </button>
+            <button type="button" onClick={() => refreshEdges.mutate()} disabled={refreshEdges.isPending}>
+              {refreshEdges.isPending ? 'Refreshing...' : 'Refresh paper edges'}
             </button>
           </div>
           <p className="learning-muted">
@@ -120,6 +136,16 @@ export default function TopicTaxonomyAdminPage() {
               {(data?.next || []).map((item) => <li key={item}><span>{item}</span></li>)}
             </ul>
           </div>
+          {refreshEdges.data?.topTopics?.length ? (
+            <div className="mt-4">
+              <h3 className="font-semibold text-ink-text mb-2">Latest edge distribution</h3>
+              <ul className="admin-mini-list">
+                {refreshEdges.data.topTopics.map((topic) => (
+                  <li key={topic.topicId}><span>{topic.label}</span><small>{topic.count.toLocaleString()}</small></li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </aside>
       </section>
     </div>

@@ -72,9 +72,9 @@ const modules: PlatformModule[] = [
     track: "research",
     status: "partial",
     maturity: 61,
-    summary: "Geographic maps, topic reports, and venue matrix are available, but geocoding and topic classification need hardening.",
+    summary: "Geographic maps, topic reports, and venue matrix are available. Topic taxonomy and heuristic paper-topic edges are now precomputed, while geocoding and review workflows still need hardening.",
     shipped: ["geo map", "topic reports", "venue matrix", "journal filter evaluation"],
-    next: ["city-level geocoding", "venue weighting audit", "topic classifier retraining"],
+    next: ["city-level geocoding", "venue weighting audit", "paper-topic review UI"],
   },
   {
     id: "content-quality",
@@ -84,7 +84,7 @@ const modules: PlatformModule[] = [
     maturity: 28,
     summary: "The next content layer should turn raw metadata into source-backed topics, entity claims, weekly diffs, and reusable report templates.",
     shipped: ["content expansion plan", "content maturity levels", "weekly refresh model"],
-    next: ["topic taxonomy table", "content-quality findings queue", "source-backed claim registry", "report templates"],
+    next: ["paper-topic manual correction", "content-quality findings queue", "source-backed claim registry", "report templates"],
   },
   {
     id: "data-ops",

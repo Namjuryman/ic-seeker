@@ -75,6 +75,27 @@ router.post("/admin/topic-taxonomy/sync", requireAdmin, async (req: Authenticate
   res.json(result);
 });
 
+router.post("/admin/topic-taxonomy/paper-edges/refresh", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const body = req.body || {};
+  const result = topicTaxonomyService.refreshPaperTopicEdges({
+    limit: body.limit,
+    minConfidence: body.minConfidence,
+    reset: body.reset !== false,
+  });
+  adminAuditService.record({
+    req,
+    action: "topic-taxonomy.paper-edges.refresh",
+    resourceType: "paper_topic_edges",
+    metadata: {
+      scannedPapers: result.scannedPapers,
+      matchedPapers: result.matchedPapers,
+      writtenEdges: result.writtenEdges,
+      minConfidence: result.minConfidence,
+    },
+  });
+  res.json(result);
+});
+
 router.get("/site-settings", requireAuth, async (_req, res) => {
   res.json(siteSettingsService.publicSettings());
 });

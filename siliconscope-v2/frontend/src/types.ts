@@ -1411,6 +1411,17 @@ export interface TopicTaxonomyAdminOverview {
   next: string[]
 }
 
+export interface PaperTopicRefreshResult {
+  generatedAt: string
+  scannedPapers: number
+  matchedPapers: number
+  writtenEdges: number
+  minConfidence: number
+  reset: boolean
+  topTopics: Array<{ topicId: string; label: string; count: number }>
+  overview: TopicTaxonomyAdminOverview
+}
+
 export type CompanyJobSignal = {
   id: string;
   companyId: string;

@@ -12,6 +12,7 @@
     "companies:seed": "tsx src/scripts/seed-companies.ts",
     "learning:sync": "tsx src/scripts/sync-learning-content.ts",
     "topic-taxonomy:sync": "tsx src/scripts/sync-topic-taxonomy.ts",
+    "paper-topics:refresh": "tsx src/scripts/refresh-paper-topics.ts",
     "snapshots:refresh": "tsx src/scripts/refresh-snapshots.ts",
     "backup:create": "tsx src/scripts/create-backup.ts",
     "test": "vitest"

@@ -11,8 +11,8 @@ This document records the current product modules and the next high-value improv
 | Mentor Intelligence | Partial | Builds a mentor/institution view for applicants and students. | Add verified reviews, abuse controls, and career timeline enrichment. |
 | Company Intelligence | Partial | Connects IC papers, roadmaps, companies, jobs, and supply chain. | Add job/news/source ingestion and confidence review workflow. |
 | Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. Current seed catalog has 23 route maps and 38 daily lessons, with a DB-backed content registry, admin sync/editing, normalized projection tables, quality scoring, per-user progress state, and reading queue handoff. | Add type-specific structured editors, spaced review scheduling, route diagrams, and completion analytics. |
-| Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and topic classification. |
-| Content Quality and Knowledge Graph | Partial | Turns raw metadata into trusted product content: topic taxonomy, provenance, confidence, and weekly diffs. Topic nodes, aliases, and keyword rules now have a DB projection plus admin sync. | Add paper-topic edge scoring, content-quality checks, source-backed claims, and report templates. |
+| Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and expose paper-topic confidence filters. |
+| Content Quality and Knowledge Graph | Partial | Turns raw metadata into trusted product content: topic taxonomy, provenance, confidence, and weekly diffs. Topic nodes, aliases, keyword rules, and heuristic paper-topic edges now have DB projections plus admin refresh. | Add paper-topic sample review, manual correction, content-quality checks, source-backed claims, and report templates. |
 | Data Operations | Partial | Keeps weekly updates manageable. | Add scheduled ingestion jobs and snapshot diff reports. |
 | Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, billing catalog, usage ledger, partial quota enforcement, admin plan management, local backup operations, maintenance task records, and optional search-index controls are in place. | Connect PostgreSQL, Redis, object storage, payment checkout/webhooks, email, realtime delivery, and observability. |
 
@@ -37,9 +37,9 @@ The learning CMS now follows the same direction:
 The topic taxonomy now follows the same seed-to-projection pattern:
 
 - `topic_nodes`, `topic_aliases`, and `topic_keyword_rules` store the curated IC hierarchy, aliases, and matching hints.
-- `paper_topic_edges` is reserved for paper-level classifier output with confidence and evidence.
+- `paper_topic_edges` stores heuristic-v1 paper-level topic output with confidence and evidence JSON. It is refreshed as a weekly/offline job rather than recalculated on every page load.
 - The public taxonomy API reads the database projection first and falls back to the TypeScript seed only when the projection is empty.
-- The independent admin app exposes a Topic Taxonomy page for status, drift checks, and seed synchronization.
+- The independent admin app exposes a Topic Taxonomy page for status, drift checks, seed synchronization, and paper-edge refresh.
 
 ## Suggested New Modules
 

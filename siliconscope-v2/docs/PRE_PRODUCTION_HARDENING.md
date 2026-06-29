@@ -85,10 +85,11 @@ Paid features should monetize workflow efficiency and AI assistance, not copyrig
 - [x] Split Reading Queue service model into `readingStatus`, `flags`, and `useCases` while keeping legacy `status` compatibility.
 - [x] Add topic taxonomy API seed for hierarchical IC topics and future `paper_topic_edges`.
 - [x] Persist topic taxonomy nodes, aliases, and keyword rules into database projection tables with admin sync.
+- [x] Add `paper_topic_edges` heuristic-v1 refresh job with confidence and evidence JSON for obvious IC subtopics.
 - [x] Add company market-data fields with explicit stale/source caveats and no fake real-time quotes.
 - [ ] Run full runtime QA with a real non-LFS-pointer SQLite database.
 - [ ] Record results in `docs/RUNTIME_QA_RESULTS.md`.
-- [ ] Write `paper_topic_edges` with classifier confidence, evidence, and manual correction workflow.
+- [ ] Add admin sample review and manual correction workflow for `paper_topic_edges`.
 - [ ] Add a compliant market-data connector or admin CSV import for market cap, price, and change fields.
 - [ ] Design the first paid AI report pipeline with input snapshot, sources, caveats, generatedAt, prompt/model version, quota, and feedback.
 

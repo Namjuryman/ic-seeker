@@ -27,6 +27,34 @@ type RuleRow = {
   weight: number;
 };
 
+type PaperTopicRow = {
+  id: number;
+  title: string;
+  abstract: string | null;
+  venue: string | null;
+  publication_title: string | null;
+  domain: string | null;
+  semantic_text: string | null;
+};
+
+type TopicClassifierNode = TopicNode & {
+  parentId?: string;
+  parentLabel?: string;
+};
+
+type TopicHit = {
+  topicId: string;
+  confidence: number;
+  score: number;
+  evidence: {
+    positive: string[];
+    negative: string[];
+    alias: string[];
+    domainBoost: boolean;
+    inferredFrom?: string;
+  };
+};
+
 function rowsExist(): boolean {
   const row = appSqlite.prepare("SELECT COUNT(*) as n FROM topic_nodes WHERE status = 'active'").get() as { n: number } | undefined;
   return Number(row?.n || 0) > 0;
@@ -36,6 +64,17 @@ function unique(values: string[]) {
   return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
+function normalizeText(value: unknown) {
+  return String(value || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/–|—|−/g, "-")
+    .replace(/&/g, " and ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function rowId(...parts: string[]) {
   return parts
     .join("-")
@@ -43,6 +82,14 @@ function rowId(...parts: string[]) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 180);
+}
+
+function phraseCount(normalizedText: string, keyword: string) {
+  const normalizedKeyword = normalizeText(keyword);
+  if (!normalizedKeyword || normalizedKeyword.length < 2) return 0;
+  const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(^|\\s)${escaped}(?=\\s|$)`, "g");
+  return normalizedText.match(re)?.length || 0;
 }
 
 function seedSummary() {
@@ -74,6 +121,99 @@ function buildTree(nodes: TopicNode[]) {
     ...node,
     children: byParent.get(node.id) || [],
   }));
+}
+
+function readClassifierNodes(): TopicClassifierNode[] {
+  if (!rowsExist()) return seedTopicNodes;
+  return listFromDatabase().nodes as TopicClassifierNode[];
+}
+
+function classifyPaper(row: PaperTopicRow, nodes: TopicClassifierNode[], minConfidence: number): TopicHit[] {
+  const text = normalizeText([
+    row.title,
+    row.abstract,
+    row.publication_title,
+    row.venue,
+    row.semantic_text,
+  ].filter(Boolean).join(" "));
+  const domain = normalizeText(row.domain);
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const hits = new Map<string, TopicHit>();
+
+  for (const node of nodes) {
+    let score = 0;
+    const positive: string[] = [];
+    const negative: string[] = [];
+    const aliasEvidence: string[] = [];
+
+    const labels = unique([node.label, ...node.aliases]);
+    for (const alias of labels) {
+      const count = phraseCount(text, alias);
+      if (count) {
+        score += Math.min(3, count) * 1.6;
+        aliasEvidence.push(alias);
+      }
+    }
+
+    for (const keyword of unique(node.positiveKeywords)) {
+      const count = phraseCount(text, keyword);
+      if (count) {
+        score += Math.min(4, count) * 2.4;
+        positive.push(keyword);
+      }
+    }
+
+    for (const keyword of unique(node.negativeKeywords)) {
+      const count = phraseCount(text, keyword);
+      if (count) {
+        score -= Math.min(3, count) * 3.5;
+        negative.push(keyword);
+      }
+    }
+
+    const domainBoost = Boolean(domain && normalizeText(node.domain) === domain);
+    if (domainBoost) score += node.parentId ? 1.6 : 1.1;
+    if (!domainBoost && domain && !node.parentId && positive.length + aliasEvidence.length <= 2) score -= 1.4;
+    if (!domainBoost && domain.includes("power management") && node.id === "rf" && text.includes("wireless power")) score -= 2.4;
+    if (!node.parentId && positive.length === 0 && aliasEvidence.length === 0) score -= 0.8;
+
+    const confidence = Math.max(0, Math.min(99, Math.round(score * 15)));
+    if (confidence >= minConfidence) {
+      hits.set(node.id, {
+        topicId: node.id,
+        confidence,
+        score: Math.round(score * 10) / 10,
+        evidence: { positive, negative, alias: aliasEvidence, domainBoost },
+      });
+    }
+  }
+
+  for (const hit of [...hits.values()]) {
+    const node = byId.get(hit.topicId);
+    if (!node?.parentId) continue;
+    const parent = byId.get(node.parentId);
+    if (!parent) continue;
+    const existing = hits.get(parent.id);
+    const inheritedConfidence = Math.max(minConfidence, hit.confidence - 8);
+    if (!existing || existing.confidence < inheritedConfidence) {
+      hits.set(parent.id, {
+        topicId: parent.id,
+        confidence: inheritedConfidence,
+        score: Math.round((hit.score * 0.82) * 10) / 10,
+        evidence: {
+          positive: [],
+          negative: [],
+          alias: [],
+          domainBoost: normalizeText(parent.domain) === domain,
+          inferredFrom: hit.topicId,
+        },
+      });
+    }
+  }
+
+  return [...hits.values()]
+    .sort((a, b) => b.confidence - a.confidence || b.score - a.score)
+    .slice(0, 6);
 }
 
 function listFromSeed() {
@@ -212,6 +352,83 @@ function syncSeedToDatabase() {
   return adminOverview();
 }
 
+function refreshPaperTopicEdges(options: { limit?: number; minConfidence?: number; reset?: boolean } = {}) {
+  if (!rowsExist()) syncSeedToDatabase();
+  const limit = Math.min(Math.max(Number(options.limit || 50000), 100), 250000);
+  const minConfidence = Math.min(Math.max(Number(options.minConfidence || 45), 20), 95);
+  const reset = options.reset !== false;
+  const now = new Date().toISOString();
+  const nodes = readClassifierNodes();
+
+  const rows = appSqlite.prepare(`
+    SELECT id, title, abstract, venue, publication_title, domain, semantic_text
+    FROM papers
+    WHERE COALESCE(venue_rank, '') != 'Hidden'
+    ORDER BY year DESC, quality_score DESC, id DESC
+    LIMIT ?
+  `).all(limit) as PaperTopicRow[];
+
+  const insertEdge = appSqlite.prepare(`
+    INSERT INTO paper_topic_edges (paper_id, topic_id, confidence, method, evidence_json, override_status, updated_at)
+    VALUES (?, ?, ?, 'heuristic-v1', ?, 'auto', ?)
+    ON CONFLICT(paper_id, topic_id) DO UPDATE SET
+      confidence = CASE
+        WHEN paper_topic_edges.override_status = 'manual' THEN paper_topic_edges.confidence
+        ELSE excluded.confidence
+      END,
+      method = CASE
+        WHEN paper_topic_edges.override_status = 'manual' THEN paper_topic_edges.method
+        ELSE excluded.method
+      END,
+      evidence_json = CASE
+        WHEN paper_topic_edges.override_status = 'manual' THEN paper_topic_edges.evidence_json
+        ELSE excluded.evidence_json
+      END,
+      updated_at = excluded.updated_at
+  `);
+
+  const tx = appSqlite.transaction(() => {
+    if (reset) {
+      appSqlite.prepare("DELETE FROM paper_topic_edges WHERE override_status != 'manual'").run();
+    }
+    let matchedPapers = 0;
+    let writtenEdges = 0;
+    const byTopic = new Map<string, number>();
+
+    for (const row of rows) {
+      const hits = classifyPaper(row, nodes, minConfidence);
+      if (!hits.length) continue;
+      matchedPapers += 1;
+      for (const hit of hits) {
+        insertEdge.run(row.id, hit.topicId, hit.confidence, JSON.stringify(hit.evidence), now);
+        writtenEdges += 1;
+        byTopic.set(hit.topicId, (byTopic.get(hit.topicId) || 0) + 1);
+      }
+    }
+
+    const topTopics = [...byTopic.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([topicId, count]) => ({ topicId, label: nodes.find((node) => node.id === topicId)?.label || topicId, count }));
+
+    return {
+      generatedAt: now,
+      scannedPapers: rows.length,
+      matchedPapers,
+      writtenEdges,
+      minConfidence,
+      reset,
+      topTopics,
+    };
+  });
+
+  const result = tx();
+  return {
+    ...result,
+    overview: adminOverview(),
+  };
+}
+
 function adminOverview() {
   const nodes = appSqlite.prepare("SELECT COUNT(*) as n FROM topic_nodes WHERE status = 'active'").get() as { n: number } | undefined;
   const aliases = appSqlite.prepare("SELECT COUNT(*) as n FROM topic_aliases").get() as { n: number } | undefined;
@@ -238,7 +455,7 @@ function adminOverview() {
       inSync: missingInDb.length === 0 && extraInDb.length === 0,
     },
     next: [
-      "Write paper_topic_edges with confidence for high-impact papers.",
+      "Review paper_topic_edges samples and tune keyword weights for noisy fields.",
       "Add admin manual correction for topic aliases and keyword rules.",
       "Expose topic confidence badges on paper detail and topic reports.",
     ],
@@ -250,5 +467,6 @@ export const topicTaxonomyService = {
     return rowsExist() ? listFromDatabase() : listFromSeed();
   },
   syncSeedToDatabase,
+  refreshPaperTopicEdges,
   adminOverview,
 };
