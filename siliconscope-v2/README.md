@@ -151,6 +151,40 @@ npm run backup:create -- weekly-refresh --keep=10
 
 The admin console also has a backup page for creating, listing, pruning, and deleting local restore points. Restore remains manual-first: stop the API, copy the selected `.sqlite` backup over the active database, then restart.
 
+### Multi-source Paper Import
+
+The backend includes a repeatable metadata importer for expanding the paper corpus from multiple sources, normalizing records, merging duplicates, and rebuilding the local FTS row for inserted or updated papers.
+
+```powershell
+cd backend
+npm run import:papers -- --sources=openalex,crossref --query="dc-dc converter" --years=2024-2026 --limit=50 --dry-run
+```
+
+Useful modes:
+
+```powershell
+# Free public metadata sources
+npm run import:papers -- --sources=openalex,crossref --queries="integrated circuit,solid-state circuit,power management IC" --year-from=2000 --year-to=2026 --limit=100
+
+# IEEE precision layer, only when IEEE_API_KEY or IEEE_XPLORE_API_KEY is configured
+npm run import:papers -- --sources=ieee,openalex --venues=ISSCC,JSSC,CICC,ASSCC,ESSCIRC --year-from=2000 --year-to=2026 --limit=100
+
+# Local exports from Google Scholar-like workflows, Publish or Perish, AMiner, or manual curation
+npm run import:papers -- --sources=scholar-csv,csv,aminer --scholar-csv=exports/scholar.csv --csv=exports/manual.csv --aminer-json=exports/aminer.json
+
+# After importing, also refresh topic edges
+npm run import:papers -- --sources=openalex,crossref --query="hybrid dc-dc converter" --years=2020-2026 --limit=100 --refresh-topics
+```
+
+Policy:
+
+- OpenAlex and Crossref are the default low-cost metadata layer.
+- IEEE Xplore is an optional precision layer and requires your own API key.
+- Google Scholar is supported through user-provided CSV exports, not direct automated scraping.
+- AMiner is supported through licensed/exported JSON input by default. Do not run paid all-corpus AMiner enrichment as a weekly job.
+- Imported rows are merged by DOI, OpenAlex ID, IEEE article number, then normalized title plus year.
+- A lightweight IC relevance gate is enabled by default to drop obvious non-IC hits from noisy keyword searches. Add `--include-low-relevance` only for audit runs.
+
 For manual development, run backend and frontend separately:
 
 ```powershell
