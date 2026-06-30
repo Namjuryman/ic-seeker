@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { appConfig } from "../config.js";
 import { appDb, appSqlite } from "../db/app-db.js";
 import { users } from "../db/schema.js";
+import { evaluateQuota } from "./billing-utils.js";
 
 export type BillingPlanId = "free" | "pro" | "lab" | "enterprise" | "internal";
 
@@ -350,17 +351,15 @@ export const billingService = {
   checkQuota(userId: number, metric: UsageMetric, increment = 1) {
     const plan = getPlan(getUserPlanId(userId));
     const limit = plan.limits[metric];
-    if (limit < 0) return { allowed: true, used: 0, limit, remaining: null };
     const { start, end } = monthWindow();
     const used = usageForMetric(userId, metric, start, end);
-    const remaining = Math.max(0, limit - used);
-    return {
-      allowed: used + increment <= limit,
+    return evaluateQuota({
+      metric,
+      planName: plan.name,
       used,
       limit,
-      remaining,
-      reason: used + increment <= limit ? undefined : `${metric} quota exceeded for ${plan.name}`,
-    };
+      increment,
+    });
   },
 
   recordUsageEvent(input: {

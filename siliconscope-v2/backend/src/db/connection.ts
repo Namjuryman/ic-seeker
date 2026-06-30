@@ -7,6 +7,11 @@ import { ensureCompanyTables } from "../scripts/company-schema.js";
 import { ensureTopicTaxonomyTables } from "../scripts/topic-taxonomy-schema.js";
 import { ensurePaperAiTables } from "../scripts/paper-ai-schema.js";
 import { ensureContentQualityTables } from "../scripts/content-quality-schema.js";
+import { assertUsableSqliteDatabase } from "./sqlite-file-health.js";
+
+if (process.env.SKIP_SQLITE_FILE_HEALTH !== "1") {
+  assertUsableSqliteDatabase(appConfig.dbPath);
+}
 
 export const sqlite = new Database(appConfig.dbPath);
 

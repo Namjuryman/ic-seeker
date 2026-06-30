@@ -2,6 +2,7 @@ import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
 import { toPaperRow } from "./paper-row.js";
 import { learningRoadmaps } from "../data/learning-catalog-v3.js";
+import { escapeLike } from "./company-utils.js";
 
 const ORDER_BY_COLUMNS: Record<string, string> = {
   name: "name",
@@ -43,10 +44,6 @@ function parseJson(value: string | null): string[] {
 function toJson(value: string[] | null): string | null {
   if (!value || !value.length) return null;
   return JSON.stringify(value);
-}
-
-function escapeLike(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
 function enrichCompany(row: Record<string, any>): Record<string, any> {

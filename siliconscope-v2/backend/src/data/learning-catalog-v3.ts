@@ -760,7 +760,7 @@ export const learningRoadmaps: LearningRoadmapSeed[] = [
         resources: [guide("Verification Academy", "Siemens", "https://verificationacademy.com/", "Practical verification material.")],
       },
       {
-        id: "formal-cdc",
+        id: "verification-formal-cdc-stage",
         title: "Stage 2: formal and CDC",
         goal: "Use formal methods and CDC/RDC analysis for deep bugs.",
         modules: [

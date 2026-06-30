@@ -1,5 +1,6 @@
-import { appSqlite } from "../db/app-db.js";
+﻿import { appSqlite } from "../db/app-db.js";
 import { topicNodes as seedTopicNodes, type TopicNode } from "../data/topic-taxonomy.js";
+import { buildTopicTree } from "./topic-taxonomy-utils.js";
 
 const SOURCE_VERSION = "topic-taxonomy-v2-db-projection";
 
@@ -68,7 +69,7 @@ function normalizeText(value: unknown) {
   return String(value || "")
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/–|—|−/g, "-")
+    .replace(/[‐‑‒–—−]/g, "-")
     .replace(/&/g, " and ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
@@ -108,19 +109,11 @@ function seedSummary() {
 }
 
 function seedTree() {
-  return buildTree(seedTopicNodes);
+  return buildTopicTree(seedTopicNodes);
 }
 
 function buildTree(nodes: TopicNode[]) {
-  const byParent = new Map<string, TopicNode[]>();
-  for (const node of nodes) {
-    const key = node.parentId || "root";
-    byParent.set(key, [...(byParent.get(key) || []), node]);
-  }
-  return (byParent.get("root") || []).map((node) => ({
-    ...node,
-    children: byParent.get(node.id) || [],
-  }));
+  return buildTopicTree(nodes);
 }
 
 function readClassifierNodes(): TopicClassifierNode[] {

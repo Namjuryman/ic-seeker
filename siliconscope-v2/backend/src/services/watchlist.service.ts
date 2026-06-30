@@ -2,97 +2,13 @@ import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
 import { billingService } from "./billing.service.js";
 import { learningRoadmaps, dailyLessons } from "../data/learning-catalog.js";
+import {
+  WATCHLIST_VALID_TYPES,
+  canonicalizeWatchlistQueryJson,
+  isValidTargetType,
+} from "./watchlist-utils.js";
 
-const VALID_TARGET_TYPES = [
-  "company",
-  "paper",
-  "author",
-  "institution",
-  "topic",
-  "venue",
-  "search",
-  "roadmap",
-  "lesson",
-] as const;
-
-type ValidTargetType = (typeof VALID_TARGET_TYPES)[number];
-
-export const WATCHLIST_VALID_TYPES = VALID_TARGET_TYPES;
-
-export function isValidTargetType(value: string): value is ValidTargetType {
-  return VALID_TARGET_TYPES.includes(value as ValidTargetType);
-}
-
-// Allowed query_json keys for saved search
-const ALLOWED_QUERY_KEYS = new Set([
-  "q",
-  "venue",
-  "field",
-  "rank",
-  "yearFrom",
-  "yearTo",
-  "author",
-  "institution",
-  "country",
-  "minScore",
-  "minCitations",
-  "sort",
-  "semantic",
-  "hasPdf",
-  "favorite",
-]);
-
-const MAX_QUERY_JSON_SIZE = 8192; // 8KB
-
-function canonicalizeQueryJson(
-  raw: Record<string, unknown> | string | undefined
-): { json: string | null; hash: string; size: number } | { error: string } {
-  let parsed: Record<string, unknown>;
-  if (typeof raw === "string") {
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return { error: "Invalid JSON in query_json" };
-    }
-  } else if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    parsed = raw;
-  } else {
-    return { error: "query_json must be an object" };
-  }
-
-  // Filter allowed keys and remove empty values
-  const cleaned: Record<string, unknown> = {};
-  for (const key of Object.keys(parsed).sort()) {
-    if (!ALLOWED_QUERY_KEYS.has(key)) continue;
-    const val = parsed[key];
-    if (val === undefined || val === null || val === "") continue;
-    if (typeof val === "boolean") {
-      cleaned[key] = val;
-    } else if (typeof val === "number") {
-      cleaned[key] = val;
-    } else {
-      cleaned[key] = String(val).trim();
-    }
-  }
-
-  const json = JSON.stringify(cleaned);
-  const size = Buffer.byteLength(json, "utf8");
-  if (size > MAX_QUERY_JSON_SIZE) {
-    return { error: `query_json too large (${size} bytes > ${MAX_QUERY_JSON_SIZE} bytes)` };
-  }
-
-  // Hash for deterministic target_id
-  const hash = hashString(json);
-  return { json: json === "{}" ? null : json, hash, size };
-}
-
-function hashString(str: string): string {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  }
-  return String(Math.abs(h));
-}
+export { WATCHLIST_VALID_TYPES, isValidTargetType };
 
 export const watchlistService = {
   listWatchlistItems(userId: number) {
@@ -279,7 +195,7 @@ export const watchlistService = {
     let finalTargetId = targetId;
 
     if (queryJson) {
-      const result = canonicalizeQueryJson(queryJson);
+      const result = canonicalizeWatchlistQueryJson(queryJson);
       if ("error" in result) {
         return { ok: false, error: result.error };
       }

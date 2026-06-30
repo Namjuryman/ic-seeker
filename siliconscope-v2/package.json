@@ -10,7 +10,7 @@
     "frontend-admin"
   ],
   "scripts": {
-    "dev": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
+    "dev": "node scripts/dev-all.mjs",
     "build": "npm --workspace siliconscope-v2-backend run build && npm --workspace siliconscope-v2-frontend run build && npm --workspace siliconscope-v2-admin run build",
     "build:backend": "npm --workspace siliconscope-v2-backend run build",
     "build:frontend": "npm --workspace siliconscope-v2-frontend run build",
@@ -22,7 +22,11 @@
     "backup:create": "npm --workspace siliconscope-v2-backend run backup:create --",
     "deploy:init": "node scripts/init-production-domain.mjs",
     "deploy:check": "node scripts/check-production-env.mjs",
-    "deploy:doctor": "node scripts/deploy-doctor.mjs"
+    "deploy:doctor": "node scripts/deploy-doctor.mjs",
+    "dev:windows": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
+    "dev:backend": "npm --workspace siliconscope-v2-backend run dev",
+    "dev:frontend": "npm --workspace siliconscope-v2-frontend run dev -- --host 127.0.0.1 --port 5173",
+    "dev:admin": "npm --workspace siliconscope-v2-admin run dev"
   },
   "engines": {
     "node": ">=22.0.0"
