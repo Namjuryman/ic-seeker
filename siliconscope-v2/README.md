@@ -2,7 +2,7 @@
 
 SiliconScope v2 is the active frontend/backend separated edition of the IC paper search, reading-management, and academic-intelligence platform.
 
-It builds on the original ChipSeeker-style private prototype, but v2 is now the canonical product path. New product work should happen in this folder rather than the archived `ic_seeker/` v1 app.
+It builds on the original ChipSeeker-style private prototype, but v2 is now the canonical product path. The old single-process v1 source tree has been removed from the active repository; new product work should happen in this folder.
 
 It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current product is split into a public research frontend, an independent admin frontend, and a backend API. It is still a private MVP, not a public multi-user SaaS.
 
@@ -112,7 +112,7 @@ This keeps weekly data refreshes simple: import/update the corpus, rebuild norma
 
 **Important notes:**
 
-- **SiliconScope v2 is the canonical React + backend edition.** Legacy `ic_seeker` is kept only for reference.
+- **SiliconScope v2 is the canonical React + backend edition.** The legacy v1 app code has been removed; use Git history only if old behavior must be inspected.
 - **Learning catalog seed source is `backend/src/data/learning-catalog-v3.ts`; production reads prefer published rows in `learning_content_items` and fall back to the seed catalog if the database registry is empty.**
 - **Journal Ingestion is disabled until background jobs are implemented.**
 - **Data Quality analysis is manual-run only.** Open the Data Quality page and click "Run analysis" when needed.
@@ -429,63 +429,33 @@ npm --workspace siliconscope-v2-backend run learning:sync
 The sync prints the seed version, row counts, projection coverage, and a product-content quality score so weekly updates can fail loudly before the public pages drift.
 - Future work should add type-specific structured editing forms on top of the registry, plus spaced review scheduling, saved learning plans, and weekly paper recommendations per route.
 
-## Rebuild The Database
+## Database Import Direction
 
-The default rebuild uses public metadata sources and writes into `ic_database/`:
+The v1 root database-builder scripts have been removed with the old single-process app. The preserved SQLite snapshots remain under `ic_database/` and `siliconscope-v2/ic_database/`, while new ingestion work should live in the v2 backend.
 
-```powershell
-npm run build:database
-```
-
-Equivalent command:
+The current v2 metadata importer entry is:
 
 ```powershell
-node .\scripts\build-ic-database.mjs --years=2016-2026 --max-per-venue-year=500 --max-per-venue=6000 --no-source-backfill
+cd E:\美好暑假\siliconscope-v2
+npm --workspace siliconscope-v2-backend run import:papers
 ```
 
-To build one venue into an isolated directory:
+Follow-up enrichment and projection jobs are also v2 backend scripts:
 
 ```powershell
-node .\scripts\build-ic-database.mjs --out-root=ic_database_checks\isscc --years=2016-2026 --max-per-venue-year=500 --no-source-backfill --venues=ISSCC
+npm --workspace siliconscope-v2-backend run ai:annotate-papers
+npm --workspace siliconscope-v2-backend run topic-taxonomy:sync
+npm --workspace siliconscope-v2-backend run paper-topics:refresh
+npm --workspace siliconscope-v2-backend run snapshots:refresh
 ```
 
-To merge checked databases:
+Future IEEE/OpenAlex/Crossref import work should extend `backend/src/scripts/import-papers-multisource.ts` and the ingestion-job registry instead of reintroducing the removed v1 scripts.
 
-```powershell
-node .\scripts\merge-ic-databases.mjs --out=ic_database\ic_papers.sqlite ic_database_checks\isscc\ic_papers.sqlite ic_database_checks\jssc\ic_papers.sqlite
-```
+## Venue And Journal Policy
 
-To incrementally backfill the existing SQLite database for the core IC venues back to 2000 without rebuilding from scratch:
+Some IC-adjacent journals are too broad to import or rank as a whole. Venue policy should be managed through the v2 venue matrix, journal filter, paper-topic edges, and data-quality/admin review workflows.
 
-```powershell
-npm run backfill:core -- --years=2000-2026
-```
-
-For a smaller controlled batch:
-
-```powershell
-npm run backfill:core -- --years=2000-2015 --venues="ISSCC,JSSC,VLSI Symposium" --max-pages-per-year=2
-```
-
-The backfill script resolves OpenAlex sources for each configured venue, imports metadata only, and skips existing rows by DOI, OpenAlex id, or title/year. It is designed to be rerun safely in batches while the future IEEE Xplore importer is being prepared.
-
-## Extend Journal Coverage
-
-Some IC-adjacent journals are too broad to import as a whole. Use the journal extension importer to query OpenAlex by source id plus IC-focused search terms, then run local relevance filtering before writing to SQLite:
-
-```powershell
-npm run import:journals -- --years=2000-2026 --venues="IEEE Sensors J.,Adv. Mater.,Appl. Phys. Lett.,Solid-State Electron.,IEEE JMEMS,IEEE T-Nano,Microelectron. J."
-```
-
-Useful options:
-
-- `--dry-run` previews insert/skip counts without changing the database.
-- `--search-mode=source-only` scans a source-year directly; this is slower and should be reserved for narrow journals.
-- `--max-pages=30` caps OpenAlex cursor pages per year and term.
-- `--term-limit=4` keeps focused imports short by using the first high-yield search terms; set `--term-limit=0` for a deeper sweep.
-- `--rebuild-fts` rebuilds the SQLite FTS index after manual database surgery.
-
-The current extension targets include Nature Electronics, Nature, Nature Communications, IEEE T-MTT, IEEE TED, IEEE EDL, IEEE Sensors Journal, Advanced Materials, Applied Physics Letters, Solid-State Electronics, IEEE JMEMS, IEEE T-Nano, and Microelectronics Journal. Future IEEE API integration should replace the heuristic importer for IEEE venues and add stronger venue/year completeness checks.
+The current policy direction is:
 
 Broad journal policy:
 
@@ -494,22 +464,16 @@ Broad journal policy:
 - IEEE T-MTT is kept as a strong RF venue.
 - Broad materials/devices journals such as Advanced Materials and Applied Physics Letters are deliberately downweighted because keyword metadata can over-match non-IC work.
 
-After changing venue policy, reweight the existing database:
-
-```powershell
-npm run reweight:venues
-```
-
 ## IEEE Xplore API
 
 If you have IEEE Xplore API access, set an API key before rebuilding:
 
 ```powershell
 $env:IEEE_API_KEY="your_ieee_xplore_api_key"
-npm run build:database
+npm --workspace siliconscope-v2-backend run import:papers
 ```
 
-With `IEEE_API_KEY`, IEEE metadata is queried first. Without it, the builder falls back to OpenAlex and Crossref. The tool does not mass-download IEEE PDFs.
+The importer should use IEEE metadata first when configured, then fall back to OpenAlex and Crossref. The tool must not mass-download IEEE PDFs.
 
 ## Local PDF Workflow
 
@@ -519,13 +483,7 @@ Put local PDF files into:
 ic_database/pdf_inbox/
 ```
 
-If the filename contains a DOI or IEEE article number, run:
-
-```powershell
-npm run import:pdfs
-```
-
-Matched files are moved under `ic_database/pdfs/` and attached to database rows.
+The legacy root `import:pdfs` command has been removed with v1. The v2 PDF workflow should be implemented as a backend script/API that matches DOI or IEEE article numbers, moves matched files under `ic_database/pdfs/`, and attaches local-only paths to database rows without uploading or redistributing PDFs.
 
 ## Scoring
 
@@ -593,7 +551,6 @@ frontend/src/components/  Shared UI and entity-link components
 frontend/src/utils/       Route helpers and formatting utilities
 ic_database/              Ready-to-use SQLite, CSV, summary, and PDF folders
 docs/                     Product roadmap, deployment, methodology, and MVP notes
-legacy-public/            Public demo/legacy materials retained for context
 ```
 
 ## Roadmap
@@ -612,4 +569,4 @@ Future product ideas are collected in [docs/ROADMAP.md](docs/ROADMAP.md), includ
 
 This project stores metadata and local user-provided PDFs. It does not bypass paywalls and does not bulk-download publisher PDFs.
 
-The regional map basemap uses Natural Earth Admin-0 country boundaries, which are public-domain map data. The GeoJSON is stored locally under `ic_seeker/public/data/` so the web app does not depend on an external map CDN at runtime.
+The regional map basemap uses Natural Earth Admin-0 country boundaries, which are public-domain map data. The GeoJSON is stored locally under `frontend/public/data/` so the web app does not depend on an external map CDN at runtime.

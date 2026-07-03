@@ -1,114 +1,73 @@
 # Legacy v1 Archive
 
-This document preserves the history of the first SiliconScope / IC Seeker prototype.
+This document preserves the history of the first SiliconScope / IC Seeker prototype after the v1 source tree was removed from the active repository.
 
-The active product line is now:
+## Current Status
+
+The active product line is:
 
 ```text
 siliconscope-v2/
 ```
 
-The v1 implementation remains here:
+The old v1 single-process app previously lived at:
 
 ```text
 ic_seeker/
 ```
 
-## Why v1 Exists
+That app code has been removed from tracked source. The repository should no longer expose v1 runtime commands, v1 Docker files, or v1 frontend/backend code.
 
-v1 started as a local ChipSeeker-style prototype for IC paper discovery and personal reading management. It proved that the project idea was useful before the system was reorganized into a frontend/backend separated architecture.
+## What Was Preserved
 
-It helped validate:
+The database assets were intentionally kept because v2 reuses or can compare against them:
 
-- local SQLite paper search
-- FTS5 search over paper metadata
-- IC venue scoring and topic classification
-- paper detail rail
-- DOI import and manual import
-- favorites, reading status, notes, and tags
-- author/professor ranking prototypes
-- institution ranking prototypes
-- regional intelligence map prototypes
-- mentor/institution review prototypes
-- venue matrix and data-quality pages
-- local PDF inbox matching concept
-
-## Why v1 Is Archived
-
-v1 accumulated too much product and data logic in a single local Node app and large frontend files. It was good for fast exploration, but it became hard to maintain as the product moved toward:
-
-- public/private deployment modes
-- richer frontend interactions
-- API-first architecture
-- precomputed weekly database snapshots
-- author/institution identity maintenance
-- mentor review workflows
-- a polished AMiner-style UI
-- future mobile/PWA surfaces
-
-The v2 split is the intended foundation for those goals.
-
-## Current Status
-
-v1 is not deleted because it is still useful for:
-
-- checking old behavior
-- comparing scoring and classification changes
-- recovering UI ideas that worked better
-- migrating scripts or data utilities
-- debugging regressions against an older known prototype
-
-But v1 should not receive new product features by default.
-
-## Legacy Runtime
-
-The old app can still be started intentionally:
-
-```powershell
-npm run legacy:start
+```text
+ic_database/
+siliconscope-v2/ic_database/
 ```
 
-The legacy Docker path is also retained:
+These folders may contain SQLite snapshots, CSV exports, raw source reports, PDF inbox folders, and local metadata artifacts.
 
-```powershell
-npm run legacy:docker:up
+## Why v1 Existed
+
+v1 started as a local ChipSeeker-style prototype for IC paper discovery and personal reading management. It helped validate:
+
+- local SQLite paper search;
+- FTS5 metadata search;
+- IC venue scoring and topic classification;
+- paper detail rail interactions;
+- DOI/manual import ideas;
+- favorites, reading status, notes, and tags;
+- author and institution ranking prototypes;
+- regional intelligence map prototypes;
+- mentor and institution review concepts;
+- venue matrix and data-quality pages;
+- local PDF inbox matching concepts.
+
+## Why v1 Was Removed
+
+The v1 implementation accumulated too much product and data logic in one local Node app and several large frontend files. Keeping it beside v2 made the repository confusing and encouraged changes to the wrong product surface.
+
+SiliconScope now needs:
+
+- frontend/backend separation;
+- independent admin deployment;
+- typed API services;
+- precomputed snapshots;
+- better identity normalization;
+- scalable ingestion jobs;
+- reviewable data-quality workflows;
+- future Postgres/search/object-storage migration.
+
+Those goals belong in v2.
+
+## Migration Rule
+
+All new work should target:
+
+```text
+siliconscope-v2/
 ```
 
-These commands are for archival/reference use only.
-
-## Migration Notes
-
-Already migrated or reimplemented in v2:
-
-- paper search UI
-- paper detail pages
-- author/institution/topic/geo navigation
-- mentor/institution prototype
-- venue matrix
-- data quality views
-- IC learning roadmap
-- frontend/backend separation
-- TypeScript backend services
-- React/Vite frontend
-
-Still useful to mine from v1:
-
-- database builder scripts
-- venue policy experiments
-- classification edge cases
-- hidden/broad-journal policy history
-- local PDF matching workflow
-- early map and ranking heuristics
-
-## Rule Going Forward
-
-Use v2 for all new work.
-
-Only touch v1 when the task explicitly says:
-
-- restore old behavior for comparison
-- migrate a script or policy into v2
-- inspect old data logic
-- fix a critical archive/runtime issue
-
-Otherwise, leave v1 as a historical trace.
+If old behavior needs to be recovered, use Git history or the preserved data snapshots rather than reintroducing the v1 app.

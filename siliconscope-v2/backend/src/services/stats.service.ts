@@ -144,7 +144,7 @@ export const statsService = {
       path: appConfig.pdfInboxPath,
       count: pdfs.length,
       pdfs,
-      importCommand: "npm run import:pdfs",
+      importCommand: "v2 PDF importer pending; implement under siliconscope-v2/backend/src/scripts",
     };
   },
 

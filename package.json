@@ -9,16 +9,8 @@
     "dev:v2": "powershell -ExecutionPolicy Bypass -File ./siliconscope-v2/start-dev.ps1",
     "build:v2": "npm --prefix ./siliconscope-v2 run build",
     "docker:up": "docker compose -f ./siliconscope-v2/docker-compose.yml up --build",
-    "legacy:start": "node ./ic_seeker/server.mjs",
-    "legacy:docker:up": "docker compose up --build",
-    "build:database": "node ./scripts/build-ic-database.mjs --max-per-venue-year=700 --max-per-venue=12000",
-    "build:database:fast": "node ./scripts/build-ic-database.mjs --max-per-venue-year=500 --max-per-venue=9000 --no-source-backfill",
-    "backfill:core": "node ./scripts/backfill-core-venues-to-2000.mjs",
-    "import:aminer": "node ./scripts/import-aminer-venues.mjs --limit=100 --max-pages=100",
-    "import:journals": "node ./scripts/import-journal-extensions.mjs",
-    "import:pdfs": "node ./scripts/import-local-pdfs.mjs",
     "merge:databases": "node ./scripts/merge-ic-databases.mjs --out=ic_database/ic_papers.sqlite",
-    "reweight:venues": "node ./scripts/reweight-venue-policy.mjs"
+    "repair:pmic-domains": "node ./scripts/repair-power-management-domains.mjs"
   },
   "engines": {
     "node": ">=22.5.0"
