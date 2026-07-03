@@ -2,6 +2,8 @@ export type PaperImportSource =
   | "openalex"
   | "crossref"
   | "ieee"
+  | "semantic-scholar"
+  | "dblp"
   | "aminer"
   | "csv"
   | "scholar-csv";
@@ -24,12 +26,18 @@ export type ImportedPaper = {
   openalexId?: string;
   ieeeArticleNumber?: string;
   citationCount?: number;
+  externalIds?: Record<string, string>;
+  rawHash?: string;
   raw?: unknown;
 };
 
 export type MergedPaper = Omit<ImportedPaper, "source" | "sourceId" | "raw"> & {
   sources: string[];
   sourceIds: string[];
+  sourceRecords: ImportedPaper[];
+  metadataConfidence?: number;
+  confidenceFlags?: string[];
+  confidenceReasons?: string[];
 };
 
 export type ImportOptions = {

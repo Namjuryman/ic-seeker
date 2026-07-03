@@ -177,6 +177,7 @@ export default function DataQualityPage() {
             <Card title="Duplicate DOI" value={report.duplicateDoi.length} hint="duplicate groups" />
             <Card title="Missing affiliation" value={report.missingAffiliations} hint="affects geo/profiles" />
             <Card title="Venue mismatch" value={report.venuePublicationMismatches?.length ?? 0} hint="rank/source risk" />
+            <Card title="Metadata confidence" value={report.lowMetadataConfidence?.length ?? 0} hint="review below 60" />
             <Card title="AI review" value={report.aiReviewQueue?.length ?? 0} hint="low-confidence annotations" />
           </div>
 
@@ -200,6 +201,19 @@ export default function DataQualityPage() {
 
           <Section title="Low-confidence topic groups">
             <SmallTable rows={report.lowConfidenceTopics} columns={[{ key: 'field', label: 'Field' }, { key: 'count', label: 'Count' }, { key: 'avgHits', label: 'Avg hits' }, { key: 'samples', label: 'Samples', render: (row) => <span className="break-words">{row.samples}</span> }]} />
+          </Section>
+
+          <Section title="Low metadata-confidence papers">
+            <SmallTable
+              rows={report.lowMetadataConfidence || []}
+              columns={[
+                { key: 'id', label: 'Paper' },
+                { key: 'metadataConfidence', label: 'Score' },
+                { key: 'venue', label: 'Venue' },
+                { key: 'confidenceFlags', label: 'Flags', render: (row) => <span className="break-words">{row.confidenceFlags || '-'}</span> },
+                { key: 'title', label: 'Title', render: (row) => <span className="break-words">{row.title}</span> },
+              ]}
+            />
           </Section>
 
           <Section title="Venue / publication-title mismatches">

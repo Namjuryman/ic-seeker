@@ -52,7 +52,7 @@ function parseOptions(): ImportOptions {
   const singleQuery = readArg("query");
   if (singleQuery) queries.unshift(singleQuery);
   return {
-    sources: sources.length ? sources : ["openalex", "crossref"],
+    sources: sources.length ? sources : ["openalex", "crossref", "semantic-scholar", "dblp"],
     queries: queries.length ? queries : defaultQueries,
     venues: splitList(readArg("venues")),
     yearFrom,
@@ -73,11 +73,13 @@ SiliconScope multi-source paper importer
 
 Examples:
   npm run import:papers -- --sources=openalex,crossref --query="dc-dc converter" --years=2024-2026 --limit=20 --dry-run
-  npm run import:papers -- --sources=ieee,openalex --venues=ISSCC,JSSC --year-from=2000 --year-to=2026 --limit=100
+  npm run import:papers -- --sources=ieee,openalex,semantic-scholar,dblp --venues=ISSCC,JSSC --year-from=2000 --year-to=2026 --limit=100
   npm run import:papers -- --sources=scholar-csv,csv --scholar-csv=exports/scholar.csv --csv=exports/manual.csv
 
 Notes:
   - IEEE requires IEEE_API_KEY or IEEE_XPLORE_API_KEY in the backend environment.
+  - Semantic Scholar can use SEMANTIC_SCHOLAR_API_KEY but also works in limited anonymous mode.
+  - DBLP is metadata-only and does not include affiliations for most records.
   - Google Scholar is supported through CSV/BibTeX-style exports, not direct scraping.
   - AMiner is supported through --aminer-json for exported/licensed data.
   - Low-relevance records are filtered by default; use --include-low-relevance to keep everything.
@@ -123,6 +125,8 @@ async function main() {
     domain: paper.domain,
     relevance: icRelevanceScore(paper),
     sources: paper.sources,
+    metadataConfidence: paper.metadataConfidence,
+    confidenceFlags: paper.confidenceFlags,
   })), null, 2));
 
   if (options.dryRun) {

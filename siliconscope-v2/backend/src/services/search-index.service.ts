@@ -55,8 +55,8 @@ async function configureIndex(uid: SearchIndexName) {
       method: "PATCH",
       body: JSON.stringify({
         searchableAttributes: ["title", "abstract", "authors", "affiliations", "doi", "venue", "publicationTitle", "field"],
-        filterableAttributes: ["year", "venue", "rank", "field", "verificationStatus", "downloadStatus"],
-        sortableAttributes: ["year", "score", "citationCount"],
+        filterableAttributes: ["year", "venue", "rank", "field", "verificationStatus", "downloadStatus", "metadataConfidence"],
+        sortableAttributes: ["year", "score", "citationCount", "metadataConfidence"],
         displayedAttributes: ["*"],
       }),
     });
@@ -112,7 +112,8 @@ function paperRows(limit: number, offset: number) {
       download_status AS downloadStatus,
       citation_count AS citationCount,
       verification_status AS verificationStatus,
-      collection_method AS collectionMethod
+      collection_method AS collectionMethod,
+      metadata_confidence AS metadataConfidence
     FROM papers
     ORDER BY id
     LIMIT ? OFFSET ?
@@ -122,6 +123,7 @@ function paperRows(limit: number, offset: number) {
     year: Number(row.year || 0),
     score: Number(row.score || 0),
     citationCount: Number(row.citationCount || 0),
+    metadataConfidence: Number(row.metadataConfidence || 0),
   }));
 }
 
@@ -192,6 +194,98 @@ async function rebuildLearningRoutes() {
   return rows.length;
 }
 
+
+function safeJson(value: unknown): string {
+  try { return JSON.stringify(value ?? {}); } catch { return "{}"; }
+}
+
+function writeLocalDocuments(targetType: string, rows: any[]) {
+  const stmt = metadataSqlite.prepare(`
+    INSERT INTO search_index_documents (id, target_type, target_id, title, body, facets_json, ranking_json, metadata_confidence, source_version, updated_at)
+    VALUES (@id, @targetType, @targetId, @title, @body, @facetsJson, @rankingJson, @metadataConfidence, 'search-doc-v1', CURRENT_TIMESTAMP)
+    ON CONFLICT(target_type, target_id) DO UPDATE SET
+      title = excluded.title,
+      body = excluded.body,
+      facets_json = excluded.facets_json,
+      ranking_json = excluded.ranking_json,
+      metadata_confidence = excluded.metadata_confidence,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const tx = metadataSqlite.transaction((items: any[]) => {
+    for (const row of items) stmt.run(row);
+  });
+  tx(rows.map((row) => ({
+    id: `${targetType}:${row.id ?? row.slug}`,
+    targetType,
+    targetId: String(row.id ?? row.slug),
+    title: String(row.title || row.name || row.shortTitle || ""),
+    body: [row.abstract, row.authors, row.affiliations, row.description, row.domain, row.field, row.venue, ...(row.terms || [])].filter(Boolean).join("\n"),
+    facetsJson: safeJson({
+      year: row.year,
+      venue: row.venue,
+      rank: row.rank,
+      field: row.field || row.domain,
+      country: row.country,
+      city: row.city,
+      companyType: row.companyType,
+      family: row.family,
+      level: row.level,
+    }),
+    rankingJson: safeJson({ score: row.score, citationCount: row.citationCount, dataConfidence: row.dataConfidence, displayOrder: row.displayOrder }),
+    metadataConfidence: Number(row.metadataConfidence ?? row.dataConfidence ?? 80),
+  })));
+  return rows.length;
+}
+
+async function rebuildLocalPapers() {
+  let indexed = 0;
+  for (let offset = 0; ; offset += PAPER_BATCH_SIZE) {
+    const rows = paperRows(PAPER_BATCH_SIZE, offset);
+    if (!rows.length) break;
+    indexed += writeLocalDocuments("paper", rows);
+  }
+  return indexed;
+}
+
+async function rebuildLocalCompanies() {
+  const result = companyService.listCompanies({ limit: "10000", offset: "0" });
+  const rows = result.rows.map((company: any) => ({ ...company, id: company.id, title: company.name }));
+  return writeLocalDocuments("company", rows);
+}
+
+async function rebuildLocalLearningRoutes() {
+  const content = learningContentService.activeContent();
+  const rows = content.roadmaps.map((roadmap, index) => ({
+    slug: roadmap.slug,
+    title: roadmap.title,
+    shortTitle: roadmap.shortTitle,
+    domain: roadmap.domain,
+    level: roadmap.level,
+    family: roadmap.family || "",
+    description: roadmap.description,
+    paperQuery: roadmap.paperQuery || roadmap.relatedSearchQueries?.[0] || roadmap.title,
+    status: "published",
+    displayOrder: index,
+    terms: [...(roadmap.relatedTopics || []), ...(roadmap.relatedVenues || []), ...(roadmap.relatedSearchQueries || []), ...(roadmap.outcomes || [])],
+  }));
+  return writeLocalDocuments("learning_route", rows);
+}
+
+async function rebuildLocal(target: SearchIndexTarget = "all") {
+  const indexed: Record<string, number> = {};
+  if (target === "all" || target === "papers") indexed.papers = await rebuildLocalPapers();
+  if (target === "all" || target === "companies") indexed.companies = await rebuildLocalCompanies();
+  if (target === "all" || target === "learning_routes") indexed.learning_routes = await rebuildLocalLearningRoutes();
+  return {
+    ok: true,
+    provider: "sqlite",
+    target,
+    indexed,
+    tasks: Object.fromEntries(Object.entries(indexed).map(([key, documents]) => [key, { documents, localCache: true }])),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 export const searchIndexService = {
   provider() {
     return {
@@ -205,11 +299,16 @@ export const searchIndexService = {
   async status() {
     const base = this.provider();
     if (!base.configured) {
+      const localCounts = {
+        papers: Number((metadataSqlite.prepare("SELECT COUNT(*) AS n FROM search_index_documents WHERE target_type = 'paper'").get() as any)?.n || 0),
+        companies: Number((metadataSqlite.prepare("SELECT COUNT(*) AS n FROM search_index_documents WHERE target_type = 'company'").get() as any)?.n || 0),
+        learning_routes: Number((metadataSqlite.prepare("SELECT COUNT(*) AS n FROM search_index_documents WHERE target_type = 'learning_route'").get() as any)?.n || 0),
+      } as Record<string, number>;
       return {
         ...base,
         reachable: false,
-        message: "Meilisearch is not configured. Set SEARCH_ENGINE=meilisearch and MEILISEARCH_HOST.",
-        indexes: INDEXES.map((index) => ({ ...index, exists: false, documents: 0 })),
+        message: "Meilisearch is not configured. SQLite local search-document cache is available for facets/readiness.",
+        indexes: INDEXES.map((index) => ({ ...index, exists: localCounts[index.uid] > 0, documents: localCounts[index.uid] || 0 })),
       };
     }
 
@@ -235,7 +334,7 @@ export const searchIndexService = {
   },
 
   async rebuild(target: SearchIndexTarget = "all") {
-    if (!configured()) throw new Error("Meilisearch is not configured");
+    if (!configured()) return rebuildLocal(target);
     const selected = target === "all" ? INDEXES : INDEXES.filter((index) => index.uid === target);
     if (!selected.length) throw new Error("Unknown search index");
 

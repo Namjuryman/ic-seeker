@@ -860,6 +860,7 @@ export interface DataQualityReport {
   duplicateTitleYear: Array<{ key: string; count: number; samples: string }>;
   unknownVenues: Array<{ venue: string; rank: string; count: number; avgScore: number }>;
   lowConfidenceTopics: Array<{ field: string; count: number; avgHits: number; samples: string }>;
+  lowMetadataConfidence?: Array<{ id: number; title: string; year: number; venue: string; metadataConfidence: number; confidenceFlags: string; confidenceReasons: string }>;
   venuePublicationMismatches: Array<{ id: number; title: string; year: number; venue: string; publicationTitle: string; domain: string; domainHits: number }>;
   aiReviewQueue: Array<{
     annotationId: number;
@@ -1580,4 +1581,148 @@ export type CompanyJobSignal = {
   fetchedAt?: string;
   status?: 'active' | 'expired' | 'unknown';
   keywords?: string[];
+}
+
+export interface DailyCircuitPayload {
+  problem: string;
+  intuition: string;
+  minimalBlock: string;
+  equations: string[];
+  specs: string[];
+  tradeoffs: string[];
+  pitfalls: string[];
+  paperDirections: string[];
+  searches: string[];
+  quiz: string[];
+  next: string;
+  caveat: string;
+}
+
+export interface DailyCircuitItem {
+  id: string;
+  lessonId: string;
+  title: string;
+  roadmapSlug: string;
+  roadmap?: Pick<LearningRoadmap, 'slug' | 'title' | 'shortTitle' | 'domain' | 'family'> | null;
+  level?: LessonLevel;
+  estimatedMinutes?: number;
+  displayOrder?: number;
+  circuitKind: string;
+  relatedTopics?: string[];
+  relatedVenues?: string[];
+  relatedSearchQueries?: string[];
+  payload: DailyCircuitPayload;
+  actions?: Record<string, unknown>;
+}
+
+export interface DailyCircuitListResult {
+  generatedAt: string;
+  total: number;
+  rows: DailyCircuitItem[];
+  caveat: string;
+}
+
+export interface DailyCircuitTodayResult {
+  generatedAt: string;
+  dayIndex: number;
+  item: DailyCircuitItem;
+  nextReviewIntervals: number[];
+  caveat: string;
+}
+
+export interface ReadingWorkflowResult {
+  paper: PaperRow | null;
+  status: { status: string; readingState?: string; readingStatus?: string; important?: boolean; useCases?: string[] };
+  workflow: {
+    userId: number;
+    paperId: number;
+    readingGoal: string;
+    literatureReviewNote: string;
+    projectNote: string;
+    applicationNote: string;
+    summaryText: string;
+    keyContributions: string[];
+    limitations: string[];
+    nextReviewAt: string | null;
+    exportedAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+  };
+  suggestedTemplate: Record<string, unknown>;
+}
+
+export interface PaperDedupeCandidate {
+  id: string;
+  candidateKey: string;
+  candidateType: 'doi' | 'title_year' | 'source_id';
+  paperIds: number[];
+  doiValues: string[];
+  titleValues: string[];
+  sourceValues: string[];
+  confidence: number;
+  status: string;
+  reasons: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PaperDedupeResult {
+  rows?: PaperDedupeCandidate[];
+  candidates?: PaperDedupeCandidate[];
+  total: number;
+  limit?: number;
+  offset?: number;
+  generatedAt?: string;
+  persisted?: boolean;
+}
+
+export interface LocalPdfItem {
+  id: string;
+  paperId?: number | null;
+  filePath: string;
+  fileHash?: string;
+  fileSize: number;
+  titleGuess: string;
+  doiGuess: string;
+  matchStatus: 'matched' | 'candidate' | 'unmatched' | 'ignored';
+  matchConfidence: number;
+  pageCount?: number | null;
+  ocrStatus: string;
+  extractedTextHash?: string | null;
+  lastSeenAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LocalPdfResult {
+  rows: LocalPdfItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  summary: Array<{ status: string; count: number }>;
+  policy: Record<string, unknown>;
+}
+
+export interface FeatureCompletionReport {
+  generatedAt: string;
+  releaseDecision: string;
+  summary: { total: number; complete: number; wired: number; pendingRuntime: number };
+  tables: Record<string, boolean>;
+  counters: Record<string, number>;
+  tasks: Array<{ id: number; title: string; status: string; evidence: string[] }>;
+  caveats: string[];
+}
+
+export interface PaperIngestionRunResult {
+  rows: Array<Record<string, any>>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface IdentityCandidateResult {
+  rows: Array<Record<string, any>>;
+  total: number;
+  limit: number;
+  offset: number;
 }

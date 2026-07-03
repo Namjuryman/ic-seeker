@@ -6,14 +6,42 @@ It builds on the original ChipSeeker-style private prototype, but v2 is now the 
 
 It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current product is split into a public research frontend, an independent admin frontend, and a backend API. It is still a private MVP, not a public multi-user SaaS.
 
+## 20-task completion surfaces
+
+The v2 codebase now includes source-level implementations for the full 20-task foundation pass:
+
+- Multi-source paper ingestion control with source attempts, provenance, dedupe candidates, and metadata-confidence audits.
+- Fine-grained IC topic taxonomy, AI enrichment review flow, Daily Circuit, learning routes, reading workflow exports, and local PDF indexing.
+- Author/institution identity candidates, institution/city/company intelligence APIs, search index cache fallback, snapshots/foundation refresh, and admin completion cockpit.
+- Commercial/legal guardrails: metadata-only export, no copyrighted PDF warehouse, no blacklists, no admission/employment/investment guarantees.
+
+Useful commands:
+
+```bash
+npm run foundation:refresh -- --dry-run
+npm run foundation:refresh
+npm run search:rebuild
+npm run dedupe:scan -- --limit=200
+npm run pdf:scan -- --dir=/path/to/local/pdf/library --dry-run
+npm run identity:candidates -- --dry-run
+```
+
+Useful routes:
+
+- Public: `/daily-circuit`, `/learning`, `/learning-path`, `/reports/topics/:field`, `/compare/*`, `/companies/:id`.
+- Admin: `/completion-report`, `/data-quality`, `/journal-ingestion`, `/search-index`, `/identity`, `/topic-taxonomy`, `/ai-enrichment`.
+
+Runtime note: the uploaded zip still contains a Git LFS pointer-sized `ic_database/ic_papers.sqlite`. Run `git lfs pull` or mount a real SQLite database before backend runtime QA.
+
 ## Current Dataset
 
-The repository includes a ready-to-use local database:
+When Git LFS has been pulled, the repository includes a ready-to-use local database:
 
 - `ic_database/ic_papers.sqlite`
 - `ic_database/ic_chipseeker.csv`
 - `ic_database/summary.json`
-Current snapshot:
+
+Expected full LFS database snapshot:
 
 - Years: `2016-2026`
 - Papers: about `38k`
@@ -48,7 +76,7 @@ git lfs pull
 - Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
 - Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
 - Admin job operations ledger for independent-domain deployments, unifying scheduler, maintenance, backup, snapshot, data-quality, and future ingestion activity
-- Admin ingestion job registry for IEEE/OpenAlex/Crossref/CSV/PDF metadata imports, with provider, scope, status, counts, and audit trail before background workers are connected
+- Admin ingestion job registry for IEEE/OpenAlex/Crossref/Semantic Scholar/DBLP/CSV/PDF metadata imports, with provider, scope, status, counts, provenance, metadata-confidence review, and audit trail before background workers are connected
 - Offline paper AI-enrichment pipeline with versioned annotation tables, a `rule-local` no-cost provider, batch jobs, admin API, and optional derived topic-edge writes
 - Backend API-key storage with masked display
 - Author/professor leaderboard
@@ -64,7 +92,7 @@ git lfs pull
 - Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
 - Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
-- Local PDF inbox workflow for matching downloaded PDFs by DOI or IEEE article number
+- Local PDF inbox workflow for matching personal PDFs by DOI/title while keeping files local-only
 - CSV export compatible with ChipSeeker-like workflows
 - Mobile-friendly web layout
 - Independent admin frontend for operations, intended for a future `admin.siliconscope.com` deployment
@@ -76,7 +104,7 @@ git lfs pull
 
 ## Commercial Architecture Track
 
-SiliconScope v2 is still runnable as a local/private SQLite MVP, but the target product architecture is tracked in [`docs/COMMERCIAL_ARCHITECTURE.md`](docs/COMMERCIAL_ARCHITECTURE.md). The SQLite-to-Postgres data split is tracked in [`docs/DATA_LAYER_MIGRATION.md`](docs/DATA_LAYER_MIGRATION.md), the module roadmap is tracked in [`docs/PLATFORM_MODULES.md`](docs/PLATFORM_MODULES.md), and the content-quality expansion plan is tracked in [`docs/CONTENT_EXPANSION_PLAN.md`](docs/CONTENT_EXPANSION_PLAN.md).
+SiliconScope v2 is still runnable as a local/private SQLite MVP, but the target product architecture is tracked in [`docs/COMMERCIAL_ARCHITECTURE.md`](docs/COMMERCIAL_ARCHITECTURE.md). The SQLite-to-Postgres data split is tracked in [`docs/DATA_LAYER_MIGRATION.md`](docs/DATA_LAYER_MIGRATION.md), the module roadmap is tracked in [`docs/PLATFORM_MODULES.md`](docs/PLATFORM_MODULES.md), and the content-quality expansion plan is tracked in [`docs/CONTENT_EXPANSION_PLAN.md`](docs/CONTENT_EXPANSION_PLAN.md). The new 20-task foundation plan is tracked in [`docs/20_TASKS_EXECUTION_PLAN.md`](docs/20_TASKS_EXECUTION_PLAN.md), with ingestion details in [`docs/MULTISOURCE_PAPER_INGESTION.md`](docs/MULTISOURCE_PAPER_INGESTION.md) and local PDF details in [`docs/LOCAL_PDF_WORKFLOW.md`](docs/LOCAL_PDF_WORKFLOW.md).
 
 Optional local infrastructure for the future commercial stack can be started with:
 
@@ -158,14 +186,14 @@ The backend includes a repeatable metadata importer for expanding the paper corp
 
 ```powershell
 cd backend
-npm run import:papers -- --sources=openalex,crossref --query="dc-dc converter" --years=2024-2026 --limit=50 --dry-run
+npm run import:papers -- --sources=openalex,crossref,semantic-scholar,dblp --query="dc-dc converter" --years=2024-2026 --limit=50 --dry-run
 ```
 
 Useful modes:
 
 ```powershell
 # Free public metadata sources
-npm run import:papers -- --sources=openalex,crossref --queries="integrated circuit,solid-state circuit,power management IC" --year-from=2000 --year-to=2026 --limit=100
+npm run import:papers -- --sources=openalex,crossref,semantic-scholar,dblp --queries="integrated circuit,solid-state circuit,power management IC" --year-from=2000 --year-to=2026 --limit=100
 
 # IEEE precision layer, only when IEEE_API_KEY or IEEE_XPLORE_API_KEY is configured
 npm run import:papers -- --sources=ieee,openalex --venues=ISSCC,JSSC,CICC,ASSCC,ESSCIRC --year-from=2000 --year-to=2026 --limit=100
@@ -174,17 +202,30 @@ npm run import:papers -- --sources=ieee,openalex --venues=ISSCC,JSSC,CICC,ASSCC,
 npm run import:papers -- --sources=scholar-csv,csv,aminer --scholar-csv=exports/scholar.csv --csv=exports/manual.csv --aminer-json=exports/aminer.json
 
 # After importing, also refresh topic edges
-npm run import:papers -- --sources=openalex,crossref --query="hybrid dc-dc converter" --years=2020-2026 --limit=100 --refresh-topics
+npm run import:papers -- --sources=openalex,crossref,semantic-scholar,dblp --query="hybrid dc-dc converter" --years=2020-2026 --limit=100 --refresh-topics
 ```
 
 Policy:
 
-- OpenAlex and Crossref are the default low-cost metadata layer.
+- OpenAlex, Crossref, Semantic Scholar, and DBLP are the default low-cost metadata layer.
 - IEEE Xplore is an optional precision layer and requires your own API key.
 - Google Scholar is supported through user-provided CSV exports, not direct automated scraping.
 - AMiner is supported through licensed/exported JSON input by default. Do not run paid all-corpus AMiner enrichment as a weekly job.
-- Imported rows are merged by DOI, OpenAlex ID, IEEE article number, then normalized title plus year.
+- Imported rows are merged by DOI, OpenAlex ID, IEEE article number, Semantic Scholar IDs, DBLP URL, then normalized title plus year. Source records are retained in `paper_sources`, and each imported paper receives a deterministic `metadata_confidence` audit.
 - A lightweight IC relevance gate is enabled by default to drop obvious non-IC hits from noisy keyword searches. Add `--include-low-relevance` only for audit runs.
+
+Provider environment variables:
+
+```bash
+OPENALEX_API_KEY=
+CROSSREF_MAILTO=researcher@example.com
+IEEE_API_KEY=
+IEEE_XPLORE_API_KEY=
+SEMANTIC_SCHOLAR_API_KEY=
+PAPER_IMPORT_RETRY_COUNT=2
+```
+
+See [`docs/MULTISOURCE_PAPER_INGESTION.md`](docs/MULTISOURCE_PAPER_INGESTION.md) for the provenance and confidence-scoring model.
 
 ### Offline Paper AI Enrichment
 
@@ -324,7 +365,7 @@ The independent admin frontend includes a `/launch` page for production readines
 - Use the admin ingestion job page to register weekly metadata jobs before running real backend workers.
 - Store optional service keys from the API-key panel. Values are masked in the UI.
 
-More detail is in [docs/PRIVATE_MVP.md](docs/PRIVATE_MVP.md).
+The deprecated v1 private-MVP notes are archived in [docs/archive/PRIVATE_MVP_V1.md](docs/archive/PRIVATE_MVP_V1.md). Canonical v2 docs are `README.md`, `docs/PRE_PRODUCTION_HARDENING.md`, `docs/DEPLOYMENT.md`, and `docs/PORTS.md`.
 
 ## Company Intelligence
 
@@ -447,9 +488,10 @@ npm --workspace siliconscope-v2-backend run ai:annotate-papers
 npm --workspace siliconscope-v2-backend run topic-taxonomy:sync
 npm --workspace siliconscope-v2-backend run paper-topics:refresh
 npm --workspace siliconscope-v2-backend run snapshots:refresh
+npm --workspace siliconscope-v2-backend run identity:candidates -- --dry-run
 ```
 
-Future IEEE/OpenAlex/Crossref import work should extend `backend/src/scripts/import-papers-multisource.ts` and the ingestion-job registry instead of reintroducing the removed v1 scripts.
+Future IEEE/OpenAlex/Crossref/Semantic Scholar/DBLP import work should extend `backend/src/scripts/import-papers-multisource.ts`, `backend/src/scripts/paper-import/*`, and the ingestion-job registry instead of reintroducing the removed v1 scripts.
 
 ## Venue And Journal Policy
 
@@ -473,7 +515,7 @@ $env:IEEE_API_KEY="your_ieee_xplore_api_key"
 npm --workspace siliconscope-v2-backend run import:papers
 ```
 
-The importer should use IEEE metadata first when configured, then fall back to OpenAlex and Crossref. The tool must not mass-download IEEE PDFs.
+The importer should use IEEE metadata first when configured, then fall back to OpenAlex, Crossref, Semantic Scholar, and DBLP. The tool must not mass-download IEEE PDFs.
 
 ## Local PDF Workflow
 
@@ -483,7 +525,14 @@ Put local PDF files into:
 ic_database/pdf_inbox/
 ```
 
-The legacy root `import:pdfs` command has been removed with v1. The v2 PDF workflow should be implemented as a backend script/API that matches DOI or IEEE article numbers, moves matched files under `ic_database/pdfs/`, and attaches local-only paths to database rows without uploading or redistributing PDFs.
+The legacy root `import:pdfs` command has been removed with v1. The v2 backend now includes a local-only scanner:
+
+```bash
+npm run pdf:scan -- --dir=ic_database/pdf_inbox --dry-run
+npm run pdf:scan -- --dir=/path/to/personal/pdf/library
+```
+
+It matches DOI/title metadata, stores local paths in `local_pdf_items`, and may attach a matched path to `papers.local_pdf` without uploading or redistributing PDFs. See [`docs/LOCAL_PDF_WORKFLOW.md`](docs/LOCAL_PDF_WORKFLOW.md).
 
 ## Scoring
 

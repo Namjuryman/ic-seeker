@@ -7,53 +7,75 @@ type LegalDoc = {
   sections: Array<{ heading: string; body: string }>
 }
 
+const contacts = {
+  support: 'support@siliconscope.example',
+  privacy: 'privacy@siliconscope.example',
+  copyright: 'copyright@siliconscope.example',
+  corrections: 'corrections@siliconscope.example',
+  moderation: 'moderation@siliconscope.example',
+}
+
+const aiReportDisclaimer = 'Generated from SiliconScope metadata and user-selected inputs. Verify papers, companies, institutions, and mentor-related information manually before making decisions.'
+
 const docs: LegalDoc[] = [
   {
     slug: 'terms',
     title: 'Terms of Service',
-    summary: 'SiliconScope is an IC research, learning, application, and career intelligence workspace.',
+    summary: 'SiliconScope is an IC research, learning, application, and career decision-support workspace.',
     sections: [
       {
         heading: 'Product boundary',
-        body: 'SiliconScope provides metadata exploration, saved workspace tools, comparisons, reports, and learning navigation. It is not a PDF redistribution service, mentor blacklist, company blacklist, school ranking list, recruiting crawler, or investment advice tool.',
+        body: 'SiliconScope provides metadata exploration, saved workspace tools, comparisons, reports, and learning navigation. It is not a PDF redistribution service, mentor blacklist, company blacklist, school ranking list, recruiting crawler, investment advice tool, or unauthorized database resale product.',
+      },
+      {
+        heading: 'Metadata-based indicators',
+        body: 'Compare, report, score, and rank-like labels are directional metadata-based indicators. They reflect source coverage, provenance, and selected filters, not final academic evaluation, employment advice, admission guarantees, or investment advice.',
       },
       {
         heading: 'Acceptable use',
-        body: 'Do not upload unlawful content, attempt to extract hidden user data, scrape restricted sources through the service, or use comparison pages as final evaluations of people, schools, or companies.',
+        body: 'Do not upload unlawful content, attempt to extract hidden user data, scrape restricted sources through the service, identify anonymous reviewers, or use the platform to harass people, schools, labs, or companies.',
+      },
+      {
+        heading: 'Contact',
+        body: `General product and account requests: ${contacts.support}.`,
       },
     ],
   },
   {
     slug: 'privacy',
     title: 'Privacy Policy',
-    summary: 'This draft defines the data categories SiliconScope expects to process before public launch.',
+    summary: 'This policy shell defines expected data categories and request channels before public launch.',
     sections: [
       {
         heading: 'User workspace data',
-        body: 'Accounts, watchlists, reading queues, notes, comments, reviews, and usage events are user data. Public launch should support access, export, correction, deletion, and retention rules before inviting broad users.',
+        body: 'Accounts, watchlists, saved searches, reading queues, notes, tags, comments, mentor reviews, usage events, billing events, and admin audit logs may be processed to operate the product.',
+      },
+      {
+        heading: 'Deletion and export',
+        body: `Users should be able to request account deletion, personal data export, review removal, correction of user-submitted content, and billing-data questions through ${contacts.privacy}.`,
       },
       {
         heading: 'Admin separation',
         body: 'Administrative workflows are separated into the private admin application and should be protected by login plus an external access layer such as Cloudflare Access, VPN, or equivalent controls.',
-      },
-      {
-        heading: 'Deletion and export',
-        body: 'Before public launch, SiliconScope should provide a clear request channel for account deletion, personal data export, review removal, and correction of user-submitted workspace data.',
       },
     ],
   },
   {
     slug: 'copyright',
     title: 'Copyright and Data Source Policy',
-    summary: 'SiliconScope should expose metadata, DOI links, source links, and user-owned notes instead of redistributing publisher PDFs.',
+    summary: 'SiliconScope exposes metadata, DOI links, source links, and user-owned notes instead of redistributing publisher PDFs.',
     sections: [
       {
         heading: 'Metadata-first policy',
         body: 'Paper records should come from allowed metadata sources, DOI links, official publisher pages, manual CSV imports, or user-provided private libraries. Public pages should not redistribute copyrighted PDFs.',
       },
       {
-        heading: 'Takedown and correction',
-        body: 'A public deployment should provide a contact channel for metadata corrections, copyright complaints, source attribution issues, and removal requests. Requests should record requester contact, target URL, reason, and resolution status.',
+        heading: 'Local PDFs',
+        body: 'Local PDF matching is a private personal indexing workflow. The system may store local paths, hashes, DOI guesses, and reading progress, but should not upload or sell copyrighted PDFs.',
+      },
+      {
+        heading: 'Takedown and source disputes',
+        body: `Copyright complaints, takedown notices, source-attribution disputes, and metadata removal requests should go to ${contacts.copyright}. Include the target URL, claimed right, requested action, and contact information.`,
       },
     ],
   },
@@ -63,12 +85,16 @@ const docs: LegalDoc[] = [
     summary: 'Future paid AI reports must be explainable, source-backed, and reviewable.',
     sections: [
       {
+        heading: 'Required disclaimer',
+        body: aiReportDisclaimer,
+      },
+      {
         heading: 'Generated report limits',
-        body: 'AI reports should summarize selected metadata and user inputs with sources, caveats, generatedAt, model/prompt version, and report inputs. They should not make absolute claims about the best mentor, school, company, or career decision.',
+        body: 'AI reports should summarize selected metadata and user inputs with sources, caveats, generatedAt, model or prompt version, and report inputs. They should not make absolute claims about the best mentor, school, company, or career decision.',
       },
       {
         heading: 'Human review',
-        body: 'AI output is a research assistant layer, not a final authority. Users should verify important claims against official sources, papers, and institutional pages.',
+        body: 'AI output is a research assistant layer, not a final authority. Users should verify important claims against official sources, papers, institutional pages, lab pages, company filings, and direct communication where appropriate.',
       },
     ],
   },
@@ -79,11 +105,15 @@ const docs: LegalDoc[] = [
     sections: [
       {
         heading: 'Public discussion',
-        body: 'Paper discussions should be visible only when approved or visible, support reporting, and avoid personal attacks, harassment, or hidden identity exposure.',
+        body: 'Paper discussions should be visible only when approved, support reporting, and avoid personal attacks, harassment, doxxing, private identity exposure, discrimination, or unsupported allegations.',
       },
       {
         heading: 'Mentor reviews',
-        body: 'Mentor review summaries should use approved reviews only, apply sample-size thresholds, avoid small-sample free-text exposure, and present fit-oriented signals rather than blacklists or rankings.',
+        body: 'Mentor review summaries must use approved reviews only, apply backend sample-size thresholds, avoid small-sample free-text exposure, and present fit-oriented signals rather than blacklists or rankings.',
+      },
+      {
+        heading: 'Moderation contact',
+        body: `Abuse, privacy, safety, or reviewer-identification concerns should go to ${contacts.moderation}. Urgent privacy or safety reports should be hidden first and reviewed later.`,
       },
     ],
   },
@@ -93,12 +123,16 @@ const docs: LegalDoc[] = [
     summary: 'Operational policy for correction requests, takedown notices, source disputes, and data removal.',
     sections: [
       {
-        heading: 'Request intake',
-        body: 'Production should expose a contact address or form for copyright complaints, metadata corrections, source attribution problems, profile correction, and data deletion requests.',
+        heading: 'Metadata corrections',
+        body: `Paper, author, institution, venue, company, topic, and provenance corrections should go to ${contacts.corrections}. Include the wrong field, the proposed correction, and source links.`,
       },
       {
-        heading: 'Resolution workflow',
-        body: 'Each request should be tracked with target URL, requester contact, category, status, decision, timestamp, and admin notes. Urgent privacy or safety issues should be hidden first and reviewed later.',
+        heading: 'Request tracking',
+        body: 'Each request should be tracked with target URL, requester contact, category, status, decision, timestamp, and admin notes. Repeated unresolved source conflicts should become admin content-quality findings.',
+      },
+      {
+        heading: 'Data deletion',
+        body: `Account, workspace, review, and personal-data deletion requests should go to ${contacts.privacy}.`,
       },
     ],
   },
@@ -109,26 +143,30 @@ const docs: LegalDoc[] = [
     sections: [
       {
         heading: 'Visibility thresholds',
-        body: 'Public mentor summaries should require enough approved reviews before showing aggregate claims. Small-sample free text should stay hidden or heavily summarized.',
+        body: 'Public mentor summaries require enough approved reviews before showing aggregate claims. Less than three approved reviews should show no aggregate, summary, or comments. Three to four should show aggregate only. Five to nine should show structured sanitized summary only. Ten or more may show curated anonymous comments after moderation.',
       },
       {
         heading: 'Allowed review focus',
-        body: 'Reviews should focus on mentoring style, research fit, communication, workload, and lab practices. Personal attacks, doxxing, discrimination, and unverifiable accusations should be removed or hidden.',
+        body: 'Reviews should focus on mentoring style, research fit, communication, workload, funding/process clarity, and lab practices. Personal attacks, doxxing, discrimination, health speculation, and unverifiable accusations should be removed or hidden.',
       },
     ],
   },
   {
     slug: 'company-data-policy',
     title: 'Company Data Source Policy',
-    summary: 'Company Intelligence is a curated public-metadata directory, not an automated surveillance or investment recommendation system.',
+    summary: 'Company Intelligence is a curated public-metadata directory, not automated surveillance or investment recommendation.',
     sections: [
       {
         heading: 'Allowed sources',
-        body: 'Company facts should come from official websites, public filings, manually reviewed CSV imports, official registries, SEC EDGAR, Companies House, OpenCorporates when terms allow, and admin-reviewed source URLs.',
+        body: 'Company facts should come from official websites, public filings, official registries, annual reports, manually reviewed CSV imports, admin-reviewed source URLs, or licensed datasets where terms allow.',
+      },
+      {
+        heading: 'Company caveat',
+        body: 'Company pages are for career and industry understanding. They are not company blacklists, employee review walls, recruiting crawlers, or investment advice tools.',
       },
       {
         heading: 'Market data caveat',
-        body: 'Ticker, market cap, stock price, and change fields are source-stamped reference fields. They may be stale, incomplete, or unavailable, and should never be treated as financial advice.',
+        body: 'Ticker, market cap, stock price, and change fields are source-stamped reference fields. They may be stale, incomplete, or unavailable and should never be treated as financial advice.',
       },
     ],
   },
@@ -139,11 +177,11 @@ const docs: LegalDoc[] = [
     sections: [
       {
         heading: 'No professional advice',
-        body: 'SiliconScope does not provide legal, financial, admission, employment, immigration, or publication advice. Users should verify decisions against official sources and professional counsel where needed.',
+        body: 'SiliconScope does not provide legal, financial, admission, employment, immigration, publication, or investment advice. Users should verify decisions against official sources and professional counsel where needed.',
       },
       {
         heading: 'Data uncertainty',
-        body: 'Rankings, classifications, entity matching, company profiles, topic reports, and AI summaries can be incomplete or wrong. Production pages should show source, confidence, and correction paths.',
+        body: 'Classifications, entity matching, company profiles, topic reports, comparisons, geographies, snapshots, and AI summaries can be incomplete or wrong. Production pages should show source, confidence, generatedAt, filters, caveats, and correction paths.',
       },
     ],
   },
@@ -159,7 +197,7 @@ export default function LegalPage() {
         <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Policy</p>
         <h1 className="text-2xl font-bold text-ink-text mt-0.5">Legal and product boundaries</h1>
         <p className="text-sm text-ink-muted mt-1">
-          Draft public-facing policies for the pre-production version. These are product guardrails, not legal advice.
+          Draft public-facing policies for the pre-production version. Replace example addresses with real production contacts before launch.
         </p>
       </section>
 

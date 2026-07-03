@@ -1,6 +1,9 @@
 import Database from "better-sqlite3";
+import { createHash } from "node:crypto";
+import { ensurePaperIntelligenceTables } from "../paper-intelligence-schema.js";
 import { qualityScore, semanticText } from "./classify.js";
-import type { MergedPaper, UpsertSummary } from "./types.js";
+import { computeMetadataConfidence, stableEvidenceHash } from "../../services/paper-metadata-confidence.js";
+import type { MergedPaper, UpsertSummary, ImportedPaper } from "./types.js";
 
 type Db = InstanceType<typeof Database>;
 
@@ -26,7 +29,22 @@ type ExistingPaper = {
   download_status: string;
   citation_count: number;
   verification_status: string;
+  metadata_confidence?: number;
 };
+
+function sha(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function safeJson(value: unknown, maxBytes = 70_000): string {
+  try {
+    const json = JSON.stringify(value ?? null);
+    if (json.length <= maxBytes) return json;
+    return JSON.stringify({ truncated: true, hash: stableEvidenceHash(value), bytes: json.length });
+  } catch {
+    return JSON.stringify({ error: "unserializable" });
+  }
+}
 
 function ensureFts(sqlite: Db) {
   const row = sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'papers_fts'").get();
@@ -76,6 +94,35 @@ function joinList(values?: string[]): string {
   return [...new Set((values || []).map((value) => String(value || "").trim()).filter(Boolean))].join("; ");
 }
 
+function splitList(value: string | undefined): string[] {
+  return String(value || "").split(";").map((item) => item.trim()).filter(Boolean);
+}
+
+function confidenceFor(paper: MergedPaper) {
+  return computeMetadataConfidence({
+    title: paper.title,
+    doi: paper.doi,
+    venue: paper.venue,
+    publicationTitle: paper.publicationTitle,
+    year: paper.year,
+    authors: paper.authors,
+    affiliations: paper.affiliations,
+    sourceRecords: paper.sourceRecords.map((record) => ({
+      source: record.source,
+      sourceId: record.sourceId,
+      sourceUrl: record.sourceUrl,
+      doi: record.doi,
+      title: record.title,
+      venue: record.venue,
+      publicationTitle: record.publicationTitle,
+      year: record.year,
+      authors: record.authors,
+      affiliations: record.affiliations,
+      rawHash: record.rawHash,
+    })),
+  });
+}
+
 function ftsRebuild(sqlite: Db, paperId: number) {
   const row = sqlite.prepare(`
     SELECT id, title, authors, abstract, venue, domain, doi
@@ -90,17 +137,20 @@ function ftsRebuild(sqlite: Db, paperId: number) {
 function insertPaper(sqlite: Db, paper: MergedPaper): number {
   const rank = paper.venueRank || "Imported";
   const domainHits = paper.domain && paper.domain !== "General IC" ? 1 : 0;
+  const confidence = confidenceFor(paper);
   const result = sqlite.prepare(`
     INSERT INTO papers (
       title, authors, affiliations, abstract, year, venue, publication_title,
       venue_rank, domain, domain_hits, quality_score, doi, pdf_link, source_url,
       openalex_id, ieee_article_number, collection_method, download_status,
-      local_pdf, citation_count, verification_status, user_added, semantic_text
+      local_pdf, citation_count, verification_status, user_added, semantic_text,
+      metadata_confidence, confidence_reasons_json, confidence_flags_json, provenance_json, last_metadata_audit_at
     ) VALUES (
       @title, @authors, @affiliations, @abstract, @year, @venue, @publicationTitle,
       @venueRank, @domain, @domainHits, @qualityScore, @doi, @pdfLink, @sourceUrl,
       @openalexId, @ieeeArticleNumber, @collectionMethod, @downloadStatus,
-      '', @citationCount, @verificationStatus, 0, @semanticText
+      '', @citationCount, @verificationStatus, 0, @semanticText,
+      @metadataConfidence, @confidenceReasonsJson, @confidenceFlagsJson, @provenanceJson, CURRENT_TIMESTAMP
     )
   `).run({
     title: paper.title,
@@ -117,18 +167,26 @@ function insertPaper(sqlite: Db, paper: MergedPaper): number {
     doi: paper.doi || "",
     pdfLink: paper.pdfLink || "",
     sourceUrl: paper.sourceUrl || "",
+    openAlexId: paper.openalexId || "",
     openalexId: paper.openalexId || "",
     ieeeArticleNumber: paper.ieeeArticleNumber || "",
     collectionMethod: `multisource:${paper.sources.join("+")}`,
     downloadStatus: paper.pdfLink ? "publisher_pdf_requires_session" : "metadata_only",
     citationCount: paper.citationCount || 0,
-    verificationStatus: paper.doi ? "doi_verified" : "metadata_imported",
+    verificationStatus: confidence.status === "trusted" ? "metadata_trusted" : paper.doi ? "doi_format_verified" : "metadata_imported",
     semanticText: semanticText([paper.title, paper.abstract, paper.domain, paper.venue]),
+    metadataConfidence: confidence.score,
+    confidenceReasonsJson: safeJson(confidence.reasons),
+    confidenceFlagsJson: safeJson(confidence.flags),
+    provenanceJson: safeJson(paper.sourceRecords.map((record) => ({ source: record.source, sourceId: record.sourceId, rawHash: record.rawHash }))),
   });
-  return Number(result.lastInsertRowid);
+  const paperId = Number(result.lastInsertRowid);
+  writeProvenance(sqlite, paperId, paper, confidence);
+  return paperId;
 }
 
 function updatePaper(sqlite: Db, existing: ExistingPaper, paper: MergedPaper): boolean {
+  const confidence = confidenceFor(paper);
   const next = {
     title: mergeText(existing.title, paper.title),
     authors: mergeText(existing.authors, joinList(paper.authors)),
@@ -149,42 +207,117 @@ function updatePaper(sqlite: Db, existing: ExistingPaper, paper: MergedPaper): b
     collectionMethod: [...new Set([...(existing.collection_method || "").split("+"), ...paper.sources].map((s) => s.replace(/^multisource:/, "").trim()).filter(Boolean))].join("+"),
     downloadStatus: existing.download_status || (paper.pdfLink ? "publisher_pdf_requires_session" : "metadata_only"),
     citationCount: Math.max(Number(existing.citation_count || 0), Number(paper.citationCount || 0)),
-    verificationStatus: existing.verification_status === "doi_verified" || paper.doi ? "doi_verified" : existing.verification_status || "metadata_imported",
+    verificationStatus: confidence.status === "trusted" ? "metadata_trusted" : existing.verification_status === "metadata_trusted" ? "metadata_trusted" : paper.doi ? "doi_format_verified" : existing.verification_status || "metadata_imported",
     semanticText: semanticText([paper.title || existing.title, paper.abstract || existing.abstract, paper.domain || existing.domain, paper.venue || existing.venue]),
+    metadataConfidence: Math.max(Number(existing.metadata_confidence || 0), confidence.score),
+    confidenceReasonsJson: safeJson(confidence.reasons),
+    confidenceFlagsJson: safeJson(confidence.flags),
+    provenanceJson: safeJson(paper.sourceRecords.map((record) => ({ source: record.source, sourceId: record.sourceId, rawHash: record.rawHash }))),
     id: existing.id,
   };
   const changed = Object.entries(next).some(([key, value]) => key !== "id" && String((existing as any)[key] ?? "") !== String(value ?? ""));
-  if (!changed) return false;
+  if (changed) {
+    sqlite.prepare(`
+      UPDATE papers SET
+        title = @title,
+        authors = @authors,
+        affiliations = @affiliations,
+        abstract = @abstract,
+        year = @year,
+        venue = @venue,
+        publication_title = @publicationTitle,
+        venue_rank = @venueRank,
+        domain = @domain,
+        domain_hits = @domainHits,
+        quality_score = @qualityScore,
+        doi = @doi,
+        pdf_link = @pdfLink,
+        source_url = @sourceUrl,
+        openalex_id = @openalexId,
+        ieee_article_number = @ieeeArticleNumber,
+        collection_method = @collectionMethod,
+        download_status = @downloadStatus,
+        citation_count = @citationCount,
+        verification_status = @verificationStatus,
+        semantic_text = @semanticText,
+        metadata_confidence = @metadataConfidence,
+        confidence_reasons_json = @confidenceReasonsJson,
+        confidence_flags_json = @confidenceFlagsJson,
+        provenance_json = @provenanceJson,
+        last_metadata_audit_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `).run(next);
+  }
+  writeProvenance(sqlite, existing.id, paper, confidence);
+  return changed;
+}
+
+function sourceRecordId(paperId: number, record: ImportedPaper): string {
+  return sha([paperId, record.source, record.sourceId || record.rawHash || record.doi || record.title].join("|"));
+}
+
+function writeProvenance(sqlite: Db, paperId: number, paper: MergedPaper, confidence = confidenceFor(paper)) {
+  const stmt = sqlite.prepare(`
+    INSERT INTO paper_sources (
+      id, paper_id, source, source_id, source_url, doi, title, venue, year,
+      authors_json, affiliations_json, raw_hash, payload_json, confidence, fetched_at, created_at, updated_at
+    ) VALUES (
+      @id, @paperId, @source, @sourceId, @sourceUrl, @doi, @title, @venue, @year,
+      @authorsJson, @affiliationsJson, @rawHash, @payloadJson, @confidence, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
+    ON CONFLICT(id) DO UPDATE SET
+      source_url = excluded.source_url,
+      doi = excluded.doi,
+      title = excluded.title,
+      venue = excluded.venue,
+      year = excluded.year,
+      authors_json = excluded.authors_json,
+      affiliations_json = excluded.affiliations_json,
+      raw_hash = excluded.raw_hash,
+      payload_json = excluded.payload_json,
+      confidence = excluded.confidence,
+      fetched_at = CURRENT_TIMESTAMP,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  for (const record of paper.sourceRecords) {
+    stmt.run({
+      id: sourceRecordId(paperId, record),
+      paperId,
+      source: record.source,
+      sourceId: record.sourceId || "",
+      sourceUrl: record.sourceUrl || "",
+      doi: record.doi || "",
+      title: record.title || paper.title,
+      venue: record.venue || record.publicationTitle || "",
+      year: record.year || null,
+      authorsJson: safeJson(record.authors || []),
+      affiliationsJson: safeJson(record.affiliations || []),
+      rawHash: record.rawHash || stableEvidenceHash(record.raw || null),
+      payloadJson: safeJson(record.raw ?? record, 45_000),
+      confidence: confidence.score,
+    });
+  }
+
   sqlite.prepare(`
-    UPDATE papers SET
-      title = @title,
-      authors = @authors,
-      affiliations = @affiliations,
-      abstract = @abstract,
-      year = @year,
-      venue = @venue,
-      publication_title = @publicationTitle,
-      venue_rank = @venueRank,
-      domain = @domain,
-      domain_hits = @domainHits,
-      quality_score = @qualityScore,
-      doi = @doi,
-      pdf_link = @pdfLink,
-      source_url = @sourceUrl,
-      openalex_id = @openalexId,
-      ieee_article_number = @ieeeArticleNumber,
-      collection_method = @collectionMethod,
-      download_status = @downloadStatus,
-      citation_count = @citationCount,
-      verification_status = @verificationStatus,
-      semantic_text = @semanticText
-    WHERE id = @id
-  `).run(next);
-  return true;
+    INSERT INTO paper_metadata_audits (
+      id, paper_id, metadata_confidence, status, source_count, provenance_score,
+      flags_json, reasons_json, audit_method, audited_at, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'metadata-confidence-v1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `).run(
+    sha([paperId, Date.now(), confidence.score, confidence.flags.join(",")].join("|")),
+    paperId,
+    confidence.score,
+    confidence.status,
+    confidence.sourceCount,
+    confidence.provenanceScore,
+    safeJson(confidence.flags),
+    safeJson(confidence.reasons),
+  );
 }
 
 export function upsertPapers(sqlite: Db, papers: MergedPaper[]): UpsertSummary {
   ensureFts(sqlite);
+  ensurePaperIntelligenceTables(sqlite);
   const summary: UpsertSummary = { inserted: 0, updated: 0, unchanged: 0, skipped: 0, ftsRebuilt: 0, errors: [] };
   const transaction = sqlite.transaction((items: MergedPaper[]) => {
     for (const paper of items) {

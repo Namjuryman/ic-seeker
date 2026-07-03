@@ -87,6 +87,15 @@ import type {
   LearningContentSyncResult,
   LearningProgress,
   LearningQueueResult,
+  DailyCircuitListResult,
+  DailyCircuitTodayResult,
+  DailyCircuitItem,
+  ReadingWorkflowResult,
+  PaperDedupeResult,
+  LocalPdfResult,
+  FeatureCompletionReport,
+  PaperIngestionRunResult,
+  IdentityCandidateResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -400,6 +409,21 @@ export const api = {
 
   async todayLesson() {
     const res = await axios.get<DailyLesson | null>('/api/learning/today')
+    return res.data
+  },
+
+  async dailyCircuit(params?: { roadmapSlug?: string; limit?: number }) {
+    const res = await axios.get<DailyCircuitListResult>('/api/daily-circuit', { params })
+    return res.data
+  },
+
+  async todayDailyCircuit() {
+    const res = await axios.get<DailyCircuitTodayResult | null>('/api/daily-circuit/today')
+    return res.data
+  },
+
+  async dailyCircuitItem(id: string) {
+    const res = await axios.get<DailyCircuitItem>(`/api/daily-circuit/${encodeURIComponent(id)}`)
     return res.data
   },
 
@@ -752,6 +776,21 @@ export const api = {
     return res.data
   },
 
+  async readingWorkflow(paperId: number) {
+    const res = await axios.get<ReadingWorkflowResult>(`/api/reading-workflow/${paperId}`)
+    return res.data
+  },
+
+  async updateReadingWorkflow(paperId: number, body: Record<string, unknown>) {
+    const res = await axios.put<ReadingWorkflowResult>(`/api/reading-workflow/${paperId}`, body)
+    return res.data
+  },
+
+  async readingWorkflowDue(limit = 30) {
+    const res = await axios.get<Array<{ workflow: ReadingWorkflowResult['workflow']; paper: PaperRow }>>('/api/reading-workflow/due', { params: { limit } })
+    return res.data
+  },
+
   async learningProgress(targetType: 'roadmap' | 'lesson', targetId: string) {
     const res = await axios.get<LearningProgress>(`/api/learning/progress/${targetType}/${encodeURIComponent(targetId)}`)
     return res.data
@@ -789,6 +828,41 @@ export const api = {
 
   async unwatchCompany(id: string) {
     const res = await axios.delete<{ watched: boolean; companyId: string }>(`/api/watchlist/companies/${encodeURIComponent(id)}`)
+    return res.data
+  },
+
+  async completionReport() {
+    const res = await axios.get<FeatureCompletionReport>('/api/admin/completion-report')
+    return res.data
+  },
+
+  async paperIngestionRuns(params?: { status?: string; limit?: number; offset?: number }) {
+    const res = await axios.get<PaperIngestionRunResult>('/api/admin/paper-ingestion/runs', { params })
+    return res.data
+  },
+
+  async runPaperIngestion(body: Record<string, unknown>) {
+    const res = await axios.post<Record<string, unknown>>('/api/admin/paper-ingestion/run', body)
+    return res.data
+  },
+
+  async paperDedupe(params?: { status?: string; limit?: number; offset?: number }) {
+    const res = await axios.get<PaperDedupeResult>('/api/admin/paper-dedupe', { params })
+    return res.data
+  },
+
+  async scanPaperDedupe(body: { limit?: number; persist?: boolean } = {}) {
+    const res = await axios.post<PaperDedupeResult>('/api/admin/paper-dedupe/scan', body)
+    return res.data
+  },
+
+  async localPdfs(params?: { status?: string; limit?: number; offset?: number }) {
+    const res = await axios.get<LocalPdfResult>('/api/admin/local-pdfs', { params })
+    return res.data
+  },
+
+  async identityCandidates(type: 'author' | 'institution', params?: { status?: string; limit?: number; offset?: number }) {
+    const res = await axios.get<IdentityCandidateResult>('/api/admin/identity/candidates', { params: { type, ...params } })
     return res.data
   },
 

@@ -33,6 +33,113 @@ export const papers = sqliteTable("papers", {
   verificationStatus: text("verification_status").notNull().default("unverified"),
   userAdded: integer("user_added", { mode: "boolean" }).notNull().default(false),
   semanticText: text("semantic_text").notNull().default(""),
+  metadataConfidence: integer("metadata_confidence", { mode: "number" }).notNull().default(0),
+  confidenceReasonsJson: text("confidence_reasons_json").notNull().default("[]"),
+  confidenceFlagsJson: text("confidence_flags_json").notNull().default("[]"),
+  provenanceJson: text("provenance_json").notNull().default("[]"),
+  lastMetadataAuditAt: text("last_metadata_audit_at"),
+});
+
+
+export const paperSources = sqliteTable("paper_sources", {
+  id: text("id").primaryKey(),
+  paperId: integer("paper_id", { mode: "number" }).notNull(),
+  source: text("source").notNull(),
+  sourceId: text("source_id"),
+  sourceUrl: text("source_url"),
+  doi: text("doi"),
+  title: text("title").notNull().default(""),
+  venue: text("venue").notNull().default(""),
+  year: integer("year", { mode: "number" }),
+  authorsJson: text("authors_json").notNull().default("[]"),
+  affiliationsJson: text("affiliations_json").notNull().default("[]"),
+  rawHash: text("raw_hash"),
+  payloadJson: text("payload_json"),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  fetchedAt: text("fetched_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const paperMetadataAudits = sqliteTable("paper_metadata_audits", {
+  id: text("id").primaryKey(),
+  paperId: integer("paper_id", { mode: "number" }).notNull(),
+  metadataConfidence: integer("metadata_confidence", { mode: "number" }).notNull().default(0),
+  status: text("status").notNull().default("needs_review"),
+  sourceCount: integer("source_count", { mode: "number" }).notNull().default(0),
+  provenanceScore: integer("provenance_score", { mode: "number" }).notNull().default(0),
+  flagsJson: text("flags_json").notNull().default("[]"),
+  reasonsJson: text("reasons_json").notNull().default("[]"),
+  auditMethod: text("audit_method").notNull().default("metadata-confidence-v1"),
+  auditedAt: text("audited_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const localPdfItems = sqliteTable("local_pdf_items", {
+  id: text("id").primaryKey(),
+  paperId: integer("paper_id", { mode: "number" }),
+  filePath: text("file_path").notNull(),
+  fileHash: text("file_hash"),
+  fileSize: integer("file_size", { mode: "number" }).notNull().default(0),
+  titleGuess: text("title_guess").notNull().default(""),
+  doiGuess: text("doi_guess").notNull().default(""),
+  matchStatus: text("match_status").notNull().default("unmatched"),
+  matchConfidence: integer("match_confidence", { mode: "number" }).notNull().default(0),
+  pageCount: integer("page_count", { mode: "number" }),
+  ocrStatus: text("ocr_status").notNull().default("not_started"),
+  extractedTextHash: text("extracted_text_hash"),
+  lastSeenAt: text("last_seen_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const authorIdentityCandidates = sqliteTable("author_identity_candidates", {
+  id: text("id").primaryKey(),
+  normalizedKey: text("normalized_key").notNull(),
+  canonicalName: text("canonical_name").notNull().default(""),
+  aliasJson: text("alias_json").notNull().default("[]"),
+  externalIdsJson: text("external_ids_json").notNull().default("{}"),
+  institutionHistoryJson: text("institution_history_json").notNull().default("[]"),
+  coauthorSignatureJson: text("coauthor_signature_json").notNull().default("[]"),
+  paperCount: integer("paper_count", { mode: "number" }).notNull().default(0),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  evidenceJson: text("evidence_json").notNull().default("{}"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const institutionIdentityCandidates = sqliteTable("institution_identity_candidates", {
+  id: text("id").primaryKey(),
+  normalizedKey: text("normalized_key").notNull(),
+  canonicalName: text("canonical_name").notNull().default(""),
+  aliasesJson: text("aliases_json").notNull().default("[]"),
+  countryCode: text("country_code"),
+  countryName: text("country_name"),
+  city: text("city"),
+  parentInstitution: text("parent_institution"),
+  labOrSchool: text("lab_or_school"),
+  companyAffiliation: text("company_affiliation"),
+  paperCount: integer("paper_count", { mode: "number" }).notNull().default(0),
+  confidence: integer("confidence", { mode: "number" }).notNull().default(0),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  evidenceJson: text("evidence_json").notNull().default("{}"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const sourceFetchAttempts = sqliteTable("source_fetch_attempts", {
+  id: text("id").primaryKey(),
+  runId: text("run_id").notNull(),
+  source: text("source").notNull(),
+  query: text("query").notNull().default(""),
+  status: text("status").notNull().default("queued"),
+  attempt: integer("attempt", { mode: "number" }).notNull().default(1),
+  httpStatus: integer("http_status", { mode: "number" }),
+  error: text("error"),
+  startedAt: text("started_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  finishedAt: text("finished_at"),
+  payloadBytes: integer("payload_bytes", { mode: "number" }).notNull().default(0),
 });
 
 export const favorites = sqliteTable("favorites", {

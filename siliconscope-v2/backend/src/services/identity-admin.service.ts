@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { appDb } from "../db/app-db.js";
+import { sqlite } from "../db/connection.js";
 import { authorIdentityService } from "./author-identity.service.js";
 import { institutionIdentityService } from "./institution-identity.service.js";
 
@@ -133,6 +134,68 @@ export const identityAdminService = {
       source: source(body.source),
       confidence: confidence(body.confidence),
     };
+  },
+
+
+  listCandidates(typeValue: unknown, options: { status?: unknown; limit?: unknown; offset?: unknown } = {}) {
+    const type = aliasType(typeValue);
+    const status = cleanText(options.status || "pending", 80);
+    const limit = Math.min(Math.max(Number(options.limit || 80), 1), 200);
+    const offset = Math.max(Number(options.offset || 0), 0);
+    const table = type === "author" ? "author_identity_candidates" : "institution_identity_candidates";
+    const where = status === "all" ? "" : "WHERE review_status = @status";
+    const rows = sqlite.prepare(`
+      SELECT * FROM ${table}
+      ${where}
+      ORDER BY confidence ASC, paper_count DESC, updated_at DESC
+      LIMIT @limit OFFSET @offset
+    `).all({ status, limit, offset }).map((row: any) => {
+      const parse = (value: string, fallback: any) => { try { return JSON.parse(value || ""); } catch { return fallback; } };
+      return type === "author" ? {
+        id: row.id,
+        type,
+        normalizedKey: row.normalized_key,
+        canonicalName: row.canonical_name,
+        aliases: parse(row.alias_json, []),
+        externalIds: parse(row.external_ids_json, {}),
+        institutionHistory: parse(row.institution_history_json, []),
+        coauthorSignature: parse(row.coauthor_signature_json, []),
+        paperCount: row.paper_count,
+        confidence: row.confidence,
+        reviewStatus: row.review_status,
+        evidence: parse(row.evidence_json, {}),
+        updatedAt: row.updated_at,
+      } : {
+        id: row.id,
+        type,
+        normalizedKey: row.normalized_key,
+        canonicalName: row.canonical_name,
+        aliases: parse(row.aliases_json, []),
+        countryCode: row.country_code,
+        countryName: row.country_name,
+        city: row.city,
+        parentInstitution: row.parent_institution,
+        labOrSchool: row.lab_or_school,
+        companyAffiliation: row.company_affiliation,
+        paperCount: row.paper_count,
+        confidence: row.confidence,
+        reviewStatus: row.review_status,
+        evidence: parse(row.evidence_json, {}),
+        updatedAt: row.updated_at,
+      };
+    });
+    const total = sqlite.prepare(`SELECT COUNT(*) AS n FROM ${table} ${where}`).get({ status }) as { n: number };
+    return { rows, total: total?.n || 0, limit, offset };
+  },
+
+  updateCandidateStatus(typeValue: unknown, id: unknown, statusValue: unknown) {
+    const type = aliasType(typeValue);
+    const candidateId = cleanText(id, 240);
+    const status = cleanText(statusValue, 80);
+    if (!["pending", "approved", "rejected", "merged", "split_required"].includes(status)) throw new Error("Invalid candidate status");
+    const table = type === "author" ? "author_identity_candidates" : "institution_identity_candidates";
+    sqlite.prepare(`UPDATE ${table} SET review_status = @status, updated_at = CURRENT_TIMESTAMP WHERE id = @id`).run({ id: candidateId, status });
+    return { type, id: candidateId, status };
   },
 
   deleteAlias(typeValue: unknown, aliasValue: unknown) {

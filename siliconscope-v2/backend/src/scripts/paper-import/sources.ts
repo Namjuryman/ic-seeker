@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { appConfig } from "../../config.js";
+import { stableEvidenceHash } from "../../services/paper-metadata-confidence.js";
 import type { ImportedPaper, ImportOptions, PaperImportSource, SourceFetchContext, SourceFetchResult } from "./types.js";
 
 const USER_AGENT = `SiliconScope/0.2 (${appConfig.crossrefMailto || "local"})`;
+const DEFAULT_RETRY_COUNT = Number(process.env.PAPER_IMPORT_RETRY_COUNT || 2);
 
 function compactText(value: unknown): string {
   return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
@@ -12,6 +14,14 @@ function compactText(value: unknown): string {
 function numberOrUndefined(value: unknown): number | undefined {
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function asArray(value: unknown): any[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function withRawHash<T extends ImportedPaper>(paper: T, raw: unknown): T {
+  return { ...paper, raw, rawHash: stableEvidenceHash(raw) };
 }
 
 function invertOpenAlexAbstract(index: Record<string, number[]> | undefined): string {
@@ -23,18 +33,25 @@ function invertOpenAlexAbstract(index: Record<string, number[]> | undefined): st
   return words.sort((a, b) => a[0] - b[0]).map(([, word]) => word).join(" ");
 }
 
-async function fetchJson(url: string, warnings: string[]): Promise<any | null> {
-  try {
-    const res = await fetch(url, { headers: { "user-agent": USER_AGENT } });
-    if (!res.ok) {
-      warnings.push(`${url} returned HTTP ${res.status}`);
-      return null;
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchJson(url: string, warnings: string[], headers: Record<string, string> = {}): Promise<any | null> {
+  let lastError = "";
+  for (let attempt = 1; attempt <= DEFAULT_RETRY_COUNT + 1; attempt += 1) {
+    try {
+      const res = await fetch(url, { headers: { "user-agent": USER_AGENT, ...headers } });
+      if (res.ok) return await res.json();
+      lastError = `HTTP ${res.status}`;
+      if (![429, 500, 502, 503, 504].includes(res.status)) break;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
     }
-    return await res.json();
-  } catch (error) {
-    warnings.push(`${url} failed: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
+    if (attempt <= DEFAULT_RETRY_COUNT) await sleep(250 * attempt);
   }
+  warnings.push(`${url} failed after ${DEFAULT_RETRY_COUNT + 1} attempt(s): ${lastError || "unknown error"}`);
+  return null;
 }
 
 function contextQuery(ctx: SourceFetchContext): string {
@@ -47,17 +64,18 @@ export async function fetchOpenAlex(ctx: SourceFetchContext): Promise<SourceFetc
   const perPage = Math.max(1, Math.min(200, ctx.limit));
   const filter = encodeURIComponent(`from_publication_date:${ctx.yearFrom}-01-01,to_publication_date:${ctx.yearTo}-12-31`);
   const mailto = appConfig.crossrefMailto ? `&mailto=${encodeURIComponent(appConfig.crossrefMailto)}` : "";
-  const url = `https://api.openalex.org/works?search=${query}&filter=${filter}&per-page=${perPage}${mailto}`;
+  const apiKey = process.env.OPENALEX_API_KEY ? `&api_key=${encodeURIComponent(process.env.OPENALEX_API_KEY)}` : "";
+  const url = `https://api.openalex.org/works?search=${query}&filter=${filter}&per-page=${perPage}${mailto}${apiKey}`;
   const data = await fetchJson(url, warnings);
   const results = Array.isArray(data?.results) ? data.results : [];
   const papers: ImportedPaper[] = results.map((item: any) => {
     const authorships = Array.isArray(item.authorships) ? item.authorships : [];
     const authors = authorships.map((a: any) => compactText(a.author?.display_name)).filter(Boolean);
-    const affiliations = authorships
+    const affiliations: string[] = authorships
       .flatMap((a: any) => Array.isArray(a.institutions) ? a.institutions.map((i: any) => compactText(i.display_name)) : [])
       .filter(Boolean);
     const sourceName = compactText(item.primary_location?.source?.display_name || item.host_venue?.display_name);
-    return {
+    return withRawHash({
       source: "openalex",
       sourceId: compactText(item.id),
       title: compactText(item.title || item.display_name),
@@ -72,8 +90,8 @@ export async function fetchOpenAlex(ctx: SourceFetchContext): Promise<SourceFetc
       pdfLink: compactText(item.primary_location?.pdf_url),
       openalexId: compactText(item.id),
       citationCount: numberOrUndefined(item.cited_by_count),
-      raw: item,
-    };
+      externalIds: { openalex: compactText(item.id), doi: compactText(item.doi) },
+    }, item);
   }).filter((paper: ImportedPaper) => paper.title);
   return { source: "openalex", papers, warnings };
 }
@@ -92,13 +110,14 @@ export async function fetchCrossref(ctx: SourceFetchContext): Promise<SourceFetc
     const authors = Array.isArray(item.author)
       ? item.author.map((a: any) => compactText([a.given, a.family].filter(Boolean).join(" "))).filter(Boolean)
       : [];
+    const affiliations = asArray(item.author).flatMap((a: any) => asArray(a.affiliation).map((aff: any) => compactText(aff.name))).filter(Boolean);
     const venue = compactText(item["container-title"]?.[0] || item.publisher);
-    return {
+    return withRawHash({
       source: "crossref",
       sourceId: compactText(item.DOI),
       title: compactText(item.title?.[0]),
       authors,
-      affiliations: [],
+      affiliations,
       abstract: compactText(item.abstract),
       year: numberOrUndefined(parts[0]),
       venue,
@@ -106,8 +125,8 @@ export async function fetchCrossref(ctx: SourceFetchContext): Promise<SourceFetc
       doi: compactText(item.DOI),
       sourceUrl: compactText(item.URL),
       citationCount: numberOrUndefined(item["is-referenced-by-count"]),
-      raw: item,
-    };
+      externalIds: { doi: compactText(item.DOI) },
+    }, item);
   }).filter((paper: ImportedPaper) => paper.title);
   return { source: "crossref", papers, warnings };
 }
@@ -133,9 +152,9 @@ export async function fetchIeee(ctx: SourceFetchContext): Promise<SourceFetchRes
   const papers: ImportedPaper[] = articles.map((item: any) => {
     const authorItems = Array.isArray(item.authors?.authors) ? item.authors.authors : [];
     const authors = authorItems.map((a: any) => compactText(a.full_name || a.name)).filter(Boolean);
-    const affiliations = authorItems.map((a: any) => compactText(a.affiliation)).filter(Boolean);
+    const affiliations: string[] = authorItems.map((a: any) => compactText(a.affiliation)).filter(Boolean);
     const venue = compactText(item.publication_title || item.publication_title_abbrev);
-    return {
+    return withRawHash({
       source: "ieee",
       sourceId: compactText(item.article_number),
       title: compactText(item.title),
@@ -150,10 +169,78 @@ export async function fetchIeee(ctx: SourceFetchContext): Promise<SourceFetchRes
       sourceUrl: compactText(item.html_url || item.abstract_url),
       ieeeArticleNumber: compactText(item.article_number),
       citationCount: numberOrUndefined(item.citing_paper_count || item.citing_patent_count),
-      raw: item,
-    };
+      externalIds: { ieeeArticleNumber: compactText(item.article_number), doi: compactText(item.doi) },
+    }, item);
   }).filter((paper: ImportedPaper) => paper.title);
   return { source: "ieee", papers, warnings };
+}
+
+export async function fetchSemanticScholar(ctx: SourceFetchContext): Promise<SourceFetchResult> {
+  const warnings: string[] = [];
+  const params = new URLSearchParams({
+    query: contextQuery(ctx),
+    limit: String(Math.max(1, Math.min(100, ctx.limit))),
+    fields: "paperId,title,abstract,year,venue,publicationVenue,authors,externalIds,citationCount,openAccessPdf,url",
+  });
+  const headers: Record<string, string> = {};
+  if (process.env.SEMANTIC_SCHOLAR_API_KEY) headers["x-api-key"] = process.env.SEMANTIC_SCHOLAR_API_KEY;
+  const data = await fetchJson(`https://api.semanticscholar.org/graph/v1/paper/search?${params.toString()}`, warnings, headers);
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  const papers: ImportedPaper[] = rows
+    .filter((item: any) => {
+      const year = Number(item.year || 0);
+      return !year || (year >= ctx.yearFrom && year <= ctx.yearTo);
+    })
+    .map((item: any) => {
+      const venue = compactText(item.publicationVenue?.name || item.venue);
+      const externalIds = item.externalIds || {};
+      return withRawHash({
+        source: "semantic-scholar",
+        sourceId: compactText(item.paperId),
+        title: compactText(item.title),
+        authors: asArray(item.authors).map((a: any) => compactText(a.name)).filter(Boolean),
+        affiliations: [],
+        abstract: compactText(item.abstract),
+        year: numberOrUndefined(item.year),
+        venue,
+        publicationTitle: venue,
+        doi: compactText(externalIds.DOI || externalIds.DOIUrl).replace(/^https?:\/\/doi\.org\//i, ""),
+        pdfLink: compactText(item.openAccessPdf?.url),
+        sourceUrl: compactText(item.url),
+        citationCount: numberOrUndefined(item.citationCount),
+        externalIds: Object.fromEntries(Object.entries(externalIds).map(([k, v]) => [k, compactText(v)])),
+      }, item);
+    })
+    .filter((paper: ImportedPaper) => paper.title);
+  return { source: "semantic-scholar", papers, warnings };
+}
+
+export async function fetchDblp(ctx: SourceFetchContext): Promise<SourceFetchResult> {
+  const warnings: string[] = [];
+  const query = encodeURIComponent(contextQuery(ctx));
+  const hits = Math.max(1, Math.min(100, ctx.limit));
+  const data = await fetchJson(`https://dblp.org/search/publ/api?q=${query}&format=json&h=${hits}`, warnings);
+  const rows = asArray(data?.result?.hits?.hit);
+  const papers: ImportedPaper[] = rows.map((hit: any) => {
+    const info = hit.info || {};
+    const authors = asArray(info.authors?.author).map((a: any) => compactText(typeof a === "string" ? a : a?.text || a?.name)).filter(Boolean);
+    const year = numberOrUndefined(info.year);
+    const venue = compactText(info.venue);
+    return withRawHash({
+      source: "dblp",
+      sourceId: compactText(info.key || hit.id),
+      title: compactText(info.title),
+      authors,
+      affiliations: [],
+      year,
+      venue,
+      publicationTitle: venue,
+      doi: compactText(info.doi),
+      sourceUrl: compactText(info.url || info.ee),
+      externalIds: { dblp: compactText(info.key || hit.id), doi: compactText(info.doi) },
+    }, hit);
+  }).filter((paper: ImportedPaper) => paper.title && (!paper.year || (paper.year >= ctx.yearFrom && paper.year <= ctx.yearTo)));
+  return { source: "dblp", papers, warnings };
 }
 
 function parseCsvLine(line: string): string[] {
@@ -197,8 +284,10 @@ export function readCsvSource(source: PaperImportSource, filePath?: string): Sou
       return "";
     };
     const authors = get("authors", "author").split(/[;|]/).map((a) => a.trim()).filter(Boolean);
-    return {
+    const raw = Object.fromEntries(headers.map((header, index) => [header, row[index] || ""]));
+    return withRawHash({
       source,
+      sourceId: compactText(get("source_id", "id", "paper_id", "doi")),
       title: compactText(get("title", "paper title")),
       authors,
       affiliations: get("affiliations", "institution", "institutions").split(/[;|]/).map((a) => a.trim()).filter(Boolean),
@@ -210,7 +299,7 @@ export function readCsvSource(source: PaperImportSource, filePath?: string): Sou
       pdfLink: compactText(get("pdf", "pdf_link", "pdf url")),
       sourceUrl: compactText(get("url", "source_url", "link")),
       citationCount: numberOrUndefined(get("citations", "citation_count", "cited by")),
-    };
+    }, raw);
   }).filter((paper: ImportedPaper) => paper.title);
   return { source, papers, warnings };
 }
@@ -222,7 +311,7 @@ export function readAminerJson(filePath?: string): SourceFetchResult {
   if (!fs.existsSync(abs)) return { source: "aminer", papers: [], warnings: [`${abs} does not exist; skipped.`] };
   const data = JSON.parse(fs.readFileSync(abs, "utf8"));
   const rows = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.results) ? data.results : [];
-  const papers: ImportedPaper[] = rows.map((item: any) => ({
+  const papers: ImportedPaper[] = rows.map((item: any) => withRawHash({
     source: "aminer",
     sourceId: compactText(item.id || item.paper_id),
     title: compactText(item.title),
@@ -235,8 +324,8 @@ export function readAminerJson(filePath?: string): SourceFetchResult {
     doi: compactText(item.doi),
     sourceUrl: compactText(item.url),
     citationCount: numberOrUndefined(item.citationCount || item.citations),
-    raw: item,
-  })).filter((paper: ImportedPaper) => paper.title);
+    externalIds: { aminer: compactText(item.id || item.paper_id), doi: compactText(item.doi) },
+  }, item)).filter((paper: ImportedPaper) => paper.title);
   return { source: "aminer", papers, warnings };
 }
 
@@ -264,6 +353,8 @@ export async function fetchConfiguredSources(options: ImportOptions): Promise<So
       if (source === "openalex") results.push(await fetchOpenAlex(ctx));
       if (source === "crossref") results.push(await fetchCrossref(ctx));
       if (source === "ieee") results.push(await fetchIeee(ctx));
+      if (source === "semantic-scholar") results.push(await fetchSemanticScholar(ctx));
+      if (source === "dblp") results.push(await fetchDblp(ctx));
     }
   }
   return results;

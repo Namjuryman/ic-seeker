@@ -231,6 +231,19 @@ export const dataQualityService = {
       });
     }
 
+
+    for (const row of report.lowMetadataConfidence || []) {
+      pushFinding(findings, {
+        type: "low_metadata_confidence",
+        severity: Number(row.metadataConfidence || 0) < 40 ? "high" : "medium",
+        targetType: "paper",
+        targetId: String(row.id),
+        title: `Low metadata confidence: ${row.title}`,
+        summary: `Metadata confidence ${row.metadataConfidence}/100; flags: ${(row.flags || []).join(", ") || "none"}.`,
+        evidence: row,
+      });
+    }
+
     for (const row of report.institutionVariants) {
       pushFinding(findings, {
         type: "institution_alias_candidate",
@@ -442,6 +455,28 @@ export const dataQualityService = {
       updatedAt: string;
     }>;
 
+
+    const lowMetadataConfidence = metadataDb.all(sql`
+      SELECT
+        id,
+        title,
+        year,
+        venue,
+        doi,
+        metadata_confidence AS metadataConfidence,
+        confidence_flags_json AS flagsJson,
+        confidence_reasons_json AS reasonsJson,
+        last_metadata_audit_at AS lastMetadataAuditAt
+      FROM papers
+      WHERE metadata_confidence > 0 AND metadata_confidence < 60
+      ORDER BY metadata_confidence ASC, year DESC, id DESC
+      LIMIT ${sampleLimit}
+    `).map((row: any) => ({
+      ...row,
+      flags: parseEvidence(row.flagsJson || "[]"),
+      reasons: parseEvidence(row.reasonsJson || "[]"),
+    })) as Array<{ id: number; title: string; year: number; venue: string; doi: string; metadataConfidence: number; flags: string[]; reasons: string[]; lastMetadataAuditAt: string }>;
+
     const rows = metadataDb.all<{ id: number; title: string; authors: string; affiliations: string; venue: string; year: number }>(sql`
       SELECT id, title, authors, affiliations, venue, year FROM papers ORDER BY year DESC LIMIT ${scanLimit}
     `);
@@ -498,6 +533,7 @@ export const dataQualityService = {
       lowConfidenceTopics,
       venuePublicationMismatches,
       aiReviewQueue,
+      lowMetadataConfidence,
       institutionVariants,
       ambiguousAuthors,
       missingAffiliations,
@@ -508,7 +544,8 @@ export const dataQualityService = {
         "Do not auto-merge ambiguous authors by name only; use IDs, affiliations, coauthors, topics, and manual overrides.",
         "Use review queues for broad-journal papers near the relevance threshold.",
         "Review venue/publication-title mismatches before trusting venue rank, score, and institution rankings.",
-        "Use the AI enrichment review queue to find non-IC leakage, missing topic edges, and low-confidence labels."
+        "Use the AI enrichment review queue to find non-IC leakage, missing topic edges, and low-confidence labels.",
+        "Treat metadata_confidence as an ingestion quality gate: low-confidence papers should enter admin review before powering reports or compare pages."
       ]
     };
   }

@@ -2,6 +2,42 @@
 
 Use this file to record evidence from a real local or production-like run. Do not mark runtime QA complete from TypeScript/Vite build results alone.
 
+## Current Uploaded-Zip Check, 2026-07-03
+
+This repository snapshot was checked in the ChatGPT container environment after the 20-task foundation slice.
+
+- Node version: `v22.16.0` observed in the tool environment.
+- OS: Linux container.
+- Database path checked: `ic_database/ic_papers.sqlite`.
+- Database size: approximately 133-134 bytes.
+- SQLite is real: **no**. The uploaded file is still Git LFS pointer-sized and cannot support runtime API smoke tests.
+- `npm install` without `--ignore-scripts`: blocked in this environment by `better-sqlite3` native prebuild/header download DNS failures. This must be rerun on a normal development or deployment machine.
+- `npm install --ignore-scripts`: completed enough to run TypeScript/Vite/unit-test checks.
+- `npm test -- --run`: passed, 12 test files / 30 tests.
+- `npm run build:backend`: passed.
+- `npm run build:frontend`: passed.
+- `npm run build:admin`: passed.
+- `npm audit --json`: 0 high, 0 critical, 4 moderate dev-tooling advisories from `drizzle-kit`/`esbuild` chain.
+
+Release decision from this environment: **not ready for public launch** because real database runtime QA, native dependency install, seed, API smoke, page smoke, admin operations, ingestion dry-run, and scheduler/backup smoke were not completed against a real SQLite database.
+
+
+
+## Second Completion Pass, 2026-07-03
+
+Additional work was checked after adding the 20-task completion cockpit, Daily Circuit page, reading workflow API, paper dedupe/admin surfaces, local PDF admin surface, search-cache fallback, and foundation refresh scripts.
+
+- Node version: `v22.16.0`.
+- OS: Linux container.
+- `npm install --ignore-scripts`: passed. Root now also declares `better-sqlite3` so workspace scripts can resolve Drizzle's better-sqlite3 peer from the hoisted package tree.
+- `npm run build:backend`: passed.
+- `npm run build:frontend`: passed.
+- `npm run build:admin`: passed.
+- `npm test -- --run`: passed, 12 test files / 30 tests.
+- `npm run foundation:refresh -- --dry-run`: intentionally blocked by SQLite health guard because `ic_database/ic_papers.sqlite` is a 134-byte Git LFS pointer, not a real database.
+
+Release decision remains: **not production-certified until the real SQLite database and provider API keys are available and runtime smoke tests complete.**
+
 ## Environment
 
 - Date:
@@ -18,11 +54,14 @@ Use this file to record evidence from a real local or production-like run. Do no
 
 ## Setup Commands
 
-```powershell
+```bash
 npm install
 npm run companies:seed
 npm run build
 npm run dev
+npm run import:papers -- --query="adc" --limit=5 --dry-run
+npm run identity:candidates -- --dry-run
+npm run pdf:scan -- --dir=ic_database/pdf_inbox --dry-run
 ```
 
 ## API Smoke
@@ -111,11 +150,14 @@ npm run dev
 
 Document every blocker, bug, performance issue, confusing copy, or data-quality caveat found during the run.
 
-1.
+1. Real SQLite was not provided in this uploaded zip. `ic_database/ic_papers.sqlite` is pointer-sized, so runtime API/page/admin smoke tests remain pending.
+2. Native `better-sqlite3` install could not be completed in the container because external downloads for prebuilds/headers were blocked by DNS failures. Release machines must run a normal `npm install` without `--ignore-scripts`.
+3. Static verification is healthy: backend/frontend/admin builds passed, and backend unit tests passed.
+4. Drizzle ORM was upgraded beyond the high advisory range; audit now reports no high or critical issues. Remaining moderate issues are dev-tooling advisories in the `drizzle-kit`/`esbuild` chain.
 
 ## Release Decision
 
-- Ready for private alpha: yes / no
-- Ready for invite-only beta: yes / no
-- Ready for public launch: yes / no
-- Required fixes before next release:
+- Ready for private alpha: no, not until real DB runtime smoke is complete.
+- Ready for invite-only beta: no.
+- Ready for public launch: no.
+- Required fixes before next release: pull the real SQLite via Git LFS, run `npm install`, run seed/import/identity/PDF dry-runs, run API/page/admin smoke tests, attach evidence here, and resolve any runtime defects.

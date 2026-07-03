@@ -26,9 +26,17 @@
     "dev:windows": "powershell -ExecutionPolicy Bypass -File ./start-dev.ps1",
     "dev:backend": "npm --workspace siliconscope-v2-backend run dev",
     "dev:frontend": "npm --workspace siliconscope-v2-frontend run dev -- --host 127.0.0.1 --port 5173",
-    "dev:admin": "npm --workspace siliconscope-v2-admin run dev"
+    "dev:admin": "npm --workspace siliconscope-v2-admin run dev",
+    "pdf:scan": "npm --workspace siliconscope-v2-backend run pdf:scan --",
+    "identity:candidates": "npm --workspace siliconscope-v2-backend run identity:candidates --",
+    "foundation:refresh": "npm --workspace siliconscope-v2-backend run foundation:refresh --",
+    "dedupe:scan": "npm --workspace siliconscope-v2-backend run dedupe:scan --",
+    "search:rebuild": "npm --workspace siliconscope-v2-backend run foundation:refresh -- --search-only"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0"
   }
 }

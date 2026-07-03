@@ -45,6 +45,13 @@ import { learningContentService } from "../services/learning-content.service.js"
 import { learningProgressService } from "../services/learning-progress.service.js";
 import { searchIndexService, type SearchIndexTarget } from "../services/search-index.service.js";
 import { paperAiEnrichmentService } from "../services/paper-ai-enrichment.service.js";
+import { paperIngestionControlService } from "../services/paper-ingestion-control.service.js";
+import { paperDedupeService } from "../services/paper-dedupe.service.js";
+import { dailyCircuitService } from "../services/daily-circuit.service.js";
+import { readingWorkflowService } from "../services/reading-workflow.service.js";
+import { localPdfService } from "../services/local-pdf.service.js";
+import { entityIntelligenceService } from "../services/entity-intelligence.service.js";
+import { featureCompletionService } from "../services/feature-completion.service.js";
 
 const router = Router();
 
@@ -794,6 +801,23 @@ router.get("/learning/today", requireAuth, async (_req, res) => {
   res.json(learningService.getTodayLesson());
 });
 
+router.get("/daily-circuit", requireAuth, async (req, res) => {
+  res.json(dailyCircuitService.list({ roadmapSlug: req.query.roadmapSlug as string | undefined, limit: Number(req.query.limit || 80) }));
+});
+
+router.get("/daily-circuit/today", requireAuth, async (_req, res) => {
+  res.json(dailyCircuitService.today());
+});
+
+router.get("/daily-circuit/:id", requireAuth, async (req, res) => {
+  const item = dailyCircuitService.get(req.params.id);
+  if (!item) {
+    res.status(404).json({ error: "Daily circuit item not found" });
+    return;
+  }
+  res.json(item);
+});
+
 router.get("/learning/progress", requireAuth, async (req: AuthenticatedRequest, res) => {
   res.json(learningProgressService.list(req.user?.userId ?? 0));
 });
@@ -938,6 +962,31 @@ router.get("/companies/:id/related-roadmaps", requireAuth, async (req, res) => {
     return;
   }
   res.json(result);
+});
+
+router.get("/companies/:id/intelligence", requireAuth, async (req, res) => {
+  const result = entityIntelligenceService.company(req.params.id);
+  if (!result) {
+    res.status(404).json({ error: "Company not found" });
+    return;
+  }
+  res.json(result);
+});
+
+router.get("/institutions/:name/intelligence", requireAuth, async (req, res) => {
+  res.json(entityIntelligenceService.institution(decodeURIComponent(req.params.name)));
+});
+
+router.get("/mentors/:name/intelligence", requireAuth, async (req, res) => {
+  res.json(entityIntelligenceService.mentor(decodeURIComponent(req.params.name), req.query as Record<string, string>));
+});
+
+router.get("/geo/cities", requireAuth, async (req, res) => {
+  res.json(entityIntelligenceService.cityMap({
+    field: req.query.field as string | undefined,
+    yearFrom: req.query.yearFrom ? Number(req.query.yearFrom) : undefined,
+    yearTo: req.query.yearTo ? Number(req.query.yearTo) : undefined,
+  }));
 });
 
 router.get("/compare/companies", requireAuth, async (req, res) => {
@@ -1152,6 +1201,41 @@ router.post("/reading-queue/:paperId", requireAuth, async (req: AuthenticatedReq
   res.json(result);
 });
 
+router.get("/reading-workflow/due", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(readingWorkflowService.reviewDue(req.user?.userId ?? 0, { limit: Number(req.query.limit || 30) }));
+});
+
+router.get("/reading-workflow/export", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const result = readingWorkflowService.exportLiteratureMaterial(req.user?.userId ?? 0, {
+    format: req.query.format === "json" ? "json" : "markdown",
+    useCase: req.query.useCase as string | undefined,
+  });
+  res.setHeader("content-type", result.format === "json" ? "application/json" : "text/markdown; charset=utf-8");
+  res.send(result.content);
+});
+
+router.get("/reading-workflow/:paperId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const paperId = Number(req.params.paperId);
+  if (!Number.isFinite(paperId)) {
+    res.status(400).json({ error: "Invalid paperId" });
+    return;
+  }
+  res.json(readingWorkflowService.get(req.user?.userId ?? 0, paperId));
+});
+
+router.put("/reading-workflow/:paperId", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const paperId = Number(req.params.paperId);
+  if (!Number.isFinite(paperId)) {
+    res.status(400).json({ error: "Invalid paperId" });
+    return;
+  }
+  try {
+    res.json(readingWorkflowService.update(req.user?.userId ?? 0, paperId, req.body || {}));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.get("/papers/:id/comments", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   res.json(discussionService.listComments(id, {
@@ -1261,6 +1345,80 @@ router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: Authe
     adminAuditService.record({ req, action: "moderation.action", resourceType: decodeURIComponent(req.params.targetType), resourceId: req.params.id, status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.get("/admin/completion-report", requireAdmin, async (_req, res) => {
+  res.json(featureCompletionService.report());
+});
+
+router.get("/admin/paper-ingestion/plan", requireAdmin, async (req, res) => {
+  res.json(paperIngestionControlService.plan({
+    sources: typeof req.query.sources === "string" ? req.query.sources.split(",") : undefined,
+    queries: typeof req.query.queries === "string" ? req.query.queries.split(",") : undefined,
+    venues: typeof req.query.venues === "string" ? req.query.venues.split(",") : undefined,
+    yearFrom: req.query.yearFrom ? Number(req.query.yearFrom) : undefined,
+    yearTo: req.query.yearTo ? Number(req.query.yearTo) : undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+  }));
+});
+
+router.get("/admin/paper-ingestion/runs", requireAdmin, async (req, res) => {
+  res.json(paperIngestionControlService.listRuns({ status: req.query.status as string | undefined, limit: Number(req.query.limit || 30), offset: Number(req.query.offset || 0) }));
+});
+
+router.post("/admin/paper-ingestion/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await paperIngestionControlService.run(req.body || {});
+    adminAuditService.record({ req, action: "paper_ingestion.run", resourceType: "paper_ingestion_run", resourceId: result.id, metadata: result });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "paper_ingestion.run", resourceType: "paper_ingestion_run", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/admin/paper-ingestion/source-attempts", requireAdmin, async (req, res) => {
+  res.json(paperIngestionControlService.sourceAttempts({ runId: req.query.runId as string | undefined, limit: Number(req.query.limit || 100) }));
+});
+
+router.get("/admin/paper-dedupe", requireAdmin, async (req, res) => {
+  res.json(paperDedupeService.list({ status: req.query.status as string | undefined, limit: Number(req.query.limit || 50), offset: Number(req.query.offset || 0) }));
+});
+
+router.post("/admin/paper-dedupe/scan", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const result = paperDedupeService.scan({ limit: Number(req.body?.limit || 100), persist: req.body?.persist !== false });
+  adminAuditService.record({ req, action: "paper_dedupe.scan", resourceType: "paper_dedupe_candidate", metadata: { total: result.total, persisted: result.persisted } });
+  res.json(result);
+});
+
+router.patch("/admin/paper-dedupe/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = paperDedupeService.updateStatus(req.params.id, req.body?.status);
+    adminAuditService.record({ req, action: "paper_dedupe.update", resourceType: "paper_dedupe_candidate", resourceId: req.params.id, metadata: { status: result.status } });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/admin/local-pdfs", requireAdmin, async (req, res) => {
+  res.json(localPdfService.list({ status: req.query.status as string | undefined, limit: Number(req.query.limit || 50), offset: Number(req.query.offset || 0) }));
+});
+
+router.patch("/admin/local-pdfs/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = localPdfService.update(req.params.id, req.body || {});
+    adminAuditService.record({ req, action: "local_pdf.update", resourceType: "local_pdf", resourceId: req.params.id, metadata: { matchStatus: result.matchStatus, paperId: result.paperId } });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post("/admin/daily-circuit/sync", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  const result = dailyCircuitService.syncSeed();
+  adminAuditService.record({ req, action: "daily_circuit.sync_seed", resourceType: "daily_circuit", metadata: result });
+  res.json(result);
 });
 
 router.get("/admin/snapshots", requireAdmin, async (_req, res) => {
@@ -1434,6 +1592,28 @@ router.get("/admin/identity/aliases", requireAdmin, async (req, res) => {
       limit: req.query.limit,
       offset: req.query.offset,
     }));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/admin/identity/candidates", requireAdmin, async (req, res) => {
+  try {
+    res.json(identityAdminService.listCandidates(req.query.type, {
+      status: req.query.status,
+      limit: req.query.limit,
+      offset: req.query.offset,
+    }));
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch("/admin/identity/candidates/:type/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = identityAdminService.updateCandidateStatus(req.params.type, req.params.id, req.body?.status);
+    adminAuditService.record({ req, action: "identity.candidate_status", resourceType: `identity_candidate.${req.params.type}`, resourceId: req.params.id, metadata: result });
+    res.json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

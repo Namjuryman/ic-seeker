@@ -30,6 +30,7 @@ const DataQualityPage = lazy(() => import('../../frontend/src/pages/DataQualityP
 const JournalIngestionPage = lazy(() => import('../../frontend/src/pages/JournalIngestionPage'))
 const VenueMatrixPage = lazy(() => import('../../frontend/src/pages/VenueMatrixPage'))
 const PlatformPage = lazy(() => import('../../frontend/src/pages/PlatformPage'))
+const CompletionReportAdminPage = lazy(() => import('../../frontend/src/pages/CompletionReportAdminPage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -47,6 +48,7 @@ const adminNav = [
       { to: '/site-settings', label: 'Site settings', icon: 'F' },
       { to: '/access-requests', label: 'Access requests', icon: 'U' },
       { to: '/observability', label: 'Observability', icon: 'O' },
+      { to: '/completion-report', label: '20-task report', icon: '20' },
     ],
   },
   {
@@ -214,6 +216,7 @@ function AdminRoutes() {
       <Route path="/scheduler" element={<SchedulerAdminPage />} />
       <Route path="/maintenance" element={<MaintenanceAdminPage />} />
       <Route path="/observability" element={<ObservabilityPage />} />
+      <Route path="/completion-report" element={<CompletionReportAdminPage />} />
       <Route path="/audit-logs" element={<AdminAuditPage />} />
       <Route path="/notifications" element={<NotificationsPage />} />
       <Route path="/billing" element={<AdminBillingPage />} />
