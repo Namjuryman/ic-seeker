@@ -53,7 +53,10 @@ export default function AuthorsPage() {
   const [query, setQuery] = useState('')
   const params = useParams()
   const navigate = useNavigate()
-  const name = params['*']
+  const rawName = params['*']?.trim()
+  const name = rawName && !['authors', 'author', 'author profile', 'scholar graph'].includes(rawName.toLowerCase())
+    ? rawName
+    : ''
 
   useEffect(() => {
     setLoadingList(true)
