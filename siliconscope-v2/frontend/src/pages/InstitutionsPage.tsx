@@ -53,7 +53,10 @@ export default function InstitutionsPage() {
   const [query, setQuery] = useState('')
   const params = useParams()
   const navigate = useNavigate()
-  const name = params['*']
+  const rawName = params['*']?.trim()
+  const name = rawName && !['institutions', 'institution', 'institution profile', 'institution graph'].includes(rawName.toLowerCase())
+    ? rawName
+    : ''
 
   useEffect(() => {
     setLoadingList(true)

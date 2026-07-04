@@ -224,8 +224,19 @@ export default function MentorsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const params = useParams()
-  const institution = searchParams.get('institution')
-  const mentor = params['*']
+  const pathSegments = (params['*'] || '').split('/').filter(Boolean)
+  const pathKind = pathSegments[0]?.toLowerCase()
+  const pathValue = pathSegments.slice(1).join('/')
+  const routeInstitution = pathKind === 'institutions' ? decodeURIComponent(pathValue) : ''
+  const routeMentor = pathKind === 'authors'
+    ? decodeURIComponent(pathValue)
+    : pathSegments.length === 1
+      ? pathSegments[0]
+      : ''
+  const institution = searchParams.get('institution') || routeInstitution
+  const mentor = routeMentor && !['mentors', 'mentor', 'mentor profile', 'mentor intelligence', 'authors', 'institutions'].includes(routeMentor.toLowerCase())
+    ? routeMentor
+    : ''
 
   useEffect(() => {
     setLoadingInstitutions(true)
