@@ -12,4 +12,17 @@ describe("billing quota evaluation", () => {
     expect(result.remaining).toBe(0);
     expect(result.reason).toContain("readingQueueItems quota exceeded");
   });
+
+  it("allows exact-boundary increments and reports remaining before consumption", () => {
+    const result = evaluateQuota({ metric: "dailyAiReports", planName: "Builder", limit: 10, used: 8, increment: 2 });
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(2);
+    expect(result.reason).toBeUndefined();
+  });
+
+  it("rejects batch increments that cross the quota even when remaining is nonzero", () => {
+    const result = evaluateQuota({ metric: "exportsPerMonth", planName: "Free Preview", limit: 10, used: 9, increment: 2 });
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(1);
+  });
 });

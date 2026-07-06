@@ -1,5 +1,15 @@
 export type ExportKindName = "topic-report" | "company-compare" | "institution-compare" | "author-compare" | "mentor-compare";
 export type ExportFormatName = "json" | "markdown" | "csv";
+export type CitationFormatName = "ieee" | "apa" | "bibtex";
+
+export type CitationPaper = {
+  title?: string | null;
+  authors?: string | null;
+  year?: number | string | null;
+  venue?: string | null;
+  publicationTitle?: string | null;
+  doi?: string | null;
+};
 
 export function nowStamp(date = new Date()) {
   return date.toISOString().replace(/[:.]/g, "-");
@@ -28,6 +38,42 @@ export function asList(value: unknown) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function authorList(value: unknown) {
+  return String(value || "")
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function bibtexKey(paper: CitationPaper) {
+  const firstAuthor = authorList(paper.authors)[0]?.split(/\s+/).at(-1) || "paper";
+  return slug(`${firstAuthor}${paper.year || "nd"}${paper.title || ""}`).replace(/-/g, "").slice(0, 40) || "paper";
+}
+
+export function paperCitation(paper: CitationPaper, format: CitationFormatName): string {
+  const title = String(paper.title || "Untitled paper").trim();
+  const authors = authorList(paper.authors);
+  const authorText = authors.join(", ") || "Unknown author";
+  const year = String(paper.year || "n.d.");
+  const venue = String(paper.publicationTitle || paper.venue || "").trim();
+  const doi = String(paper.doi || "").trim();
+
+  if (format === "bibtex") {
+    const fields = [
+      `  title={${title}}`,
+      `  author={${authors.join(" and ") || "Unknown author"}}`,
+      `  year={${year}}`,
+      venue ? `  journal={${venue}}` : "",
+      doi ? `  doi={${doi}}` : "",
+    ].filter(Boolean);
+    return `@article{${bibtexKey(paper)},\n${fields.join(",\n")}\n}`;
+  }
+  if (format === "apa") {
+    return `${authorText} (${year}). ${title}.${venue ? ` ${venue}.` : ""}${doi ? ` https://doi.org/${doi}` : ""}`;
+  }
+  return `${authorText}, "${title},"${venue ? ` ${venue},` : ""} ${year}.${doi ? ` doi: ${doi}.` : ""}`;
 }
 
 function paperRows(papers: Array<Record<string, any>>) {
