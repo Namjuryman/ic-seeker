@@ -24,7 +24,7 @@ export const appConfig = {
   
   jwtSecret: process.env.JWT_SECRET || "change-me-in-production",
   adminPassword: process.env.ADMIN_PASSWORD || "change-me-now",
-  authEnabled: process.env.IC_SEEKER_REQUIRE_LOGIN === "1" || process.env.IC_SEEKER_AUTH === "password",
+  authEnabled: process.env.IC_SEEKER_REQUIRE_LOGIN === "1" || ["1", "on", "password", "true"].includes(String(process.env.IC_SEEKER_AUTH || "").toLowerCase()),
   localAdminEnabled: process.env.IC_SEEKER_LOCAL_ADMIN === "1",
   frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176")
     .split(",")
@@ -82,3 +82,69 @@ export const appConfig = {
 } as const;
 
 export type AppConfig = typeof appConfig;
+
+type SafetyInput = Pick<AppConfig, "deploymentMode" | "jwtSecret" | "adminPassword" | "authEnabled" | "frontendOrigins" | "trustProxy"> & {
+  nodeEnv?: string;
+};
+
+export type ProductionSafetyReport = {
+  productionLike: boolean;
+  blockingIssues: string[];
+  warnings: string[];
+};
+
+const DEFAULT_JWT_SECRET = "change-me-in-production";
+const DEFAULT_ADMIN_PASSWORD = "change-me-now";
+
+export function evaluateProductionSafety(config: SafetyInput): ProductionSafetyReport {
+  const productionLike = config.nodeEnv === "production" || config.deploymentMode === "production";
+  const blockingIssues: string[] = [];
+  const warnings: string[] = [];
+
+  if (config.jwtSecret === DEFAULT_JWT_SECRET || config.jwtSecret.length < 32) {
+    blockingIssues.push("JWT_SECRET must be a non-default secret with at least 32 characters.");
+  }
+  if (config.adminPassword === DEFAULT_ADMIN_PASSWORD) {
+    blockingIssues.push("ADMIN_PASSWORD must not use the default change-me-now value.");
+  }
+  if (!config.authEnabled) {
+    blockingIssues.push("Authentication must be enabled with IC_SEEKER_AUTH=on or IC_SEEKER_REQUIRE_LOGIN=1.");
+  }
+  const unsafeOrigins = config.frontendOrigins.filter((origin) => {
+    const normalized = origin.toLowerCase();
+    return normalized === "*" || normalized.includes("localhost") || normalized.includes("127.0.0.1");
+  });
+  if (unsafeOrigins.length > 0) {
+    blockingIssues.push(`FRONTEND_ORIGINS must not include wildcard or localhost origins in production: ${unsafeOrigins.join(", ")}`);
+  }
+  if (!config.trustProxy) {
+    warnings.push("TRUST_PROXY is disabled. Set TRUST_PROXY=1 when deploying behind Caddy, Nginx, Cloudflare, or another reverse proxy.");
+  }
+
+  return {
+    productionLike,
+    blockingIssues: productionLike ? blockingIssues : [],
+    warnings: productionLike ? warnings : [...blockingIssues, ...warnings],
+  };
+}
+
+export function assertProductionSafety(config: SafetyInput = { ...appConfig, nodeEnv: process.env.NODE_ENV }, options: { exitOnFailure?: boolean } = {}) {
+  const report = evaluateProductionSafety(config);
+  const exitOnFailure = options.exitOnFailure ?? true;
+  if (report.productionLike && report.blockingIssues.length > 0) {
+    console.error("[SiliconScope] Unsafe production configuration:");
+    for (const issue of report.blockingIssues) console.error(`- ${issue}`);
+    for (const warning of report.warnings) console.error(`- Warning: ${warning}`);
+    if (exitOnFailure) process.exit(1);
+    throw new Error(`Unsafe production configuration: ${report.blockingIssues.join(" ")}`);
+  }
+  if (!report.productionLike && report.warnings.length > 0) {
+    console.warn("[SiliconScope] Development configuration warnings:");
+    for (const warning of report.warnings) console.warn(`- ${warning}`);
+  }
+  return report;
+}
+
+if (process.env.VITEST !== "true") {
+  assertProductionSafety();
+}

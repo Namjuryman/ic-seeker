@@ -1,0 +1,46 @@
+name: SiliconScope v2 CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: siliconscope-v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: siliconscope-v2/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build fixture SQLite database from CSV
+        run: npm run db:build-from-csv -- --out=${{ runner.temp }}/siliconscope-ci.sqlite --limit=1000 --force
+
+      - name: Backend build
+        env:
+          DATABASE_URL: ${{ runner.temp }}/siliconscope-ci.sqlite
+        run: npm run build:backend
+
+      - name: Backend tests
+        env:
+          DATABASE_URL: ${{ runner.temp }}/siliconscope-ci.sqlite
+        run: npm test -- --run
+
+      - name: Frontend build
+        run: npm run build:frontend
+
+      - name: Admin build
+        run: npm run build:admin
