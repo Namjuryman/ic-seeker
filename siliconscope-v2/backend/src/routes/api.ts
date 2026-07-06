@@ -38,6 +38,7 @@ import { observabilityService } from "../services/observability.service.js";
 import { schedulerService, type SchedulerJobId } from "../services/scheduler.service.js";
 import { jobOperationsService } from "../services/job-operations.service.js";
 import { ingestionJobService } from "../services/ingestion-job.service.js";
+import { ingestionRunnerService } from "../services/ingestion-runner.service.js";
 import { siteSettingsService } from "../services/site-settings.service.js";
 import { exportService, type ExportFormat } from "../services/export.service.js";
 import { accessRequestService } from "../services/access-request.service.js";
@@ -437,7 +438,7 @@ router.post("/admin/ingestion/jobs/:id/start", requireAdmin, async (req: Authent
     return;
   }
   try {
-    const job = ingestionJobService.start(id, req.user?.userId ?? 0);
+    const job = ingestionRunnerService.start(id, req.user?.userId ?? 0);
     adminAuditService.record({
       req,
       action: "ingestion.start",

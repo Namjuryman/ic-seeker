@@ -693,7 +693,17 @@ export interface JobOperationsOverview {
 }
 
 export type IngestionJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'review_required';
-export type IngestionProvider = 'ieee' | 'openalex' | 'crossref' | 'csv' | 'pdf' | 'manual';
+export type IngestionProvider =
+  | 'ieee'
+  | 'openalex'
+  | 'crossref'
+  | 'semantic-scholar'
+  | 'dblp'
+  | 'csv'
+  | 'scholar-csv'
+  | 'aminer'
+  | 'pdf'
+  | 'manual';
 
 export interface IngestionJob {
   id: number;

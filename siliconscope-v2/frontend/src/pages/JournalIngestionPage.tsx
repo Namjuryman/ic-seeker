@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { IngestionJob, IngestionJobEvent, IngestionJobStatus } from '../types'
 
-const providerOptions = ['ieee', 'openalex', 'crossref', 'csv', 'pdf', 'manual'] as const
+const providerOptions = ['openalex', 'crossref', 'ieee', 'semantic-scholar', 'dblp', 'csv', 'scholar-csv', 'aminer', 'pdf', 'manual'] as const
 const statusOptions: IngestionJobStatus[] = ['queued', 'running', 'succeeded', 'failed', 'review_required', 'cancelled']
 
 function formatTime(value: string | null) {
@@ -41,6 +41,10 @@ function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => 
   const [yearTo, setYearTo] = useState(2026)
   const [venues, setVenues] = useState('ISSCC,JSSC,CICC,VLSI,ASSCC,ESSCIRC')
   const [query, setQuery] = useState('integrated circuit OR solid-state circuit')
+  const [limit, setLimit] = useState(5)
+  const [dryRun, setDryRun] = useState(false)
+  const [refreshTopics, setRefreshTopics] = useState(false)
+  const [includeLowRelevance, setIncludeLowRelevance] = useState(false)
   const [notes, setNotes] = useState('Weekly metadata import candidate. PDF download remains publisher/manual only.')
 
   const mutation = useMutation({
@@ -53,6 +57,10 @@ function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => 
         yearTo,
         venues: venues.split(',').map((item) => item.trim()).filter(Boolean),
         query: query.trim(),
+        limit,
+        dryRun,
+        refreshTopics,
+        includeLowRelevance,
       },
     }),
     onSuccess: onCreated,
@@ -92,6 +100,24 @@ function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => 
         Query
         <input value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
+      <label>
+        Limit
+        <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(Number(event.target.value))} />
+      </label>
+      <div className="ingestion-checks">
+        <label>
+          <input type="checkbox" checked={dryRun} onChange={(event) => setDryRun(event.target.checked)} />
+          Dry run only
+        </label>
+        <label>
+          <input type="checkbox" checked={refreshTopics} onChange={(event) => setRefreshTopics(event.target.checked)} />
+          Refresh topic taxonomy
+        </label>
+        <label>
+          <input type="checkbox" checked={includeLowRelevance} onChange={(event) => setIncludeLowRelevance(event.target.checked)} />
+          Include low-relevance rows
+        </label>
+      </div>
       <label>
         Notes
         <textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} />
@@ -248,8 +274,8 @@ export default function JournalIngestionPage() {
           <span>Ingestion control plane</span>
           <h1>Weekly import jobs</h1>
           <p>
-            Register IEEE, OpenAlex, Crossref, CSV, and local PDF metadata work as auditable jobs before the real workers run.
-            This keeps weekly database updates idempotent, reviewable, and ready for production deployment.
+            Register and run IEEE, OpenAlex, Crossref, CSV, and local metadata imports as auditable jobs.
+            Each run records source scope, counts, errors, and review status so weekly database updates stay traceable.
           </p>
         </div>
         <div className="ingestion-hero-card">

@@ -1,11 +1,12 @@
 import Database from "better-sqlite3";
+import { pathToFileURL } from "node:url";
 import { appConfig } from "../config.js";
 import { topicTaxonomyService } from "../services/topic-taxonomy.service.js";
 import { icRelevanceScore } from "./paper-import/classify.js";
 import { fetchConfiguredSources } from "./paper-import/sources.js";
 import { mergePapers } from "./paper-import/merge.js";
 import { upsertPapers } from "./paper-import/upsert.js";
-import type { ImportOptions, PaperImportSource } from "./paper-import/types.js";
+import type { ImportOptions, PaperImportSource, SourceFetchResult, UpsertSummary } from "./paper-import/types.js";
 
 const defaultQueries = [
   "integrated circuit",
@@ -86,6 +87,96 @@ Notes:
 `);
 }
 
+export type PaperImportSummary = {
+  options: Omit<ImportOptions, "csvPath" | "scholarCsvPath" | "aminerJsonPath"> & {
+    csvPath?: string;
+    scholarCsvPath?: string;
+    aminerJsonPath?: string;
+  };
+  sources: Array<{
+    source: PaperImportSource;
+    fetched: number;
+    warnings: string[];
+  }>;
+  raw: number;
+  merged: number;
+  kept: number;
+  filtered: number;
+  lowConfidence: number;
+  upsert: UpsertSummary;
+  refreshedTopics?: unknown;
+  sample: Array<{
+    title: string;
+    year?: number;
+    venue?: string;
+    doi?: string;
+    domain?: string;
+    relevance: number;
+    sources: string[];
+    metadataConfidence?: number;
+    confidenceFlags?: string[];
+  }>;
+};
+
+function sourceSummary(results: SourceFetchResult[]): PaperImportSummary["sources"] {
+  return results.map((result) => ({
+    source: result.source,
+    fetched: result.papers.length,
+    warnings: result.warnings,
+  }));
+}
+
+export async function runImport(options: ImportOptions): Promise<PaperImportSummary> {
+  const sourceResults = await fetchConfiguredSources(options);
+  const rawPapers = sourceResults.flatMap((result) => result.papers);
+  const mergedAll = mergePapers(rawPapers);
+  const merged = options.includeLowRelevance
+    ? mergedAll
+    : mergedAll.filter((paper) => icRelevanceScore(paper) > 0);
+  const lowConfidence = merged.filter((paper) => Number(paper.metadataConfidence || 0) < 60).length;
+
+  const sample = merged.slice(0, 5).map((paper) => ({
+    title: paper.title,
+    year: paper.year,
+    venue: paper.venue,
+    doi: paper.doi,
+    domain: paper.domain,
+    relevance: icRelevanceScore(paper),
+    sources: paper.sources,
+    metadataConfidence: paper.metadataConfidence,
+    confidenceFlags: paper.confidenceFlags,
+  }));
+
+  const upsert: UpsertSummary = options.dryRun
+    ? { inserted: 0, updated: 0, unchanged: 0, skipped: 0, ftsRebuilt: 0, errors: [] }
+    : (() => {
+        const sqlite = new Database(appConfig.dbPath);
+        try {
+          return upsertPapers(sqlite, merged);
+        } finally {
+          sqlite.close();
+        }
+      })();
+
+  let refreshedTopics: unknown;
+  if (!options.dryRun && options.refreshTopics) {
+    refreshedTopics = topicTaxonomyService.refreshPaperTopicEdges({ limit: 100000, reset: true, minConfidence: 45 });
+  }
+
+  return {
+    options,
+    sources: sourceSummary(sourceResults),
+    raw: rawPapers.length,
+    merged: mergedAll.length,
+    kept: merged.length,
+    filtered: mergedAll.length - merged.length,
+    lowConfidence,
+    upsert,
+    refreshedTopics,
+    sample,
+  };
+}
+
 async function main() {
   if (hasFlag("help") || hasFlag("h")) {
     printHelp();
@@ -105,50 +196,29 @@ async function main() {
     includeLowRelevance: options.includeLowRelevance,
   }, null, 2));
 
-  const sourceResults = await fetchConfiguredSources(options);
-  for (const result of sourceResults) {
-    console.log(`[paper-import] ${result.source}: ${result.papers.length} papers`);
+  const summary = await runImport(options);
+  for (const result of summary.sources) {
+    console.log(`[paper-import] ${result.source}: ${result.fetched} papers`);
     for (const warning of result.warnings) console.warn(`[paper-import] warning: ${warning}`);
   }
-
-  const rawPapers = sourceResults.flatMap((result) => result.papers);
-  const mergedAll = mergePapers(rawPapers);
-  const merged = options.includeLowRelevance
-    ? mergedAll
-    : mergedAll.filter((paper) => icRelevanceScore(paper) > 0);
-  console.log(`[paper-import] raw=${rawPapers.length}, merged=${mergedAll.length}, kept=${merged.length}, filtered=${mergedAll.length - merged.length}`);
-  console.log("[paper-import] sample", JSON.stringify(merged.slice(0, 5).map((paper) => ({
-    title: paper.title,
-    year: paper.year,
-    venue: paper.venue,
-    doi: paper.doi,
-    domain: paper.domain,
-    relevance: icRelevanceScore(paper),
-    sources: paper.sources,
-    metadataConfidence: paper.metadataConfidence,
-    confidenceFlags: paper.confidenceFlags,
-  })), null, 2));
+  console.log(`[paper-import] raw=${summary.raw}, merged=${summary.merged}, kept=${summary.kept}, filtered=${summary.filtered}`);
+  console.log("[paper-import] sample", JSON.stringify(summary.sample, null, 2));
 
   if (options.dryRun) {
     console.log("[paper-import] dry run complete; database unchanged.");
     return;
   }
 
-  const sqlite = new Database(appConfig.dbPath);
-  try {
-    const summary = upsertPapers(sqlite, merged);
-    console.log("[paper-import] upsert", JSON.stringify(summary, null, 2));
-  } finally {
-    sqlite.close();
-  }
+  console.log("[paper-import] upsert", JSON.stringify(summary.upsert, null, 2));
 
-  if (options.refreshTopics) {
-    const result = topicTaxonomyService.refreshPaperTopicEdges({ limit: 100000, reset: true, minConfidence: 45 });
-    console.log("[paper-import] refreshed topic edges", JSON.stringify(result, null, 2));
+  if (summary.refreshedTopics) {
+    console.log("[paper-import] refreshed topic edges", JSON.stringify(summary.refreshedTopics, null, 2));
   }
 }
 
-main().catch((error) => {
-  console.error("[paper-import] failed", error);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error("[paper-import] failed", error);
+    process.exitCode = 1;
+  });
+}

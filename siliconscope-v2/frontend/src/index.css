@@ -8236,6 +8236,29 @@
   gap: 12px;
 }
 
+.ingestion-checks {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--ss-border);
+  border-radius: 16px;
+  background: rgba(246, 248, 252, 0.84);
+}
+
+.ingestion-checks label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--ss-muted);
+}
+
+.ingestion-checks input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
 .ingestion-form button {
   border: 0;
   border-radius: 16px;

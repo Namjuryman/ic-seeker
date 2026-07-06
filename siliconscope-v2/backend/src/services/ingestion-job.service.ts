@@ -1,7 +1,17 @@
 import { appSqlite } from "../db/app-db.js";
 
 export type IngestionJobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled" | "review_required";
-export type IngestionProvider = "ieee" | "openalex" | "crossref" | "csv" | "pdf" | "manual";
+export type IngestionProvider =
+  | "ieee"
+  | "openalex"
+  | "crossref"
+  | "semantic-scholar"
+  | "dblp"
+  | "csv"
+  | "scholar-csv"
+  | "aminer"
+  | "pdf"
+  | "manual";
 export type IngestionEventType = "created" | "started" | "progress" | "succeeded" | "failed" | "cancelled" | "retry" | "review_required" | "note";
 
 export type IngestionJob = {
@@ -36,7 +46,18 @@ export type IngestionJobEvent = {
   createdAt: string;
 };
 
-const providers = new Set<IngestionProvider>(["ieee", "openalex", "crossref", "csv", "pdf", "manual"]);
+const providers = new Set<IngestionProvider>([
+  "ieee",
+  "openalex",
+  "crossref",
+  "semantic-scholar",
+  "dblp",
+  "csv",
+  "scholar-csv",
+  "aminer",
+  "pdf",
+  "manual",
+]);
 const statuses = new Set<IngestionJobStatus>(["queued", "running", "succeeded", "failed", "cancelled", "review_required"]);
 
 function ensureTables() {
@@ -291,6 +312,27 @@ export const ingestionJobService = {
       actorUserId: actorUserId ?? null,
     });
     return updated;
+  },
+
+  recordEvent(input: {
+    jobId: number;
+    eventType: IngestionEventType;
+    message?: string | null;
+    payload?: Record<string, unknown>;
+    createdByUserId?: number | null;
+  }) {
+    return recordEvent(input);
+  },
+
+  runningJob(exceptId?: number) {
+    const row = appSqlite.prepare(`
+      SELECT *
+      FROM ingestion_jobs
+      WHERE status = 'running' ${exceptId ? "AND id != ?" : ""}
+      ORDER BY started_at ASC, id ASC
+      LIMIT 1
+    `).get(...(exceptId ? [exceptId] : []));
+    return row ? rowToJob(row) : null;
   },
 
   cancel(id: number, actorUserId?: number | null) {
