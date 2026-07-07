@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
 import type { PaperComment, PaperRow } from '../types'
 
 const COMMENTS_PAGE_SIZE = 20
@@ -23,7 +24,7 @@ const READING_STATUS_OPTIONS = [
   { value: 'skip', label: '跳过' },
   { value: 'review_later', label: '稍后复习' },
   { value: 'use_for_literature_review', label: '用于文献综述' },
-  { value: 'use_for_application', label: '用于应用' },
+  { value: 'use_for_application', label: '用于申请' },
   { value: 'use_for_project', label: '用于项目' },
 ]
 
@@ -51,6 +52,7 @@ export default function PaperDetailPage() {
   const { id } = useParams()
   const paperId = Number(id)
   const [paper, setPaper] = useState<(PaperRow & { note?: string }) | null>(null)
+  const [loadError, setLoadError] = useState('')
   const [comments, setComments] = useState<PaperComment[]>([])
   const [commentOffset, setCommentOffset] = useState(0)
   const [hasMoreComments, setHasMoreComments] = useState(false)
@@ -65,7 +67,6 @@ export default function PaperDetailPage() {
   const [activeReportId, setActiveReportId] = useState<number | null>(null)
 
   const queryClient = useQueryClient()
-
   const authors = useMemo(() => splitAuthors(paper?.authors || ''), [paper?.authors])
 
   async function loadComments(nextOffset = 0, append = false) {
@@ -83,14 +84,19 @@ export default function PaperDetailPage() {
   useEffect(() => {
     if (!Number.isFinite(paperId)) return
     async function load() {
-      const data = await api.paper(paperId)
-      setPaper(data)
-      setNote(data.note || '')
-      setReadingStatus(data.readingStatus || 'unread')
-      setTagText((data.tags || []).map((tag) => tag.name).join(', '))
-      await loadComments(0, false)
+      setLoadError('')
+      try {
+        const data = await api.paper(paperId)
+        setPaper(data)
+        setNote(data.note || '')
+        setReadingStatus(data.readingStatus || 'unread')
+        setTagText((data.tags || []).map((tag) => tag.name).join(', '))
+        await loadComments(0, false)
+      } catch (err: any) {
+        setLoadError(err?.response?.data?.error || err?.message || '论文详情加载失败')
+      }
     }
-    load().catch(console.error)
+    load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paperId])
 
@@ -145,8 +151,12 @@ export default function PaperDetailPage() {
     }
   }
 
+  if (loadError) {
+    return <ErrorState title="论文详情加载失败" description={loadError} onRetry={() => window.location.reload()} />
+  }
+
   if (!paper) {
-    return <div className="ss-skeleton-page"><p>Loading paper...</p></div>
+    return <SkeletonState variant="detail" title="正在加载论文详情" description="整理 DOI、作者、摘要、阅读状态和评论。" />
   }
 
   return (
@@ -191,9 +201,9 @@ export default function PaperDetailPage() {
             </div>
             <div className="ss-comment-list">
               {loadingComments && comments.length === 0 ? (
-                <div className="ss-skeleton-page"><p>评论加载中...</p></div>
+                <SkeletonState variant="list" title="评论加载中" description="只展示已通过审核的公开评论。" />
               ) : comments.length === 0 ? (
-                <p>暂无评论。适合记录技术问题、复现笔记和相关工作补充。</p>
+                <EmptyState title="暂无评论" description="适合记录技术问题、复现笔记和相关工作补充。" />
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="ss-comment-item">
@@ -239,7 +249,7 @@ export default function PaperDetailPage() {
             {loadingComments && comments.length > 0 && <p className="ss-comment-loading">加载中...</p>}
             <div className="ss-comment-editor">
               <p className="ss-comment-hint">
-                Discuss the paper, methods, circuits, experiments, and reproducibility. Do not attack authors personally.
+                讨论论文方法、电路、实验和可复现性。不要攻击作者个人，也不要上传或分享受版权保护的 PDF。
               </p>
               <select value={commentType} onChange={(event) => setCommentType(event.target.value)}>
                 <option>Question</option>

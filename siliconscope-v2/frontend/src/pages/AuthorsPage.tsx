@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
 import { searchPath } from '../utils/routes'
 import type { AuthorProfile, PaperRow } from '../types'
 
@@ -44,6 +45,32 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
   )
 }
 
+function BarList({
+  rows,
+  onClick,
+}: {
+  rows: Array<{ key: string; count: number }>
+  onClick: (key: string) => void
+}) {
+  const max = Math.max(1, rows[0]?.count || 1)
+
+  if (!rows.length) {
+    return <EmptyState eyebrow="No data" title="暂无分布数据" description="当前画像还没有足够的聚合信息。" />
+  }
+
+  return (
+    <div className="ss-bar-list">
+      {rows.map((item) => (
+        <button key={item.key} type="button" onClick={() => onClick(item.key)}>
+          <span>{item.key}</span>
+          <strong>{item.count ?? 0}</strong>
+          <i style={{ width: `${Math.min(100, (item.count / max) * 100)}%` }} />
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function AuthorsPage() {
   const [list, setList] = useState<AuthorListItem[]>([])
   const [detail, setDetail] = useState<AuthorProfile | null>(null)
@@ -74,7 +101,10 @@ export default function AuthorsPage() {
     }
     setLoadingDetail(true)
     setError('')
-    api.authorProfile(name).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载学者画像失败')).finally(() => setLoadingDetail(false))
+    api.authorProfile(name)
+      .then(setDetail)
+      .catch((err) => setError(err instanceof Error ? err.message : '加载学者画像失败'))
+      .finally(() => setLoadingDetail(false))
   }, [name])
 
   const filtered = useMemo(() => {
@@ -84,11 +114,11 @@ export default function AuthorsPage() {
   }, [list, query])
 
   if (name && loadingDetail) {
-    return <div className="ss-skeleton-page"><div /><p>正在加载学者画像...</p></div>
+    return <SkeletonState variant="detail" title="正在加载学者画像" description="整理代表论文、方向分布和合作网络。" />
   }
 
   if (name && error) {
-    return <div className="ss-empty-state">{error}</div>
+    return <ErrorState title="学者画像加载失败" description={error} onRetry={() => window.location.reload()} />
   }
 
   if (name && detail) {
@@ -118,9 +148,6 @@ export default function AuthorsPage() {
         <section className="ss-caveat">
           作者归一化仍依赖论文元数据和 alias 表。这里显示的是本地数据库画像，不等同于最终学术评价；未来接入 IEEE API、ORCID 和主页爬虫后会继续校准。
         </section>
-        <section className="ss-caveat">
-          Author profiles may merge or split people incorrectly when metadata is ambiguous. Use alias tools for manual correction.
-        </section>
 
         <div className="ss-profile-grid">
           <main className="ss-profile-main">
@@ -133,7 +160,11 @@ export default function AuthorsPage() {
                 <span>{detail.papers.length} loaded</span>
               </div>
               <div className="ss-mini-list">
-                {detail.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)}
+                {detail.papers.length ? (
+                  detail.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)
+                ) : (
+                  <EmptyState title="暂无代表论文" description="当前作者画像没有匹配到可展示论文。" />
+                )}
               </div>
             </section>
           </main>
@@ -141,56 +172,20 @@ export default function AuthorsPage() {
           <aside className="ss-profile-side">
             <section className="ss-panel">
               <div className="ss-panel-head compact"><h2>方向分布</h2></div>
-              <div className="ss-bar-list">
-                {detail.byDomain.slice(0, 8).map((item) => (
-                  <div
-                    key={item.key}
-                    className="cursor-pointer hover:bg-surface-elevated"
-                    onClick={() => navigate(searchPath({ field: item.key }))}
-                  >
-                    <span>{item.key}</span>
-                    <strong>{item.count ?? 0}</strong>
-                    <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byDomain[0]?.count || 1)) * 100)}%` }} />
-                  </div>
-                ))}
-              </div>
+              <BarList rows={detail.byDomain.slice(0, 8)} onClick={(key) => navigate(searchPath({ field: key }))} />
             </section>
 
             {detail.byVenue && detail.byVenue.length > 0 && (
               <section className="ss-panel">
                 <div className="ss-panel-head compact"><h2>发表 venues</h2></div>
-                <div className="ss-bar-list">
-                  {detail.byVenue.slice(0, 8).map((item) => (
-                    <div
-                      key={item.key}
-                      className="cursor-pointer hover:bg-surface-elevated"
-                      onClick={() => navigate(searchPath({ venue: item.key }))}
-                    >
-                      <span>{item.key}</span>
-                      <strong>{item.count ?? 0}</strong>
-                      <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byVenue[0]?.count || 1)) * 100)}%` }} />
-                    </div>
-                  ))}
-                </div>
+                <BarList rows={detail.byVenue.slice(0, 8)} onClick={(key) => navigate(searchPath({ venue: key }))} />
               </section>
             )}
 
             {detail.byYear && detail.byYear.length > 0 && (
               <section className="ss-panel">
                 <div className="ss-panel-head compact"><h2>年度趋势</h2></div>
-                <div className="ss-bar-list">
-                  {detail.byYear.slice(0, 8).map((item) => (
-                    <div
-                      key={item.key}
-                      className="cursor-pointer hover:bg-surface-elevated"
-                      onClick={() => navigate(searchPath({ yearFrom: item.key, yearTo: item.key }))}
-                    >
-                      <span>{item.key}</span>
-                      <strong>{item.count ?? 0}</strong>
-                      <i style={{ width: `${Math.min(100, (item.count / Math.max(1, detail.byYear[0]?.count || 1)) * 100)}%` }} />
-                    </div>
-                  ))}
-                </div>
+                <BarList rows={detail.byYear.slice(0, 8)} onClick={(key) => navigate(searchPath({ yearFrom: key, yearTo: key }))} />
               </section>
             )}
 
@@ -203,6 +198,7 @@ export default function AuthorsPage() {
                     <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
+                {!detail.coauthors.length && <span className="ss-muted-line">暂无合作作者数据。</span>}
               </div>
             </section>
 
@@ -215,6 +211,7 @@ export default function AuthorsPage() {
                     <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
+                {!detail.institutions.length && <span className="ss-muted-line">暂无机构线索。</span>}
               </div>
             </section>
           </aside>
@@ -237,7 +234,7 @@ export default function AuthorsPage() {
         </div>
       </section>
 
-      {error && <div className="ss-empty-state">{error}</div>}
+      {error && <ErrorState title="学者列表加载失败" description={error} />}
 
       <section className="ss-rank-table">
         <header>
@@ -248,7 +245,7 @@ export default function AuthorsPage() {
           <span>Citations</span>
           <span>Score</span>
         </header>
-        {loadingList && <div className="ss-table-loading">正在加载学者排行...</div>}
+        {loadingList && <SkeletonState variant="list" title="正在加载学者排行" description="整理作者分数、论文数和引用统计。" />}
         {!loadingList && filtered.map((author, index) => (
           <button key={author.name} onClick={() => navigate(`/authors/${encodeURIComponent(author.name)}`)}>
             <span>{index + 1}</span>
@@ -263,6 +260,9 @@ export default function AuthorsPage() {
             <span>{author.authorScore ?? 0}</span>
           </button>
         ))}
+        {!loadingList && !filtered.length && (
+          <EmptyState title="没有匹配的学者" description="换一个姓名、缩写或机构线索试试。" />
+        )}
       </section>
     </div>
   )

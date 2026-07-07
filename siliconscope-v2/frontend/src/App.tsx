@@ -2,6 +2,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from './api'
+import { SkeletonState } from './components/StatusState'
+import { useThemeMode, type ThemeMode } from './hooks/useThemeMode'
 import type { AuthStatus } from './types'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -75,7 +77,7 @@ function LoginGate({ children }: { children: React.ReactNode }) {
     }
   }
 
-  if (!status) return <div className="ss-loading">Loading SiliconScope...</div>
+  if (!status) return <SkeletonState title="正在进入 SiliconScope" description="检查本地认证状态和工作台配置。" />
 
   if (status.authEnabled && !status.authenticated) {
     return (
@@ -104,7 +106,15 @@ function LoginGate({ children }: { children: React.ReactNode }) {
   return children
 }
 
-function Layout({ children }: { children: React.ReactNode }) {
+function Layout({
+  children,
+  themeMode,
+  setThemeMode,
+}: {
+  children: React.ReactNode
+  themeMode: ThemeMode
+  setThemeMode: (mode: ThemeMode) => void
+}) {
   const [navOpen, setNavOpen] = useState(true)
   const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     acc[item.section] = acc[item.section] || []
@@ -141,6 +151,14 @@ function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="ss-sidebar-foot">
+          <label className="ss-theme-switch">
+            <span>主题</span>
+            <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
+              <option value="system">跟随系统</option>
+              <option value="light">浅色</option>
+              <option value="dark">深色</option>
+            </select>
+          </label>
           <button onClick={() => setNavOpen(false)}>收起</button>
           <span>SQLite metadata workspace</span>
         </div>
@@ -158,15 +176,17 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const { themeMode, setThemeMode } = useThemeMode()
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<div className="ss-loading">Loading page...</div>}>
+        <Suspense fallback={<SkeletonState title="正在加载页面" description="模块正在按需加载。" />}>
           <Routes>
             <Route path="/request-access" element={<AccessRequestPage />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/legal/:slug" element={<LegalPage />} />
-            <Route path="/*" element={<ProtectedApp />} />
+            <Route path="/*" element={<ProtectedApp themeMode={themeMode} setThemeMode={setThemeMode} />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
@@ -174,10 +194,10 @@ function App() {
   )
 }
 
-function ProtectedApp() {
+function ProtectedApp({ themeMode, setThemeMode }: { themeMode: ThemeMode; setThemeMode: (mode: ThemeMode) => void }) {
   return (
     <LoginGate>
-      <Layout>
+      <Layout themeMode={themeMode} setThemeMode={setThemeMode}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/papers/:id" element={<PaperDetailPage />} />
@@ -223,4 +243,3 @@ function ProtectedApp() {
 }
 
 export default App
-

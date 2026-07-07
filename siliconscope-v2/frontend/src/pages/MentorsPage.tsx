@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
-import type { MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, PaperRow } from '../types'
+import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
+import type { MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, MentorReviewStats, PaperRow } from '../types'
 
 const scoreFields = [
   ['mentorship', '指导质量'],
@@ -15,6 +16,8 @@ const scoreFields = [
   ['workloadIntensity', '工作强度'],
   ['careerSupport', '升学/就业支持'],
 ]
+
+type MentorProfileWithReviews = MentorProfile & { reviews?: MentorReview[]; reviewStats?: MentorReviewStats }
 
 function initials(name: string) {
   return name
@@ -51,9 +54,9 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
   )
 }
 
-function ReviewSection({ mentorName, profile }: { mentorName: string; profile: MentorProfile & { reviews?: MentorReview[]; reviewStats?: any } }) {
+function ReviewSection({ mentorName, profile }: { mentorName: string; profile: MentorProfileWithReviews }) {
   const [reviews, setReviews] = useState<MentorReview[]>(profile.reviews || [])
-  const [stats, setStats] = useState(profile.reviewStats || { total: 0, verified: 0, approved: 0, pending: 0 })
+  const [stats, setStats] = useState<MentorReviewStats>(profile.reviewStats || { total: 0, verified: 0, approved: 0, pending: 0 })
   const [relationshipType, setRelationshipType] = useState('Former Group Member')
   const [scores, setScores] = useState<Record<string, number>>(() => Object.fromEntries(scoreFields.map(([key]) => [key, 3])))
   const [strengthsText, setStrengthsText] = useState('')
@@ -68,13 +71,13 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
     setStats(profile.reviewStats || { total: 0, verified: 0, approved: 0, pending: 0 })
   }, [profile])
 
-  const refresh = async () => {
+  async function refresh() {
     const data = await api.mentorProfile(mentorName)
     setReviews(data.reviews || [])
     setStats(data.reviewStats || { total: 0, verified: 0, approved: 0, pending: 0 })
   }
 
-  const submit = async () => {
+  async function submit() {
     if (submitting) return
     setSubmitting(true)
     setError('')
@@ -100,10 +103,6 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
     return { key, label, avg }
   })
 
-  const showAggregate = approvedCount >= 3
-  const showSummary = approvedCount >= 5
-  const showCurated = approvedCount >= 10
-
   return (
     <section className="ss-panel ss-review-panel">
       <div className="ss-panel-head">
@@ -115,66 +114,31 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
       </div>
 
       <div className="ss-caveat compact">
-        Reviews are verified anonymous and moderated. They are intended for group experience and fit matching, not personal attacks.
+        评价用于了解课题组体验和匹配度，不用于人身攻击。公开统计只展示通过审核的匿名评价。
       </div>
 
-      {approvedCount < 3 && (
-        <div className="ss-caveat compact">
-          样本不足（{approvedCount} 条），暂不公开统计。评价继续收集，审核通过后即计入。
-        </div>
-      )}
-
-      {showAggregate && (
+      {approvedCount < 3 ? (
+        <EmptyState title="样本仍然不足" description={`当前只有 ${approvedCount} 条通过审核的评价，暂不公开聚合分数。`} />
+      ) : (
         <div className="ss-review-grid">
           {aggregate.map((item) => (
             <div key={item.key}>
               <span>{item.label}</span>
-              <strong>{item.avg ?? '—'}</strong>
+              <strong>{item.avg ?? '-'}</strong>
             </div>
           ))}
         </div>
       )}
 
-      {showSummary && (
+      {approvedCount >= 5 && (
         <div className="ss-review-summary">
           <h3>评价摘要</h3>
-          <div className="ss-text-block">
-            <h4>优势</h4>
-            {reviews.map((review, i) => {
-              const text = review.strengthsText || review.strengths_text
-              return text ? <p key={i}>• {text}</p> : null
-            })}
-          </div>
-          <div className="ss-text-block">
-            <h4>需要注意</h4>
-            {reviews.map((review, i) => {
-              const text = review.cautionsText || review.cautions_text
-              return text ? <p key={i}>• {text}</p> : null
-            })}
-          </div>
-          <div className="ss-text-block">
-            <h4>适合人群</h4>
-            {reviews.map((review, i) => {
-              const text = review.fitText || review.fit_text
-              return text ? <p key={i}>• {text}</p> : null
-            })}
-          </div>
-        </div>
-      )}
-
-      {showCurated && (
-        <div className="ss-review-curated">
-          <h3>精选匿名评价</h3>
-          {reviews.map((review) => (
-            <div key={review.id} className="ss-review-curated-item">
-              <div className="ss-review-curated-meta">
-                <span>{review.publicAlias || review.public_alias || 'Anonymous Verified Reviewer'}</span>
-              </div>
-              <div className="ss-review-curated-body">
-                <p><strong>优势：</strong>{review.strengthsText || review.strengths_text || '—'}</p>
-                <p><strong>需要注意：</strong>{review.cautionsText || review.cautions_text || '—'}</p>
-                <p><strong>适合人群：</strong>{review.fitText || review.fit_text || '—'}</p>
-              </div>
+          {reviews.slice(0, 6).map((review) => (
+            <div className="ss-text-block" key={review.id}>
+              <h4>{review.publicAlias || review.public_alias || 'Anonymous reviewer'}</h4>
+              <p><strong>优势：</strong>{review.strengthsText || review.strengths_text || '-'}</p>
+              <p><strong>注意：</strong>{review.cautionsText || review.cautions_text || '-'}</p>
+              <p><strong>适合：</strong>{review.fitText || review.fit_text || '-'}</p>
             </div>
           ))}
         </div>
@@ -214,7 +178,7 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
 export default function MentorsPage() {
   const [institutions, setInstitutions] = useState<MentorInstitution[]>([])
   const [detail, setDetail] = useState<MentorDetail | null>(null)
-  const [profile, setProfile] = useState<(MentorProfile & { reviews?: MentorReview[]; reviewStats?: any }) | null>(null)
+  const [profile, setProfile] = useState<MentorProfileWithReviews | null>(null)
   const [loadingInstitutions, setLoadingInstitutions] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
@@ -241,7 +205,10 @@ export default function MentorsPage() {
   useEffect(() => {
     setLoadingInstitutions(true)
     setError('')
-    api.mentorInstitutions().then(setInstitutions).catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败')).finally(() => setLoadingInstitutions(false))
+    api.mentorInstitutions()
+      .then(setInstitutions)
+      .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
+      .finally(() => setLoadingInstitutions(false))
   }, [])
 
   useEffect(() => {
@@ -251,7 +218,10 @@ export default function MentorsPage() {
     }
     setLoadingDetail(true)
     setError('')
-    api.mentorDetail(institution).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载导师列表失败')).finally(() => setLoadingDetail(false))
+    api.mentorDetail(institution)
+      .then(setDetail)
+      .catch((err) => setError(err instanceof Error ? err.message : '加载导师列表失败'))
+      .finally(() => setLoadingDetail(false))
   }, [institution])
 
   useEffect(() => {
@@ -261,7 +231,10 @@ export default function MentorsPage() {
     }
     setLoadingProfile(true)
     setError('')
-    api.mentorProfile(mentor).then(setProfile).catch((err) => setError(err instanceof Error ? err.message : '加载导师画像失败')).finally(() => setLoadingProfile(false))
+    api.mentorProfile(mentor)
+      .then(setProfile)
+      .catch((err) => setError(err instanceof Error ? err.message : '加载导师画像失败'))
+      .finally(() => setLoadingProfile(false))
   }, [mentor])
 
   const filteredInstitutions = useMemo(() => {
@@ -277,11 +250,11 @@ export default function MentorsPage() {
   }, [detail, recentOnly])
 
   if (mentor && loadingProfile) {
-    return <div className="ss-skeleton-page"><div /><p>正在加载导师画像...</p></div>
+    return <SkeletonState variant="detail" title="正在加载导师画像" description="整理论文流、职业阶段和评价摘要。" />
   }
 
   if (mentor && error) {
-    return <div className="ss-empty-state">{error}</div>
+    return <ErrorState title="导师画像加载失败" description={error} onRetry={() => window.location.reload()} />
   }
 
   if (mentor && profile) {
@@ -316,7 +289,11 @@ export default function MentorsPage() {
                 <span>{profile.papers?.length || 0} loaded</span>
               </div>
               <div className="ss-mini-list">
-                {profile.papers?.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)}
+                {profile.papers?.length ? (
+                  profile.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)
+                ) : (
+                  <EmptyState title="暂无论文" description="当前导师画像没有匹配到论文。" />
+                )}
               </div>
             </section>
           </main>
@@ -340,11 +317,11 @@ export default function MentorsPage() {
   }
 
   if (institution && loadingDetail) {
-    return <div className="ss-skeleton-page"><div /><p>正在加载机构导师列表...</p></div>
+    return <SkeletonState variant="list" title="正在加载机构导师列表" description="按机构论文和导师候选重新排序。" />
   }
 
   if (institution && error) {
-    return <div className="ss-empty-state">{error}</div>
+    return <ErrorState title="机构导师列表加载失败" description={error} onRetry={() => window.location.reload()} />
   }
 
   if (institution && detail) {
@@ -356,7 +333,7 @@ export default function MentorsPage() {
             <p className="ss-kicker">Mentor institution</p>
             <h1>{detail.institution}</h1>
             <p>
-              {detail.mentorCandidateCount} 位导师候选，已过滤 {detail.excludedLikelyStudentCount} 位疑似学生作者。单位归属仍需未来用 IEEE affiliation 和学院主页继续校验。
+              {detail.mentorCandidateCount} 位导师候选，已过滤 {detail.excludedLikelyStudentCount} 位疑似学生作者。单位归属仍需未来由 IEEE affiliation 和学院主页继续校验。
             </p>
           </div>
           <label className="ss-toggle">
@@ -384,6 +361,7 @@ export default function MentorsPage() {
               </div>
             </button>
           ))}
+          {!mentors.length && <EmptyState title="暂无导师候选" description="当前筛选条件下没有可展示导师。" />}
         </section>
       </div>
     )
@@ -403,10 +381,10 @@ export default function MentorsPage() {
         </div>
       </section>
 
-      {error && <div className="ss-empty-state">{error}</div>}
+      {error && <ErrorState title="导师机构加载失败" description={error} />}
 
       <section className="ss-card-grid institution">
-        {loadingInstitutions && <div className="ss-card-loading">正在加载导师机构...</div>}
+        {loadingInstitutions && <SkeletonState variant="list" title="正在加载导师机构" description="按 IC 论文实力、导师候选和 QS 信息排序。" />}
         {!loadingInstitutions && filteredInstitutions.map((item, index) => (
           <button key={item.name} className="ss-institution-card" onClick={() => setSearchParams({ institution: item.name })}>
             <div className="ss-card-head">
@@ -422,6 +400,9 @@ export default function MentorsPage() {
             </div>
           </button>
         ))}
+        {!loadingInstitutions && !filteredInstitutions.length && (
+          <EmptyState title="没有匹配机构" description="换一个学校英文名、缩写或地区线索试试。" />
+        )}
       </section>
     </div>
   )
