@@ -35,7 +35,8 @@
     "identity:candidates": "npm --workspace siliconscope-v2-backend run identity:candidates --",
     "foundation:refresh": "npm --workspace siliconscope-v2-backend run foundation:refresh --",
     "dedupe:scan": "npm --workspace siliconscope-v2-backend run dedupe:scan --",
-    "search:rebuild": "npm --workspace siliconscope-v2-backend run foundation:refresh -- --search-only"
+    "search:rebuild": "npm --workspace siliconscope-v2-backend run foundation:refresh -- --search-only",
+    "search:smoke": "npm --workspace siliconscope-v2-backend run search:smoke --"
   },
   "engines": {
     "node": ">=22.0.0"

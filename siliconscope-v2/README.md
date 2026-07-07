@@ -21,10 +21,13 @@ Useful commands:
 npm run foundation:refresh -- --dry-run
 npm run foundation:refresh
 npm run search:rebuild
+npm run search:smoke -- --threshold-ms=300
 npm run dedupe:scan -- --limit=200
 npm run pdf:scan -- --dir=/path/to/local/pdf/library --dry-run
 npm run identity:candidates -- --dry-run
 ```
+
+`search:smoke` runs a read-only set of representative local search queries against SQLite and fails if any first-page query exceeds the threshold. Use it after weekly data refreshes to keep the default 38k-paper search experience fast.
 
 Useful routes:
 

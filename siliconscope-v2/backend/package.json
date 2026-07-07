@@ -24,6 +24,7 @@
     "pdf:scan": "tsx src/scripts/scan-local-pdfs.ts",
     "identity:candidates": "tsx src/scripts/refresh-identity-candidates.ts",
     "foundation:refresh": "tsx src/scripts/run-foundation-refresh.ts",
+    "search:smoke": "tsx src/scripts/search-smoke.ts",
     "dedupe:scan": "tsx src/scripts/scan-paper-dedupe.ts"
   },
   "dependencies": {
