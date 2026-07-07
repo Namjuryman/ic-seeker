@@ -122,6 +122,11 @@ export const api = {
     return res.data
   },
 
+  async publicSearchDemo(params: { q: string }) {
+    const res = await axios.get<SearchResult>('/api/public/search-demo', { params })
+    return res.data
+  },
+
   async stats() {
     const res = await axios.get<StatsData>('/api/stats')
     return res.data

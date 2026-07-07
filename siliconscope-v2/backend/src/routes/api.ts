@@ -637,6 +637,16 @@ router.post("/admin/notifications", requireAdmin, async (req: AuthenticatedReque
   }
 });
 
+router.get("/public/search-demo", async (req, res) => {
+  const q = String(req.query.q || "").trim().slice(0, 120);
+  if (q.length < 2) {
+    res.json({ total: 0, limit: 3, offset: 0, engine: "public-demo", query: q, rows: [] });
+    return;
+  }
+  const result = searchService.search({ q, semantic: "1", limit: "3", offset: "0" }, 0);
+  res.json({ ...result, rows: result.rows.slice(0, 3), limit: 3, offset: 0, engine: `${result.engine}:public-demo` });
+});
+
 router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {
   const result = searchService.search(req.query as Record<string, string>, req.user?.userId ?? 0);
   res.json(result);

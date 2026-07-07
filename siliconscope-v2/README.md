@@ -28,8 +28,11 @@ npm run identity:candidates -- --dry-run
 
 Useful routes:
 
+- Public entry: unauthenticated `/` renders the Landing page; authenticated `/` enters the Search hub. `/landing` is also available as an explicit public landing route.
 - Public hubs: `/`, `/intelligence`, `/learning`, `/workspace`, `/account`.
 - Public deep links: `/daily-circuit`, `/learning-path`, `/reports/topics/:field`, `/compare/*`, `/companies/:id`.
+- Commercial/public pages: `/pricing`, `/request-access`, `/legal`.
+- SEO files: `/robots.txt` and `/sitemap.xml`. The current static sitemap covers the public entry points and a representative paper detail route; the production task is to generate full paper-detail sitemap shards from SQLite during release.
 - Admin: `/completion-report`, `/data-quality`, `/journal-ingestion`, `/search-index`, `/identity`, `/topic-taxonomy`, `/ai-enrichment`.
 
 Runtime note: the uploaded zip still contains a Git LFS pointer-sized `ic_database/ic_papers.sqlite`. Run `git lfs pull` or mount a real SQLite database before backend runtime QA.

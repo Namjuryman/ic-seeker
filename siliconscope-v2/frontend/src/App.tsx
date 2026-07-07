@@ -37,6 +37,8 @@ const ExportCenterPage = lazy(() => import('./pages/ExportCenterPage'))
 const TopicReportPage = lazy(() => import('./pages/TopicReportPage'))
 const PlatformPage = lazy(() => import('./pages/PlatformPage'))
 const LegalPage = lazy(() => import('./pages/LegalPage'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const PricingPage = lazy(() => import('./pages/PricingPage'))
 const AdminRedirectPage = lazy(() => import('./pages/AdminRedirectPage'))
 const AccessRequestPage = lazy(() => import('./pages/AccessRequestPage'))
 
@@ -52,17 +54,18 @@ const navItems = [
   { to: '/account', label: '账户平台', icon: 'A', section: 'SiliconScope' },
 ]
 
-function LoginGate({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus | null>(null)
+function LoginGate({ children, initialStatus }: { children: React.ReactNode; initialStatus?: AuthStatus }) {
+  const [status, setStatus] = useState<AuthStatus | null>(initialStatus ?? null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    if (initialStatus) return
     api.authStatus()
       .then(setStatus)
       .catch(() => setStatus({ authenticated: true, authEnabled: false, appName: 'SiliconScope' }))
-  }, [])
+  }, [initialStatus])
 
   async function login() {
     setLoading(true)
@@ -183,14 +186,38 @@ function App() {
       <BrowserRouter>
         <Suspense fallback={<SkeletonState title="正在加载页面" description="模块正在按需加载。" />}>
           <Routes>
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
             <Route path="/request-access" element={<AccessRequestPage />} />
             <Route path="/legal" element={<LegalPage />} />
             <Route path="/legal/:slug" element={<LegalPage />} />
+            <Route path="/" element={<EntryPage themeMode={themeMode} setThemeMode={setThemeMode} />} />
             <Route path="/*" element={<ProtectedApp themeMode={themeMode} setThemeMode={setThemeMode} />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
+  )
+}
+
+function EntryPage({ themeMode, setThemeMode }: { themeMode: ThemeMode; setThemeMode: (mode: ThemeMode) => void }) {
+  const [status, setStatus] = useState<AuthStatus | null>(null)
+
+  useEffect(() => {
+    api.authStatus()
+      .then(setStatus)
+      .catch(() => setStatus({ authenticated: true, authEnabled: false, appName: 'SiliconScope' }))
+  }, [])
+
+  if (!status) return <SkeletonState title="正在进入 SiliconScope" description="检查登录状态并准备首页。" />
+  if (status.authEnabled && !status.authenticated) return <LandingPage />
+
+  return (
+    <LoginGate initialStatus={status}>
+      <Layout themeMode={themeMode} setThemeMode={setThemeMode}>
+        <HomePage />
+      </Layout>
+    </LoginGate>
   )
 }
 
