@@ -19,6 +19,7 @@
     "paper-topics:refresh": "tsx src/scripts/refresh-paper-topics.ts",
     "snapshots:refresh": "tsx src/scripts/refresh-snapshots.ts",
     "backup:create": "tsx src/scripts/create-backup.ts",
+    "backup:restore": "tsx src/scripts/restore-backup.ts",
     "test": "vitest",
     "pdf:scan": "tsx src/scripts/scan-local-pdfs.ts",
     "identity:candidates": "tsx src/scripts/refresh-identity-candidates.ts",

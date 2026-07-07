@@ -204,10 +204,22 @@ npm start
 Before weekly imports, crawls, or schema/data maintenance, create a restore point:
 
 ```powershell
-npm run backup:create -- weekly-refresh --keep=10
+npm run backup:create -- weekly-refresh
 ```
 
-The admin console also has a backup page for creating, listing, pruning, and deleting local restore points. Restore remains manual-first: stop the API, copy the selected `.sqlite` backup over the active database, then restart.
+Backups keep the newest 14 restore points by default; pass `--keep=20` if you want a longer local retention window.
+
+The admin console also has a backup page for creating, listing, pruning, and deleting local restore points. Restore is scriptable but still operations-first:
+
+```powershell
+# Preview which files would be touched.
+npm run backup:restore -- --file=<backup-id-or-path> --dry-run
+
+# Stop the API first, then restore and restart.
+npm run backup:restore -- --file=<backup-id-or-path>
+```
+
+The restore command archives the current database and SQLite `-wal`/`-shm` sidecars as `.pre-restore-*` files before copying the selected backup over the active database. After restart, run a smoke check such as `/api/search?q=ldo`.
 
 ### Multi-source Paper Import
 
@@ -379,7 +391,8 @@ Ready-to-edit independent-domain templates are included under `deploy/`:
 - `deploy/DOMAIN_GO_LIVE.md` for the complete go-live checklist.
 - `npm run deploy:init -- your-domain.com` to generate `.env.production` with `www/admin/api` domains and strong random secrets.
 - `npm run deploy:doctor -- .env.production` to check env, frontend builds, and DNS readiness before going live.
-- `npm run backup:create -- pre-deploy --keep=10` before risky imports, schema work, or public deployments.
+- `npm run backup:create -- pre-deploy` before risky imports, schema work, or public deployments.
+- `npm run backup:restore -- --file=<backup-id-or-path> --dry-run` to rehearse a restore before touching the live SQLite file.
 
 Vercel or Cloudflare Pages can host the two static frontends later. The backend API still needs a server, Docker host, or serverless-compatible rewrite because it owns SQLite/Postgres access, admin APIs, authentication cookies, and ingestion jobs.
 
