@@ -154,8 +154,8 @@ export const adminService = {
           title: "Ingestion Jobs",
           status: ingestionJobs.total ? "partial" : "planned",
           metric: `${ingestionJobs.total} jobs`,
-          detail: "Register IEEE/OpenAlex/Crossref/CSV/PDF import jobs before background workers are connected.",
-          href: "/admin/ingestion",
+          detail: "Register and run audited IEEE/OpenAlex/Crossref/CSV metadata jobs with single-runner protection.",
+          href: "/journal-ingestion",
           action: "Create job",
         },
         {

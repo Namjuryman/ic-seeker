@@ -141,8 +141,8 @@ export const jobOperationsService = {
         metric: ingestionJobs.total ? `${ingestionJobs.total} jobs` : "planned",
         detail: activeIngestion
           ? `${activeIngestion} queued/running ingestion jobs`
-          : "IEEE/OpenAlex weekly imports can now be registered before workers are connected.",
-        href: "/admin/ingestion",
+          : "IEEE/OpenAlex/Crossref/Semantic Scholar/DBLP/CSV imports can run through the audited runner.",
+        href: "/journal-ingestion",
       },
     ];
 
@@ -190,7 +190,7 @@ export const jobOperationsService = {
               : "ok" as const,
         detail: `${job.counts.inserted} inserted, ${job.counts.updated} updated, ${job.counts.review} review`,
         at: timeOrNull(job.updatedAt || job.createdAt),
-        href: "/admin/ingestion",
+        href: "/journal-ingestion",
         sourceId: job.id,
       })),
     ].sort((a, b) => String(b.at || "").localeCompare(String(a.at || ""))).slice(0, 60);
@@ -211,7 +211,7 @@ export const jobOperationsService = {
         ingestionJobs: ingestionJobs.total,
         activeIngestion,
       },
-      caveat: "This page is the operations ledger for the independent-domain deployment. Import workers are still planned, so ingestion rows are placeholders until IEEE/OpenAlex jobs are connected.",
+      caveat: "This page is the operations ledger for the independent-domain deployment. Metadata ingestion jobs run in-process with a single-writer guard; large public imports should still be preceded by a backup and followed by snapshot/search refresh.",
     };
   },
 };

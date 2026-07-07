@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { IngestionJob, IngestionJobEvent, IngestionJobStatus } from '../types'
 
 const providerOptions = ['openalex', 'crossref', 'ieee', 'semantic-scholar', 'dblp', 'csv', 'scholar-csv', 'aminer', 'pdf', 'manual'] as const
+const runnableProviders = new Set(['openalex', 'crossref', 'ieee', 'semantic-scholar', 'dblp', 'csv', 'scholar-csv', 'aminer'])
 const statusOptions: IngestionJobStatus[] = ['queued', 'running', 'succeeded', 'failed', 'review_required', 'cancelled']
 
 function formatTime(value: string | null) {
@@ -189,10 +190,17 @@ function JobActions({ job, onSelected }: { job: IngestionJob; onSelected: (job: 
   })
 
   const busy = start.isPending || cancel.isPending || retry.isPending || status.isPending
+  const canRun = runnableProviders.has(job.provider)
 
   return (
     <div className="ingestion-actions" onClick={(event) => event.stopPropagation()}>
-      <button disabled={busy || (job.status !== 'queued' && job.status !== 'review_required')} onClick={() => start.mutate()}>Start</button>
+      <button
+        disabled={busy || !canRun || (job.status !== 'queued' && job.status !== 'review_required')}
+        title={canRun ? 'Run this metadata import job' : 'This provider is registry-only until its runner is implemented'}
+        onClick={() => start.mutate()}
+      >
+        Start
+      </button>
       <button className="subtle" disabled={busy || job.status === 'succeeded' || job.status === 'cancelled'} onClick={() => cancel.mutate()}>Cancel</button>
       <button className="subtle" disabled={busy || job.status === 'running'} onClick={() => retry.mutate()}>Retry</button>
       <select value={job.status} disabled={busy} onChange={(event) => status.mutate(event.target.value as IngestionJobStatus)}>
