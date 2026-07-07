@@ -1,4 +1,5 @@
 import { paperAiEnrichmentService, type PaperAiMode } from "../services/paper-ai-enrichment.service.js";
+import { appConfig } from "../config.js";
 
 const args = new Map<string, string | boolean>();
 
@@ -25,11 +26,11 @@ if (!["missing", "stale", "weak", "all"].includes(mode)) {
   throw new Error(`Unsupported --mode=${mode}. Use missing, stale, weak, or all.`);
 }
 
-const result = paperAiEnrichmentService.runBatch({
+const result = await paperAiEnrichmentService.runBatch({
   mode,
   limit: numberArg("limit", 200),
-  provider: stringArg("provider", "rule-local"),
-  model: stringArg("model", "heuristic-v1"),
+  provider: stringArg("provider", appConfig.aiEnrichmentProvider),
+  model: stringArg("model", appConfig.aiEnrichmentModel),
   dryRun: args.has("dry-run"),
   writeTopicEdges: !args.has("no-topic-edges"),
   minTopicConfidence: numberArg("min-topic-confidence", 55),

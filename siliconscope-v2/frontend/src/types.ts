@@ -1073,6 +1073,9 @@ export interface PaperAiRunResult {
   failed: number;
   skipped: number;
   topicEdgesWritten: number;
+  tokenInput?: number;
+  tokenOutput?: number;
+  actualCostUsd?: number;
   samples: Array<{
     paperId: number;
     title: string;

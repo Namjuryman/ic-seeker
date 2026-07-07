@@ -298,7 +298,7 @@ See [`docs/MULTISOURCE_PAPER_INGESTION.md`](docs/MULTISOURCE_PAPER_INGESTION.md)
 
 ### Offline Paper AI Enrichment
 
-SiliconScope can now run a cheap metadata-only enrichment pass after imports. The current provider is `rule-local`, so it costs nothing and does not call an external model. It creates versioned annotation rows and can also write derived `paper_topic_edges`.
+SiliconScope can now run a cheap metadata-only enrichment pass after imports. The default provider is `rule-local`, so it costs nothing and does not call an external model. An optional `openai-compatible` provider can be enabled with environment variables for controlled low-cost batches. Enrichment creates versioned annotation rows and can also write derived `paper_topic_edges`.
 
 ```powershell
 cd backend
@@ -311,9 +311,12 @@ npm run ai:annotate-papers -- --mode=missing --limit=500 --min-topic-confidence=
 
 # Revisit rows whose title/abstract/venue/DOI hash changed
 npm run ai:annotate-papers -- --mode=stale --limit=500
+
+# Optional external-provider smoke run. Requires AI_ENRICHMENT_API_KEY or OPENAI_API_KEY.
+npm run ai:annotate-papers -- --provider=openai-compatible --model=<cheap-model> --mode=weak --limit=10 --dry-run
 ```
 
-See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md) for the provider boundary, table model, and future low-cost API adapter plan.
+See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md) for the provider boundary, table model, schema validation, and cost-control plan.
 
 For manual development, run backend and frontend separately:
 
@@ -471,7 +474,7 @@ This runs `backend/src/scripts/seed-companies.ts`, which creates the `companies`
 - Sync the learning route/daily-lesson seed catalog into the database-backed learning content registry from the independent admin frontend.
 - Sync the IC topic taxonomy seed into database projection tables from the independent admin frontend, or run `npm --workspace siliconscope-v2-backend run topic-taxonomy:sync`.
 - Refresh precomputed paper-topic edges with `npm --workspace siliconscope-v2-backend run paper-topics:refresh -- --limit=50000 --min-confidence=45`.
-- AI enrichment now has backend tables, a CLI, and admin API. The current `rule-local` provider is a no-cost metadata annotator; a real cheap-model provider and admin review UI are next. See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md).
+- AI enrichment now has backend tables, a CLI, admin API, independent-admin controls, a no-cost `rule-local` provider, and an optional chat-completions-compatible provider guarded by schema validation. See [`docs/AI_PAPER_ENRICHMENT_PLAN.md`](docs/AI_PAPER_ENRICHMENT_PLAN.md).
 - CSV bulk import is planned but not yet implemented.
 - All `/api/admin/*` endpoints require admin role (`requireAdmin`). In local development, the launcher sets `IC_SEEKER_LOCAL_ADMIN=1`; public deployments must keep that flag disabled and require login.
 

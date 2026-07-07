@@ -90,6 +90,8 @@ function RunResultPanel({ result }: { result: PaperAiRunResult }) {
 export default function AiEnrichmentAdminPage() {
   const queryClient = useQueryClient()
   const [mode, setMode] = useState('weak')
+  const [provider, setProvider] = useState('rule-local')
+  const [model, setModel] = useState('heuristic-v1')
   const [limit, setLimit] = useState(100)
   const [minTopicConfidence, setMinTopicConfidence] = useState(55)
   const [dryRun, setDryRun] = useState(true)
@@ -106,7 +108,7 @@ export default function AiEnrichmentAdminPage() {
     queryFn: () => api.paperAiAnnotations({ limit: 40, needsReview: needsReviewOnly }),
   })
   const runBatch = useMutation({
-    mutationFn: () => api.runPaperAiEnrichment({ mode, limit, minTopicConfidence, dryRun, writeTopicEdges }),
+    mutationFn: () => api.runPaperAiEnrichment({ mode, provider, model, limit, minTopicConfidence, dryRun, writeTopicEdges }),
     onSuccess: (result) => {
       setLastResult(result)
       queryClient.invalidateQueries({ queryKey: ['paper-ai-overview'] })
@@ -166,6 +168,17 @@ export default function AiEnrichmentAdminPage() {
               </select>
             </label>
             <label className="block text-sm font-semibold text-ink-text">
+              Provider
+              <select value={provider} onChange={(event) => setProvider(event.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2">
+                <option value="rule-local">rule-local (free deterministic)</option>
+                <option value="openai-compatible">openai-compatible</option>
+              </select>
+            </label>
+            <label className="block text-sm font-semibold text-ink-text">
+              Model
+              <input value={model} onChange={(event) => setModel(event.target.value)} className="mt-1 w-full rounded-lg border border-line px-3 py-2" />
+            </label>
+            <label className="block text-sm font-semibold text-ink-text">
               Limit
               <input type="number" min={1} max={5000} value={limit} onChange={(event) => setLimit(Number(event.target.value || 1))} className="mt-1 w-full rounded-lg border border-line px-3 py-2" />
             </label>
@@ -185,7 +198,7 @@ export default function AiEnrichmentAdminPage() {
               {runBatch.isPending ? 'Running...' : dryRun ? 'Run dry-run' : 'Run batch'}
             </button>
             <p className="learning-muted">
-              Start with dry-run. Disable dry-run only after samples look reasonable; the job writes versioned rows and can update non-manual topic edges.
+              Start with dry-run. External providers require AI_ENRICHMENT_API_KEY or OPENAI_API_KEY on the backend; the local provider never calls paid APIs.
             </p>
           </div>
         </div>

@@ -1453,7 +1453,7 @@ router.get("/admin/ai-enrichment/annotations", requireAdmin, async (req, res) =>
 
 router.post("/admin/ai-enrichment/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = paperAiEnrichmentService.runBatch({
+    const result = await paperAiEnrichmentService.runBatch({
       mode: req.body?.mode,
       limit: req.body?.limit,
       provider: req.body?.provider,

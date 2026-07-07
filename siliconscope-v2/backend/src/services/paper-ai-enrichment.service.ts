@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
 import { appSqlite } from "../db/app-db.js";
 import { topicNodes } from "../data/topic-taxonomy.js";
+import { appConfig } from "../config.js";
+import { generatePaperAiAnnotation, type PaperAiAnnotationResult } from "./paper-ai-provider.js";
 
-const DEFAULT_PROVIDER = "rule-local";
-const DEFAULT_MODEL = "heuristic-v1";
+const DEFAULT_PROVIDER = appConfig.aiEnrichmentProvider;
+const DEFAULT_MODEL = appConfig.aiEnrichmentModel;
 const PROMPT_VERSION = "paper-ai-v1";
 const EDGE_METHOD = "ai-cheap-v1";
 
@@ -32,7 +34,7 @@ export type PaperAiRunOptions = {
   dryRun?: boolean;
 };
 
-type AnnotationResult = {
+type AnnotationResult = PaperAiAnnotationResult & {
   summaryZh: string;
   summaryEn: string;
   primaryDomain: string;
@@ -44,6 +46,7 @@ type AnnotationResult = {
   needsReview: boolean;
   tokenInput: number;
   tokenOutput: number;
+  costEstimateUsd: number;
 };
 
 function stableHash(parts: unknown[]) {
@@ -199,6 +202,7 @@ function annotateWithRules(row: PaperRow): AnnotationResult {
     needsReview: icRelevance <= 0 || !row.abstract || !topics.length || confidence < 0.55 || row.domain === "General IC",
     tokenInput: Math.ceil(text.length / 4),
     tokenOutput: Math.ceil((summaries.zh.length + summaries.en.length) / 4),
+    costEstimateUsd: 0,
   };
 }
 
@@ -282,7 +286,7 @@ function insertAnnotation(row: PaperRow, annotation: AnnotationResult, options: 
     ) VALUES (
       @paperId, @provider, @model, @promptVersion, @inputHash, 'zh-en',
       @summaryZh, @summaryEn, @primaryDomain, @labelsJson, @topicsJson,
-      @entitiesJson, @metricsJson, @confidence, 0, @tokenInput,
+      @entitiesJson, @metricsJson, @confidence, @costEstimateUsd, @tokenInput,
       @tokenOutput, @needsReview, 'ok', NULL, CURRENT_TIMESTAMP
     )
   `).run({
@@ -299,6 +303,7 @@ function insertAnnotation(row: PaperRow, annotation: AnnotationResult, options: 
     entitiesJson: JSON.stringify(annotation.entities),
     metricsJson: JSON.stringify(annotation.metrics),
     confidence: annotation.confidence,
+    costEstimateUsd: annotation.costEstimateUsd,
     tokenInput: annotation.tokenInput,
     tokenOutput: annotation.tokenOutput,
     needsReview: annotation.needsReview ? 1 : 0,
@@ -349,7 +354,7 @@ export const paperAiEnrichmentService = {
     return { rows, total: rows.length };
   },
 
-  runBatch(input: PaperAiRunOptions = {}) {
+  async runBatch(input: PaperAiRunOptions = {}) {
     const options = {
       mode: input.mode || "missing",
       limit: Math.max(1, Math.min(5000, Number(input.limit || 200))),
@@ -373,40 +378,50 @@ export const paperAiEnrichmentService = {
     let failed = 0;
     let skipped = 0;
     let topicEdgesWritten = 0;
+    let tokenInput = 0;
+    let tokenOutput = 0;
+    let actualCostUsd = 0;
     const samples: unknown[] = [];
     const errors: string[] = [];
-    const tx = appSqlite.transaction((rows: PaperRow[]) => {
-      for (const row of rows) {
-        try {
-          const hash = inputHash(row);
-          if (options.mode !== "all" && row.input_hash === hash) {
-            skipped += 1;
-            continue;
-          }
-          const annotation = annotateWithRules(row);
-          if (samples.length < 8) {
-            samples.push({ paperId: row.id, title: row.title, confidence: annotation.confidence, topics: annotation.topics.slice(0, 3), needsReview: annotation.needsReview });
-          }
-          if (!options.dryRun) {
+    for (const row of candidates) {
+      try {
+        const hash = inputHash(row);
+        if (options.mode !== "all" && row.input_hash === hash) {
+          skipped += 1;
+          continue;
+        }
+        const annotation = await generatePaperAiAnnotation({
+          row,
+          provider: options.provider,
+          model: options.model,
+          fallback: () => annotateWithRules(row),
+        });
+        tokenInput += annotation.tokenInput;
+        tokenOutput += annotation.tokenOutput;
+        actualCostUsd += annotation.costEstimateUsd;
+        if (samples.length < 8) {
+          samples.push({ paperId: row.id, title: row.title, confidence: annotation.confidence, topics: annotation.topics.slice(0, 3), needsReview: annotation.needsReview });
+        }
+        if (!options.dryRun) {
+          appSqlite.transaction(() => {
             insertAnnotation(row, annotation, options);
             if (options.writeTopicEdges) topicEdgesWritten += writeTopicEdges(row.id, annotation.topics, options.minTopicConfidence);
-          }
-          processed += 1;
-        } catch (error) {
-          failed += 1;
-          errors.push(`${row.id}: ${error instanceof Error ? error.message : String(error)}`);
+          })();
         }
+        processed += 1;
+      } catch (error) {
+        failed += 1;
+        errors.push(`${row.id}: ${error instanceof Error ? error.message : String(error)}`);
       }
-    });
-    tx(candidates);
+    }
     const finishedAt = new Date().toISOString();
     if (!options.dryRun && jobId) {
       appSqlite.prepare(`
         UPDATE paper_ai_annotation_jobs
-        SET status = ?, processed = ?, failed = ?, skipped = ?, actual_cost_usd = 0,
+        SET status = ?, processed = ?, failed = ?, skipped = ?, actual_cost_usd = ?,
             error = ?, finished_at = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(failed ? "review_required" : "succeeded", processed, failed, skipped, errors.slice(0, 5).join("\n") || null, finishedAt, jobId);
+      `).run(failed ? "review_required" : "succeeded", processed, failed, skipped, actualCostUsd, errors.slice(0, 5).join("\n") || null, finishedAt, jobId);
     }
     return {
       ok: failed === 0,
@@ -421,6 +436,9 @@ export const paperAiEnrichmentService = {
       failed,
       skipped,
       topicEdgesWritten,
+      tokenInput,
+      tokenOutput,
+      actualCostUsd,
       samples,
       errors: errors.slice(0, 20),
       job: jobId ? jobRow(jobId) : null,

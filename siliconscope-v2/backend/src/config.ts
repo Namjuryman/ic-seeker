@@ -44,6 +44,12 @@ export const appConfig = {
   
   crossrefMailto: process.env.CROSSREF_MAILTO || "",
 
+  aiEnrichmentProvider: process.env.AI_ENRICHMENT_PROVIDER || "rule-local",
+  aiEnrichmentModel: process.env.AI_ENRICHMENT_MODEL || "heuristic-v1",
+  aiEnrichmentBaseUrl: process.env.AI_ENRICHMENT_BASE_URL || "https://api.openai.com/v1",
+  aiEnrichmentApiKey: process.env.AI_ENRICHMENT_API_KEY || process.env.OPENAI_API_KEY || "",
+  aiEnrichmentMaxOutputTokens: Number(process.env.AI_ENRICHMENT_MAX_OUTPUT_TOKENS || 900),
+
   postgresUrl: process.env.POSTGRES_URL || "",
   redisUrl: process.env.REDIS_URL || "",
   searchEngine: process.env.SEARCH_ENGINE || "sqlite",

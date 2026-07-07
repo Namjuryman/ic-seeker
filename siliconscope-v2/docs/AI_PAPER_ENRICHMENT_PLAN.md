@@ -169,7 +169,7 @@ If validation fails, store the error and do not update derived edges.
 
 ## First Implementation Milestone
 
-Status: implemented as a local rule-based MVP. This creates the durable versioned annotation layer first, without spending API budget or making page render depend on model calls.
+Status: implemented as a durable offline annotation layer with a default local provider and an optional chat-completions-compatible provider. Page rendering never calls a model directly; admins run batches explicitly from CLI or the independent admin frontend.
 
 Implemented:
 
@@ -177,7 +177,9 @@ Implemented:
    - `paper_ai_annotations`
    - `paper_ai_annotation_jobs`
    - `paper_ai_annotation_reviews`
-2. Provider-neutral `rule-local` service that reads only title, abstract, venue, year, DOI, current domain, and the local topic taxonomy.
+2. Provider-neutral annotation service:
+   - `rule-local` reads only title, abstract, venue, year, DOI, current domain, and the local topic taxonomy.
+   - `openai-compatible` calls a configured chat-completions-compatible endpoint, validates strict JSON with Zod, and rejects unknown topic IDs.
 3. CLI command:
 
 ```powershell
@@ -195,6 +197,9 @@ npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=weak --
 
 # Revisit rows whose source metadata changed since the previous prompt version/hash
 npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=stale --limit=500
+
+# Optional external provider dry-run. Requires AI_ENRICHMENT_API_KEY or OPENAI_API_KEY.
+npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --provider=openai-compatible --model=<cheap-model> --mode=weak --limit=10 --dry-run
 ```
 
 4. Admin API:
@@ -202,10 +207,18 @@ npm --workspace siliconscope-v2-backend run ai:annotate-papers -- --mode=stale -
    - `GET /api/admin/ai-enrichment/annotations`
    - `POST /api/admin/ai-enrichment/run`
 
+Configuration:
+
+- `AI_ENRICHMENT_PROVIDER=rule-local`
+- `AI_ENRICHMENT_MODEL=heuristic-v1`
+- `AI_ENRICHMENT_BASE_URL=https://api.openai.com/v1`
+- `AI_ENRICHMENT_API_KEY=`
+- `AI_ENRICHMENT_MAX_OUTPUT_TOKENS=900`
+
 Remaining:
 
-1. Add the independent-admin UI page for job history, cost estimate, failed rows, and samples.
-2. Add one real provider adapter only after API key, budget limit, and prompt validation are ready.
-3. Add review tools to approve/correct generated topic paths and metric extraction.
+1. Add hard daily/monthly budget ceilings before running large external-model batches.
+2. Add review tools to approve/correct generated topic paths and metric extraction.
+3. Add a cost table per provider/model so `actual_cost_usd` becomes a real estimate instead of a placeholder.
 
 This keeps the product cheap and scalable: old papers get one bulk annotation pass, and weekly imports only annotate new or changed rows.
