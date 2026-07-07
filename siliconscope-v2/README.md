@@ -28,10 +28,13 @@ npm run identity:candidates -- --dry-run
 
 Useful routes:
 
-- Public: `/daily-circuit`, `/learning`, `/learning-path`, `/reports/topics/:field`, `/compare/*`, `/companies/:id`.
+- Public hubs: `/`, `/intelligence`, `/learning`, `/workspace`, `/account`.
+- Public deep links: `/daily-circuit`, `/learning-path`, `/reports/topics/:field`, `/compare/*`, `/companies/:id`.
 - Admin: `/completion-report`, `/data-quality`, `/journal-ingestion`, `/search-index`, `/identity`, `/topic-taxonomy`, `/ai-enrichment`.
 
 Runtime note: the uploaded zip still contains a Git LFS pointer-sized `ic_database/ic_papers.sqlite`. Run `git lfs pull` or mount a real SQLite database before backend runtime QA.
+
+The public/admin route split and hub map are documented in [`docs/INFORMATION_ARCHITECTURE.md`](docs/INFORMATION_ARCHITECTURE.md).
 
 ## Quickstart
 

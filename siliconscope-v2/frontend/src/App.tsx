@@ -12,6 +12,9 @@ const LearningDashboardPage = lazy(() => import('./pages/LearningDashboardPage')
 const RoadmapDetailPage = lazy(() => import('./pages/RoadmapDetailPage'))
 const DailyLessonPage = lazy(() => import('./pages/DailyLessonPage'))
 const DailyCircuitPage = lazy(() => import('./pages/DailyCircuitPage'))
+const IntelligenceHubPage = lazy(() => import('./pages/IntelligenceHubPage'))
+const WorkspaceHubPage = lazy(() => import('./pages/WorkspaceHubPage'))
+const AccountHubPage = lazy(() => import('./pages/AccountHubPage'))
 const GeoPage = lazy(() => import('./pages/GeoPage'))
 const AuthorsPage = lazy(() => import('./pages/AuthorsPage'))
 const InstitutionsPage = lazy(() => import('./pages/InstitutionsPage'))
@@ -40,26 +43,11 @@ const queryClient = new QueryClient({
 })
 
 const navItems = [
-  { to: '/', label: '学术搜索', icon: 'S', section: '探索' },
-  { to: '/daily-circuit', label: '每日电路', icon: 'D', section: '探索' },
-  { to: '/learning', label: '学习首页', icon: 'Ω', section: '探索' },
-  { to: '/learning-path', label: '路线库', icon: 'L', section: '探索' },
-  { to: '/topics', label: '方向洞察', icon: 'T', section: '探索' },
-  { to: '/geo', label: '区域地图', icon: 'G', section: '探索' },
-  { to: '/companies', label: '企业情报', icon: 'C', section: '探索' },
-  { to: '/watchlist', label: '关注列表', icon: 'W', section: '探索' },
-  { to: '/notifications', label: '通知中心', icon: 'N', section: '探索' },
-  { to: '/billing', label: '订阅配额', icon: 'B', section: '探索' },
-  { to: '/reading-queue', label: '阅读队列', icon: 'R', section: '探索' },
-  { to: '/compare', label: '对比中心', icon: '≋', section: '探索' },
-  { to: '/exports', label: '导出中心', icon: 'E', section: '探索' },
-  { to: '/reports', label: '报告中心', icon: 'P', section: '探索' },
-  { to: '/legal', label: '政策边界', icon: '§', section: '探索' },
-  { to: '/authors', label: '学者画像', icon: 'A', section: '画像' },
-  { to: '/institutions', label: '机构实力', icon: 'I', section: '画像' },
-  { to: '/mentors', label: '导师档案', icon: 'M', section: '画像' },
-  { to: '/platform', label: '平台中枢', icon: 'O', section: '数据' },
-  { to: '/venue-matrix', label: '会议/期刊', icon: 'V', section: '数据' },
+  { to: '/', label: '学术搜索', icon: 'S', section: 'SiliconScope' },
+  { to: '/intelligence', label: '情报中心', icon: 'I', section: 'SiliconScope' },
+  { to: '/learning', label: '学习路线', icon: 'L', section: 'SiliconScope' },
+  { to: '/workspace', label: '个人工作台', icon: 'W', section: 'SiliconScope' },
+  { to: '/account', label: '账户平台', icon: 'A', section: 'SiliconScope' },
 ]
 
 function LoginGate({ children }: { children: React.ReactNode }) {
@@ -193,6 +181,9 @@ function ProtectedApp() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/papers/:id" element={<PaperDetailPage />} />
+          <Route path="/intelligence" element={<IntelligenceHubPage />} />
+          <Route path="/workspace" element={<WorkspaceHubPage />} />
+          <Route path="/account" element={<AccountHubPage />} />
           <Route path="/daily-circuit" element={<DailyCircuitPage />} />
           <Route path="/learning" element={<LearningDashboardPage />} />
           <Route path="/learning/roadmaps/:slug" element={<RoadmapDetailPage />} />
@@ -232,6 +223,4 @@ function ProtectedApp() {
 }
 
 export default App
-
-
 

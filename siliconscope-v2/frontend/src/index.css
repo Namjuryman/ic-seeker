@@ -8274,6 +8274,105 @@
   cursor: wait;
 }
 
+.hub-page {
+  display: grid;
+  gap: 22px;
+}
+
+.hub-hero,
+.hub-card,
+.hub-tile {
+  border: 1px solid var(--ss-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--ss-shadow-soft);
+}
+
+.hub-hero {
+  padding: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(45, 99, 255, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(244, 248, 255, 0.92));
+}
+
+.hub-hero span,
+.hub-card > div:first-child span {
+  color: var(--ss-blue);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hub-hero h1 {
+  margin: 8px 0 10px;
+  color: var(--ss-ink);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+}
+
+.hub-hero p,
+.hub-card p,
+.hub-tile span,
+.hub-link-list small {
+  color: var(--ss-muted);
+  line-height: 1.65;
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.hub-grid-compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hub-card {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.hub-card p {
+  margin: 8px 0 0;
+}
+
+.hub-link-list {
+  display: grid;
+  gap: 10px;
+}
+
+.hub-link-list a,
+.hub-tile {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  color: var(--ss-ink);
+  text-decoration: none;
+  border: 1px solid rgba(207, 216, 232, 0.75);
+  border-radius: 16px;
+  background: rgba(248, 250, 253, 0.84);
+  transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.hub-link-list a:hover,
+.hub-tile:hover {
+  transform: translateY(-1px);
+  border-color: rgba(45, 99, 255, 0.32);
+  box-shadow: 0 14px 30px rgba(31, 44, 72, 0.08);
+}
+
+.hub-link-list strong,
+.hub-tile strong {
+  font-size: 1rem;
+}
+
+.hub-tile {
+  padding: 22px;
+}
+
 .ingestion-error {
   margin: 0;
   color: #b42318;
@@ -8489,6 +8588,8 @@
 
   .observability-stats,
   .jobops-lanes,
+  .hub-grid,
+  .hub-grid-compact,
   .ingestion-grid,
   .ingestion-workbench,
   .scheduler-summary,
@@ -8537,6 +8638,8 @@
   .observability-stats,
   .jobops-counts,
   .jobops-lanes,
+  .hub-grid,
+  .hub-grid-compact,
   .ingestion-grid,
   .ingestion-workbench,
   .ingestion-form-pair,
