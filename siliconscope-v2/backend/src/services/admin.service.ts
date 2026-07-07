@@ -92,7 +92,7 @@ export const adminService = {
           status: siteSettings.maintenanceMode ? "attention" : siteSettings.checkoutEnabled ? "partial" : "ready",
           metric: siteSettings.inviteOnlyMode ? "invite-only" : "public",
           detail: `${siteSettings.enabledFlags} flags enabled, ${siteSettings.disabledFlags} disabled; checkout ${siteSettings.checkoutEnabled ? "enabled" : "off"}.`,
-          href: "/admin/site-settings",
+          href: "/site-settings",
           action: "Configure flags",
         },
         {
@@ -101,7 +101,7 @@ export const adminService = {
           status: scheduler.enabled || maintenanceRuns.total || ingestionJobs.total ? "ready" : "partial",
           metric: `${maintenanceRuns.total + ingestionJobs.total} runs`,
           detail: "Unified scheduler, maintenance, backup, snapshot, data-quality, and ingestion operations ledger.",
-          href: "/admin/job-operations",
+          href: "/job-operations",
           action: "Open ledger",
         },
         {
@@ -119,7 +119,7 @@ export const adminService = {
           status: auditCount ? "ready" : "planned",
           metric: `${auditCount} events`,
           detail: "Admin mutations, actor, resource, status, IP, and user-agent.",
-          href: "/admin/audit-logs",
+          href: "/audit-logs",
           action: "View trail",
         },
         {
@@ -128,7 +128,7 @@ export const adminService = {
           status: observability.totalErrors || observability.totalRateLimited ? "attention" : "ready",
           metric: `${observability.totalRequests} req`,
           detail: `${observability.requestsLastMinute}/min, avg ${observability.averageDurationMs}ms, errors ${observability.totalErrors}`,
-          href: "/admin/observability",
+          href: "/observability",
           action: "Inspect traffic",
         },
         {
@@ -137,7 +137,7 @@ export const adminService = {
           status: maintenanceRuns.rows[0]?.status === "failure" ? "attention" : "ready",
           metric: `${maintenanceRuns.total} runs`,
           detail: maintenanceRuns.rows[0] ? `${maintenanceRuns.rows[0].jobId} ${maintenanceRuns.rows[0].status}` : "No maintenance jobs have run yet.",
-          href: "/admin/maintenance",
+          href: "/maintenance",
           action: "Run task",
         },
         {
@@ -146,7 +146,7 @@ export const adminService = {
           status: scheduler.enabled ? "ready" : "planned",
           metric: scheduler.enabled ? "enabled" : "manual",
           detail: scheduler.nextRunAt ? `next ${scheduler.nextRunAt}` : `${scheduler.jobs.length} jobs configured; scheduler disabled.`,
-          href: "/admin/scheduler",
+          href: "/scheduler",
           action: "Configure jobs",
         },
         {
@@ -164,7 +164,7 @@ export const adminService = {
           status: backups.total ? "ready" : "attention",
           metric: `${backups.total} backups`,
           detail: backups.rows[0] ? `latest ${backups.rows[0].createdAt}` : "No backup has been created yet.",
-          href: "/admin/backups",
+          href: "/backups",
           action: "Create / prune",
         },
         {
@@ -193,7 +193,7 @@ export const adminService = {
           detail: searchIndex.configured
             ? `${searchIndex.indexes.map((index: any) => `${index.uid}:${index.documents || 0}`).join(", ")}`
             : "Optional Meilisearch adapter is not configured; SQLite search remains active.",
-          href: "/admin/search-index",
+          href: "/search-index",
           action: "Inspect / rebuild",
         },
         {
@@ -202,7 +202,7 @@ export const adminService = {
           status: snapshots.length ? "ready" : "needs-refresh",
           metric: `${snapshots.length} snapshots`,
           detail: `${Math.round(snapshotBytes / 1024).toLocaleString()} KB cached payload.`,
-          href: "/admin/snapshots",
+          href: "/snapshots",
           action: "Refresh / clear",
         },
         {
@@ -211,7 +211,7 @@ export const adminService = {
           status: moderationOpen ? "attention" : "ready",
           metric: `${moderationOpen} open`,
           detail: `${moderation.totals?.comments || 0} comments, ${moderation.totals?.reviews || 0} reviews, ${moderation.totals?.reports || 0} reports.`,
-          href: "/admin/moderation",
+          href: "/moderation",
           action: "Review content",
         },
         {
@@ -220,7 +220,7 @@ export const adminService = {
           status: configuredApiKeys ? "partial" : "planned",
           metric: `${configuredApiKeys} configured`,
           detail: "IEEE / OpenAI / AMiner / Crossref credentials.",
-          href: "/admin",
+          href: "/",
           action: "View config",
         },
         {
@@ -229,7 +229,7 @@ export const adminService = {
           status: pdfInbox.count ? "attention" : "ready",
           metric: `${pdfInbox.count} PDFs`,
           detail: pdfInbox.path,
-          href: "/admin",
+          href: "/",
           action: "Match local PDF",
         },
         {
@@ -238,7 +238,7 @@ export const adminService = {
           status: "partial",
           metric: `${stats.total.toLocaleString()} papers`,
           detail: "Duplicate DOI, topic confidence, aliases, and affiliations.",
-          href: "/admin/data-quality",
+          href: "/data-quality",
           action: "Run checks",
         },
         {
@@ -247,7 +247,7 @@ export const adminService = {
           status: companies.total ? "ready" : "needs-seed",
           metric: `${companies.total} companies`,
           detail: "Company aliases, sources, field facts, and job signals.",
-          href: "/admin/companies",
+          href: "/companies",
           action: "Maintain companies",
         },
         {
@@ -256,7 +256,7 @@ export const adminService = {
           status: "partial",
           metric: "manual aliases",
           detail: "Author and institution disambiguation.",
-          href: "/admin/identity",
+          href: "/identity",
           action: "Maintain aliases",
         },
         {
