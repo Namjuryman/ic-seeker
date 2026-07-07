@@ -39,9 +39,9 @@ Runtime note: the uploaded zip still contains a Git LFS pointer-sized `ic_databa
 
 The public/admin route split and hub map are documented in [`docs/INFORMATION_ARCHITECTURE.md`](docs/INFORMATION_ARCHITECTURE.md).
 
-## Quickstart
+## Three-command Quickstart
 
-SiliconScope v2 can run from a clean clone even when the large SQLite file has not been pulled through Git LFS.
+SiliconScope v2 can run from a clean clone even when the large SQLite file has not been pulled through Git LFS. Start from `siliconscope-v2/`:
 
 ```powershell
 npm install
@@ -49,13 +49,24 @@ npm run db:build-from-csv
 npm run dev
 ```
 
-Open the public frontend at `http://localhost:5173`, the admin frontend at `http://localhost:5176`, and the backend API at `http://127.0.0.1:8751`.
+Open:
+
+| Layer | Local URL | Notes |
+| --- | --- | --- |
+| Public frontend | `http://localhost:5173` | Search, papers, learning, companies, geo, workspace |
+| Independent admin frontend | `http://localhost:5176` | Local-only operations UI; production should use a separate admin domain |
+| Backend API | `http://127.0.0.1:8751` | Express API for local development |
+
+Docker containers use API port `8750` internally. Public production should expose HTTPS hostnames such as `www.<domain>`, `admin.<domain>`, and `api.<domain>` instead of asking users to visit raw ports.
 
 If you have already run `git lfs pull` and `ic_database/ic_papers.sqlite` is a real SQLite database, you may skip `npm run db:build-from-csv`. If the SQLite file is only a tiny Git LFS pointer, the build script safely replaces it from `ic_database/ic_chipseeker.csv`; pass `--force` only when intentionally rebuilding an existing real database.
 
 Useful variants:
 
 ```powershell
+# Check that .env.example documents every backend process.env key used by code
+npm run env:check
+
 # Build a fixture database for CI or local smoke tests
 npm run db:build-from-csv -- --out=$env:TEMP\siliconscope-fixture.sqlite --limit=1000 --force
 
@@ -171,7 +182,7 @@ The current local database remains convenient for private research, but the prod
 
 This keeps weekly data refreshes simple: import/update the corpus, rebuild normalized projections, refresh snapshots, rebuild search indexes, then publish.
 
-## Quick Start
+## Development Launcher
 
 **Important notes:**
 
