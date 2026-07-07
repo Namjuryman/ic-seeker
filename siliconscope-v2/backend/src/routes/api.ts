@@ -652,6 +652,10 @@ router.get("/search", requireAuth, async (req: AuthenticatedRequest, res) => {
   res.json(result);
 });
 
+router.get("/search/suggestions", requireAuth, async (req: AuthenticatedRequest, res) => {
+  res.json(searchService.suggestions(req.query as Record<string, string>));
+});
+
 router.get("/papers/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {

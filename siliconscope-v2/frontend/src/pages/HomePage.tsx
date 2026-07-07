@@ -1,14 +1,14 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useSearchParams } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EntityLink } from '../components/EntityLink'
 import { searchPath } from '../utils/routes'
-import type { ApiKeyInfo, PaperComment, PaperRow, PdfInboxInfo, SearchResult, StatsData } from '../types'
+import type { ApiKeyInfo, PaperComment, PaperRow, PdfInboxInfo, SearchResult, SearchSuggestion, StatsData } from '../types'
 
 const PAGE_SIZE = 20
 const COMMENT_LIMIT = 12
+const SEARCH_HISTORY_KEY = 'siliconscope.search.history.v1'
 
 type SearchControls = {
   q: string
@@ -80,6 +80,51 @@ function cleanText(value: string | undefined) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
+function csvValues(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function toggleCsvValue(value: string, item: string) {
+  const next = new Set(csvValues(value))
+  if (next.has(item)) next.delete(item)
+  else next.add(item)
+  return [...next].join(',')
+}
+
+function loadSearchHistory() {
+  try {
+    const raw = localStorage.getItem(SEARCH_HISTORY_KEY)
+    return raw ? JSON.parse(raw).filter(Boolean).slice(0, 8) as string[] : []
+  } catch {
+    return []
+  }
+}
+
+function saveSearchHistory(query: string) {
+  const trimmed = query.trim()
+  if (!trimmed) return loadSearchHistory()
+  const next = [trimmed, ...loadSearchHistory().filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, 8)
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+  return next
+}
+
+function highlightParts(text: string | undefined, query: string) {
+  const value = cleanText(text)
+  const terms = query
+    .split(/\s+/)
+    .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .filter((term) => term.length >= 2)
+    .slice(0, 8)
+
+  if (!value || !terms.length) return value
+
+  const matcher = new RegExp(`(${terms.join('|')})`, 'ig')
+  const exact = new RegExp(`^(${terms.join('|')})$`, 'i')
+  return value.split(matcher).map((part, index) => (
+    exact.test(part) ? <mark key={`${part}-${index}`} className="ss-hit">{part}</mark> : part
+  ))
+}
+
 function controlsFromParams(params: URLSearchParams): SearchControls {
   return {
     ...defaultControls,
@@ -140,11 +185,13 @@ const PaperCard = memo(function PaperCard({
   row,
   index,
   selected,
+  query,
   onOpen,
 }: {
   row: PaperRow
   index: number
   selected: boolean
+  query: string
   onOpen: (id: number) => void
 }) {
   const authors = splitAuthors(row.authors)
@@ -154,7 +201,9 @@ const PaperCard = memo(function PaperCard({
       <div className="ss-row-index">{index}</div>
       <div className="ss-paper-main">
         <h3>
-          <PaperLink id={row.id} title={cleanText(row.title)} onClick={(event) => event.stopPropagation()} />
+          <PaperLink id={row.id} title={cleanText(row.title)} onClick={(event) => event.stopPropagation()}>
+            {highlightParts(row.title, query)}
+          </PaperLink>
         </h3>
         <p className="ss-authors">
           {authors.slice(0, 10).map((author, authorIndex) => (
@@ -165,7 +214,7 @@ const PaperCard = memo(function PaperCard({
           ))}
           {authors.length > 10 ? ' ...' : ''}
         </p>
-        <p className="ss-abstract">{cleanText(row.abstract) || '暂无摘要。'}</p>
+        <p className="ss-abstract">{highlightParts(row.abstract, query) || '暂无摘要。'}</p>
         <div className="ss-paper-meta">
           <span className="rank">{row.rank || '-'}</span>
           <EntityLink kind="venue" value={row.venue} params={{ yearFrom: row.year, yearTo: row.year }}>{row.venue || '-'}</EntityLink>
@@ -185,17 +234,7 @@ const PaperCard = memo(function PaperCard({
   )
 })
 
-function Pagination({
-  total,
-  page,
-  loading,
-  onPage,
-}: {
-  total: number
-  page: number
-  loading: boolean
-  onPage: (page: number) => void
-}) {
+function Pagination({ total, page, loading, onPage }: { total: number; page: number; loading: boolean; onPage: (page: number) => void }) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const start = Math.max(1, Math.min(page - 3, Math.max(1, pages - 6)))
   const end = Math.min(pages, start + 6)
@@ -218,15 +257,7 @@ function Pagination({
   )
 }
 
-function PaperDetailRail({
-  paperId,
-  onClose,
-  onUpdated,
-}: {
-  paperId: number | null
-  onClose: () => void
-  onUpdated: (paper: PaperRow) => void
-}) {
+function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | null; onClose: () => void; onUpdated: (paper: PaperRow) => void }) {
   const [paper, setPaper] = useState<(PaperRow & { note?: string }) | null>(null)
   const [comments, setComments] = useState<PaperComment[]>([])
   const [note, setNote] = useState('')
@@ -281,7 +312,7 @@ function PaperDetailRail({
     return (
       <aside className="ss-detail empty">
         <h2>论文详情</h2>
-        <p>点击中间列表里的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。</p>
+        <p>点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。</p>
       </aside>
     )
   }
@@ -411,32 +442,21 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [saveMessage, setSaveMessage] = useState('')
-
-  const queryClient = useQueryClient()
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
+  const [emptyHint, setEmptyHint] = useState('')
+  const [history, setHistory] = useState<string[]>(() => loadSearchHistory())
+  const requestId = useRef(0)
+  const didMount = useRef(false)
 
   const page = Math.max(1, Number(searchParams.get('page') || 1))
-
-  const saveSearchMutation = useMutation({
-    mutationFn: async () => {
-      const params = paramsFromControls(controls)
-      return api.addWatchlistItem('search', 'placeholder', params)
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['watchlist'] })
-      setSaveMessage(data.alreadyExists ? '搜索已保存（已存在）' : '搜索已保存')
-      setTimeout(() => setSaveMessage(''), 1400)
-    },
-    onError: (err: any) => {
-      setError(err?.response?.data?.error || err?.message || '保存失败')
-    },
-  })
-
   const venueOptions = useMemo(() => (stats?.venues || []).filter(Boolean).slice(0, 120), [stats])
   const fieldOptions = useMemo(() => (stats?.fields || []).filter(Boolean).slice(0, 120), [stats])
   const rankOptions = useMemo(() => (stats?.ranks || []).filter(Boolean).slice(0, 40), [stats])
   const rows = results?.rows || []
+  const controlsSignature = useMemo(() => JSON.stringify(controls), [controls])
 
   const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1) => {
+    const id = ++requestId.current
     setLoading(true)
     setError('')
     try {
@@ -448,13 +468,31 @@ export default function HomePage() {
         limit: PAGE_SIZE,
         offset: (nextPage - 1) * PAGE_SIZE,
       })
+      if (id !== requestId.current) return
       setResults(res)
       setSelectedId((current) => (current && res.rows.some((row) => row.id === current) ? current : res.rows[0]?.id ?? null))
+
+      const query = nextControls.q.trim()
+      if (query && res.rows.length) {
+        setHistory(saveSearchHistory(query))
+      }
+      if (query && !res.rows.length) {
+        const hint = await api.searchSuggestions({ q: query }).catch(() => null)
+        if (id === requestId.current) {
+          setSuggestions(hint?.rows || [])
+          setEmptyHint(hint?.emptyState || '换一个电路模块、会议或作者试试。')
+        }
+      } else {
+        setSuggestions([])
+        setEmptyHint('')
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '搜索失败')
-      console.error(err)
+      if (id === requestId.current) {
+        setError(err instanceof Error ? err.message : '搜索失败')
+        console.error(err)
+      }
     } finally {
-      setLoading(false)
+      if (id === requestId.current) setLoading(false)
     }
   }, [])
 
@@ -470,6 +508,20 @@ export default function HomePage() {
     setControls(next)
     runSearch(next, Math.max(1, Number(searchParams.get('page') || 1)))
   }, [runSearch, searchParams])
+
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true
+      return
+    }
+    const timer = window.setTimeout(() => {
+      const urlControls = controlsFromParams(searchParams)
+      if (JSON.stringify(urlControls) !== controlsSignature) {
+        setSearchParams(paramsFromControls(controls, 1), { replace: true })
+      }
+    }, 250)
+    return () => window.clearTimeout(timer)
+  }, [controls, controlsSignature, searchParams, setSearchParams])
 
   function updateControl<K extends keyof SearchControls>(key: K, value: SearchControls[K]) {
     setControls((prev) => ({ ...prev, [key]: value }))
@@ -489,6 +541,24 @@ export default function HomePage() {
     submit(1, next)
   }
 
+  function applyQuery(query: string) {
+    const next = { ...controls, q: query }
+    setControls(next)
+    submit(1, next)
+  }
+
+  async function saveSearch() {
+    try {
+      const params = paramsFromControls(controls)
+      const label = controls.q || Object.entries(params).map(([key, value]) => `${key}:${value}`).join(' ') || 'all papers'
+      const data = await api.addWatchlistItem('search', label, params)
+      setSaveMessage(data.alreadyExists ? '搜索已保存（已存在）' : '搜索已保存')
+      setTimeout(() => setSaveMessage(''), 1400)
+    } catch (err: any) {
+      setError(err?.response?.data?.error || err?.message || '保存失败')
+    }
+  }
+
   function updateRow(paper: PaperRow) {
     setResults((prev) => prev ? { ...prev, rows: prev.rows.map((row) => row.id === paper.id ? { ...row, ...paper } : row) } : prev)
   }
@@ -497,6 +567,8 @@ export default function HomePage() {
     setResults((prev) => prev ? { ...prev, total: prev.total + 1, rows: [paper, ...prev.rows] } : { total: 1, limit: PAGE_SIZE, offset: 0, engine: 'manual', rows: [paper] })
     setSelectedId(paper.id)
   }
+
+  const selectedVenues = csvValues(controls.venue)
 
   return (
     <div className="ss-search-page">
@@ -513,14 +585,25 @@ export default function HomePage() {
             placeholder="integrated circuit mmWave phased array transceiver"
           />
           <button disabled={loading}>{loading ? '搜索中...' : '搜索'}</button>
-          <button type="button" className="ghost">高级搜索⌄</button>
+          <button type="button" className="ghost">高级搜索</button>
         </form>
         <div className="ss-home-actions">
-          <Link to="/">收藏夹</Link>
+          <Link to="/watchlist">收藏夹</Link>
           <button type="button">?</button>
           <span>RP</span>
         </div>
       </header>
+
+      {(history.length > 0 || suggestions.length > 0) && (
+        <div className="ss-search-assist">
+          {history.slice(0, 5).map((item) => (
+            <button key={`history-${item}`} onClick={() => applyQuery(item)}>历史：{item}</button>
+          ))}
+          {suggestions.slice(0, 5).map((item) => (
+            <button key={`suggestion-${item.query}`} onClick={() => applyQuery(item.query)}>建议：{item.label}</button>
+          ))}
+        </div>
+      )}
 
       <nav className="ss-tabs">
         {tabs.map((item) => (
@@ -553,11 +636,24 @@ export default function HomePage() {
             <label><span>结束年份</span><input value={controls.yearTo} onChange={(event) => updateControl('yearTo', event.target.value)} /></label>
           </div>
           <div className="ss-filter-shortcuts horizontal">
-            <button onClick={() => { updateControl('yearFrom', '2022'); submit(1, { ...controls, yearFrom: '2022' }) }}>近 5 年</button>
-            <button onClick={() => { updateControl('yearFrom', '2017'); submit(1, { ...controls, yearFrom: '2017' }) }}>近 10 年</button>
-            <button onClick={() => { updateControl('yearFrom', '2012'); submit(1, { ...controls, yearFrom: '2012' }) }}>近 15 年</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2022' })}>近 5 年</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2017' })}>近 10 年</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2012' })}>近 15 年</button>
           </div>
-          <label><span>会议/期刊</span><select value={controls.venue} onChange={(event) => updateControl('venue', event.target.value)}><option value="">全部</option>{venueOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label>
+            <span>会议/期刊</span>
+            <select value="" onChange={(event) => event.target.value && updateControl('venue', toggleCsvValue(controls.venue, event.target.value))}>
+              <option value="">添加会议/期刊</option>
+              {venueOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+          </label>
+          {selectedVenues.length > 0 && (
+            <div className="ss-filter-chips">
+              {selectedVenues.map((item) => (
+                <button key={item} onClick={() => updateControl('venue', toggleCsvValue(controls.venue, item))}>{item} ×</button>
+              ))}
+            </div>
+          )}
           <label><span>研究方向</span><select value={controls.field} onChange={(event) => updateControl('field', event.target.value)}><option value="">全部</option>{fieldOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label><span>期刊/会议等级</span><select value={controls.rank} onChange={(event) => updateControl('rank', event.target.value)}><option value="">全部</option>{rankOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label><span>作者</span><input value={controls.author} onChange={(event) => updateControl('author', event.target.value)} placeholder="Rui P. Martins" /></label>
@@ -572,24 +668,20 @@ export default function HomePage() {
           <label className="ss-check"><input type="checkbox" checked={controls.favorite} onChange={(event) => updateControl('favorite', event.target.checked)} /> 仅看收藏</label>
           <button className="ss-apply-filter" onClick={() => submit(1)}>应用筛选</button>
           <AdminTools onImported={appendImported} />
-          <section className="ss-tool-panel" style={{ marginTop: '1rem' }}>
+          <section className="ss-tool-panel ss-company-entry">
             <h3>Company Intelligence</h3>
             <p>Explore IC industry employers and research labs.</p>
-            <div className="ss-inline-form">
-              <Link to="/companies" style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 16px', borderRadius: 12, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink-text)', textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
-                Explore companies →
-              </Link>
-            </div>
+            <Link to="/companies">Explore companies →</Link>
           </section>
         </aside>
 
         <main className="ss-result-panel">
-          {error && <div className="rounded-xl border p-3 text-sm bg-red-50 text-red-700 border-red-100 mb-3">{error}</div>}
+          {error && <div className="ss-error-banner">{error}</div>}
           <div className="ss-result-head">
             <div>
               <strong>{formatNumber(results?.total)} 条结果</strong>
               <span>{results?.expandedQuery ? `扩展查询：${results.expandedQuery}` : results?.engine || 'sqlite'}</span>
-              {saveMessage && <span className="ml-2 text-xs text-emerald-600">{saveMessage}</span>}
+              {saveMessage && <span className="ss-save-message">{saveMessage}</span>}
             </div>
             <div className="ss-result-tools">
               <select value={controls.sort} onChange={(event) => { const next = { ...controls, sort: event.target.value }; setControls(next); submit(1, next) }}>
@@ -599,9 +691,7 @@ export default function HomePage() {
                 <option value="citations">引用数</option>
                 <option value="title">标题</option>
               </select>
-              <button type="button" onClick={() => saveSearchMutation.mutate()} disabled={saveSearchMutation.isPending}>
-                {saveSearchMutation.isPending ? '保存中...' : '保存搜索'}
-              </button>
+              <button type="button" onClick={saveSearch}>保存搜索</button>
               <button type="button">列表</button>
               <button type="button">导出</button>
             </div>
@@ -613,10 +703,23 @@ export default function HomePage() {
                 row={row}
                 index={(page - 1) * PAGE_SIZE + index + 1}
                 selected={selectedId === row.id}
+                query={controls.q}
                 onOpen={setSelectedId}
               />
             ))}
-            {!loading && rows.length === 0 && <div className="ss-empty-state">没有匹配论文，试试放宽年份、期刊或语义条件。</div>}
+            {!loading && rows.length === 0 && (
+              <div className="ss-empty-state">
+                <strong>没有匹配论文</strong>
+                <p>{emptyHint || '试试放宽年份、会议或语义条件。'}</p>
+                {suggestions.length > 0 && (
+                  <div className="ss-empty-suggestions">
+                    {suggestions.map((item) => (
+                      <button key={item.query} onClick={() => applyQuery(item.query)}>{item.label}<span>{item.detail}</span></button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           {results && <Pagination total={results.total} page={page} loading={loading} onPage={(nextPage) => submit(nextPage)} />}
         </main>

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type {
   SearchResult,
+  SearchSuggestionResult,
   TopicSummary,
   TopicDetail,
   AuthorProfile,
@@ -119,6 +120,11 @@ export const api = {
 
   async search(params: Record<string, string | number | boolean>) {
     const res = await axios.get<SearchResult>('/api/search', { params })
+    return res.data
+  },
+
+  async searchSuggestions(params: { q: string }) {
+    const res = await axios.get<SearchSuggestionResult>('/api/search/suggestions', { params })
     return res.data
   },
 

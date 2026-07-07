@@ -9362,3 +9362,157 @@
     text-align: center;
   }
 }
+
+/* Search UX polish: late overrides for the v2 workspace. */
+.ss-shell {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.ss-shell.ss-shell-collapsed,
+.ss-shell-collapsed {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.ss-shell.ss-shell-collapsed .ss-sidebar,
+.ss-shell-collapsed .ss-sidebar {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-right: 0;
+}
+
+.ss-shell.ss-shell-collapsed .ss-workspace,
+.ss-shell-collapsed .ss-workspace,
+.ss-shell.ss-shell-collapsed .ss-main,
+.ss-shell-collapsed .ss-main {
+  width: 100%;
+  max-width: none;
+}
+
+.ss-search-page {
+  min-height: 100vh;
+  padding-top: 0;
+}
+
+.ss-search-assist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0 0;
+}
+
+.ss-search-assist button,
+.ss-filter-chips button,
+.ss-empty-suggestions button,
+.ss-company-entry a {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.ss-search-assist button:hover,
+.ss-filter-chips button:hover,
+.ss-empty-suggestions button:hover,
+.ss-company-entry a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ss-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -2px 0 10px;
+}
+
+.ss-hit {
+  background: #fff3bf;
+  color: #7a4d00;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
+.ss-error-banner {
+  margin: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.ss-save-message {
+  margin-left: 10px;
+  color: var(--green-deep);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ss-empty-state {
+  display: grid;
+  gap: 10px;
+  padding: 34px;
+  color: var(--muted);
+}
+
+.ss-empty-state strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.ss-empty-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ss-empty-suggestions button {
+  display: inline-grid;
+  gap: 2px;
+  text-align: left;
+  border-radius: 12px;
+}
+
+.ss-empty-suggestions span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ss-company-entry {
+  margin-top: 1rem;
+}
+
+.ss-company-entry a {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+}
+
+.ss-result-panel,
+.ss-detail,
+.ss-filter-panel {
+  scroll-margin-top: 96px;
+}
+
+.ss-detail {
+  top: 96px;
+  max-height: calc(100vh - 104px);
+}
+
+.ss-filter-panel {
+  top: 96px;
+  max-height: calc(100vh - 104px);
+}
+
+.ss-result-head {
+  top: 96px;
+}

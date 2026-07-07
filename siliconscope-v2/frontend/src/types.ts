@@ -35,6 +35,19 @@ export interface SearchResult {
   rows: PaperRow[];
 }
 
+export interface SearchSuggestion {
+  kind: string;
+  label: string;
+  query: string;
+  detail?: string;
+}
+
+export interface SearchSuggestionResult {
+  query: string;
+  rows: SearchSuggestion[];
+  emptyState: string;
+}
+
 export interface TopicSummary {
   field: string;
   papers: number;

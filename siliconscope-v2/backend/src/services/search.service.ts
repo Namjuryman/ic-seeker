@@ -3,7 +3,7 @@ import { appDb } from "../db/app-db.js";
 import { papers, favorites, readingStatus, notes, tags, paperTags } from "../db/schema.js";
 import { sql, eq, and, inArray, not, gte, lte } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
-import { ftsQuery, semanticText } from "./search-query-utils.js";
+import { ftsQuery, searchAliasSuggestions, semanticText } from "./search-query-utils.js";
 
 export { semanticText };
 
@@ -23,7 +23,8 @@ function buildWhereClause(params: Record<string, string>, userId = 0) {
   }
 
   if (params.venue) {
-    conditions.push(eq(papers.venue, params.venue));
+    const venues = params.venue.split(",").map((item) => item.trim()).filter(Boolean).slice(0, 20);
+    conditions.push(venues.length > 1 ? inArray(papers.venue, venues) : eq(papers.venue, venues[0] || params.venue));
   }
   if (params.field) {
     conditions.push(eq(papers.domain, params.field));
@@ -90,6 +91,27 @@ function buildWhereClause(params: Record<string, string>, userId = 0) {
 
 
 export const searchService = {
+  suggestions(params: Record<string, string>) {
+    const q = String(params.q || "").trim();
+    const aliases = searchAliasSuggestions(q);
+    const rows = aliases.map((item) => ({
+      kind: "alias",
+      label: item.label,
+      query: item.query,
+      detail: item.aliases.join(" / "),
+    }));
+
+    return {
+      query: q,
+      rows,
+      emptyState: q
+        ? rows.length
+          ? `Try ${rows[0].label} or one of its IC aliases.`
+          : "Try a broader circuit block, venue, author, or institution."
+        : "Type a circuit block, venue, author, institution, or DOI.",
+    };
+  },
+
   search(params: Record<string, string>, userId = 0) {
     const limit = Math.min(Math.max(Number(params.limit || 50), 1), 100);
     const offset = Math.max(Number(params.offset || 0), 0);

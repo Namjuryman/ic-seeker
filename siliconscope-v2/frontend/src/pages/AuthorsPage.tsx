@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
-import { searchPath } from '../utils/routes'
+import { institutionPath, searchPath } from '../utils/routes'
 import type { AuthorProfile, PaperRow } from '../types'
 
 interface AuthorListItem {
@@ -16,13 +16,23 @@ interface AuthorListItem {
   citations: number
 }
 
+const RESERVED_AUTHOR_ROUTES = new Set(['', 'authors', 'author', 'profile', 'scholar', 'scholar-graph'])
+
+function decodeRouteName(raw?: string) {
+  const value = decodeURIComponent(raw || '').trim()
+  return RESERVED_AUTHOR_ROUTES.has(value.toLowerCase()) ? '' : value
+}
+
 function initials(name: string) {
-  return name
+  const letters = name
+    .replace(/[()]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('')
+
+  return letters || 'A'
 }
 
 function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
@@ -37,9 +47,9 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
         <p>{paper.authors || '-'}</p>
       </div>
       <div className="ss-mini-meta">
-        <span>{paper.venue}</span>
-        <span>{paper.year}</span>
-        <span>{paper.rank}</span>
+        <span>{paper.venue || '-'}</span>
+        <span>{paper.year || '-'}</span>
+        <span>{paper.rank || '-'}</span>
       </div>
     </article>
   )
@@ -48,14 +58,16 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
 function BarList({
   rows,
   onClick,
+  emptyTitle = '暂无分布数据',
 }: {
   rows: Array<{ key: string; count: number }>
   onClick: (key: string) => void
+  emptyTitle?: string
 }) {
   const max = Math.max(1, rows[0]?.count || 1)
 
   if (!rows.length) {
-    return <EmptyState eyebrow="No data" title="暂无分布数据" description="当前画像还没有足够的聚合信息。" />
+    return <EmptyState eyebrow="No data" title={emptyTitle} description="当前画像还没有足够的聚合信息。" />
   }
 
   return (
@@ -80,15 +92,12 @@ export default function AuthorsPage() {
   const [query, setQuery] = useState('')
   const params = useParams()
   const navigate = useNavigate()
-  const rawName = params['*']?.trim()
-  const name = rawName && !['authors', 'author', 'author profile', 'scholar graph'].includes(rawName.toLowerCase())
-    ? rawName
-    : ''
+  const name = decodeRouteName(params['*'])
 
   useEffect(() => {
     setLoadingList(true)
     setError('')
-    api.professors({ limit: 80, minPapers: 2 })
+    api.professors({ limit: 120, minPapers: 2 })
       .then((data) => setList(data as AuthorListItem[]))
       .catch((err) => setError(err instanceof Error ? err.message : '加载学者列表失败'))
       .finally(() => setLoadingList(false))
@@ -133,9 +142,9 @@ export default function AuthorsPage() {
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
               <span>{detail.paperCount ?? 0} papers</span>
-              <span>Score {detail.authorScore ?? 0}</span>
+              <span>Score {Math.round(detail.authorScore ?? 0)}</span>
               <span>{rankLine(detail.ranks)}</span>
-              {detail.primaryInstitution && <span>{detail.primaryInstitution}</span>}
+              {detail.primaryInstitution && <button type="button" onClick={() => navigate(institutionPath(detail.primaryInstitution))}>{detail.primaryInstitution}</button>}
               {detail.qs?.qs_world_rank && <span>QS {detail.qs.qs_world_rank}</span>}
             </div>
           </div>
@@ -161,7 +170,7 @@ export default function AuthorsPage() {
               </div>
               <div className="ss-mini-list">
                 {detail.papers.length ? (
-                  detail.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)
+                  detail.papers.slice(0, 80).map((paper) => <MiniPaper key={paper.id} paper={paper} />)
                 ) : (
                   <EmptyState title="暂无代表论文" description="当前作者画像没有匹配到可展示论文。" />
                 )}
@@ -175,19 +184,15 @@ export default function AuthorsPage() {
               <BarList rows={detail.byDomain.slice(0, 8)} onClick={(key) => navigate(searchPath({ field: key }))} />
             </section>
 
-            {detail.byVenue && detail.byVenue.length > 0 && (
-              <section className="ss-panel">
-                <div className="ss-panel-head compact"><h2>发表 venues</h2></div>
-                <BarList rows={detail.byVenue.slice(0, 8)} onClick={(key) => navigate(searchPath({ venue: key }))} />
-              </section>
-            )}
+            <section className="ss-panel">
+              <div className="ss-panel-head compact"><h2>会议/期刊</h2></div>
+              <BarList rows={(detail.byVenue || []).slice(0, 8)} onClick={(key) => navigate(searchPath({ venue: key }))} emptyTitle="暂无会议/期刊统计" />
+            </section>
 
-            {detail.byYear && detail.byYear.length > 0 && (
-              <section className="ss-panel">
-                <div className="ss-panel-head compact"><h2>年度趋势</h2></div>
-                <BarList rows={detail.byYear.slice(0, 8)} onClick={(key) => navigate(searchPath({ yearFrom: key, yearTo: key }))} />
-              </section>
-            )}
+            <section className="ss-panel">
+              <div className="ss-panel-head compact"><h2>年度趋势</h2></div>
+              <BarList rows={(detail.byYear || []).slice(0, 10)} onClick={(key) => navigate(searchPath({ yearFrom: key, yearTo: key }))} emptyTitle="暂无年度趋势" />
+            </section>
 
             <section className="ss-panel">
               <div className="ss-panel-head compact"><h2>合作者</h2></div>
@@ -198,7 +203,7 @@ export default function AuthorsPage() {
                     <strong>{item.count ?? 0}</strong>
                   </button>
                 ))}
-                {!detail.coauthors.length && <span className="ss-muted-line">暂无合作作者数据。</span>}
+                {!detail.coauthors.length && <span className="ss-muted-line">暂无合作者数据。</span>}
               </div>
             </section>
 
@@ -206,7 +211,7 @@ export default function AuthorsPage() {
               <div className="ss-panel-head compact"><h2>机构线索</h2></div>
               <div className="ss-link-list">
                 {detail.institutions.slice(0, 8).map((item) => (
-                  <button key={item.key} onClick={() => navigate(`/institutions/${encodeURIComponent(item.key)}`)}>
+                  <button key={item.key} onClick={() => navigate(institutionPath(item.key))}>
                     <span>{item.key}</span>
                     <strong>{item.count ?? 0}</strong>
                   </button>
@@ -257,7 +262,7 @@ export default function AuthorsPage() {
             <span>{author.papers ?? 0}</span>
             <span>{author.sPlus ?? 0}</span>
             <span>{author.citations ?? 0}</span>
-            <span>{author.authorScore ?? 0}</span>
+            <span>{Math.round(author.authorScore ?? 0)}</span>
           </button>
         ))}
         {!loadingList && !filtered.length && (

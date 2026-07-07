@@ -22,20 +22,53 @@ const semanticAliases = new Map<string, string[]>([
   ["模拟", ["analog", "mixed signal"]],
 ]);
 
+function compactKey(value: string) {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
 export function semanticText(input: string): string {
   const q = String(input || "").trim();
   if (!q) return "";
   const lower = q.toLowerCase();
-  const compact = lower.replace(/[^\p{L}\p{N}]+/gu, "");
+  const compact = compactKey(lower);
   const extra: string[] = [];
   for (const [key, values] of semanticAliases) {
     const keyLower = key.toLowerCase();
-    const keyCompact = keyLower.replace(/[^\p{L}\p{N}]+/gu, "");
+    const keyCompact = compactKey(keyLower);
     if (lower.includes(keyLower) || (keyCompact && compact.includes(keyCompact))) {
       extra.push(...values);
     }
   }
   return [...new Set([q, ...extra])].join(" ");
+}
+
+export function searchAliasSuggestions(input: string) {
+  const q = String(input || "").trim();
+  if (!q) return [];
+  const lower = q.toLowerCase();
+  const compact = compactKey(lower);
+  const scored: Array<{ label: string; query: string; aliases: string[]; score: number }> = [];
+
+  for (const [key, values] of semanticAliases) {
+    const keyLower = key.toLowerCase();
+    const keyCompact = compactKey(keyLower);
+    const aliasHit = values.some((value) => value.toLowerCase().includes(lower) || compactKey(value).includes(compact));
+    const directHit = keyLower.includes(lower) || (keyCompact && keyCompact.includes(compact));
+    const reverseHit = lower.includes(keyLower) || (keyCompact && compact.includes(keyCompact));
+    if (!directHit && !reverseHit && !aliasHit) continue;
+
+    scored.push({
+      label: key,
+      query: key,
+      aliases: values.slice(0, 5),
+      score: reverseHit ? 3 : directHit ? 2 : 1,
+    });
+  }
+
+  return scored
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+    .slice(0, 6)
+    .map(({ label, query, aliases }) => ({ label, query, aliases }));
 }
 
 export function ftsQuery(input: string, operator: "AND" | "OR" = "AND"): string {
