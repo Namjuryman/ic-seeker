@@ -30,6 +30,7 @@ export interface SearchResult {
   limit: number;
   offset: number;
   engine: string;
+  durationMs?: number;
   query?: string;
   expandedQuery?: string;
   rows: PaperRow[];

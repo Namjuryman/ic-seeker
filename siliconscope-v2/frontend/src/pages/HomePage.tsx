@@ -159,6 +159,34 @@ function paramsFromControls(controls: SearchControls, page = 1) {
   return next
 }
 
+function activeFilterChips(controls: SearchControls) {
+  const chips: Array<{ key: keyof SearchControls; label: string; value: string; removeValue?: string }> = []
+  for (const venue of csvValues(controls.venue)) {
+    chips.push({ key: 'venue', label: 'Venue', value: venue, removeValue: venue })
+  }
+  const labels: Partial<Record<keyof SearchControls, string>> = {
+    field: 'Direction',
+    rank: 'Rank',
+    yearFrom: 'From',
+    yearTo: 'To',
+    author: 'Author',
+    institution: 'Institution',
+    country: 'Region',
+    minScore: 'Min score',
+    minCitations: 'Min citations',
+  }
+  for (const [key, label] of Object.entries(labels) as Array<[keyof SearchControls, string]>) {
+    const value = controls[key]
+    if (typeof value === 'string' && value && value !== defaultControls[key]) {
+      chips.push({ key, label, value })
+    }
+  }
+  if (!controls.semantic) chips.push({ key: 'semantic', label: 'Semantic', value: 'off' })
+  if (controls.hasPdf) chips.push({ key: 'hasPdf', label: 'PDF', value: 'local only' })
+  if (controls.favorite) chips.push({ key: 'favorite', label: 'Saved', value: 'favorites only' })
+  return chips
+}
+
 function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex') {
   const authors = splitAuthors(paper.authors)
   const authorText = authors.length ? authors.slice(0, 6).join(', ') + (authors.length > 6 ? ', et al.' : '') : 'Unknown Author'
@@ -455,6 +483,7 @@ export default function HomePage() {
   const rankOptions = useMemo(() => (stats?.ranks || []).filter(Boolean).slice(0, 40), [stats])
   const rows = results?.rows || []
   const controlsSignature = useMemo(() => JSON.stringify(controls), [controls])
+  const activeChips = useMemo(() => activeFilterChips(controls), [controls])
 
   const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1) => {
     const id = ++requestId.current
@@ -546,6 +575,25 @@ export default function HomePage() {
     const next = { ...controls, q: query }
     setControls(next)
     submit(1, next)
+  }
+
+  function removeFilter(chip: { key: keyof SearchControls; removeValue?: string }) {
+    const next = { ...controls }
+    if (chip.removeValue && chip.key === 'venue') {
+      next.venue = toggleCsvValue(next.venue, chip.removeValue)
+    } else {
+      next[chip.key] = defaultControls[chip.key] as never
+    }
+    setControls(next)
+    submit(1, next)
+  }
+
+  async function copySearchLink() {
+    const url = new URL(window.location.href)
+    url.search = new URLSearchParams(paramsFromControls(controls, page)).toString()
+    await navigator.clipboard.writeText(url.toString())
+    setSaveMessage('搜索链接已复制')
+    setTimeout(() => setSaveMessage(''), 1400)
   }
 
   async function saveSearch() {
@@ -682,6 +730,7 @@ export default function HomePage() {
             <div>
               <strong>{formatNumber(results?.total)} 条结果</strong>
               <span>{results?.expandedQuery ? `扩展查询：${results.expandedQuery}` : results?.engine || 'sqlite'}</span>
+              {typeof results?.durationMs === 'number' && <span>{results.durationMs} ms</span>}
               {saveMessage && <span className="ss-save-message">{saveMessage}</span>}
             </div>
             <div className="ss-result-tools">
@@ -692,11 +741,23 @@ export default function HomePage() {
                 <option value="citations">引用数</option>
                 <option value="title">标题</option>
               </select>
+              <button type="button" onClick={copySearchLink}>复制链接</button>
               <button type="button" onClick={saveSearch}>保存搜索</button>
               <button type="button">列表</button>
               <button type="button">导出</button>
             </div>
           </div>
+          {activeChips.length > 0 && (
+            <div className="ss-active-filters" aria-label="Active search filters">
+              {activeChips.map((chip) => (
+                <button key={`${chip.key}-${chip.value}`} type="button" onClick={() => removeFilter(chip)}>
+                  <span>{chip.label}</span>
+                  <strong>{chip.value}</strong>
+                  <em>×</em>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="ss-paper-list">
             {rows.map((row, index) => (
               <PaperCard

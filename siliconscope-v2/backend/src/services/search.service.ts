@@ -251,6 +251,7 @@ export const searchService = {
   },
 
   search(params: Record<string, string>, userId = 0) {
+    const startedAt = performance.now();
     const limit = Math.min(Math.max(Number(params.limit || 50), 1), 100);
     const offset = Math.max(Number(params.offset || 0), 0);
     const rawQ = (params.q || "").trim();
@@ -345,6 +346,7 @@ export const searchService = {
         query: rawQ,
         expandedQuery: q,
         engine: semantic ? "sqlite-fts5-semantic-lite" : "sqlite-fts5",
+        durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
         rows: enriched,
       };
     }
@@ -399,6 +401,7 @@ export const searchService = {
       limit,
       offset,
       engine: "sqlite",
+      durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
       rows: enriched,
     };
   },

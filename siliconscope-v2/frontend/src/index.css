@@ -9449,6 +9449,48 @@
   white-space: nowrap;
 }
 
+.ss-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line-subtle, #e6edf6);
+  background: rgba(248, 251, 255, .92);
+  padding: 10px 15px;
+}
+
+.ss-active-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: 999px;
+  background: #fff;
+  color: #1c3768;
+  padding: 6px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(21, 42, 78, .04);
+}
+
+.ss-active-filters span {
+  color: #6b7a90;
+  font-weight: 760;
+}
+
+.ss-active-filters strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 880;
+}
+
+.ss-active-filters em {
+  color: #5b6f92;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .ss-error-banner {
   margin: 12px;
   padding: 10px 12px;
