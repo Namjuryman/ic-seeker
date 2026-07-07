@@ -23,6 +23,7 @@
     "companies:market-refresh": "npm --workspace siliconscope-v2-backend run companies:market-refresh --",
     "backup:create": "npm --workspace siliconscope-v2-backend run backup:create --",
     "backup:restore": "npm --workspace siliconscope-v2-backend run backup:restore --",
+    "backup:smoke": "node scripts/smoke-backup-restore.mjs",
     "deploy:init": "node scripts/init-production-domain.mjs",
     "deploy:check": "node scripts/check-production-env.mjs",
     "deploy:doctor": "node scripts/deploy-doctor.mjs",

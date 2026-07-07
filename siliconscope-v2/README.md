@@ -238,6 +238,14 @@ npm run backup:restore -- --file=<backup-id-or-path>
 
 The restore command archives the current database and SQLite `-wal`/`-shm` sidecars as `.pre-restore-*` files before copying the selected backup over the active database. After restart, run a smoke check such as `/api/search?q=ldo`.
 
+To test the whole backup/restore path without touching your real database, run:
+
+```powershell
+npm run backup:smoke
+```
+
+This builds a tiny temporary SQLite fixture, creates a restore point in a temporary backup directory, rehearses `backup:restore --dry-run`, performs an actual restore against the temporary file, and verifies that the original database plus WAL/SHM sidecars were archived.
+
 ### Multi-source Paper Import
 
 The backend includes a repeatable metadata importer for expanding the paper corpus from multiple sources, normalizing records, merging duplicates, and rebuilding the local FTS row for inserted or updated papers.
