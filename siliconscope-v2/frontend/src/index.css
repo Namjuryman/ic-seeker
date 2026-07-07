@@ -9439,6 +9439,16 @@
   padding: 0 2px;
 }
 
+.ss-paper-meta .ss-match-reason {
+  border-color: rgba(37, 99, 235, .18);
+  background: #eff6ff;
+  color: #2454c6;
+  max-width: min(100%, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ss-error-banner {
   margin: 12px;
   padding: 10px 12px;

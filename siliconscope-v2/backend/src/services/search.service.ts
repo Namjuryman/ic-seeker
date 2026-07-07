@@ -89,6 +89,59 @@ function buildWhereClause(params: Record<string, string>, userId = 0) {
   return conditions;
 }
 
+function cleanText(value: unknown) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function includesLoose(haystack: unknown, needle: string) {
+  const source = cleanText(haystack).toLowerCase();
+  const target = needle.trim().toLowerCase();
+  return Boolean(source && target && source.includes(target));
+}
+
+function firstMatchingTerms(row: Record<string, unknown>, rawQ: string) {
+  const terms = rawQ
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length >= 2)
+    .slice(0, 8);
+
+  const fields = [
+    ["title", "title"],
+    ["abstract", "abstract"],
+    ["authors", "authors"],
+    ["affiliations", "affiliations"],
+    ["doi", "DOI"],
+    ["venue", "venue"],
+    ["field", "field"],
+  ] as const;
+
+  const hits: string[] = [];
+  for (const term of terms) {
+    const field = fields.find(([key]) => includesLoose(row[key], term));
+    if (field) hits.push(`${field[1]}:${term}`);
+  }
+  return [...new Set(hits)].slice(0, 4);
+}
+
+function matchReason(row: Record<string, unknown>, rawQ: string, semantic: boolean, searchRank?: unknown) {
+  const hits = firstMatchingTerms(row, rawQ);
+  if (hits.length) return `${semantic ? "semantic-lite" : "keyword"} match (${hits.join(", ")})`;
+  if (typeof searchRank === "number" && Number.isFinite(searchRank)) return `FTS rank ${searchRank.toFixed(3)}`;
+  return rawQ ? "metadata filter match" : "ranked by score and recency";
+}
+
+function uniqueSuggestionRows(rows: Array<{ kind: string; label: string; query: string; detail?: string }>) {
+  const seen = new Set<string>();
+  const result = [];
+  for (const row of rows) {
+    const key = `${row.kind}:${row.query}`.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(row);
+  }
+  return result.slice(0, 12);
+}
 
 export const searchService = {
   suggestions(params: Record<string, string>) {
@@ -101,12 +154,97 @@ export const searchService = {
       detail: item.aliases.join(" / "),
     }));
 
+    if (q) {
+      const like = `%${q}%`;
+      const venueRows = metadataDb.all<{ venue: string; n: number }>(sql`
+        SELECT venue, COUNT(*) AS n
+        FROM papers
+        WHERE venue LIKE ${like} AND COALESCE(venue_rank, '') != 'Hidden'
+        GROUP BY venue
+        ORDER BY n DESC
+        LIMIT 4
+      `);
+      rows.push(...venueRows.map((row) => ({
+        kind: "venue",
+        label: row.venue,
+        query: row.venue,
+        detail: `${row.n.toLocaleString()} papers in this venue`,
+      })));
+
+      const fieldRows = metadataDb.all<{ domain: string; n: number }>(sql`
+        SELECT domain, COUNT(*) AS n
+        FROM papers
+        WHERE domain LIKE ${like} AND COALESCE(venue_rank, '') != 'Hidden'
+        GROUP BY domain
+        ORDER BY n DESC
+        LIMIT 4
+      `);
+      rows.push(...fieldRows.map((row) => ({
+        kind: "field",
+        label: row.domain,
+        query: row.domain,
+        detail: `${row.n.toLocaleString()} papers in this IC direction`,
+      })));
+
+      const authorRows = metadataDb.all<{ authors: string; n: number }>(sql`
+        SELECT authors, COUNT(*) AS n
+        FROM papers
+        WHERE authors LIKE ${like} AND COALESCE(venue_rank, '') != 'Hidden'
+        GROUP BY authors
+        ORDER BY n DESC
+        LIMIT 12
+      `);
+      const authorSuggestions = new Map<string, number>();
+      for (const row of authorRows) {
+        for (const author of row.authors.split(";").map((item) => item.trim()).filter(Boolean)) {
+          if (author.toLowerCase().includes(q.toLowerCase())) {
+            authorSuggestions.set(author, (authorSuggestions.get(author) || 0) + row.n);
+          }
+        }
+      }
+      rows.push(...[...authorSuggestions.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([author, n]) => ({
+          kind: "author",
+          label: author,
+          query: author,
+          detail: `${n.toLocaleString()} matching author rows`,
+        })));
+
+      const institutionRows = metadataDb.all<{ affiliations: string; n: number }>(sql`
+        SELECT affiliations, COUNT(*) AS n
+        FROM papers
+        WHERE affiliations LIKE ${like} AND COALESCE(venue_rank, '') != 'Hidden'
+        GROUP BY affiliations
+        ORDER BY n DESC
+        LIMIT 12
+      `);
+      const institutionSuggestions = new Map<string, number>();
+      for (const row of institutionRows) {
+        for (const institution of row.affiliations.split(";").map((item) => item.trim()).filter(Boolean)) {
+          if (institution.toLowerCase().includes(q.toLowerCase())) {
+            institutionSuggestions.set(institution, (institutionSuggestions.get(institution) || 0) + row.n);
+          }
+        }
+      }
+      rows.push(...[...institutionSuggestions.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4)
+        .map(([institution, n]) => ({
+          kind: "institution",
+          label: institution,
+          query: institution,
+          detail: `${n.toLocaleString()} matching affiliation rows`,
+        })));
+    }
+
     return {
       query: q,
-      rows,
+      rows: uniqueSuggestionRows(rows),
       emptyState: q
         ? rows.length
-          ? `Try ${rows[0].label} or one of its IC aliases.`
+          ? `Try ${rows[0].label} or narrow by venue, IC direction, author, or institution.`
           : "Try a broader circuit block, venue, author, or institution."
         : "Type a circuit block, venue, author, institution, or DOI.",
     };
@@ -160,6 +298,8 @@ export const searchService = {
         id: number;
         title: string;
         authors: string;
+        affiliations: string;
+        abstract: string;
         year: number;
         venue: string;
         rank: string;
@@ -194,7 +334,10 @@ export const searchService = {
         LIMIT ${limit} OFFSET ${offset}
       `);
 
-      const enriched = this.enrichWithUserState(rows.map(toPaperRow), userId);
+      const enriched = this.enrichWithUserState(rows.map((row) => ({
+        ...toPaperRow(row),
+        matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic, row.searchRank),
+      })), userId);
       return {
         total,
         limit,
@@ -217,6 +360,8 @@ export const searchService = {
       id: number;
       title: string;
       authors: string;
+      affiliations: string;
+      abstract: string;
       year: number;
       venue: string;
       rank: string;
@@ -245,7 +390,10 @@ export const searchService = {
       LIMIT ${limit} OFFSET ${offset}
     `);
 
-    const enriched = this.enrichWithUserState(rows.map(toPaperRow), userId);
+    const enriched = this.enrichWithUserState(rows.map((row) => ({
+      ...toPaperRow(row),
+      matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic),
+    })), userId);
     return {
       total,
       limit,

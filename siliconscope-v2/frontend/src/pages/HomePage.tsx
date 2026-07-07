@@ -223,6 +223,7 @@ const PaperCard = memo(function PaperCard({
           <span>score {Number(row.score || 0).toFixed(1)}</span>
           <span>{row.citationCount || 0} citations</span>
           {row.favorite && <span className="favorite">已收藏</span>}
+          {row.matchReason && <span className="ss-match-reason">{row.matchReason}</span>}
         </div>
       </div>
       <div className="ss-paper-actions">
