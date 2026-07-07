@@ -17,6 +17,7 @@
     "build:admin": "npm --workspace siliconscope-v2-admin run build",
     "start": "npm --workspace siliconscope-v2-backend run start",
     "test": "npm --workspace siliconscope-v2-backend run test",
+    "env:check": "node scripts/check-env-example.mjs",
     "db:build-from-csv": "npm --workspace siliconscope-v2-backend run db:build-from-csv --",
     "companies:seed": "npm --workspace siliconscope-v2-backend run companies:seed",
     "companies:market-refresh": "npm --workspace siliconscope-v2-backend run companies:market-refresh --",

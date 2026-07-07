@@ -67,6 +67,9 @@ jobs:
           name: siliconscope-ci-sqlite
           path: ${{ runner.temp }}
 
+      - name: Check environment example coverage
+        run: npm run env:check
+
       - name: Backend build
         env:
           DATABASE_URL: ${{ runner.temp }}/siliconscope-ci.sqlite
