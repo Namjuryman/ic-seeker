@@ -7,6 +7,98 @@ import { ftsQuery, searchAliasSuggestions, semanticText } from "./search-query-u
 
 export { semanticText };
 
+type CursorSort = "score" | "year" | "citations";
+
+type SearchCursor = {
+  sort: CursorSort;
+  id: number;
+  score: number;
+  year: number;
+  citationCount: number;
+};
+
+function stableSort(sort: string): CursorSort | null {
+  return sort === "year" || sort === "citations" || sort === "score" || sort === "relevance" ? (sort === "relevance" ? "score" : sort) : null;
+}
+
+function encodeCursor(row: { id: number; score?: number; year?: number; citationCount?: number }, sort: CursorSort) {
+  const payload: SearchCursor = {
+    sort,
+    id: Number(row.id || 0),
+    score: Number(row.score || 0),
+    year: Number(row.year || 0),
+    citationCount: Number(row.citationCount || 0),
+  };
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+}
+
+function decodeCursor(value: string | undefined, sort: string): SearchCursor | null {
+  if (!value) return null;
+  const expectedSort = stableSort(sort);
+  if (!expectedSort) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<SearchCursor>;
+    if (parsed.sort !== expectedSort) return null;
+    const id = Number(parsed.id);
+    const score = Number(parsed.score);
+    const year = Number(parsed.year);
+    const citationCount = Number(parsed.citationCount);
+    if (![id, score, year, citationCount].every(Number.isFinite) || id <= 0) return null;
+    return { sort: expectedSort, id, score, year, citationCount };
+  } catch {
+    return null;
+  }
+}
+
+function keysetCondition(cursor: SearchCursor | null) {
+  if (!cursor) return null;
+  if (cursor.sort === "year") {
+    return sql`(
+      COALESCE(${papers.year}, 0) < ${cursor.year}
+      OR (COALESCE(${papers.year}, 0) = ${cursor.year} AND COALESCE(${papers.qualityScore}, 0) < ${cursor.score})
+      OR (COALESCE(${papers.year}, 0) = ${cursor.year} AND COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND ${papers.id} < ${cursor.id})
+    )`;
+  }
+  if (cursor.sort === "citations") {
+    return sql`(
+      COALESCE(${papers.citationCount}, 0) < ${cursor.citationCount}
+      OR (COALESCE(${papers.citationCount}, 0) = ${cursor.citationCount} AND COALESCE(${papers.qualityScore}, 0) < ${cursor.score})
+      OR (COALESCE(${papers.citationCount}, 0) = ${cursor.citationCount} AND COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND ${papers.id} < ${cursor.id})
+    )`;
+  }
+  return sql`(
+    COALESCE(${papers.qualityScore}, 0) < ${cursor.score}
+    OR (COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND COALESCE(${papers.year}, 0) < ${cursor.year})
+    OR (COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND COALESCE(${papers.year}, 0) = ${cursor.year} AND ${papers.id} < ${cursor.id})
+  )`;
+}
+
+function paginationInfo(args: {
+  mode: "offset" | "keyset";
+  limit: number;
+  offset: number;
+  total: number;
+  rows: Array<{ id: number; score?: number; year?: number; citationCount?: number }>;
+  sort: string;
+  hasExtraRow?: boolean;
+}) {
+  const cursorSort = stableSort(args.sort);
+  const hasNextPage = args.mode === "keyset"
+    ? Boolean(args.hasExtraRow)
+    : args.offset + args.rows.length < args.total;
+  const lastRow = args.rows[args.rows.length - 1];
+  const nextCursor = hasNextPage && cursorSort && lastRow
+    ? encodeCursor(lastRow, cursorSort)
+    : undefined;
+  return {
+    mode: args.mode,
+    limit: args.limit,
+    offset: args.offset,
+    hasNextPage,
+    nextCursor,
+  };
+}
+
 function buildWhereClause(params: Record<string, string>, userId = 0) {
   const conditions = [];
 
@@ -143,6 +235,29 @@ function uniqueSuggestionRows(rows: Array<{ kind: string; label: string; query: 
   return result.slice(0, 12);
 }
 
+function searchRelaxations(params: Record<string, string>) {
+  const rows: Array<{ label: string; detail: string; params: Record<string, string> }> = [];
+  const without = (keys: string[], label: string, detail: string) => {
+    const next = { ...params };
+    for (const key of keys) delete next[key];
+    delete next.cursor;
+    delete next.offset;
+    rows.push({ label, detail, params: next });
+  };
+  if (params.venue) without(["venue"], "Remove venue filter", "Search across all conferences and journals.");
+  if (params.field) without(["field"], "Remove IC direction", "Let the query match adjacent circuit domains.");
+  if (params.rank) without(["rank"], "Remove venue rank", "Include all visible venue levels.");
+  if (params.yearFrom || params.yearTo) without(["yearFrom", "yearTo"], "Use all years", "Search the full local 2000+ paper window.");
+  if (params.minScore) without(["minScore"], "Remove score floor", "Include lower-scored but still relevant papers.");
+  if (params.minCitations) without(["minCitations"], "Remove citation floor", "Recent papers often have few citations.");
+  if (params.hasPdf === "1") without(["hasPdf"], "Include papers without local PDF", "The metadata index is broader than the PDF inbox.");
+  if (params.favorite === "1") without(["favorite"], "Search outside favorites", "Favorites are usually a small personal subset.");
+  if (params.semantic === "0") {
+    rows.push({ label: "Enable semantic expansion", detail: "Use alias expansion such as LDO / low-dropout regulator.", params: { ...params, semantic: "1" } });
+  }
+  return rows.slice(0, 5);
+}
+
 export const searchService = {
   suggestions(params: Record<string, string>) {
     const q = String(params.q || "").trim();
@@ -262,21 +377,21 @@ export const searchService = {
 
     const ftsOrderBy =
       sort === "year"
-        ? "papers.year DESC, papers.quality_score DESC"
+        ? "papers.year DESC, papers.quality_score DESC, papers.id DESC"
         : sort === "citations"
-        ? "papers.citation_count DESC, papers.quality_score DESC"
+        ? "papers.citation_count DESC, papers.quality_score DESC, papers.id DESC"
         : sort === "title"
-        ? "papers.title COLLATE NOCASE ASC"
-        : "searchRank ASC, papers.quality_score DESC, papers.year DESC";
+        ? "papers.title COLLATE NOCASE ASC, papers.id ASC"
+        : "searchRank ASC, papers.quality_score DESC, papers.year DESC, papers.id DESC";
 
     const tableOrderBy =
       sort === "year"
-        ? "papers.year DESC, papers.quality_score DESC"
+        ? "papers.year DESC, papers.quality_score DESC, papers.id DESC"
         : sort === "citations"
-        ? "papers.citation_count DESC, papers.quality_score DESC"
+        ? "papers.citation_count DESC, papers.quality_score DESC, papers.id DESC"
         : sort === "title"
-        ? "papers.title COLLATE NOCASE ASC"
-        : "papers.quality_score DESC, papers.year DESC";
+        ? "papers.title COLLATE NOCASE ASC, papers.id ASC"
+        : "papers.quality_score DESC, papers.year DESC, papers.id DESC";
 
     const filterParams = { ...params, _includeQ: "0" };
     const whereConditions = buildWhereClause(filterParams, userId);
@@ -347,6 +462,8 @@ export const searchService = {
         expandedQuery: q,
         engine: semantic ? "sqlite-fts5-semantic-lite" : "sqlite-fts5",
         durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+        pagination: paginationInfo({ mode: "offset", limit, offset, total, rows: enriched, sort }),
+        relaxations: enriched.length ? [] : searchRelaxations(params),
         rows: enriched,
       };
     }
@@ -357,6 +474,11 @@ export const searchService = {
       ${whereConditions.length > 0 ? sql`WHERE ${and(...whereConditions)}` : sql``}
     `);
     const total = totalResult?.n ?? 0;
+
+    const cursor = decodeCursor(params.cursor, sort);
+    const cursorWhere = keysetCondition(cursor);
+    const pageConditions = cursorWhere ? [...whereConditions, cursorWhere] : whereConditions;
+    const queryLimit = cursor ? limit + 1 : limit;
 
     const rows = metadataDb.all<{
       id: number;
@@ -387,21 +509,32 @@ export const searchService = {
         papers.citation_count AS citationCount, papers.verification_status AS verificationStatus,
         papers.collection_method AS collectionMethod
       FROM papers
-      ${whereConditions.length > 0 ? sql`WHERE ${and(...whereConditions)}` : sql``}
+      ${pageConditions.length > 0 ? sql`WHERE ${and(...pageConditions)}` : sql``}
       ORDER BY ${sql.raw(tableOrderBy)}
-      LIMIT ${limit} OFFSET ${offset}
+      LIMIT ${queryLimit} OFFSET ${cursor ? 0 : offset}
     `);
 
-    const enriched = this.enrichWithUserState(rows.map((row) => ({
+    const visibleRows = cursor ? rows.slice(0, limit) : rows;
+    const enriched = this.enrichWithUserState(visibleRows.map((row) => ({
       ...toPaperRow(row),
       matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic),
     })), userId);
     return {
       total,
       limit,
-      offset,
+      offset: cursor ? 0 : offset,
       engine: "sqlite",
       durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
+      pagination: paginationInfo({
+        mode: cursor ? "keyset" : "offset",
+        limit,
+        offset: cursor ? 0 : offset,
+        total,
+        rows: enriched,
+        sort,
+        hasExtraRow: cursor ? rows.length > limit : false,
+      }),
+      relaxations: enriched.length ? [] : searchRelaxations(params),
       rows: enriched,
     };
   },

@@ -263,7 +263,21 @@ const PaperCard = memo(function PaperCard({
   )
 })
 
-function Pagination({ total, page, loading, onPage }: { total: number; page: number; loading: boolean; onPage: (page: number) => void }) {
+function Pagination({
+  total,
+  page,
+  loading,
+  hasCursor,
+  onPage,
+  onCursor,
+}: {
+  total: number;
+  page: number;
+  loading: boolean;
+  hasCursor?: boolean;
+  onPage: (page: number) => void;
+  onCursor?: () => void;
+}) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const start = Math.max(1, Math.min(page - 3, Math.max(1, pages - 6)))
   const end = Math.min(pages, start + 6)
@@ -281,6 +295,7 @@ function Pagination({ total, page, loading, onPage }: { total: number; page: num
         </button>
       ))}
       <button onClick={() => onPage(Math.min(pages, page + 1))} disabled={loading || page >= pages}>下一页</button>
+      {hasCursor && <button className="keyset" onClick={onCursor} disabled={loading}>Next batch</button>}
       <span>第 {page} / {pages} 页</span>
     </nav>
   )
@@ -485,7 +500,7 @@ export default function HomePage() {
   const controlsSignature = useMemo(() => JSON.stringify(controls), [controls])
   const activeChips = useMemo(() => activeFilterChips(controls), [controls])
 
-  const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1) => {
+  const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1, nextCursor = '') => {
     const id = ++requestId.current
     setLoading(true)
     setError('')
@@ -496,7 +511,8 @@ export default function HomePage() {
         hasPdf: nextControls.hasPdf ? 1 : 0,
         favorite: nextControls.favorite ? 1 : 0,
         limit: PAGE_SIZE,
-        offset: (nextPage - 1) * PAGE_SIZE,
+        offset: nextCursor ? 0 : (nextPage - 1) * PAGE_SIZE,
+        ...(nextCursor ? { cursor: nextCursor } : {}),
       })
       if (id !== requestId.current) return
       setResults(res)
@@ -536,7 +552,7 @@ export default function HomePage() {
   useEffect(() => {
     const next = controlsFromParams(searchParams)
     setControls(next)
-    runSearch(next, Math.max(1, Number(searchParams.get('page') || 1)))
+    runSearch(next, Math.max(1, Number(searchParams.get('page') || 1)), searchParams.get('cursor') || '')
   }, [runSearch, searchParams])
 
   useEffect(() => {
@@ -561,6 +577,14 @@ export default function HomePage() {
     setSearchParams(paramsFromControls(nextControls, nextPage))
   }
 
+  function submitCursor() {
+    const cursor = results?.pagination?.nextCursor
+    if (!cursor) return
+    const next = paramsFromControls(controls, page + 1)
+    next.cursor = cursor
+    setSearchParams(next)
+  }
+
   function applyShortcut(label: string) {
     const next = {
       ...controls,
@@ -573,6 +597,12 @@ export default function HomePage() {
 
   function applyQuery(query: string) {
     const next = { ...controls, q: query }
+    setControls(next)
+    submit(1, next)
+  }
+
+  function applyRelaxation(params: Record<string, string>) {
+    const next = controlsFromParams(new URLSearchParams(params))
     setControls(next)
     submit(1, next)
   }
@@ -780,10 +810,26 @@ export default function HomePage() {
                     ))}
                   </div>
                 )}
+                {Boolean(results?.relaxations?.length) && (
+                  <div className="ss-empty-suggestions">
+                    {results?.relaxations?.map((item) => (
+                      <button key={item.label} onClick={() => applyRelaxation(item.params)}>{item.label}<span>{item.detail}</span></button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-          {results && <Pagination total={results.total} page={page} loading={loading} onPage={(nextPage) => submit(nextPage)} />}
+          {results && (
+            <Pagination
+              total={results.total}
+              page={page}
+              loading={loading}
+              hasCursor={Boolean(results.pagination?.nextCursor)}
+              onPage={(nextPage) => submit(nextPage)}
+              onCursor={submitCursor}
+            />
+          )}
         </main>
 
         <PaperDetailRail paperId={selectedId} onClose={() => setSelectedId(null)} onUpdated={updateRow} />

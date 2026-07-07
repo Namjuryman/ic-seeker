@@ -33,6 +33,18 @@ export interface SearchResult {
   durationMs?: number;
   query?: string;
   expandedQuery?: string;
+  pagination?: {
+    mode: 'offset' | 'keyset';
+    limit: number;
+    offset: number;
+    hasNextPage: boolean;
+    nextCursor?: string;
+  };
+  relaxations?: Array<{
+    label: string;
+    detail: string;
+    params: Record<string, string>;
+  }>;
   rows: PaperRow[];
 }
 
