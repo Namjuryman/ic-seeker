@@ -16,16 +16,32 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
   { canonicalName: "University of California, Berkeley", aliases: ["uc berkeley", "u.c. berkeley", "university of california berkeley", "berkeley"], countryCode: "US", countryName: "United States", city: "Berkeley" },
   { canonicalName: "California Institute of Technology", aliases: ["caltech", "california institute of technology"], countryCode: "US", countryName: "United States", city: "Pasadena" },
   { canonicalName: "University of Michigan", aliases: ["umich", "university of michigan", "u michigan"], countryCode: "US", countryName: "United States", city: "Ann Arbor" },
+  { canonicalName: "University of Illinois Urbana-Champaign", aliases: ["uiuc", "university of illinois urbana champaign", "university of illinois at urbana champaign"], countryCode: "US", countryName: "United States", city: "Urbana-Champaign" },
+  { canonicalName: "Georgia Institute of Technology", aliases: ["georgia tech", "georgia institute of technology", "gatech"], countryCode: "US", countryName: "United States", city: "Atlanta" },
+  { canonicalName: "University of California, Los Angeles", aliases: ["ucla", "university of california los angeles"], countryCode: "US", countryName: "United States", city: "Los Angeles" },
+  { canonicalName: "University of Southern California", aliases: ["usc", "university of southern california"], countryCode: "US", countryName: "United States", city: "Los Angeles" },
+  { canonicalName: "University of Texas at Austin", aliases: ["ut austin", "university of texas at austin", "the university of texas at austin"], countryCode: "US", countryName: "United States", city: "Austin" },
+  { canonicalName: "Cornell University", aliases: ["cornell", "cornell university"], countryCode: "US", countryName: "United States", city: "Ithaca" },
+  { canonicalName: "Purdue University", aliases: ["purdue", "purdue university"], countryCode: "US", countryName: "United States", city: "West Lafayette" },
+  { canonicalName: "IBM Research", aliases: ["ibm research", "ibm t j watson research center", "ibm thomas j watson research center"], countryCode: "US", countryName: "United States", city: "Yorktown Heights" },
+  { canonicalName: "Intel", aliases: ["intel", "intel corporation", "intel labs", "intel foundry"], countryCode: "US", countryName: "United States", city: "Santa Clara" },
   { canonicalName: "Tsinghua University", aliases: ["tsinghua", "tsinghua university"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Peking University", aliases: ["peking university", "pku"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Fudan University", aliases: ["fudan", "fudan university"], countryCode: "CN", countryName: "China", city: "Shanghai" },
   { canonicalName: "Shanghai Jiao Tong University", aliases: ["shanghai jiao tong university", "sjtu"], countryCode: "CN", countryName: "China", city: "Shanghai" },
   { canonicalName: "Zhejiang University", aliases: ["zhejiang university", "zju"], countryCode: "CN", countryName: "China", city: "Hangzhou" },
+  { canonicalName: "Southeast University", aliases: ["southeast university", "seu"], countryCode: "CN", countryName: "China", city: "Nanjing" },
+  { canonicalName: "Xidian University", aliases: ["xidian university", "xdu"], countryCode: "CN", countryName: "China", city: "Xi'an" },
   { canonicalName: "University of Electronic Science and Technology of China", aliases: ["uestc", "university of electronic science and technology of china", "electronic science and technology of china"], countryCode: "CN", countryName: "China", city: "Chengdu" },
+  { canonicalName: "Institute of Microelectronics, Chinese Academy of Sciences", aliases: ["ime cas", "imcas", "institute of microelectronics chinese academy of sciences", "institute of microelectronics cas"], countryCode: "CN", countryName: "China", city: "Beijing" },
+  { canonicalName: "Chinese Academy of Sciences", aliases: ["cas", "chinese academy of sciences"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "The Chinese University of Hong Kong, Shenzhen", aliases: ["cuhk-shenzhen", "cuhk shenzhen", "cuhk sz", "the chinese university of hong kong shenzhen", "chinese university of hong kong shenzhen"], countryCode: "CN", countryName: "China", city: "Shenzhen" },
   { canonicalName: "The Hong Kong University of Science and Technology", aliases: ["hkust", "hong kong university of science and technology"], countryCode: "HK", countryName: "Hong Kong", city: "Hong Kong" },
   { canonicalName: "The Chinese University of Hong Kong", aliases: ["cuhk", "chinese university of hong kong", "the chinese university of hong kong"], countryCode: "HK", countryName: "Hong Kong", city: "Hong Kong" },
   { canonicalName: "University of Macau", aliases: ["university of macau", "universidade de macau", "um macau", "macao university"], countryCode: "MO", countryName: "Macau", city: "Macau" },
+  { canonicalName: "Taiwan Semiconductor Manufacturing Company", aliases: ["tsmc", "taiwan semiconductor manufacturing company", "taiwan semiconductor manufacturing co", "taiwan semiconductor manufacturing company limited"], countryCode: "TW", countryName: "Taiwan", city: "Hsinchu" },
+  { canonicalName: "National Taiwan University", aliases: ["ntu taiwan", "national taiwan university"], countryCode: "TW", countryName: "Taiwan", city: "Taipei" },
+  { canonicalName: "National Tsing Hua University", aliases: ["nthu", "national tsing hua university"], countryCode: "TW", countryName: "Taiwan", city: "Hsinchu" },
   { canonicalName: "National University of Singapore", aliases: ["nus", "national university of singapore"], countryCode: "SG", countryName: "Singapore", city: "Singapore" },
   { canonicalName: "Nanyang Technological University", aliases: ["ntu singapore", "nanyang technological university"], countryCode: "SG", countryName: "Singapore", city: "Singapore" },
   { canonicalName: "Delft University of Technology", aliases: ["tu delft", "delft university of technology", "delft"], countryCode: "NL", countryName: "Netherlands", city: "Delft" },
@@ -35,6 +51,8 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
   { canonicalName: "KU Leuven", aliases: ["ku leuven", "katholieke universiteit leuven"], countryCode: "BE", countryName: "Belgium", city: "Leuven" },
   { canonicalName: "University of Tokyo", aliases: ["university of tokyo", "the university of tokyo", "tokyo university"], countryCode: "JP", countryName: "Japan", city: "Tokyo" },
   { canonicalName: "KAIST", aliases: ["kaist", "korea advanced institute of science and technology"], countryCode: "KR", countryName: "South Korea", city: "Daejeon" },
+  { canonicalName: "Samsung Electronics", aliases: ["samsung", "samsung electronics", "samsung electronics co"], countryCode: "KR", countryName: "South Korea", city: "Suwon" },
+  { canonicalName: "SK hynix", aliases: ["sk hynix", "sk hynix inc", "hynix"], countryCode: "KR", countryName: "South Korea", city: "Icheon" },
 ];
 
 function normalizeKey(value: string): string {
@@ -59,7 +77,7 @@ for (const inst of BUILTIN_INSTITUTIONS) {
 }
 
 function titleCaseInstitution(value: string): string {
-  const keepUpper = new Set(["MIT", "UC", "UCLA", "USC", "NUS", "NTU", "HKUST", "CUHK", "UESTC", "ETH", "EPFL", "KAIST", "imec"]);
+  const keepUpper = new Set(["MIT", "UC", "UCLA", "USC", "NUS", "NTU", "HKUST", "CUHK", "UESTC", "SEU", "XDU", "CAS", "ETH", "EPFL", "KAIST", "TSMC", "IBM", "imec"]);
   const small = new Set(["of", "and", "the", "for", "in"]);
   return String(value || "")
     .split(/\s+/)

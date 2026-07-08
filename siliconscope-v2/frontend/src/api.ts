@@ -97,6 +97,7 @@ import type {
   FeatureCompletionReport,
   PaperIngestionRunResult,
   IdentityCandidateResult,
+  IdentityCandidateReviewResult,
 } from './types'
 
 axios.defaults.withCredentials = true
@@ -874,6 +875,13 @@ export const api = {
 
   async identityCandidates(type: 'author' | 'institution', params?: { status?: string; limit?: number; offset?: number }) {
     const res = await axios.get<IdentityCandidateResult>('/api/admin/identity/candidates', { params: { type, ...params } })
+    return res.data
+  },
+
+  async reviewIdentityCandidate(type: 'author' | 'institution', id: string, action: 'apply' | 'reject' | 'undo' | 'split-required') {
+    const res = await axios.post<IdentityCandidateReviewResult>(
+      `/api/admin/identity/candidates/${encodeURIComponent(type)}/${encodeURIComponent(id)}/${encodeURIComponent(action)}`
+    )
     return res.data
   },
 

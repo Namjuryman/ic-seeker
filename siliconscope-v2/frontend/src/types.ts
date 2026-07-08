@@ -1111,6 +1111,38 @@ export interface IdentityAliasInput {
   confidence?: number;
 }
 
+export interface IdentityCandidateRow {
+  id: string;
+  type: 'author' | 'institution';
+  normalizedKey: string;
+  canonicalName: string;
+  aliases: string[];
+  externalIds?: Record<string, unknown>;
+  institutionHistory?: string[];
+  coauthorSignature?: string[];
+  countryCode?: string | null;
+  countryName?: string | null;
+  city?: string | null;
+  parentInstitution?: string | null;
+  labOrSchool?: string | null;
+  companyAffiliation?: string | null;
+  paperCount: number;
+  confidence: number;
+  reviewStatus: string;
+  evidence?: Record<string, unknown>;
+  updatedAt?: string;
+}
+
+export interface IdentityCandidateReviewResult {
+  type: 'author' | 'institution';
+  id: string;
+  action: string;
+  status: string;
+  aliasesWritten: number;
+  aliasesDeleted: number;
+  canonicalName?: string;
+}
+
 export interface JournalFilterVenue {
   venue: string;
   aliases?: string[];
@@ -1760,7 +1792,7 @@ export interface PaperIngestionRunResult {
 }
 
 export interface IdentityCandidateResult {
-  rows: Array<Record<string, any>>;
+  rows: IdentityCandidateRow[];
   total: number;
   limit: number;
   offset: number;

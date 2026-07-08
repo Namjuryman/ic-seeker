@@ -4850,6 +4850,13 @@
     align-items: start;
   }
 
+  .identity-review-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 390px);
+    gap: 14px;
+    align-items: start;
+  }
+
   .identity-form,
   .identity-list {
     border: 1px solid var(--line-subtle);
@@ -4948,6 +4955,78 @@
     border-color: rgba(239, 68, 68, .25);
     background: var(--danger-soft);
     color: #b91c1c;
+  }
+
+  .identity-notice {
+    border: 1px solid rgba(16, 185, 129, .24);
+    border-radius: 12px;
+    background: rgba(16, 185, 129, .08);
+    color: #047857;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .identity-notice.danger {
+    border-color: rgba(239, 68, 68, .24);
+    background: rgba(239, 68, 68, .08);
+    color: #b91c1c;
+  }
+
+  .identity-candidate-card {
+    display: grid;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .identity-candidate-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .identity-candidate-main h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.25;
+    font-weight: 950;
+  }
+
+  .identity-candidate-score {
+    border: 1px solid rgba(79, 106, 243, .18);
+    border-radius: 999px;
+    background: rgba(79, 106, 243, .08);
+    padding: 6px 9px;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 950;
+  }
+
+  .identity-candidate-aliases {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .identity-candidate-aliases span {
+    max-width: 260px;
+    overflow: hidden;
+    border: 1px solid var(--line-subtle);
+    border-radius: 999px;
+    background: var(--panel-soft);
+    padding: 5px 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .review-summary-card {
@@ -5736,7 +5815,8 @@
       height: calc(100% - 150px);
     }
     .geo-inset-tray,
-    .identity-grid {
+    .identity-grid,
+    .identity-review-grid {
       grid-template-columns: 1fr;
     }
     .identity-form {

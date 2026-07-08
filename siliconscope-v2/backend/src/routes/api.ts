@@ -1634,6 +1634,32 @@ router.patch("/admin/identity/candidates/:type/:id", requireAdmin, async (req: A
   }
 });
 
+router.post("/admin/identity/candidates/:type/:id/:action", requireAdmin, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = identityAdminService.reviewCandidate(req.params.type, req.params.id, req.params.action);
+    adminAuditService.record({
+      req,
+      action: `identity.candidate_${String(req.params.action || "").replace(/-/g, "_")}`,
+      resourceType: `identity_candidate.${req.params.type}`,
+      resourceId: req.params.id,
+      metadata: result,
+    });
+    clearCache();
+    snapshotService.invalidateAllSnapshots();
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({
+      req,
+      action: `identity.candidate_${String(req.params.action || "").replace(/-/g, "_")}`,
+      resourceType: `identity_candidate.${req.params.type}`,
+      resourceId: req.params.id,
+      status: "failure",
+      error: err,
+    });
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.put("/admin/identity/aliases/:type", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const result = identityAdminService.upsertAlias(req.params.type, req.body);
