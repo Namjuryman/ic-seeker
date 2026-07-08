@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -33,7 +35,13 @@ jobs:
         run: npm ci
 
       - name: Build fixture SQLite database from CSV
-        run: npm run db:build-from-csv -- --out=${{ runner.temp }}/siliconscope-ci.sqlite --limit=1000 --force
+        run: |
+          npm run db:build-from-csv -- \
+            --csv=src/__fixtures__/ic_chipseeker.sample.csv \
+            --out=${{ runner.temp }}/siliconscope-ci.sqlite \
+            --force
+          cd backend
+          node -e "const Database=require('better-sqlite3'); const db=new Database('${{ runner.temp }}/siliconscope-ci.sqlite'); const count=db.prepare('SELECT COUNT(*) AS n FROM papers').get().n; const hits=db.prepare(\"SELECT COUNT(*) AS n FROM papers_fts WHERE papers_fts MATCH 'buck OR pmic'\").get().n; if (count !== 1000) throw new Error('Expected 1000 papers, got '+count); if (hits < 1) throw new Error('Expected buck/pmic FTS hits'); db.close();"
 
       - name: Upload SQLite fixture
         uses: actions/upload-artifact@v4
@@ -50,6 +58,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -87,6 +97,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -108,6 +120,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
