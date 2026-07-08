@@ -248,6 +248,72 @@ function selectCandidates(options: Required<Pick<PaperAiRunOptions, "mode" | "li
   return rows.filter((row) => row.input_hash !== inputHash(row));
 }
 
+function latestAnnotationForPaper(paperId: number, provider = DEFAULT_PROVIDER, model = DEFAULT_MODEL) {
+  return appSqlite.prepare(`
+    SELECT
+      a.id, a.paper_id AS paperId, a.provider, a.model, a.prompt_version AS promptVersion,
+      a.input_hash AS inputHash, a.language, a.summary_zh AS summaryZh,
+      a.summary_en AS summaryEn, a.primary_domain AS primaryDomain,
+      a.labels_json AS labelsJson, a.topics_json AS topicsJson,
+      a.entities_json AS entitiesJson, a.metrics_json AS metricsJson,
+      a.confidence, a.cost_estimate_usd AS costEstimateUsd,
+      a.token_input AS tokenInput, a.token_output AS tokenOutput,
+      a.needs_review AS needsReview, a.status, a.updated_at AS updatedAt
+    FROM paper_ai_annotations a
+    WHERE a.paper_id = ?
+      AND a.provider = ?
+      AND a.model = ?
+      AND a.prompt_version = ?
+      AND a.status = 'ok'
+    ORDER BY a.updated_at DESC, a.id DESC
+    LIMIT 1
+  `).get(paperId, provider, model, PROMPT_VERSION) as Record<string, unknown> | undefined;
+}
+
+function paperRowById(paperId: number) {
+  return appSqlite.prepare(`
+    SELECT
+      id, title, abstract, year, venue, publication_title, domain, doi, citation_count
+    FROM papers
+    WHERE id = ?
+    LIMIT 1
+  `).get(paperId) as PaperRow | undefined;
+}
+
+function parseJson<T>(value: unknown, fallback: T): T {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(String(value)) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function annotationPayload(row: Record<string, unknown>, cacheHit: boolean) {
+  return {
+    cacheHit,
+    id: Number(row.id),
+    paperId: Number(row.paperId),
+    provider: String(row.provider || ""),
+    model: String(row.model || ""),
+    promptVersion: String(row.promptVersion || ""),
+    language: String(row.language || "zh-en"),
+    summaryZh: String(row.summaryZh || ""),
+    summaryEn: String(row.summaryEn || ""),
+    primaryDomain: String(row.primaryDomain || ""),
+    labels: parseJson<string[]>(row.labelsJson, []),
+    topics: parseJson<Array<{ topicId: string; label: string; confidence: number; evidence: string[] }>>(row.topicsJson, []),
+    entities: parseJson<Record<string, unknown>>(row.entitiesJson, {}),
+    metrics: parseJson<Array<{ name: string; value: string; context: string }>>(row.metricsJson, []),
+    confidence: Number(row.confidence || 0),
+    costEstimateUsd: Number(row.costEstimateUsd || 0),
+    tokenInput: Number(row.tokenInput || 0),
+    tokenOutput: Number(row.tokenOutput || 0),
+    needsReview: Number(row.needsReview || 0) === 1,
+    updatedAt: String(row.updatedAt || ""),
+  };
+}
+
 function writeTopicEdges(paperId: number, topics: AnnotationResult["topics"], minConfidence: number) {
   const insert = appSqlite.prepare(`
     INSERT INTO paper_topic_edges (paper_id, topic_id, confidence, method, evidence_json, override_status, updated_at)
@@ -352,6 +418,50 @@ export const paperAiEnrichmentService = {
       LIMIT ?
     `).all(limit);
     return { rows, total: rows.length };
+  },
+
+  async getOrCreatePaperSummary(paperId: number, input: { provider?: string; model?: string; refresh?: boolean } = {}) {
+    const provider = input.provider || DEFAULT_PROVIDER;
+    const model = input.model || DEFAULT_MODEL;
+    const cached = latestAnnotationForPaper(paperId, provider, model);
+    const paper = paperRowById(paperId);
+    if (!paper) return null;
+
+    if (cached && !input.refresh && cached.inputHash === inputHash(paper)) {
+      return annotationPayload(cached, true);
+    }
+
+    const annotation = await generatePaperAiAnnotation({
+      row: paper,
+      provider,
+      model,
+      fallback: () => annotateWithRules(paper),
+    });
+
+    const insertedId = insertAnnotation(paper, annotation, { provider, model });
+    const row = latestAnnotationForPaper(paperId, provider, model) || {
+      id: insertedId,
+      paperId,
+      provider,
+      model,
+      promptVersion: PROMPT_VERSION,
+      inputHash: inputHash(paper),
+      language: "zh-en",
+      summaryZh: annotation.summaryZh,
+      summaryEn: annotation.summaryEn,
+      primaryDomain: annotation.primaryDomain,
+      labelsJson: JSON.stringify(annotation.labels),
+      topicsJson: JSON.stringify(annotation.topics),
+      entitiesJson: JSON.stringify(annotation.entities),
+      metricsJson: JSON.stringify(annotation.metrics),
+      confidence: annotation.confidence,
+      costEstimateUsd: annotation.costEstimateUsd,
+      tokenInput: annotation.tokenInput,
+      tokenOutput: annotation.tokenOutput,
+      needsReview: annotation.needsReview ? 1 : 0,
+      updatedAt: new Date().toISOString(),
+    };
+    return annotationPayload(row, false);
   },
 
   async runBatch(input: PaperAiRunOptions = {}) {

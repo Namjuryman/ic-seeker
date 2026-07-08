@@ -13,6 +13,7 @@ import type {
   StatsData,
   VenueMatrixItem,
   PaperRow,
+  PaperAiSummary,
   PaperComment,
   MentorReview,
   MentorReviewStats,
@@ -476,6 +477,11 @@ export const api = {
 
   async paper(id: number) {
     const res = await axios.get<PaperRow & { note?: string }>(`/api/papers/${id}`)
+    return res.data
+  },
+
+  async paperAiSummary(id: number, body?: { refresh?: boolean; provider?: string; model?: string }) {
+    const res = await axios.post<PaperAiSummary>(`/api/papers/${id}/ai-summary`, body || {})
     return res.data
   },
 

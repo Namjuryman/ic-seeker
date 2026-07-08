@@ -4,6 +4,7 @@ import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom'
 import { api } from './api'
 import { SkeletonState } from './components/StatusState'
 import { useThemeMode, type ThemeMode } from './hooks/useThemeMode'
+import { LanguageToggle, useI18n } from './i18n'
 import type { AuthStatus } from './types'
 
 const HomePage = lazy(() => import('./pages/HomePage'))
@@ -46,15 +47,8 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
 })
 
-const navItems = [
-  { to: '/', label: '学术搜索', icon: 'S', section: 'SiliconScope' },
-  { to: '/intelligence', label: '情报中心', icon: 'I', section: 'SiliconScope' },
-  { to: '/learning', label: '学习路线', icon: 'L', section: 'SiliconScope' },
-  { to: '/workspace', label: '个人工作台', icon: 'W', section: 'SiliconScope' },
-  { to: '/account', label: '账户平台', icon: 'A', section: 'SiliconScope' },
-]
-
 function LoginGate({ children, initialStatus }: { children: React.ReactNode; initialStatus?: AuthStatus }) {
+  const { t } = useI18n()
   const [status, setStatus] = useState<AuthStatus | null>(initialStatus ?? null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -74,13 +68,13 @@ function LoginGate({ children, initialStatus }: { children: React.ReactNode; ini
       await api.login(password)
       setStatus(await api.authStatus())
     } catch (err: any) {
-      setError(err?.response?.data?.error || '登录失败，请检查 ADMIN_PASSWORD')
+      setError(err?.response?.data?.error || t('login.error'))
     } finally {
       setLoading(false)
     }
   }
 
-  if (!status) return <SkeletonState title="正在进入 SiliconScope" description="检查本地认证状态和工作台配置。" />
+  if (!status) return <SkeletonState title={t('loading.enter')} description={t('loading.authCheck')} />
 
   if (status.authEnabled && !status.authenticated) {
     return (
@@ -88,7 +82,7 @@ function LoginGate({ children, initialStatus }: { children: React.ReactNode; ini
         <div className="ss-login-card">
           <div className="ss-mark">S</div>
           <h1>SiliconScope</h1>
-          <p>请输入管理员密码进入本地 IC 论文情报工作台。</p>
+          <p>{t('login.help')}</p>
           <input
             type="password"
             value={password}
@@ -98,9 +92,9 @@ function LoginGate({ children, initialStatus }: { children: React.ReactNode; ini
           />
           {error && <div className="ss-login-error">{error}</div>}
           <button disabled={loading || !password} onClick={login}>
-            {loading ? '登录中...' : '登录'}
+            {loading ? t('login.loading') : t('login.submit')}
           </button>
-          <Link className="ss-login-link" to="/request-access">申请私测访问</Link>
+          <Link className="ss-login-link" to="/request-access">{t('login.requestAccess')}</Link>
         </div>
       </div>
     )
@@ -118,7 +112,15 @@ function Layout({
   themeMode: ThemeMode
   setThemeMode: (mode: ThemeMode) => void
 }) {
+  const { t } = useI18n()
   const [navOpen, setNavOpen] = useState(true)
+  const navItems = [
+    { to: '/', label: t('nav.search'), icon: 'S', section: t('nav.section.product') },
+    { to: '/intelligence', label: t('nav.intelligence'), icon: 'I', section: t('nav.section.product') },
+    { to: '/learning', label: t('nav.learning'), icon: 'L', section: t('nav.section.product') },
+    { to: '/workspace', label: t('nav.workspace'), icon: 'W', section: t('nav.section.product') },
+    { to: '/account', label: t('nav.account'), icon: 'A', section: t('nav.section.product') },
+  ]
   const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     acc[item.section] = acc[item.section] || []
     acc[item.section].push(item)
@@ -155,19 +157,20 @@ function Layout({
         </nav>
         <div className="ss-sidebar-foot">
           <label className="ss-theme-switch">
-            <span>主题</span>
+            <span>{t('nav.theme')}</span>
             <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as ThemeMode)}>
-              <option value="system">跟随系统</option>
-              <option value="light">浅色</option>
-              <option value="dark">深色</option>
+              <option value="system">{t('nav.theme.system')}</option>
+              <option value="light">{t('nav.theme.light')}</option>
+              <option value="dark">{t('nav.theme.dark')}</option>
             </select>
           </label>
-          <button onClick={() => setNavOpen(false)}>收起</button>
-          <span>SQLite metadata workspace</span>
+          <LanguageToggle />
+          <button onClick={() => setNavOpen(false)}>{t('nav.collapse')}</button>
+          <span>{t('nav.workspaceHint')}</span>
         </div>
       </aside>
 
-      <button className="ss-collapse" onClick={() => setNavOpen(!navOpen)} aria-label="Toggle navigation">
+      <button className="ss-collapse" onClick={() => setNavOpen(!navOpen)} aria-label={t('nav.toggle')}>
         {navOpen ? '<' : '>'}
       </button>
 
@@ -180,11 +183,12 @@ function Layout({
 
 function App() {
   const { themeMode, setThemeMode } = useThemeMode()
+  const { t } = useI18n()
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<SkeletonState title="正在加载页面" description="模块正在按需加载。" />}>
+        <Suspense fallback={<SkeletonState title={t('loading.page')} description={t('loading.module')} />}>
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
@@ -201,6 +205,7 @@ function App() {
 }
 
 function EntryPage({ themeMode, setThemeMode }: { themeMode: ThemeMode; setThemeMode: (mode: ThemeMode) => void }) {
+  const { t } = useI18n()
   const [status, setStatus] = useState<AuthStatus | null>(null)
 
   useEffect(() => {
@@ -209,7 +214,7 @@ function EntryPage({ themeMode, setThemeMode }: { themeMode: ThemeMode; setTheme
       .catch(() => setStatus({ authenticated: true, authEnabled: false, appName: 'SiliconScope' }))
   }, [])
 
-  if (!status) return <SkeletonState title="正在进入 SiliconScope" description="检查登录状态并准备首页。" />
+  if (!status) return <SkeletonState title={t('loading.enter')} description={t('loading.home')} />
   if (status.authEnabled && !status.authenticated) return <LandingPage />
 
   return (

@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
-import type { PaperComment, PaperRow } from '../types'
+import { useI18n } from '../i18n'
+import type { PaperAiSummary, PaperComment, PaperRow } from '../types'
 
 const COMMENTS_PAGE_SIZE = 20
 
@@ -16,16 +17,16 @@ const REPORT_REASONS = [
   'other',
 ]
 
-const READING_STATUS_OPTIONS = [
-  { value: 'unread', label: '未读' },
-  { value: 'reading', label: '在读' },
-  { value: 'read', label: '已读' },
-  { value: 'important', label: '重点' },
-  { value: 'skip', label: '跳过' },
-  { value: 'review_later', label: '稍后复习' },
-  { value: 'use_for_literature_review', label: '用于文献综述' },
-  { value: 'use_for_application', label: '用于申请' },
-  { value: 'use_for_project', label: '用于项目' },
+const READING_STATUS_VALUES = [
+  'unread',
+  'reading',
+  'read',
+  'important',
+  'skip',
+  'review_later',
+  'use_for_literature_review',
+  'use_for_application',
+  'use_for_project',
 ]
 
 function splitAuthors(authors: string) {
@@ -51,6 +52,7 @@ function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex') {
 export default function PaperDetailPage() {
   const { id } = useParams()
   const paperId = Number(id)
+  const { language, t } = useI18n()
   const [paper, setPaper] = useState<(PaperRow & { note?: string }) | null>(null)
   const [loadError, setLoadError] = useState('')
   const [comments, setComments] = useState<PaperComment[]>([])
@@ -65,9 +67,15 @@ export default function PaperDetailPage() {
   const [loadingComments, setLoadingComments] = useState(false)
   const [reportedIds, setReportedIds] = useState<Set<number>>(new Set())
   const [activeReportId, setActiveReportId] = useState<number | null>(null)
+  const [aiSummary, setAiSummary] = useState<PaperAiSummary | null>(null)
+  const [translating, setTranslating] = useState(false)
 
   const queryClient = useQueryClient()
   const authors = useMemo(() => splitAuthors(paper?.authors || ''), [paper?.authors])
+  const readingOptions = useMemo(() => READING_STATUS_VALUES.map((value) => ({
+    value,
+    label: t(`paper.reading.${value}` as any),
+  })), [t])
 
   async function loadComments(nextOffset = 0, append = false) {
     setLoadingComments(true)
@@ -83,22 +91,25 @@ export default function PaperDetailPage() {
 
   useEffect(() => {
     if (!Number.isFinite(paperId)) return
+    let alive = true
     async function load() {
       setLoadError('')
       try {
         const data = await api.paper(paperId)
+        if (!alive) return
         setPaper(data)
         setNote(data.note || '')
         setReadingStatus(data.readingStatus || 'unread')
         setTagText((data.tags || []).map((tag) => tag.name).join(', '))
         await loadComments(0, false)
       } catch (err: any) {
-        setLoadError(err?.response?.data?.error || err?.message || '论文详情加载失败')
+        if (alive) setLoadError(err?.response?.data?.error || err?.message || t('paper.detailLoadFailed'))
       }
     }
     load()
+    return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paperId])
+  }, [paperId, t])
 
   async function saveState(nextFavorite = paper?.favorite) {
     if (!paper) return
@@ -109,15 +120,30 @@ export default function PaperDetailPage() {
       tags: tagText.split(',').map((tag) => tag.trim()).filter(Boolean),
     })
     setPaper(updated)
-    setMessage('已保存')
+    setMessage(t('common.saved'))
     setTimeout(() => setMessage(''), 1600)
+  }
+
+  async function translateAbstract(refresh = false) {
+    if (!paper) return
+    setTranslating(true)
+    try {
+      const result = await api.paperAiSummary(paper.id, { refresh })
+      setAiSummary(result)
+      setMessage(result.cacheHit ? t('paper.translateCached') : t('paper.translateFresh'))
+    } catch (err: any) {
+      setMessage(err?.response?.data?.error || err?.message || t('paper.translateError'))
+    } finally {
+      setTranslating(false)
+      setTimeout(() => setMessage(''), 1800)
+    }
   }
 
   const updateReadingQueue = useMutation({
     mutationFn: (status: string) => api.updateReadingQueue(paperId, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reading-queue'] })
-      setMessage('阅读状态已更新')
+      setMessage(t('paper.queueUpdated'))
       setTimeout(() => setMessage(''), 1600)
     },
   })
@@ -125,7 +151,7 @@ export default function PaperDetailPage() {
   async function copyCitation(format: 'ieee' | 'apa' | 'bibtex') {
     if (!paper) return
     await navigator.clipboard.writeText(citationText(paper, format))
-    setMessage(`已复制 ${format.toUpperCase()}`)
+    setMessage(t('paper.copiedCitation', { format: format.toUpperCase() }))
     setTimeout(() => setMessage(''), 1600)
   }
 
@@ -134,7 +160,7 @@ export default function PaperDetailPage() {
     await api.addPaperComment(paper.id, { commentType, body: commentBody })
     setCommentBody('')
     await loadComments(0, false)
-    setMessage('评论已提交，敏感内容会进入审核')
+    setMessage(t('paper.commentSubmitted'))
     setTimeout(() => setMessage(''), 1800)
   }
 
@@ -143,25 +169,27 @@ export default function PaperDetailPage() {
       await api.reportContent('paper_comment', commentId, reason)
       setReportedIds((prev) => new Set(prev).add(commentId))
       setActiveReportId(null)
-      setMessage('已举报')
+      setMessage(t('paper.reportSubmitted'))
       setTimeout(() => setMessage(''), 1600)
     } catch (err: any) {
-      setMessage(err?.response?.data?.error || err?.message || '举报失败')
+      setMessage(err?.response?.data?.error || err?.message || t('paper.reportFailed'))
       setTimeout(() => setMessage(''), 1800)
     }
   }
 
   if (loadError) {
-    return <ErrorState title="论文详情加载失败" description={loadError} onRetry={() => window.location.reload()} />
+    return <ErrorState title={t('paper.detailLoadFailed')} description={loadError} onRetry={() => window.location.reload()} />
   }
 
   if (!paper) {
-    return <SkeletonState variant="detail" title="正在加载论文详情" description="整理 DOI、作者、摘要、阅读状态和评论。" />
+    return <SkeletonState variant="detail" title={t('paper.detailLoading')} description={t('paper.detailLoadingDesc')} />
   }
+
+  const translatedSummary = language === 'zh' ? aiSummary?.summaryZh : aiSummary?.summaryEn
 
   return (
     <div className="ss-paper-detail-page">
-      <Link to="/" className="ss-back-button">返回搜索</Link>
+      <Link to="/" className="ss-back-button">{t('common.backToSearch')}</Link>
 
       <section className="ss-paper-detail-hero">
         <div>
@@ -177,7 +205,7 @@ export default function PaperDetailPage() {
           <p>{authors.slice(0, 14).join('; ')}{authors.length > 14 ? ' ...' : ''}</p>
         </div>
         <div className="ss-paper-detail-actions">
-          <button onClick={() => saveState(!paper.favorite)}>{paper.favorite ? '已收藏' : '收藏'}</button>
+          <button onClick={() => saveState(!paper.favorite)}>{paper.favorite ? t('common.favorited') : t('common.favorite')}</button>
           <button onClick={() => copyCitation('ieee')}>IEEE</button>
           <button onClick={() => copyCitation('apa')}>APA</button>
           <button onClick={() => copyCitation('bibtex')}>BibTeX</button>
@@ -189,21 +217,31 @@ export default function PaperDetailPage() {
         <main className="ss-profile-main">
           <section className="ss-panel">
             <div className="ss-panel-head compact">
-              <h2>摘要</h2>
+              <h2>{t('paper.abstract')}</h2>
+              <button className="ss-subtle-button" type="button" onClick={() => translateAbstract(false)} disabled={translating}>
+                {translating ? t('common.loading') : t('paper.translate')}
+              </button>
             </div>
-            <p className="ss-detail-abstract">{cleanText(paper.abstract) || '暂无摘要。'}</p>
+            <p className="ss-detail-abstract">{cleanText(paper.abstract) || t('common.noAbstract')}</p>
+            {translatedSummary && (
+              <div className="ss-ai-summary">
+                <strong>{t('paper.translation')}</strong>
+                <p>{translatedSummary}</p>
+                <small>{aiSummary?.cacheHit ? t('paper.translateCached') : `${aiSummary?.provider || 'AI'} · ${aiSummary?.model || ''}`}</small>
+              </div>
+            )}
           </section>
 
           <section className="ss-panel">
             <div className="ss-panel-head compact">
-              <h2>论文讨论</h2>
-              <span>{comments.length} comments</span>
+              <h2>{t('paper.discussion')}</h2>
+              <span>{comments.length} {t('common.comments')}</span>
             </div>
             <div className="ss-comment-list">
               {loadingComments && comments.length === 0 ? (
-                <SkeletonState variant="list" title="评论加载中" description="只展示已通过审核的公开评论。" />
+                <SkeletonState variant="list" title={t('paper.commentsLoading')} description={t('paper.commentsPublicOnly')} />
               ) : comments.length === 0 ? (
-                <EmptyState title="暂无评论" description="适合记录技术问题、复现笔记和相关工作补充。" />
+                <EmptyState title={t('common.noComments')} description={t('paper.commentsEmptyHint')} />
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="ss-comment-item">
@@ -225,7 +263,7 @@ export default function PaperDetailPage() {
                               {reason}
                             </button>
                           ))}
-                          <button className="ss-report-cancel" onClick={() => setActiveReportId(null)}>取消</button>
+                          <button className="ss-report-cancel" onClick={() => setActiveReportId(null)}>{t('common.cancel')}</button>
                         </div>
                       ) : (
                         <button
@@ -233,7 +271,7 @@ export default function PaperDetailPage() {
                           onClick={() => setActiveReportId(comment.id)}
                           disabled={reportedIds.has(comment.id)}
                         >
-                          {reportedIds.has(comment.id) ? '已举报' : 'Report'}
+                          {reportedIds.has(comment.id) ? t('common.reported') : t('common.report')}
                         </button>
                       )}
                     </div>
@@ -243,14 +281,12 @@ export default function PaperDetailPage() {
             </div>
             {hasMoreComments && !loadingComments && (
               <button className="ss-comment-submit subtle" onClick={() => loadComments(commentOffset + COMMENTS_PAGE_SIZE, true)}>
-                加载更多评论
+                {t('paper.loadMoreComments')}
               </button>
             )}
-            {loadingComments && comments.length > 0 && <p className="ss-comment-loading">加载中...</p>}
+            {loadingComments && comments.length > 0 && <p className="ss-comment-loading">{t('common.loading')}</p>}
             <div className="ss-comment-editor">
-              <p className="ss-comment-hint">
-                讨论论文方法、电路、实验和可复现性。不要攻击作者个人，也不要上传或分享受版权保护的 PDF。
-              </p>
+              <p className="ss-comment-hint">{t('paper.commentHint')}</p>
               <select value={commentType} onChange={(event) => setCommentType(event.target.value)}>
                 <option>Question</option>
                 <option>Technical Note</option>
@@ -259,50 +295,50 @@ export default function PaperDetailPage() {
                 <option>Correction</option>
                 <option>Reading Summary</option>
               </select>
-              <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder="评论论文内容，不攻击作者个人；不要上传或分享 PDF。" />
-              <button className="ss-comment-submit" onClick={addComment} disabled={!commentBody.trim()}>提交评论</button>
+              <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder={t('paper.commentPlaceholder')} />
+              <button className="ss-comment-submit" onClick={addComment} disabled={!commentBody.trim()}>{t('common.submit')}</button>
             </div>
           </section>
         </main>
 
         <aside className="ss-profile-side">
           <section className="ss-panel">
-            <div className="ss-panel-head compact"><h2>Metadata</h2></div>
+            <div className="ss-panel-head compact"><h2>{t('paper.metadata')}</h2></div>
             <dl className="ss-detail-facts">
               <dt>DOI</dt><dd>{paper.doi || '-'}</dd>
-              <dt>机构</dt><dd>{paper.affiliations || '-'}</dd>
-              <dt>采集来源</dt><dd>{paper.collectionMethod || '-'}</dd>
-              <dt>PDF 状态</dt><dd>{paper.downloadStatus || '-'}</dd>
-              <dt>验证状态</dt><dd>{paper.verificationStatus || '-'}</dd>
+              <dt>{t('paper.institution')}</dt><dd>{paper.affiliations || '-'}</dd>
+              <dt>{t('paper.collectionSource')}</dt><dd>{paper.collectionMethod || '-'}</dd>
+              <dt>{t('paper.pdfStatus')}</dt><dd>{paper.downloadStatus || '-'}</dd>
+              <dt>{t('paper.verificationStatus')}</dt><dd>{paper.verificationStatus || '-'}</dd>
             </dl>
             <div className="ss-detail-buttons">
-              {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">打开 DOI</a>}
-              {paper.pdfLink && <a href={paper.pdfLink} target="_blank" rel="noreferrer">打开 PDF</a>}
-              {paper.sourceUrl && <a href={paper.sourceUrl} target="_blank" rel="noreferrer">来源</a>}
+              {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">{t('common.openDoi')}</a>}
+              {paper.pdfLink && <a href={paper.pdfLink} target="_blank" rel="noreferrer">{t('common.openPdf')}</a>}
+              {paper.sourceUrl && <a href={paper.sourceUrl} target="_blank" rel="noreferrer">{t('common.source')}</a>}
             </div>
           </section>
 
           <section className="ss-panel ss-reading-box">
-            <div className="ss-panel-head compact"><h2>阅读与笔记</h2></div>
+            <div className="ss-panel-head compact"><h2>{t('paper.readingNotes')}</h2></div>
             <label>
-              <span>状态</span>
+              <span>{t('paper.status')}</span>
               <select value={readingStatus} onChange={(event) => setReadingStatus(event.target.value)}>
-                {READING_STATUS_OPTIONS.map((opt) => (
+                {readingOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </label>
-            <label><span>标签</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="PMIC, must-read" /></label>
-            <label><span>私人笔记</span><textarea value={note} onChange={(event) => setNote(event.target.value)} /></label>
-            <button className="ss-apply-filter" onClick={() => saveState()}>保存阅读状态</button>
+            <label><span>{t('paper.tags')}</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="PMIC, must-read" /></label>
+            <label><span>{t('paper.privateNote')}</span><textarea value={note} onChange={(event) => setNote(event.target.value)} /></label>
+            <button className="ss-apply-filter" onClick={() => saveState()}>{t('paper.saveReading')}</button>
           </section>
 
           <section className="ss-panel">
-            <div className="ss-panel-head compact"><h2>阅读队列</h2></div>
+            <div className="ss-panel-head compact"><h2>{t('paper.readingQueue')}</h2></div>
             <div className="space-y-2 text-sm">
-              <p className="text-ink-muted text-xs">快速标记到阅读队列，不影响收藏和笔记。</p>
+              <p className="text-ink-muted text-xs">{t('paper.quickQueueHint')}</p>
               <div className="flex flex-wrap gap-1">
-                {READING_STATUS_OPTIONS.map((opt) => (
+                {readingOptions.map((opt) => (
                   <button
                     key={opt.value}
                     className={`text-xs px-2 py-1 rounded border ${readingStatus === opt.value ? 'bg-brand-50 border-brand-200 text-brand-700' : 'border-line hover:bg-surface-elevated'}`}

@@ -25,6 +25,29 @@ export interface PaperRow {
   matchReason?: string;
 }
 
+export interface PaperAiSummary {
+  cacheHit: boolean;
+  id: number;
+  paperId: number;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  language: string;
+  summaryZh: string;
+  summaryEn: string;
+  primaryDomain: string;
+  labels: string[];
+  topics: Array<{ topicId: string; label: string; confidence: number; evidence: string[] }>;
+  entities: Record<string, unknown>;
+  metrics: Array<{ name: string; value: string; context: string }>;
+  confidence: number;
+  costEstimateUsd: number;
+  tokenInput: number;
+  tokenOutput: number;
+  needsReview: boolean;
+  updatedAt: string;
+}
+
 export interface SearchResult {
   total: number;
   limit: number;

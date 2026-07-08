@@ -670,6 +670,28 @@ router.get("/papers/:id", requireAuth, async (req: AuthenticatedRequest, res) =>
   res.json(paper);
 });
 
+router.post("/papers/:id/ai-summary", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid paper ID" });
+    return;
+  }
+  try {
+    const summary = await paperAiEnrichmentService.getOrCreatePaperSummary(id, {
+      provider: req.body?.provider,
+      model: req.body?.model,
+      refresh: Boolean(req.body?.refresh),
+    });
+    if (!summary) {
+      res.status(404).json({ error: "Paper not found" });
+      return;
+    }
+    res.json(summary);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 router.put("/private/papers/:id/state", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   const paper = paperService.upsertPaperState(id, req.body, req.user?.userId ?? 0);
