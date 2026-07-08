@@ -3,6 +3,7 @@ import { Link, NavLink, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EntityLink } from '../components/EntityLink'
+import { useI18n, type Language } from '../i18n'
 import { searchPath } from '../utils/routes'
 import type { ApiKeyInfo, PaperComment, PaperRow, PdfInboxInfo, SearchResult, SearchSuggestion, StatsData } from '../types'
 
@@ -46,26 +47,263 @@ const defaultControls: SearchControls = {
   minCitations: '',
 }
 
-const readingOptions = [
-  ['unread', '未读'],
-  ['reading', '在读'],
-  ['read', '已读'],
-  ['important', '重点'],
-  ['skip', '跳过'],
-]
+const readingStatusValues = ['unread', 'reading', 'read', 'important', 'skip'] as const
 
-const tabs = [
-  { to: '/', label: '全部' },
-  { to: searchPath({ rank: 'S+' }), label: '论文(S+)' },
-  { to: '/mentors', label: '导师/机构' },
-  { to: '/topics', label: '方向' },
-  { to: '/geo', label: 'Geo' },
-  { to: '/authors', label: '专家' },
-  { to: '/institutions', label: '机构' },
-  { to: '/venue-matrix', label: '会议/期刊' },
+const tabSpecs = [
+  { to: '/', key: 'all' },
+  { to: searchPath({ rank: 'S+' }), key: 'sPlus' },
+  { to: '/mentors', key: 'mentors' },
+  { to: '/topics', key: 'topics' },
+  { to: '/geo', key: 'geo' },
+  { to: '/authors', key: 'authors' },
+  { to: '/institutions', key: 'institutions' },
+  { to: '/venue-matrix', key: 'venues' },
 ]
 
 const topicShortcuts = ['ADC', 'PLL', 'DC-DC', 'LDO', 'RF', 'SerDes', 'SRAM', 'Bandgap']
+
+function homeCopy(language: Language) {
+  if (language === 'en') {
+    return {
+      scopeAll: 'All',
+      scopePapers: 'Papers',
+      scopeAuthors: 'Authors',
+      scopeInstitutions: 'Institutions',
+      searchLoading: 'Searching...',
+      search: 'Search',
+      advancedSearch: 'Advanced search',
+      watchlist: 'Watchlist',
+      history: 'History:',
+      suggestion: 'Suggestion:',
+      noAbstract: 'No abstract yet.',
+      favorited: 'Saved',
+      openPaper: 'Paper',
+      save: 'Save',
+      previousPage: 'Previous',
+      nextPage: 'Next',
+      nextBatch: 'Next batch',
+      pageOf: 'Page {page} / {pages}',
+      detail: 'Paper detail',
+      detailEmpty: 'Click a paper in the center list to inspect DOI, abstract, source, reading state, notes, and quick citation.',
+      openFull: 'Open full page',
+      close: 'Close',
+      openDoi: 'Open DOI',
+      openPdf: 'Open PDF',
+      source: 'Source',
+      authors: 'Authors',
+      institution: 'Institution',
+      status: 'Status',
+      dataSource: 'Data source',
+      citations: 'Citations',
+      abstract: 'Abstract',
+      quickCitation: 'Quick citation',
+      readingNotes: 'Reading and notes',
+      tags: 'Tags',
+      note: 'Note',
+      notePlaceholder: 'Write a short private reading note...',
+      unsave: 'Unsave',
+      discussion: 'Discussion',
+      noComments: 'No comments yet.',
+      imported: 'DOI imported',
+      privateTools: 'Private tools',
+      privateToolsHint: 'Import metadata only; PDFs stay in your local library or open through publisher links.',
+      importDoi: 'Import DOI',
+      emptyHint: 'Try relaxing year, venue, or semantic filters.',
+      suggestionFallback: 'Try another circuit block, venue, or author.',
+      searchFailed: 'Search failed',
+      statsFailed: 'Failed to load statistics',
+      copiedLink: 'Search link copied',
+      savedSearch: 'Search saved',
+      savedSearchExists: 'Search already saved',
+      saveFailed: 'Save failed',
+      metrics: {
+        timeRange: 'Time range',
+        adjustable: 'Adjust on the left',
+        resultCount: 'Results',
+        pdfLibrary: 'PDF library',
+        matched: 'matched',
+        ieee: 'IEEE enrichment',
+        pending: 'Pending',
+        enableAfterKey: 'Enabled after API key',
+        trust: 'Data trust',
+        trustHint: 'Institution/author disambiguation still improving',
+      },
+      filters: {
+        title: 'Refine search',
+        clear: 'Clear',
+        startYear: 'Start year',
+        endYear: 'End year',
+        recent5: 'Last 5 years',
+        recent10: 'Last 10 years',
+        recent15: 'Last 15 years',
+        venue: 'Venue / journal',
+        addVenue: 'Add venue / journal',
+        field: 'Research direction',
+        all: 'All',
+        rank: 'Venue rank',
+        author: 'Author',
+        institution: 'Institution',
+        country: 'Country / region',
+        minScore: 'Min score',
+        minCitations: 'Min citations',
+        semantic: 'Semantic expansion',
+        localPdf: 'Local PDF only',
+        favoritesOnly: 'Favorites only',
+        apply: 'Apply filters',
+      },
+      result: {
+        rows: 'results',
+        expanded: 'Expanded query: {query}',
+        relevance: 'Relevance',
+        score: 'Score',
+        year: 'Newest',
+        citations: 'Citations',
+        title: 'Title',
+        copy: 'Copy link',
+        save: 'Save search',
+        list: 'List',
+        export: 'Export',
+        emptyTitle: 'No matching papers',
+      },
+      tabs: {
+        all: 'All',
+        sPlus: 'Papers (S+)',
+        mentors: 'Mentors / Institutions',
+        topics: 'Topics',
+        geo: 'Geo',
+        authors: 'Experts',
+        institutions: 'Institutions',
+        venues: 'Venues',
+      },
+      reading: {
+        unread: 'Unread',
+        reading: 'Reading',
+        read: 'Read',
+        important: 'Important',
+        skip: 'Skip',
+      },
+    }
+  }
+  return {
+    scopeAll: '全部',
+    scopePapers: '论文',
+    scopeAuthors: '作者',
+    scopeInstitutions: '机构',
+    searchLoading: '搜索中...',
+    search: '搜索',
+    advancedSearch: '高级搜索',
+    watchlist: '收藏夹',
+    history: '历史：',
+    suggestion: '建议：',
+    noAbstract: '暂无摘要。',
+    favorited: '已收藏',
+    openPaper: '论文',
+    save: '收藏',
+    previousPage: '上一页',
+    nextPage: '下一页',
+    nextBatch: '下一批',
+    pageOf: '第 {page} / {pages} 页',
+    detail: '论文详情',
+    detailEmpty: '点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。',
+    openFull: '打开完整页',
+    close: '关闭',
+    openDoi: '打开 DOI',
+    openPdf: '打开 PDF',
+    source: '来源',
+    authors: '作者',
+    institution: '机构',
+    status: '状态',
+    dataSource: '数据源',
+    citations: '引用数',
+    abstract: '摘要',
+    quickCitation: '快捷引用',
+    readingNotes: '阅读与笔记',
+    tags: '标签',
+    note: '笔记',
+    notePlaceholder: '写一点自己的阅读笔记...',
+    unsave: '取消收藏',
+    discussion: '讨论',
+    noComments: '暂无评论。',
+    imported: 'DOI 导入完成',
+    privateTools: '私人工具',
+    privateToolsHint: '只导入 metadata；PDF 接入走本地私库或出版社官网跳转。',
+    importDoi: '导入 DOI',
+    emptyHint: '试试放宽年份、会议或语义条件。',
+    suggestionFallback: '换一个电路模块、会议或作者试试。',
+    searchFailed: '搜索失败',
+    statsFailed: '统计数据加载失败',
+    copiedLink: '搜索链接已复制',
+    savedSearch: '搜索已保存',
+    savedSearchExists: '搜索已保存（已存在）',
+    saveFailed: '保存失败',
+    metrics: {
+      timeRange: '时间范围',
+      adjustable: '可在左侧调整',
+      resultCount: '结果数量',
+      pdfLibrary: 'PDF 私库',
+      matched: '已匹配',
+      ieee: 'IEEE 精修',
+      pending: '待接入',
+      enableAfterKey: 'API key 后启用',
+      trust: '数据可信度',
+      trustHint: '机构/作者消歧待加强',
+    },
+    filters: {
+      title: '精炼搜索',
+      clear: '清空',
+      startYear: '开始年份',
+      endYear: '结束年份',
+      recent5: '近 5 年',
+      recent10: '近 10 年',
+      recent15: '近 15 年',
+      venue: '会议/期刊',
+      addVenue: '添加会议/期刊',
+      field: '研究方向',
+      all: '全部',
+      rank: '期刊/会议等级',
+      author: '作者',
+      institution: '机构',
+      country: '国家/地区',
+      minScore: '最低分',
+      minCitations: '最低引用',
+      semantic: '语义扩展',
+      localPdf: '仅看本地 PDF',
+      favoritesOnly: '仅看收藏',
+      apply: '应用筛选',
+    },
+    result: {
+      rows: '条结果',
+      expanded: '扩展查询：{query}',
+      relevance: '相关度',
+      score: '综合',
+      year: '最新',
+      citations: '引用数',
+      title: '标题',
+      copy: '复制链接',
+      save: '保存搜索',
+      list: '列表',
+      export: '导出',
+      emptyTitle: '没有匹配论文',
+    },
+    tabs: {
+      all: '全部',
+      sPlus: '论文(S+)',
+      mentors: '导师/机构',
+      topics: '方向',
+      geo: 'Geo',
+      authors: '专家',
+      institutions: '机构',
+      venues: '会议/期刊',
+    },
+    reading: {
+      unread: '未读',
+      reading: '在读',
+      read: '已读',
+      important: '重点',
+      skip: '跳过',
+    },
+  }
+}
 
 function splitAuthors(authors: string) {
   return String(authors || '').split(';').map((author) => author.trim()).filter(Boolean)
@@ -214,12 +452,14 @@ const PaperCard = memo(function PaperCard({
   index,
   selected,
   query,
+  text,
   onOpen,
 }: {
   row: PaperRow
   index: number
   selected: boolean
   query: string
+  text: ReturnType<typeof homeCopy>
   onOpen: (id: number) => void
 }) {
   const authors = splitAuthors(row.authors)
@@ -242,7 +482,7 @@ const PaperCard = memo(function PaperCard({
           ))}
           {authors.length > 10 ? ' ...' : ''}
         </p>
-        <p className="ss-abstract">{highlightParts(row.abstract, query) || '暂无摘要。'}</p>
+        <p className="ss-abstract">{highlightParts(row.abstract, query) || text.noAbstract}</p>
         <div className="ss-paper-meta">
           <span className="rank">{row.rank || '-'}</span>
           <EntityLink kind="venue" value={row.venue} params={{ yearFrom: row.year, yearTo: row.year }}>{row.venue || '-'}</EntityLink>
@@ -250,14 +490,14 @@ const PaperCard = memo(function PaperCard({
           <span>{row.year}</span>
           <span>score {Number(row.score || 0).toFixed(1)}</span>
           <span>{row.citationCount || 0} citations</span>
-          {row.favorite && <span className="favorite">已收藏</span>}
+          {row.favorite && <span className="favorite">{text.favorited}</span>}
           {row.matchReason && <span className="ss-match-reason">{row.matchReason}</span>}
         </div>
       </div>
       <div className="ss-paper-actions">
-        <button type="button" onClick={(event) => { event.stopPropagation(); onOpen(row.id) }}>论文</button>
+        <button type="button" onClick={(event) => { event.stopPropagation(); onOpen(row.id) }}>{text.openPaper}</button>
         <button type="button" onClick={(event) => event.stopPropagation()}>AI</button>
-        <button type="button" onClick={(event) => event.stopPropagation()}>收藏</button>
+        <button type="button" onClick={(event) => event.stopPropagation()}>{text.save}</button>
       </div>
     </article>
   )
@@ -270,6 +510,7 @@ function Pagination({
   hasCursor,
   onPage,
   onCursor,
+  text,
 }: {
   total: number;
   page: number;
@@ -277,6 +518,7 @@ function Pagination({
   hasCursor?: boolean;
   onPage: (page: number) => void;
   onCursor?: () => void;
+  text: ReturnType<typeof homeCopy>;
 }) {
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const start = Math.max(1, Math.min(page - 3, Math.max(1, pages - 6)))
@@ -288,20 +530,23 @@ function Pagination({
 
   return (
     <nav className="ss-pagination" aria-label="Paper pagination">
-      <button onClick={() => onPage(Math.max(1, page - 1))} disabled={loading || page <= 1}>上一页</button>
+      <button onClick={() => onPage(Math.max(1, page - 1))} disabled={loading || page <= 1}>{text.previousPage}</button>
       {items.map((item, idx) => (
         <button key={`${item}-${idx}`} className={item === page ? 'active' : ''} onClick={() => onPage(item)} disabled={loading || item === page}>
           {item}
         </button>
       ))}
-      <button onClick={() => onPage(Math.min(pages, page + 1))} disabled={loading || page >= pages}>下一页</button>
-      {hasCursor && <button className="keyset" onClick={onCursor} disabled={loading}>Next batch</button>}
-      <span>第 {page} / {pages} 页</span>
+      <button onClick={() => onPage(Math.min(pages, page + 1))} disabled={loading || page >= pages}>{text.nextPage}</button>
+      {hasCursor && <button className="keyset" onClick={onCursor} disabled={loading}>{text.nextBatch}</button>}
+      <span>{text.pageOf.replace('{page}', String(page)).replace('{pages}', String(pages))}</span>
     </nav>
   )
 }
 
 function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | null; onClose: () => void; onUpdated: (paper: PaperRow) => void }) {
+  const { language } = useI18n()
+  const text = useMemo(() => homeCopy(language), [language])
+  const readingOptions = useMemo(() => readingStatusValues.map((value) => [value, text.reading[value]] as const), [text])
   const [paper, setPaper] = useState<(PaperRow & { note?: string }) | null>(null)
   const [comments, setComments] = useState<PaperComment[]>([])
   const [note, setNote] = useState('')
@@ -341,22 +586,22 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
     })
     setPaper(updated)
     onUpdated(updated)
-    setMessage('已保存')
+    setMessage(language === 'zh' ? '已保存' : 'Saved')
     setTimeout(() => setMessage(''), 1400)
   }
 
   async function copyCitation(format: 'ieee' | 'apa' | 'bibtex') {
     if (!paper) return
     await navigator.clipboard.writeText(citationText(paper, format))
-    setMessage(`已复制 ${format.toUpperCase()}`)
+    setMessage(language === 'zh' ? `已复制 ${format.toUpperCase()}` : `Copied ${format.toUpperCase()}`)
     setTimeout(() => setMessage(''), 1400)
   }
 
   if (!paperId) {
     return (
       <aside className="ss-detail empty">
-        <h2>论文详情</h2>
-        <p>点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。</p>
+        <h2>{text.detail}</h2>
+        <p>{text.detailEmpty}</p>
       </aside>
     )
   }
@@ -368,10 +613,10 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
   return (
     <aside className="ss-detail">
       <div className="ss-detail-head">
-        <strong>论文详情</strong>
+        <strong>{text.detail}</strong>
         <div>
-          <Link to={`/papers/${paper.id}`}>打开完整页</Link>
-          <button onClick={onClose}>关闭</button>
+          <Link to={`/papers/${paper.id}`}>{text.openFull}</Link>
+          <button onClick={onClose}>{text.close}</button>
         </div>
       </div>
       <h2>{cleanText(paper.title)}</h2>
@@ -384,24 +629,24 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
         <span>score {Number(paper.score || 0).toFixed(1)}</span>
       </div>
       <div className="ss-detail-buttons">
-        {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">打开 DOI</a>}
-        {paper.pdfLink && <a href={paper.pdfLink} target="_blank" rel="noreferrer">打开 PDF</a>}
-        {paper.sourceUrl && <a href={paper.sourceUrl} target="_blank" rel="noreferrer">来源</a>}
+        {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">{text.openDoi}</a>}
+        {paper.pdfLink && <a href={paper.pdfLink} target="_blank" rel="noreferrer">{text.openPdf}</a>}
+        {paper.sourceUrl && <a href={paper.sourceUrl} target="_blank" rel="noreferrer">{text.source}</a>}
       </div>
       <dl className="ss-detail-facts">
         <dt>DOI</dt><dd>{paper.doi || '-'}</dd>
-        <dt>作者</dt><dd>{authors.slice(0, 8).join('; ') || '-'}</dd>
-        <dt>机构</dt><dd>{paper.affiliations || '-'}</dd>
-        <dt>PDF 状态</dt><dd>{paper.downloadStatus || '-'}</dd>
-        <dt>数据源</dt><dd>{paper.collectionMethod || '-'}</dd>
-        <dt>引用数</dt><dd>{paper.citationCount || 0}</dd>
+        <dt>{text.authors}</dt><dd>{authors.slice(0, 8).join('; ') || '-'}</dd>
+        <dt>{text.institution}</dt><dd>{paper.affiliations || '-'}</dd>
+        <dt>{text.status}</dt><dd>{paper.downloadStatus || '-'}</dd>
+        <dt>{text.dataSource}</dt><dd>{paper.collectionMethod || '-'}</dd>
+        <dt>{text.citations}</dt><dd>{paper.citationCount || 0}</dd>
       </dl>
       <section>
-        <h3>摘要</h3>
-        <p className="ss-detail-abstract">{cleanText(paper.abstract) || '暂无摘要。'}</p>
+        <h3>{text.abstract}</h3>
+        <p className="ss-detail-abstract">{cleanText(paper.abstract) || text.noAbstract}</p>
       </section>
       <section>
-        <h3>快捷引用</h3>
+        <h3>{text.quickCitation}</h3>
         <div className="ss-citation-buttons">
           <button onClick={() => copyCitation('ieee')}>IEEE</button>
           <button onClick={() => copyCitation('apa')}>APA</button>
@@ -409,22 +654,22 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
         </div>
       </section>
       <section className="ss-reading-box">
-        <h3>阅读与笔记</h3>
+        <h3>{text.readingNotes}</h3>
         <label>
-          <span>状态</span>
+          <span>{text.status}</span>
           <select value={readingStatus} onChange={(event) => setReadingStatus(event.target.value)}>
             {readingOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </label>
-        <label><span>标签</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="PMIC, must-read" /></label>
-        <label><span>笔记</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="写一点自己的阅读笔记..." /></label>
+        <label><span>{text.tags}</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="PMIC, must-read" /></label>
+        <label><span>{text.note}</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={text.notePlaceholder} /></label>
         <div className="ss-detail-buttons">
-          <button onClick={() => saveState(!paper.favorite)}>{paper.favorite ? '取消收藏' : '收藏'}</button>
-          <button onClick={() => saveState()}>保存</button>
+          <button onClick={() => saveState(!paper.favorite)}>{paper.favorite ? text.unsave : text.save}</button>
+          <button onClick={() => saveState()}>{text.save}</button>
         </div>
       </section>
       <section>
-        <h3>讨论</h3>
+        <h3>{text.discussion}</h3>
         <div className="ss-comment-list">
           {comments.length ? comments.map((comment) => (
             <div key={comment.id}>
@@ -432,7 +677,7 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
               <span>{comment.comment_type || comment.commentType || 'Comment'}</span>
               <p>{comment.body}</p>
             </div>
-          )) : <p>暂无评论。</p>}
+          )) : <p>{text.noComments}</p>}
         </div>
       </section>
       {message && <div className="ss-toast">{message}</div>}
@@ -441,6 +686,8 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
 }
 
 function AdminTools({ onImported }: { onImported: (paper: PaperRow) => void }) {
+  const { language } = useI18n()
+  const text = useMemo(() => homeCopy(language), [language])
   const [doi, setDoi] = useState('')
   const [keys, setKeys] = useState<ApiKeyInfo[]>([])
   const [pdfInbox, setPdfInbox] = useState<PdfInboxInfo | null>(null)
@@ -456,17 +703,17 @@ function AdminTools({ onImported }: { onImported: (paper: PaperRow) => void }) {
     const paper = await api.importDoi(doi.trim())
     onImported(paper)
     setDoi('')
-    setMessage('DOI 导入完成')
+    setMessage(text.imported)
     setTimeout(() => setMessage(''), 1600)
   }
 
   return (
     <section className="ss-tool-panel">
-      <h3>私人工具</h3>
-      <p>只导入 metadata；PDF 接入走本地私库或出版社官网跳转。</p>
+      <h3>{text.privateTools}</h3>
+      <p>{text.privateToolsHint}</p>
       <div className="ss-inline-form">
         <input value={doi} onChange={(event) => setDoi(event.target.value)} placeholder="10.xxxx/..." />
-        <button onClick={importDoi}>导入 DOI</button>
+        <button onClick={importDoi}>{text.importDoi}</button>
       </div>
       <div className="ss-tool-meta">
         <span>PDF inbox: {pdfInbox ? `${pdfInbox.count} files` : '-'}</span>
@@ -478,6 +725,8 @@ function AdminTools({ onImported }: { onImported: (paper: PaperRow) => void }) {
 }
 
 export default function HomePage() {
+  const { language } = useI18n()
+  const text = useMemo(() => homeCopy(language), [language])
   const [searchParams, setSearchParams] = useSearchParams()
   const [controls, setControls] = useState<SearchControls>(() => controlsFromParams(searchParams))
   const [results, setResults] = useState<SearchResult | null>(null)
@@ -526,7 +775,7 @@ export default function HomePage() {
         const hint = await api.searchSuggestions({ q: query }).catch(() => null)
         if (id === requestId.current) {
           setSuggestions(hint?.rows || [])
-          setEmptyHint(hint?.emptyState || '换一个电路模块、会议或作者试试。')
+          setEmptyHint(hint?.emptyState || text.suggestionFallback)
         }
       } else {
         setSuggestions([])
@@ -534,20 +783,20 @@ export default function HomePage() {
       }
     } catch (err) {
       if (id === requestId.current) {
-        setError(err instanceof Error ? err.message : '搜索失败')
+        setError(err instanceof Error ? err.message : text.searchFailed)
         console.error(err)
       }
     } finally {
       if (id === requestId.current) setLoading(false)
     }
-  }, [])
+  }, [text.searchFailed, text.suggestionFallback])
 
   useEffect(() => {
     api.stats().then(setStats).catch((err) => {
       console.error(err)
-      setError(err instanceof Error ? err.message : '统计数据加载失败')
+      setError(err instanceof Error ? err.message : text.statsFailed)
     })
-  }, [])
+  }, [text.statsFailed])
 
   useEffect(() => {
     const next = controlsFromParams(searchParams)
@@ -622,7 +871,7 @@ export default function HomePage() {
     const url = new URL(window.location.href)
     url.search = new URLSearchParams(paramsFromControls(controls, page)).toString()
     await navigator.clipboard.writeText(url.toString())
-    setSaveMessage('搜索链接已复制')
+    setSaveMessage(text.copiedLink)
     setTimeout(() => setSaveMessage(''), 1400)
   }
 
@@ -631,10 +880,10 @@ export default function HomePage() {
       const params = paramsFromControls(controls)
       const label = controls.q || Object.entries(params).map(([key, value]) => `${key}:${value}`).join(' ') || 'all papers'
       const data = await api.addWatchlistItem('search', label, params)
-      setSaveMessage(data.alreadyExists ? '搜索已保存（已存在）' : '搜索已保存')
+      setSaveMessage(data.alreadyExists ? text.savedSearchExists : text.savedSearch)
       setTimeout(() => setSaveMessage(''), 1400)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || '保存失败')
+      setError(err?.response?.data?.error || err?.message || text.saveFailed)
     }
   }
 
@@ -657,17 +906,17 @@ export default function HomePage() {
           <strong>SiliconScope</strong>
         </Link>
         <form className="ss-searchbar" onSubmit={(event) => { event.preventDefault(); submit(1) }}>
-          <select aria-label="search scope"><option>全部</option><option>论文</option><option>作者</option><option>机构</option></select>
+          <select aria-label="search scope"><option>{text.scopeAll}</option><option>{text.scopePapers}</option><option>{text.scopeAuthors}</option><option>{text.scopeInstitutions}</option></select>
           <input
             value={controls.q}
             onChange={(event) => updateControl('q', event.target.value)}
             placeholder="integrated circuit mmWave phased array transceiver"
           />
-          <button disabled={loading}>{loading ? '搜索中...' : '搜索'}</button>
-          <button type="button" className="ghost">高级搜索</button>
+          <button disabled={loading}>{loading ? text.searchLoading : text.search}</button>
+          <button type="button" className="ghost">{text.advancedSearch}</button>
         </form>
         <div className="ss-home-actions">
-          <Link to="/watchlist">收藏夹</Link>
+          <Link to="/watchlist">{text.watchlist}</Link>
           <button type="button">?</button>
           <span>RP</span>
         </div>
@@ -676,18 +925,18 @@ export default function HomePage() {
       {(history.length > 0 || suggestions.length > 0) && (
         <div className="ss-search-assist">
           {history.slice(0, 5).map((item) => (
-            <button key={`history-${item}`} onClick={() => applyQuery(item)}>历史：{item}</button>
+            <button key={`history-${item}`} onClick={() => applyQuery(item)}>{text.history}{item}</button>
           ))}
           {suggestions.slice(0, 5).map((item) => (
-            <button key={`suggestion-${item.query}`} onClick={() => applyQuery(item.query)}>建议：{item.label}</button>
+            <button key={`suggestion-${item.query}`} onClick={() => applyQuery(item.query)}>{text.suggestion}{item.label}</button>
           ))}
         </div>
       )}
 
       <nav className="ss-tabs">
-        {tabs.map((item) => (
-          <NavLink key={item.to + item.label} to={item.to} end={item.to === '/'} className={({ isActive }) => isActive ? 'active' : ''}>
-            {item.label}
+        {tabSpecs.map((item) => (
+          <NavLink key={item.to + item.key} to={item.to} end={item.to === '/'} className={({ isActive }) => isActive ? 'active' : ''}>
+            {text.tabs[item.key as keyof typeof text.tabs]}
           </NavLink>
         ))}
         <i />
@@ -697,32 +946,32 @@ export default function HomePage() {
       </nav>
 
       <section className="ss-command-strip">
-        <Metric label="时间范围" value={`${controls.yearFrom || '-'}-${controls.yearTo || '-'}`} hint="可在左侧调整" />
-        <Metric label="结果数量" value={formatNumber(results?.total ?? stats?.total)} hint={results?.engine || 'sqlite'} />
-        <Metric label="PDF 私库" value={`${stats?.pdfs || 0}`} hint="已匹配" />
-        <Metric label="IEEE 精修" value="待接入" hint="API key 后启用" tone="warn" />
-        <Metric label="数据可信度" value="80%" hint="机构/作者消歧待加强" tone="good" />
+        <Metric label={text.metrics.timeRange} value={`${controls.yearFrom || '-'}-${controls.yearTo || '-'}`} hint={text.metrics.adjustable} />
+        <Metric label={text.metrics.resultCount} value={formatNumber(results?.total ?? stats?.total)} hint={results?.engine || 'sqlite'} />
+        <Metric label={text.metrics.pdfLibrary} value={`${stats?.pdfs || 0}`} hint={text.metrics.matched} />
+        <Metric label={text.metrics.ieee} value={text.metrics.pending} hint={text.metrics.enableAfterKey} tone="warn" />
+        <Metric label={text.metrics.trust} value="80%" hint={text.metrics.trustHint} tone="good" />
       </section>
 
       <div className="ss-content-grid">
         <aside className="ss-filter-panel">
           <div className="ss-filter-head">
-            <strong>精炼搜索</strong>
-            <button onClick={() => { setControls(defaultControls); setSearchParams({}) }}>清空</button>
+            <strong>{text.filters.title}</strong>
+            <button onClick={() => { setControls(defaultControls); setSearchParams({}) }}>{text.filters.clear}</button>
           </div>
           <div className="ss-year-grid">
-            <label><span>开始年份</span><input value={controls.yearFrom} onChange={(event) => updateControl('yearFrom', event.target.value)} /></label>
-            <label><span>结束年份</span><input value={controls.yearTo} onChange={(event) => updateControl('yearTo', event.target.value)} /></label>
+            <label><span>{text.filters.startYear}</span><input value={controls.yearFrom} onChange={(event) => updateControl('yearFrom', event.target.value)} /></label>
+            <label><span>{text.filters.endYear}</span><input value={controls.yearTo} onChange={(event) => updateControl('yearTo', event.target.value)} /></label>
           </div>
           <div className="ss-filter-shortcuts horizontal">
-            <button onClick={() => submit(1, { ...controls, yearFrom: '2022' })}>近 5 年</button>
-            <button onClick={() => submit(1, { ...controls, yearFrom: '2017' })}>近 10 年</button>
-            <button onClick={() => submit(1, { ...controls, yearFrom: '2012' })}>近 15 年</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2022' })}>{text.filters.recent5}</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2017' })}>{text.filters.recent10}</button>
+            <button onClick={() => submit(1, { ...controls, yearFrom: '2012' })}>{text.filters.recent15}</button>
           </div>
           <label>
-            <span>会议/期刊</span>
+            <span>{text.filters.venue}</span>
             <select value="" onChange={(event) => event.target.value && updateControl('venue', toggleCsvValue(controls.venue, event.target.value))}>
-              <option value="">添加会议/期刊</option>
+              <option value="">{text.filters.addVenue}</option>
               {venueOptions.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
@@ -733,19 +982,19 @@ export default function HomePage() {
               ))}
             </div>
           )}
-          <label><span>研究方向</span><select value={controls.field} onChange={(event) => updateControl('field', event.target.value)}><option value="">全部</option>{fieldOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label><span>期刊/会议等级</span><select value={controls.rank} onChange={(event) => updateControl('rank', event.target.value)}><option value="">全部</option>{rankOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label><span>作者</span><input value={controls.author} onChange={(event) => updateControl('author', event.target.value)} placeholder="Rui P. Martins" /></label>
-          <label><span>机构</span><input value={controls.institution} onChange={(event) => updateControl('institution', event.target.value)} placeholder="University of Macau" /></label>
-          <label><span>国家/地区</span><input value={controls.country} onChange={(event) => updateControl('country', event.target.value)} placeholder="China / United States" /></label>
+          <label><span>{text.filters.field}</span><select value={controls.field} onChange={(event) => updateControl('field', event.target.value)}><option value="">{text.filters.all}</option>{fieldOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>{text.filters.rank}</span><select value={controls.rank} onChange={(event) => updateControl('rank', event.target.value)}><option value="">{text.filters.all}</option>{rankOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>{text.filters.author}</span><input value={controls.author} onChange={(event) => updateControl('author', event.target.value)} placeholder="Rui P. Martins" /></label>
+          <label><span>{text.filters.institution}</span><input value={controls.institution} onChange={(event) => updateControl('institution', event.target.value)} placeholder="University of Macau" /></label>
+          <label><span>{text.filters.country}</span><input value={controls.country} onChange={(event) => updateControl('country', event.target.value)} placeholder="China / United States" /></label>
           <div className="ss-year-grid">
-            <label><span>最低分</span><input value={controls.minScore} onChange={(event) => updateControl('minScore', event.target.value)} /></label>
-            <label><span>最低引用</span><input value={controls.minCitations} onChange={(event) => updateControl('minCitations', event.target.value)} /></label>
+            <label><span>{text.filters.minScore}</span><input value={controls.minScore} onChange={(event) => updateControl('minScore', event.target.value)} /></label>
+            <label><span>{text.filters.minCitations}</span><input value={controls.minCitations} onChange={(event) => updateControl('minCitations', event.target.value)} /></label>
           </div>
-          <label className="ss-check"><input type="checkbox" checked={controls.semantic} onChange={(event) => updateControl('semantic', event.target.checked)} /> 语义扩展</label>
-          <label className="ss-check"><input type="checkbox" checked={controls.hasPdf} onChange={(event) => updateControl('hasPdf', event.target.checked)} /> 仅看本地 PDF</label>
-          <label className="ss-check"><input type="checkbox" checked={controls.favorite} onChange={(event) => updateControl('favorite', event.target.checked)} /> 仅看收藏</label>
-          <button className="ss-apply-filter" onClick={() => submit(1)}>应用筛选</button>
+          <label className="ss-check"><input type="checkbox" checked={controls.semantic} onChange={(event) => updateControl('semantic', event.target.checked)} /> {text.filters.semantic}</label>
+          <label className="ss-check"><input type="checkbox" checked={controls.hasPdf} onChange={(event) => updateControl('hasPdf', event.target.checked)} /> {text.filters.localPdf}</label>
+          <label className="ss-check"><input type="checkbox" checked={controls.favorite} onChange={(event) => updateControl('favorite', event.target.checked)} /> {text.filters.favoritesOnly}</label>
+          <button className="ss-apply-filter" onClick={() => submit(1)}>{text.filters.apply}</button>
           <AdminTools onImported={appendImported} />
           <section className="ss-tool-panel ss-company-entry">
             <h3>Company Intelligence</h3>
@@ -758,23 +1007,23 @@ export default function HomePage() {
           {error && <div className="ss-error-banner">{error}</div>}
           <div className="ss-result-head">
             <div>
-              <strong>{formatNumber(results?.total)} 条结果</strong>
-              <span>{results?.expandedQuery ? `扩展查询：${results.expandedQuery}` : results?.engine || 'sqlite'}</span>
+              <strong>{formatNumber(results?.total)} {text.result.rows}</strong>
+              <span>{results?.expandedQuery ? text.result.expanded.replace('{query}', results.expandedQuery) : results?.engine || 'sqlite'}</span>
               {typeof results?.durationMs === 'number' && <span>{results.durationMs} ms</span>}
               {saveMessage && <span className="ss-save-message">{saveMessage}</span>}
             </div>
             <div className="ss-result-tools">
               <select value={controls.sort} onChange={(event) => { const next = { ...controls, sort: event.target.value }; setControls(next); submit(1, next) }}>
-                <option value="relevance">相关度</option>
-                <option value="score">综合</option>
-                <option value="year">最新</option>
-                <option value="citations">引用数</option>
-                <option value="title">标题</option>
+                <option value="relevance">{text.result.relevance}</option>
+                <option value="score">{text.result.score}</option>
+                <option value="year">{text.result.year}</option>
+                <option value="citations">{text.result.citations}</option>
+                <option value="title">{text.result.title}</option>
               </select>
-              <button type="button" onClick={copySearchLink}>复制链接</button>
-              <button type="button" onClick={saveSearch}>保存搜索</button>
-              <button type="button">列表</button>
-              <button type="button">导出</button>
+              <button type="button" onClick={copySearchLink}>{text.result.copy}</button>
+              <button type="button" onClick={saveSearch}>{text.result.save}</button>
+              <button type="button">{text.result.list}</button>
+              <button type="button">{text.result.export}</button>
             </div>
           </div>
           {activeChips.length > 0 && (
@@ -796,13 +1045,14 @@ export default function HomePage() {
                 index={(page - 1) * PAGE_SIZE + index + 1}
                 selected={selectedId === row.id}
                 query={controls.q}
+                text={text}
                 onOpen={setSelectedId}
               />
             ))}
             {!loading && rows.length === 0 && (
               <div className="ss-empty-state">
-                <strong>没有匹配论文</strong>
-                <p>{emptyHint || '试试放宽年份、会议或语义条件。'}</p>
+                <strong>{text.result.emptyTitle}</strong>
+                <p>{emptyHint || text.emptyHint}</p>
                 {suggestions.length > 0 && (
                   <div className="ss-empty-suggestions">
                     {suggestions.map((item) => (
@@ -828,6 +1078,7 @@ export default function HomePage() {
               hasCursor={Boolean(results.pagination?.nextCursor)}
               onPage={(nextPage) => submit(nextPage)}
               onCursor={submitCursor}
+              text={text}
             />
           )}
         </main>
