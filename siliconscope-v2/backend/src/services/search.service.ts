@@ -81,33 +81,29 @@ function buildWhereClause(params: Record<string, string>, userId = 0) {
     conditions.push(not(eq(papers.localPdf, "")));
   }
   if (params.favorite === "1") {
-    const favoriteIds = appDb.select({ id: favorites.paperId })
-      .from(favorites)
-      .where(eq(favorites.userId, userId))
-      .all()
-      .map((row) => row.id);
-    conditions.push(favoriteIds.length ? inArray(papers.id, favoriteIds) : sql`0 = 1`);
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM favorites f
+      WHERE f.user_id = ${userId}
+        AND f.paper_id = ${papers.id}
+    )`);
   }
   if (params.tag) {
-    const tagId = appDb.select({ id: tags.id }).from(tags).where(eq(tags.name, params.tag)).get()?.id;
-    if (tagId) {
-      const taggedIds = appDb.select({ paperId: paperTags.paperId })
-        .from(paperTags)
-        .where(and(eq(paperTags.userId, userId), eq(paperTags.tagId, tagId)))
-        .all()
-        .map((row) => row.paperId);
-      conditions.push(taggedIds.length ? inArray(papers.id, taggedIds) : sql`0 = 1`);
-    } else {
-      conditions.push(sql`0 = 1`);
-    }
+    conditions.push(sql`EXISTS (
+      SELECT 1
+      FROM paper_tags pt
+      INNER JOIN tags t ON t.id = pt.tag_id
+      WHERE pt.user_id = ${userId}
+        AND pt.paper_id = ${papers.id}
+        AND t.name = ${params.tag}
+    )`);
   }
   if (params.status) {
-    const statusIds = appDb.select({ paperId: readingStatus.paperId })
-      .from(readingStatus)
-      .where(and(eq(readingStatus.userId, userId), eq(readingStatus.status, params.status)))
-      .all()
-      .map((row) => row.paperId);
-    conditions.push(statusIds.length ? inArray(papers.id, statusIds) : sql`0 = 1`);
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM reading_status rs
+      WHERE rs.user_id = ${userId}
+        AND rs.paper_id = ${papers.id}
+        AND rs.status = ${params.status}
+    )`);
   }
 
   return conditions;
