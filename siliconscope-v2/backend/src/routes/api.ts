@@ -54,6 +54,18 @@ import { readingWorkflowService } from "../services/reading-workflow.service.js"
 import { localPdfService } from "../services/local-pdf.service.js";
 import { entityIntelligenceService } from "../services/entity-intelligence.service.js";
 import { featureCompletionService } from "../services/feature-completion.service.js";
+import {
+  aiEnrichmentRunBodySchema,
+  contentQualityStatusBodySchema,
+  contentQualitySyncBodySchema,
+  learningContentUpdateBodySchema,
+  moderationActionBodySchema,
+  paperDedupeScanBodySchema,
+  paperDedupeStatusBodySchema,
+  parseBody,
+  snapshotClearBodySchema,
+  snapshotRefreshBodySchema,
+} from "./route-validation.js";
 
 const router = Router();
 
@@ -1360,15 +1372,16 @@ router.get("/admin/content-quality/findings", requireAdmin, async (req, res) => 
 
 router.post("/admin/content-quality/sync", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
+    const body = parseBody(contentQualitySyncBodySchema, req.body);
     const result = dataQualityService.syncFindings({
-      scanLimit: Number(req.body?.scanLimit || 12000),
-      sampleLimit: Number(req.body?.sampleLimit || 50),
+      scanLimit: body.scanLimit ?? 12000,
+      sampleLimit: body.sampleLimit ?? 50,
     });
     adminAuditService.record({
       req,
       action: "content_quality.sync",
       resourceType: "content_quality_findings",
-      metadata: { scanLimit: req.body?.scanLimit, sampleLimit: req.body?.sampleLimit, total: result.total },
+      metadata: { scanLimit: body.scanLimit, sampleLimit: body.sampleLimit, total: result.total },
     });
     clearCache("data-quality");
     res.json(result);
@@ -1381,10 +1394,11 @@ router.post("/admin/content-quality/sync", requireAdmin, async (req: Authenticat
 router.patch("/admin/content-quality/findings/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const id = Number(req.params.id);
-    const result = dataQualityService.updateFinding(id, { status: String(req.body?.status || "") });
+    const body = parseBody(contentQualityStatusBodySchema, req.body);
+    const result = dataQualityService.updateFinding(id, { status: body.status });
     adminAuditService.record({
       req,
-      action: `content_quality.${req.body?.status || "update"}`,
+      action: `content_quality.${body.status}`,
       resourceType: "content_quality_finding",
       resourceId: id,
     });
@@ -1416,7 +1430,7 @@ router.post("/admin/moderation/:targetType/:id", requireAdmin, async (req: Authe
   try {
     const targetType = decodeURIComponent(req.params.targetType);
     const targetId = Number(req.params.id);
-    const { action, reason } = req.body;
+    const { action, reason } = parseBody(moderationActionBodySchema, req.body);
     const result = moderationService.moderate(targetType, targetId, action, req.user?.userId ?? null, reason);
     adminAuditService.record({
       req,
@@ -1472,14 +1486,21 @@ router.get("/admin/paper-dedupe", requireAdmin, async (req, res) => {
 });
 
 router.post("/admin/paper-dedupe/scan", requireAdmin, async (req: AuthenticatedRequest, res) => {
-  const result = paperDedupeService.scan({ limit: Number(req.body?.limit || 100), persist: req.body?.persist !== false });
-  adminAuditService.record({ req, action: "paper_dedupe.scan", resourceType: "paper_dedupe_candidate", metadata: { total: result.total, persisted: result.persisted } });
-  res.json(result);
+  try {
+    const body = parseBody(paperDedupeScanBodySchema, req.body);
+    const result = paperDedupeService.scan({ limit: body.limit ?? 100, persist: body.persist !== false });
+    adminAuditService.record({ req, action: "paper_dedupe.scan", resourceType: "paper_dedupe_candidate", metadata: { total: result.total, persisted: result.persisted } });
+    res.json(result);
+  } catch (err) {
+    adminAuditService.record({ req, action: "paper_dedupe.scan", resourceType: "paper_dedupe_candidate", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.patch("/admin/paper-dedupe/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = paperDedupeService.updateStatus(req.params.id, req.body?.status);
+    const body = parseBody(paperDedupeStatusBodySchema, req.body);
+    const result = paperDedupeService.updateStatus(req.params.id, body.status);
     adminAuditService.record({ req, action: "paper_dedupe.update", resourceType: "paper_dedupe_candidate", resourceId: req.params.id, metadata: { status: result.status } });
     res.json(result);
   } catch (err) {
@@ -1524,14 +1545,15 @@ router.get("/admin/ai-enrichment/annotations", requireAdmin, async (req, res) =>
 
 router.post("/admin/ai-enrichment/run", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
+    const body = parseBody(aiEnrichmentRunBodySchema, req.body);
     const result = await paperAiEnrichmentService.runBatch({
-      mode: req.body?.mode,
-      limit: req.body?.limit,
-      provider: req.body?.provider,
-      model: req.body?.model,
-      dryRun: Boolean(req.body?.dryRun),
-      writeTopicEdges: req.body?.writeTopicEdges !== false,
-      minTopicConfidence: req.body?.minTopicConfidence,
+      mode: body.mode,
+      limit: body.limit,
+      provider: body.provider,
+      model: body.model,
+      dryRun: Boolean(body.dryRun),
+      writeTopicEdges: body.writeTopicEdges !== false,
+      minTopicConfidence: body.minTopicConfidence,
     });
     adminAuditService.record({
       req,
@@ -1574,10 +1596,11 @@ router.patch("/admin/learning-content/:kind/:id", requireAdmin, async (req: Auth
   const kind = req.params.kind;
   const itemId = decodeURIComponent(req.params.id);
   try {
+    const body = parseBody(learningContentUpdateBodySchema, req.body);
     const item = learningContentService.updateItem(kind, itemId, {
-      status: req.body?.status,
-      title: req.body?.title,
-      payloadJson: req.body?.payloadJson,
+      status: body.status,
+      title: body.title,
+      payloadJson: body.payloadJson,
       actorUserId: req.user?.userId ?? null,
     });
     adminAuditService.record({
@@ -1626,37 +1649,42 @@ router.post("/admin/learning-content/sync-seed", requireAdmin, async (req: Authe
 });
 
 router.post("/admin/snapshots/refresh", requireAdmin, async (req: AuthenticatedRequest, res) => {
-  const keys = Array.isArray(req.body?.keys)
-    ? req.body.keys.map(String)
-    : String(req.body?.key || "all").split(",").map((key) => key.trim()).filter(Boolean);
   try {
+    const body = parseBody(snapshotRefreshBodySchema, req.body);
+    const keys = body.keys ?? String(body.key || "all").split(",").map((key) => key.trim()).filter(Boolean);
     const result = snapshotService.refresh(keys.length ? keys : ["all"]);
     adminAuditService.record({ req, action: "snapshot.refresh", resourceType: "snapshot", resourceId: keys.join(",") || "all", metadata: { count: result.length } });
     res.json(result);
   } catch (err) {
-    adminAuditService.record({ req, action: "snapshot.refresh", resourceType: "snapshot", resourceId: keys.join(",") || "all", status: "failure", error: err });
+    adminAuditService.record({ req, action: "snapshot.refresh", resourceType: "snapshot", status: "failure", error: err });
     res.status(400).json({ error: (err as Error).message });
   }
 });
 
 router.post("/admin/snapshots/clear", requireAdmin, async (req: AuthenticatedRequest, res) => {
-  const key = typeof req.body?.key === "string" ? req.body.key.trim() : "";
-  const prefix = typeof req.body?.prefix === "string" ? req.body.prefix.trim() : "";
-  if (key) {
-    const result = { mode: "key", key, ...snapshotService.invalidateSnapshot(key) };
-    adminAuditService.record({ req, action: "snapshot.clear", resourceType: "snapshot", resourceId: key, metadata: result });
+  try {
+    const body = parseBody(snapshotClearBodySchema, req.body);
+    const key = body.key || "";
+    const prefix = body.prefix || "";
+    if (key) {
+      const result = { mode: "key", key, ...snapshotService.invalidateSnapshot(key) };
+      adminAuditService.record({ req, action: "snapshot.clear", resourceType: "snapshot", resourceId: key, metadata: result });
+      res.json(result);
+      return;
+    }
+    if (prefix) {
+      const result = { mode: "prefix", prefix, ...snapshotService.invalidateSnapshotsByPrefix(prefix) };
+      adminAuditService.record({ req, action: "snapshot.clear_prefix", resourceType: "snapshot", resourceId: prefix, metadata: result });
+      res.json(result);
+      return;
+    }
+    const result = { mode: "all", ...snapshotService.invalidateAllSnapshots() };
+    adminAuditService.record({ req, action: "snapshot.clear_all", resourceType: "snapshot", resourceId: "all", metadata: result });
     res.json(result);
-    return;
+  } catch (err) {
+    adminAuditService.record({ req, action: "snapshot.clear", resourceType: "snapshot", status: "failure", error: err });
+    res.status(400).json({ error: (err as Error).message });
   }
-  if (prefix) {
-    const result = { mode: "prefix", prefix, ...snapshotService.invalidateSnapshotsByPrefix(prefix) };
-    adminAuditService.record({ req, action: "snapshot.clear_prefix", resourceType: "snapshot", resourceId: prefix, metadata: result });
-    res.json(result);
-    return;
-  }
-  const result = { mode: "all", ...snapshotService.invalidateAllSnapshots() };
-  adminAuditService.record({ req, action: "snapshot.clear_all", resourceType: "snapshot", resourceId: "all", metadata: result });
-  res.json(result);
 });
 
 router.post("/reports", requireAuth, async (req: AuthenticatedRequest, res) => {
