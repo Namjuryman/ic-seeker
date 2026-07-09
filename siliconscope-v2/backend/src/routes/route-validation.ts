@@ -2,6 +2,14 @@ import { z } from "zod";
 
 const nonEmptyString = z.string().trim().min(1);
 const jsonObject = z.record(z.string(), z.unknown());
+const booleanLikeSchema = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) return true;
+    if (["false", "0", "no", "off", ""].includes(normalized)) return false;
+  }
+  return value;
+}, z.boolean());
 
 export function zodErrorMessage(error: z.ZodError) {
   return error.issues.map((issue) => {
@@ -43,6 +51,16 @@ export const billingCheckoutBodySchema = z.object({
 
 export const searchIndexRebuildBodySchema = z.object({
   target: z.enum(["all", "papers", "companies", "learning_routes"]).optional().default("all"),
+}).strict();
+
+export const paperAiSummaryBodySchema = z.object({
+  provider: z.string().trim().max(80).optional(),
+  model: z.string().trim().max(160).optional(),
+  refresh: booleanLikeSchema.optional().default(false),
+}).strict();
+
+export const importDoiBodySchema = z.object({
+  doi: z.string({ required_error: "doi is required" }).trim().min(1, "doi is required").max(500),
 }).strict();
 
 export const siteSettingUpdateBodySchema = z.object({

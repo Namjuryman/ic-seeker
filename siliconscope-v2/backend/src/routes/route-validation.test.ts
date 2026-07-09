@@ -5,10 +5,12 @@ import {
   billingCheckoutBodySchema,
   billingPlanUpdateBodySchema,
   contentQualitySyncBodySchema,
+  importDoiBodySchema,
   ingestionJobCreateBodySchema,
   learningContentUpdateBodySchema,
   moderationActionBodySchema,
   notificationCreateBodySchema,
+  paperAiSummaryBodySchema,
   parseBody,
   snapshotRefreshBodySchema,
 } from "./route-validation.js";
@@ -47,6 +49,14 @@ describe("route body validation", () => {
   it("validates billing checkout plan IDs", () => {
     expect(parseBody(billingCheckoutBodySchema, { planId: "pro" })).toEqual({ planId: "pro" });
     expect(() => parseBody(billingCheckoutBodySchema, { planId: "" })).toThrow(/Invalid enum value/);
+  });
+
+  it("validates paper write payloads", () => {
+    expect(parseBody(paperAiSummaryBodySchema, { refresh: "true" })).toEqual({ refresh: true });
+    expect(parseBody(paperAiSummaryBodySchema, { refresh: "false" })).toEqual({ refresh: false });
+    expect(() => parseBody(paperAiSummaryBodySchema, { provider: "x".repeat(81) })).toThrow(/at most 80/);
+    expect(parseBody(importDoiBodySchema, { doi: " 10.1109/example " })).toEqual({ doi: "10.1109/example" });
+    expect(() => parseBody(importDoiBodySchema, {})).toThrow(/doi is required/);
   });
 
   it("normalizes bounded backup retention", () => {
