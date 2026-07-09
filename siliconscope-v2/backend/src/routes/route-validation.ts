@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const nonEmptyString = z.string().trim().min(1);
+const jsonObject = z.record(z.string(), z.unknown());
 
 export function zodErrorMessage(error: z.ZodError) {
   return error.issues.map((issue) => {
@@ -29,6 +30,80 @@ export const contentQualityStatusBodySchema = z.object({
 export const moderationActionBodySchema = z.object({
   action: z.enum(["restore", "hide", "remove", "keep_pending", "approved", "rejected", "pending"]),
   reason: z.string().trim().max(1_000).optional().default(""),
+}).strict();
+
+export const billingPlanUpdateBodySchema = z.object({
+  planId: z.enum(["free", "pro", "lab", "enterprise", "internal"]),
+  reason: z.string().trim().max(500).optional().default(""),
+}).strict();
+
+export const searchIndexRebuildBodySchema = z.object({
+  target: z.enum(["all", "papers", "companies", "learning_routes"]).optional().default("all"),
+}).strict();
+
+export const siteSettingUpdateBodySchema = z.object({
+  value: z.union([z.boolean(), z.string().max(2_000), z.number().finite()]),
+}).strict();
+
+export const accessRequestUpdateBodySchema = z.object({
+  status: z.enum(["pending", "approved", "rejected", "invited"]).optional(),
+  notes: z.string().trim().max(2_000).nullable().optional(),
+}).strict();
+
+const ingestionProviderSchema = z.enum([
+  "ieee",
+  "openalex",
+  "crossref",
+  "semantic-scholar",
+  "dblp",
+  "csv",
+  "scholar-csv",
+  "aminer",
+  "pdf",
+  "manual",
+]);
+
+const ingestionStatusSchema = z.enum(["queued", "running", "succeeded", "failed", "cancelled", "review_required"]);
+
+const ingestionCountsSchema = z.object({
+  fetched: z.coerce.number().int().min(0).optional(),
+  inserted: z.coerce.number().int().min(0).optional(),
+  updated: z.coerce.number().int().min(0).optional(),
+  skipped: z.coerce.number().int().min(0).optional(),
+  review: z.coerce.number().int().min(0).optional(),
+}).strict();
+
+export const ingestionJobCreateBodySchema = z.object({
+  provider: ingestionProviderSchema.optional(),
+  mode: nonEmptyString.max(80).optional(),
+  scope: jsonObject.optional(),
+  notes: z.string().trim().max(1_000).optional(),
+}).strict();
+
+export const ingestionJobUpdateBodySchema = z.object({
+  status: ingestionStatusSchema.optional(),
+  counts: ingestionCountsSchema.optional(),
+  error: z.string().trim().max(1_000).nullable().optional(),
+  notes: z.string().trim().max(1_000).nullable().optional(),
+}).strict();
+
+export const backupCreateBodySchema = z.object({
+  label: z.string().trim().min(1).max(80).optional().default("admin"),
+}).strict();
+
+export const backupPruneBodySchema = z.object({
+  keep: z.coerce.number().int().min(1).max(100).optional().default(10),
+}).strict();
+
+export const notificationCreateBodySchema = z.object({
+  userId: z.coerce.number().int().min(0).optional(),
+  kind: z.string().trim().min(1).max(40).optional(),
+  severity: z.enum(["info", "success", "warning", "critical"]).optional(),
+  title: nonEmptyString.max(180),
+  body: z.string().trim().max(2_000).optional(),
+  href: z.string().trim().max(500).optional(),
+  actionLabel: z.string().trim().max(80).optional(),
+  metadata: jsonObject.optional(),
 }).strict();
 
 export const paperDedupeScanBodySchema = z.object({

@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   aiEnrichmentRunBodySchema,
+  backupPruneBodySchema,
+  billingPlanUpdateBodySchema,
   contentQualitySyncBodySchema,
+  ingestionJobCreateBodySchema,
   learningContentUpdateBodySchema,
   moderationActionBodySchema,
+  notificationCreateBodySchema,
   parseBody,
   snapshotRefreshBodySchema,
 } from "./route-validation.js";
@@ -32,5 +36,24 @@ describe("route body validation", () => {
   it("rejects ambiguous snapshot refresh requests", () => {
     expect(() => parseBody(snapshotRefreshBodySchema, { key: "all", keys: ["profiles:professors:top80"] }))
       .toThrow(/either key or keys/);
+  });
+
+  it("accepts known billing plans only", () => {
+    expect(parseBody(billingPlanUpdateBodySchema, { planId: "lab" })).toEqual({ planId: "lab", reason: "" });
+    expect(() => parseBody(billingPlanUpdateBodySchema, { planId: "god-mode" })).toThrow(/Invalid enum value/);
+  });
+
+  it("normalizes bounded backup retention", () => {
+    expect(parseBody(backupPruneBodySchema, { keep: "7" })).toEqual({ keep: 7 });
+    expect(() => parseBody(backupPruneBodySchema, { keep: 101 })).toThrow(/less than or equal to 100/);
+  });
+
+  it("validates ingestion job payload shape", () => {
+    expect(parseBody(ingestionJobCreateBodySchema, { provider: "openalex", scope: { q: "adc" } }).provider).toBe("openalex");
+    expect(() => parseBody(ingestionJobCreateBodySchema, { provider: "unknown" })).toThrow(/Invalid enum value/);
+  });
+
+  it("requires notification titles", () => {
+    expect(() => parseBody(notificationCreateBodySchema, { severity: "info" })).toThrow(/title/);
   });
 });

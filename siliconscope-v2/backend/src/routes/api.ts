@@ -56,13 +56,22 @@ import { entityIntelligenceService } from "../services/entity-intelligence.servi
 import { featureCompletionService } from "../services/feature-completion.service.js";
 import {
   aiEnrichmentRunBodySchema,
+  accessRequestUpdateBodySchema,
+  backupCreateBodySchema,
+  backupPruneBodySchema,
+  billingPlanUpdateBodySchema,
   contentQualityStatusBodySchema,
   contentQualitySyncBodySchema,
+  ingestionJobCreateBodySchema,
+  ingestionJobUpdateBodySchema,
   learningContentUpdateBodySchema,
   moderationActionBodySchema,
+  notificationCreateBodySchema,
   paperDedupeScanBodySchema,
   paperDedupeStatusBodySchema,
   parseBody,
+  searchIndexRebuildBodySchema,
+  siteSettingUpdateBodySchema,
   snapshotClearBodySchema,
   snapshotRefreshBodySchema,
 } from "./route-validation.js";
@@ -252,10 +261,11 @@ router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: Authenti
     return;
   }
   try {
+    const body = parseBody(billingPlanUpdateBodySchema, req.body);
     const result = billingService.updateUserPlan({
       userId,
-      planId: String(req.body?.planId || ""),
-      reason: String(req.body?.reason || ""),
+      planId: body.planId,
+      reason: body.reason,
       actorUserId: req.user?.userId ?? 0,
     });
     adminAuditService.record({
@@ -263,7 +273,7 @@ router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: Authenti
       action: "billing.update_plan",
       resourceType: "user",
       resourceId: userId,
-      metadata: { planId: req.body?.planId, reason: req.body?.reason },
+      metadata: { planId: body.planId, reason: body.reason },
     });
     res.json(result);
   } catch (err) {
@@ -282,18 +292,19 @@ router.get("/admin/search-index", requireAdmin, async (_req, res) => {
 });
 
 router.post("/admin/search-index/rebuild", requireAdmin, async (req: AuthenticatedRequest, res) => {
-  const target = String(req.body?.target || "all");
-  const allowedTargets = ["all", "papers", "companies", "learning_routes"];
-  if (!allowedTargets.includes(target)) {
+  let target: SearchIndexTarget | "all" = "all";
+  try {
+    target = parseBody(searchIndexRebuildBodySchema, req.body).target;
+  } catch (err) {
     adminAuditService.record({
       req,
       action: "search_index.rebuild",
       resourceType: "search_index",
       resourceId: target,
       status: "failure",
-      error: new Error("Unknown search index"),
+      error: err,
     });
-    res.status(400).json({ error: "Unknown search index" });
+    res.status(400).json({ error: (err as Error).message });
     return;
   }
   try {
@@ -350,7 +361,8 @@ router.get("/admin/site-settings", requireAdmin, async (_req, res) => {
 router.patch("/admin/site-settings/:key", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const key = String(req.params.key || "");
   try {
-    const row = siteSettingsService.update(key, req.body?.value, req.user?.userId ?? 0);
+    const body = parseBody(siteSettingUpdateBodySchema, req.body);
+    const row = siteSettingsService.update(key, body.value, req.user?.userId ?? 0);
     adminAuditService.record({
       req,
       action: "site_settings.update",
@@ -372,9 +384,10 @@ router.get("/admin/access-requests", requireAdmin, async (req, res) => {
 router.patch("/admin/access-requests/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   try {
+    const body = parseBody(accessRequestUpdateBodySchema, req.body);
     const row = accessRequestService.updateStatus(id, {
-      status: req.body?.status,
-      notes: req.body?.notes,
+      status: body.status,
+      notes: body.notes,
       actorUserId: req.user?.userId ?? null,
     });
     adminAuditService.record({
@@ -404,11 +417,12 @@ router.get("/admin/ingestion/jobs", requireAdmin, async (req, res) => {
 
 router.post("/admin/ingestion/jobs", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
+    const body = parseBody(ingestionJobCreateBodySchema, req.body);
     const job = ingestionJobService.create({
-      provider: req.body?.provider,
-      mode: req.body?.mode,
-      scope: req.body?.scope,
-      notes: req.body?.notes,
+      provider: body.provider,
+      mode: body.mode,
+      scope: body.scope,
+      notes: body.notes,
       createdByUserId: req.user?.userId ?? 0,
     });
     adminAuditService.record({
@@ -432,13 +446,14 @@ router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: Authenticate
     return;
   }
   try {
-      const job = ingestionJobService.updateStatus(id, {
-        status: req.body?.status,
-        counts: req.body?.counts,
-        error: req.body?.error,
-        notes: req.body?.notes,
-        actorUserId: req.user?.userId ?? 0,
-      });
+    const body = parseBody(ingestionJobUpdateBodySchema, req.body);
+    const job = ingestionJobService.updateStatus(id, {
+      status: body.status,
+      counts: body.counts,
+      error: body.error,
+      notes: body.notes,
+      actorUserId: req.user?.userId ?? 0,
+    });
     adminAuditService.record({
       req,
       action: "ingestion.update",
@@ -589,8 +604,9 @@ router.post("/admin/maintenance/jobs/:jobId/run", requireAdmin, async (req: Auth
 
 router.post("/admin/backups", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
+    const body = parseBody(backupCreateBodySchema, req.body);
     const backup = await backupService.create({
-      label: String(req.body?.label || "admin"),
+      label: body.label,
       actor: req.user?.email || "admin",
     });
     adminAuditService.record({
@@ -609,7 +625,7 @@ router.post("/admin/backups", requireAdmin, async (req: AuthenticatedRequest, re
 
 router.post("/admin/backups/prune", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const keep = Math.max(1, Math.min(100, Number(req.body?.keep || 10)));
+    const { keep } = parseBody(backupPruneBodySchema, req.body);
     const result = backupService.prune(keep);
     adminAuditService.record({
       req,
@@ -644,7 +660,8 @@ router.delete("/admin/backups/:id", requireAdmin, async (req: AuthenticatedReque
 
 router.post("/admin/notifications", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
-    const notification = notificationService.create(req.body);
+    const body = parseBody(notificationCreateBodySchema, req.body);
+    const notification = notificationService.create(body);
     adminAuditService.record({
       req,
       action: "notification.create",
