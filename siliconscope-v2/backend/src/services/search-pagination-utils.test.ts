@@ -23,6 +23,19 @@ describe("search pagination utilities", () => {
     expect(decodeCursor("not-json", "score")).toBeNull();
   });
 
+  it("preserves optional FTS search ranks in cursors", () => {
+    const cursor = encodeCursor({ id: 42, score: 193.5, year: 2025, citationCount: 17, searchRank: -8.25 }, "score");
+    expect(decodeCursor(cursor, "score")).toEqual({
+      sort: "score",
+      id: 42,
+      score: 193.5,
+      year: 2025,
+      citationCount: 17,
+      searchRank: -8.25,
+    });
+  });
+
+
   it("adds nextCursor only when a stable next page exists", () => {
     const page = paginationInfo({
       mode: "offset",

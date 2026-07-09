@@ -31,6 +31,19 @@ function keysetCondition(cursor: SearchCursor | null) {
   )`;
 }
 
+function ftsKeysetCondition(cursor: SearchCursor | null, sort: string) {
+  if (!cursor) return null;
+  if (sort === "title") return null;
+  if (sort === "year" || sort === "citations") return keysetCondition(cursor);
+  if (!Number.isFinite(cursor.searchRank)) return null;
+  return sql`(
+    matched.searchRank > ${cursor.searchRank}
+    OR (matched.searchRank = ${cursor.searchRank} AND COALESCE(${papers.qualityScore}, 0) < ${cursor.score})
+    OR (matched.searchRank = ${cursor.searchRank} AND COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND COALESCE(${papers.year}, 0) < ${cursor.year})
+    OR (matched.searchRank = ${cursor.searchRank} AND COALESCE(${papers.qualityScore}, 0) = ${cursor.score} AND COALESCE(${papers.year}, 0) = ${cursor.year} AND ${papers.id} < ${cursor.id})
+  )`;
+}
+
 function buildWhereClause(params: Record<string, string>, userId = 0) {
   const conditions = [];
 
@@ -305,6 +318,12 @@ export const searchService = {
 
     if (query) {
       // FTS5 search
+      const cursor = decodeCursor(params.cursor, sort);
+      const cursorWhere = ftsKeysetCondition(cursor, sort);
+      const pageConditions = cursorWhere ? [...whereConditions, cursorWhere] : whereConditions;
+      const usingCursor = Boolean(cursorWhere);
+      const queryLimit = usingCursor ? limit + 1 : limit;
+
       const totalResult = metadataDb.get<{ n: number }>(sql`
         WITH matched AS (
           SELECT rowid AS id FROM papers_fts WHERE papers_fts MATCH ${query}
@@ -350,24 +369,34 @@ export const searchService = {
           papers.collection_method AS collectionMethod, matched.searchRank
         FROM matched
         JOIN papers ON papers.id = matched.id
-        ${whereConditions.length > 0 ? sql`WHERE ${and(...whereConditions)}` : sql``}
+        ${pageConditions.length > 0 ? sql`WHERE ${and(...pageConditions)}` : sql``}
         ORDER BY ${sql.raw(ftsOrderBy)}
-        LIMIT ${limit} OFFSET ${offset}
+        LIMIT ${queryLimit} OFFSET ${usingCursor ? 0 : offset}
       `);
 
-      const enriched = this.enrichWithUserState(rows.map((row) => ({
+      const visibleRows = usingCursor ? rows.slice(0, limit) : rows;
+      const enriched = this.enrichWithUserState(visibleRows.map((row) => ({
         ...toPaperRow(row),
+        searchRank: row.searchRank,
         matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic, row.searchRank),
       })), userId);
       return {
         total,
         limit,
-        offset,
+        offset: usingCursor ? 0 : offset,
         query: rawQ,
         expandedQuery: q,
         engine: semantic ? "sqlite-fts5-semantic-lite" : "sqlite-fts5",
         durationMs: Math.round((performance.now() - startedAt) * 10) / 10,
-        pagination: paginationInfo({ mode: "offset", limit, offset, total, rows: enriched, sort }),
+        pagination: paginationInfo({
+          mode: usingCursor ? "keyset" : "offset",
+          limit,
+          offset: usingCursor ? 0 : offset,
+          total,
+          rows: enriched,
+          sort,
+          hasExtraRow: usingCursor ? rows.length > limit : false,
+        }),
         relaxations: enriched.length ? [] : searchRelaxations(params),
         rows: enriched,
       };

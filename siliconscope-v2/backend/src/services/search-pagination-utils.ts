@@ -6,6 +6,7 @@ export type SearchCursor = {
   score: number;
   year: number;
   citationCount: number;
+  searchRank?: number;
 };
 
 export function stableSort(sort: string): CursorSort | null {
@@ -14,7 +15,7 @@ export function stableSort(sort: string): CursorSort | null {
     : null;
 }
 
-export function encodeCursor(row: { id: number; score?: number; year?: number; citationCount?: number }, sort: CursorSort) {
+export function encodeCursor(row: { id: number; score?: number; year?: number; citationCount?: number; searchRank?: number }, sort: CursorSort) {
   const payload: SearchCursor = {
     sort,
     id: Number(row.id || 0),
@@ -22,6 +23,7 @@ export function encodeCursor(row: { id: number; score?: number; year?: number; c
     year: Number(row.year || 0),
     citationCount: Number(row.citationCount || 0),
   };
+  if (Number.isFinite(Number(row.searchRank))) payload.searchRank = Number(row.searchRank);
   return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
 }
 
@@ -36,8 +38,17 @@ export function decodeCursor(value: string | undefined, sort: string): SearchCur
     const score = Number(parsed.score);
     const year = Number(parsed.year);
     const citationCount = Number(parsed.citationCount);
+    const searchRank = Number(parsed.searchRank);
     if (![id, score, year, citationCount].every(Number.isFinite) || id <= 0) return null;
-    return { sort: expectedSort, id, score, year, citationCount };
+    const cursor: SearchCursor = {
+      sort: expectedSort,
+      id,
+      score,
+      year,
+      citationCount,
+    };
+    if (Number.isFinite(searchRank)) cursor.searchRank = searchRank;
+    return cursor;
   } catch {
     return null;
   }
@@ -48,7 +59,7 @@ export function paginationInfo(args: {
   limit: number;
   offset: number;
   total: number;
-  rows: Array<{ id: number; score?: number; year?: number; citationCount?: number }>;
+  rows: Array<{ id: number; score?: number; year?: number; citationCount?: number; searchRank?: number }>;
   sort: string;
   hasExtraRow?: boolean;
 }) {
