@@ -24,6 +24,7 @@ export const appConfig = {
   
   jwtSecret: process.env.JWT_SECRET || "change-me-in-production",
   adminPassword: process.env.ADMIN_PASSWORD || "change-me-now",
+  adminPasswordHash: process.env.ADMIN_PASSWORD_HASH || "",
   authEnabled: process.env.IC_SEEKER_REQUIRE_LOGIN === "1" || ["1", "on", "password", "true"].includes(String(process.env.IC_SEEKER_AUTH || "").toLowerCase()),
   localAdminEnabled: process.env.IC_SEEKER_LOCAL_ADMIN === "1",
   frontendOrigins: (process.env.FRONTEND_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176")
@@ -89,7 +90,7 @@ export const appConfig = {
 
 export type AppConfig = typeof appConfig;
 
-type SafetyInput = Pick<AppConfig, "deploymentMode" | "jwtSecret" | "adminPassword" | "authEnabled" | "frontendOrigins" | "trustProxy"> & {
+type SafetyInput = Pick<AppConfig, "deploymentMode" | "jwtSecret" | "adminPassword" | "adminPasswordHash" | "authEnabled" | "frontendOrigins" | "trustProxy"> & {
   nodeEnv?: string;
 };
 
@@ -110,8 +111,11 @@ export function evaluateProductionSafety(config: SafetyInput): ProductionSafetyR
   if (config.jwtSecret === DEFAULT_JWT_SECRET || config.jwtSecret.length < 32) {
     blockingIssues.push("JWT_SECRET must be a non-default secret with at least 32 characters.");
   }
-  if (config.adminPassword === DEFAULT_ADMIN_PASSWORD) {
-    blockingIssues.push("ADMIN_PASSWORD must not use the default change-me-now value.");
+  if (!config.adminPasswordHash && config.adminPassword === DEFAULT_ADMIN_PASSWORD) {
+    blockingIssues.push("ADMIN_PASSWORD must not use the default change-me-now value unless ADMIN_PASSWORD_HASH is configured.");
+  }
+  if (config.adminPasswordHash && !/^\$2[aby]\$\d{2}\$/.test(config.adminPasswordHash)) {
+    blockingIssues.push("ADMIN_PASSWORD_HASH must be a bcrypt hash.");
   }
   if (!config.authEnabled) {
     blockingIssues.push("Authentication must be enabled with IC_SEEKER_AUTH=on or IC_SEEKER_REQUIRE_LOGIN=1.");

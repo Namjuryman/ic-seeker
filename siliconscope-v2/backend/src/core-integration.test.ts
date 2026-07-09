@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import jwt from "jsonwebtoken";
 import { appConfig } from "./config.js";
+import { appSqlite } from "./db/app-db.js";
 import { requireAdmin, requireAuth, type AuthenticatedRequest } from "./middleware/auth.js";
 import { paperCitation } from "./services/export-format-utils.js";
 import { ftsQuery, semanticText } from "./services/search-query-utils.js";
@@ -236,12 +237,22 @@ describe("core paper citation and auth integration", () => {
       expect(noTokenRes.statusCode).toBe(401);
       expect(next).not.toHaveBeenCalled();
 
-      const userToken = jwt.sign({ userId: 7, email: "user@example.com", role: "user" }, appConfig.jwtSecret);
-      const userReq = { cookies: {}, headers: { authorization: `Bearer ${userToken}` } } as AuthenticatedRequest;
-      const userRes = mockResponse();
-      requireAdmin(userReq, userRes as any, next);
-      expect(userRes.statusCode).toBe(403);
-      expect(userRes.body).toEqual({ error: "Admin access required" });
+      const email = `non-admin-${Date.now()}@example.com`;
+      const user = appSqlite.prepare(`
+        INSERT INTO users (email, password_hash, verification_status, verification_level, subscription_plan, token_version)
+        VALUES (?, 'test', 'verified', 'none', 'free', 0)
+        RETURNING id, email
+      `).get(email) as { id: number; email: string };
+      try {
+        const userToken = jwt.sign({ userId: user.id, email: user.email, role: "user", tokenVersion: 0 }, appConfig.jwtSecret);
+        const userReq = { cookies: {}, headers: { authorization: `Bearer ${userToken}` } } as AuthenticatedRequest;
+        const userRes = mockResponse();
+        requireAdmin(userReq, userRes as any, next);
+        expect(userRes.statusCode).toBe(403);
+        expect(userRes.body).toEqual({ error: "Admin access required" });
+      } finally {
+        appSqlite.prepare("DELETE FROM users WHERE id = ?").run(user.id);
+      }
     });
   });
 });

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { appConfig } from "../config.js";
 import { z } from "zod";
 import { authService } from "../services/auth.service.js";
+import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -23,7 +24,8 @@ function readPayload(req: any) {
   const token = req.cookies?.[appConfig.cookieName] || req.headers.authorization?.replace("Bearer ", "");
   if (!token) return null;
   try {
-    return jwt.verify(token, appConfig.jwtSecret) as { userId: number; email: string; role: string };
+    const payload = jwt.verify(token, appConfig.jwtSecret) as { userId: number; email: string; role: string; tokenVersion?: number };
+    return authService.verifyTokenPayload(payload);
   } catch {
     return null;
   }
@@ -34,6 +36,7 @@ function localUser() {
     userId: 0,
     email: "local",
     role: appConfig.localAdminEnabled ? "admin" : "user",
+    tokenVersion: 0,
   };
 }
 
@@ -55,7 +58,7 @@ router.post("/login", async (req, res) => {
   }
 
   const { password } = parsed.data;
-  if (appConfig.authEnabled && password !== appConfig.adminPassword) {
+  if (appConfig.authEnabled && !authService.verifyAdminPassword(password)) {
     res.status(401).json({ error: "Invalid password" });
     return;
   }
@@ -72,6 +75,12 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (_req, res) => {
   res.clearCookie(appConfig.cookieName);
   res.json({ ok: true });
+});
+
+router.post("/revoke-tokens", requireAuth, (req: AuthenticatedRequest, res) => {
+  const tokenVersion = authService.revokeUserTokens(req.user?.userId ?? -1);
+  res.clearCookie(appConfig.cookieName);
+  res.json({ ok: Boolean(tokenVersion), tokenVersion });
 });
 
 export { router as authRouter };

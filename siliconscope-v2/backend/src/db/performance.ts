@@ -57,6 +57,12 @@ function hasTable(sqlite: any, table: string): boolean {
   return Boolean(row);
 }
 
+function ensureUserAuthColumns(sqlite: any) {
+  if (hasTable(sqlite, "users") && !tableColumns(sqlite, "users").includes("token_version")) {
+    sqlite.exec("ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0");
+  }
+}
+
 function migrateUserScopedTables(sqlite: any) {
   // Older v2 builds used paper_id as the primary key for favorites/notes/status.
   // That makes all users share one reading workspace. Rebuild those tables into
@@ -528,6 +534,7 @@ export function applyPerformanceSettings(sqlite: any) {
 
   migrateUserScopedTables(sqlite);
   migrateReadingQueueModel(sqlite);
+  ensureUserAuthColumns(sqlite);
   ensureIdentityTables(sqlite);
   ensureSnapshotTables(sqlite);
   ensureAdminAuditTables(sqlite);

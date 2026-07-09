@@ -6,6 +6,7 @@ const safeConfig = {
   nodeEnv: "production",
   jwtSecret: "this-is-a-long-production-grade-secret-value",
   adminPassword: "not-the-default-admin-password",
+  adminPasswordHash: "",
   authEnabled: true,
   frontendOrigins: ["https://app.siliconscope.example"],
   trustProxy: true,
@@ -25,6 +26,15 @@ describe("production safety checks", () => {
   it("blocks default admin passwords", () => {
     const report = evaluateProductionSafety({ ...safeConfig, adminPassword: "change-me-now" });
     expect(report.blockingIssues.join("\n")).toContain("ADMIN_PASSWORD");
+  });
+
+  it("allows bcrypt admin password hashes instead of a plaintext admin password", () => {
+    const report = evaluateProductionSafety({
+      ...safeConfig,
+      adminPassword: "change-me-now",
+      adminPasswordHash: "$2b$12$abcdefghijklmnopqrstuuJz5E7d3m4j3ZSu8kJQj5pC3pGm8lt9O",
+    });
+    expect(report.blockingIssues).toEqual([]);
   });
 
   it("blocks disabled production auth and unsafe local origins", () => {
@@ -51,6 +61,7 @@ describe("production safety checks", () => {
       nodeEnv: "development",
       jwtSecret: "change-me-in-production",
       adminPassword: "change-me-now",
+      adminPasswordHash: "",
       authEnabled: false,
       frontendOrigins: ["http://localhost:5173"],
       trustProxy: false,

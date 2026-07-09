@@ -46,8 +46,12 @@ if (isBlank(env.JWT_SECRET) || env.JWT_SECRET.length < 32) {
   errors.push("JWT_SECRET must be a real random value with at least 32 characters.");
 }
 
-if (isBlank(env.ADMIN_PASSWORD) || env.ADMIN_PASSWORD.length < 16) {
-  errors.push("ADMIN_PASSWORD must be a real strong password with at least 16 characters.");
+if (isBlank(env.ADMIN_PASSWORD_HASH) && (isBlank(env.ADMIN_PASSWORD) || env.ADMIN_PASSWORD.length < 16)) {
+  errors.push("ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set. ADMIN_PASSWORD must be at least 16 characters when used.");
+}
+
+if (!isBlank(env.ADMIN_PASSWORD_HASH) && !/^\$2[aby]\$\d{2}\$/.test(env.ADMIN_PASSWORD_HASH)) {
+  errors.push("ADMIN_PASSWORD_HASH must look like a bcrypt hash.");
 }
 
 if (env.IC_SEEKER_REQUIRE_LOGIN !== "1") {

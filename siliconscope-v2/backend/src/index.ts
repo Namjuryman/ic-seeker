@@ -12,6 +12,7 @@ import { staticRouter } from "./routes/static.js";
 import { healthRouter } from "./routes/health.js";
 import { observabilityService } from "./services/observability.service.js";
 import { schedulerService } from "./services/scheduler.service.js";
+import { authService } from "./services/auth.service.js";
 import { wrapAsyncRouter } from "./middleware/async-errors.js";
 import { apiCompression } from "./middleware/api-compression.js";
 
@@ -129,6 +130,7 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 app.listen(appConfig.port, appConfig.host, () => {
   console.log(`${appConfig.appName} v2 running at http://${appConfig.host}:${appConfig.port}`);
   console.log(`Database: ${appConfig.dbPath}`);
+  authService.syncRuntimeAdminUser();
   schedulerService.start();
 });
 

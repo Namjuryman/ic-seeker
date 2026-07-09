@@ -224,6 +224,7 @@ export const users = sqliteTable("users", {
   verificationStatus: text("verification_status").notNull().default("unverified"),
   verificationLevel: text("verification_level").notNull().default("none"),
   subscriptionPlan: text("subscription_plan").notNull().default("free"),
+  tokenVersion: integer("token_version", { mode: "number" }).notNull().default(0),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
