@@ -3,6 +3,7 @@ import { appDb } from "../db/app-db.js";
 import { papers, favorites, readingStatus, notes, tags, paperTags } from "../db/schema.js";
 import { sql, eq, and, inArray, not, gte, lte } from "drizzle-orm";
 import { toPaperRow } from "./paper-row.js";
+import { compactPaperAbstract } from "./search-response-utils.js";
 import { decodeCursor, paginationInfo, searchRelaxations, stableSort, type SearchCursor } from "./search-pagination-utils.js";
 import { ftsQuery, searchAliasSuggestions, semanticText } from "./search-query-utils.js";
 
@@ -376,7 +377,7 @@ export const searchService = {
 
       const visibleRows = usingCursor ? rows.slice(0, limit) : rows;
       const enriched = this.enrichWithUserState(visibleRows.map((row) => ({
-        ...toPaperRow(row),
+        ...compactPaperAbstract(toPaperRow(row)),
         searchRank: row.searchRank,
         matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic, row.searchRank),
       })), userId);
@@ -450,7 +451,7 @@ export const searchService = {
 
     const visibleRows = cursor ? rows.slice(0, limit) : rows;
     const enriched = this.enrichWithUserState(visibleRows.map((row) => ({
-      ...toPaperRow(row),
+      ...compactPaperAbstract(toPaperRow(row)),
       matchReason: matchReason(row as unknown as Record<string, unknown>, rawQ, semantic),
     })), userId);
     return {
