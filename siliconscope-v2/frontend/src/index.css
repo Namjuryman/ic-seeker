@@ -2111,13 +2111,18 @@
   flex-wrap: wrap;
 }
 
-.learning-progress-actions button {
+.learning-progress-actions button,
+.learning-action-link {
   border: 1px solid var(--line);
   background: var(--surface-elevated);
   color: var(--ink-text);
   border-radius: 999px;
   padding: 10px 14px;
   font-weight: 750;
+  text-decoration: none;
+}
+
+.learning-progress-actions button {
   cursor: default;
 }
 

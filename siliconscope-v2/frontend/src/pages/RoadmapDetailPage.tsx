@@ -121,7 +121,7 @@ export default function RoadmapDetailPage() {
           </div>
           {data.paperQuery && (
             <div className="learning-progress-actions">
-              <Link className="button" to={searchPath({ q: data.paperQuery, scope: 'all', semantic: 1 })}>
+              <Link className="learning-action-link" to={searchPath({ q: data.paperQuery, scope: 'all', semantic: 1 })}>
                 Search: {data.paperQuery}
               </Link>
             </div>
