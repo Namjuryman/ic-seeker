@@ -12,8 +12,19 @@ import { staticRouter } from "./routes/static.js";
 import { healthRouter } from "./routes/health.js";
 import { observabilityService } from "./services/observability.service.js";
 import { schedulerService } from "./services/scheduler.service.js";
+import { wrapAsyncRouter } from "./middleware/async-errors.js";
+import { apiCompression } from "./middleware/api-compression.js";
 
 const app = express();
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[process] Unhandled promise rejection", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[process] Uncaught exception", err);
+  process.exitCode = 1;
+});
 
 if (appConfig.trustProxy) {
   app.set("trust proxy", 1);
@@ -95,13 +106,14 @@ if (appConfig.rateLimitEnabled) {
 }
 
 // Routes
-app.use("/api/auth", authRouter);
-app.use("/api", apiRouter);
-app.use("/api/health", healthRouter);
+app.use("/api", apiCompression);
+app.use("/api/auth", wrapAsyncRouter(authRouter));
+app.use("/api", wrapAsyncRouter(apiRouter));
+app.use("/api/health", wrapAsyncRouter(healthRouter));
 app.use("/api", (req, res) => {
   res.status(404).json({ error: "API route not found", requestId: res.locals.requestId, path: req.path });
 });
-app.use(staticRouter);
+app.use(wrapAsyncRouter(staticRouter));
 
 // Global error handler
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {

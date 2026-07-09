@@ -3,6 +3,7 @@ import { Router, Request, Response } from "express";
 import path from "node:path";
 import { appConfig } from "../config.js";
 import { promises as fs } from "node:fs";
+import { createReadStream } from "node:fs";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 
 const router = Router();
@@ -101,14 +102,24 @@ function sendStaticEntry(req: Request, res: Response, entry: StaticCacheEntry) {
 }
 
 router.get("/download/csv", requireAuth, async (_req, res) => {
-  try {
-    const bytes = await fs.readFile(appConfig.csvPath);
-    res.setHeader("content-type", "text/csv; charset=utf-8");
-    res.setHeader("content-disposition", 'attachment; filename="ic_chipseeker.csv"');
-    res.end(bytes);
-  } catch {
+  const stat = await fs.stat(appConfig.csvPath).catch(() => null);
+  if (!stat?.isFile()) {
     res.status(404).json({ error: "CSV not found" });
+    return;
   }
+
+  res.setHeader("content-type", "text/csv; charset=utf-8");
+  res.setHeader("content-disposition", 'attachment; filename="ic_chipseeker.csv"');
+  res.setHeader("content-length", stat.size);
+  const stream = createReadStream(appConfig.csvPath);
+  stream.on("error", (err) => {
+    if (!res.headersSent) {
+      res.status(500).json({ error: "CSV download failed" });
+      return;
+    }
+    res.destroy(err);
+  });
+  stream.pipe(res);
 });
 
 router.get("/*", async (req, res) => {
