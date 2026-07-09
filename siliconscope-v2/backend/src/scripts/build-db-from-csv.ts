@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { appConfig } from "../config.js";
+import { enableForeignKeys } from "../db/sqlite-pragmas.js";
 import { qualityScore, semanticText } from "./paper-import/classify.js";
 
 type CsvRow = Record<string, string>;
@@ -119,7 +120,9 @@ function realValue(value: string, fallback = 0): number {
 }
 
 function createSchema(sqlite: SqliteDb) {
+  enableForeignKeys(sqlite);
   sqlite.exec(`
+    PRAGMA foreign_keys = ON;
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
     PRAGMA temp_store = MEMORY;

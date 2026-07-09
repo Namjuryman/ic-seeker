@@ -526,6 +526,7 @@ function migrateReadingQueueModel(sqlite: any) {
 }
 
 export function applyPerformanceSettings(sqlite: any) {
+  sqlite.pragma("foreign_keys = ON");
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("temp_store = MEMORY");

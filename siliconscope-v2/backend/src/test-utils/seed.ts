@@ -1,4 +1,5 @@
 import Database from "better-sqlite3";
+import { enableForeignKeys } from "../db/sqlite-pragmas.js";
 import { ftsQuery, semanticText } from "../services/search-query-utils.js";
 
 export type TestDb = InstanceType<typeof Database>;
@@ -23,6 +24,7 @@ export type SeedPaper = {
 
 export function createTestSqlite(): TestDb {
   const sqlite = new Database(":memory:");
+  enableForeignKeys(sqlite);
   sqlite.exec(`
     CREATE TABLE papers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
