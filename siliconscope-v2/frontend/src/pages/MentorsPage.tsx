@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
@@ -21,6 +21,57 @@ type MentorProfileWithReviews = MentorProfile & { reviews?: MentorReview[]; revi
 
 const INITIAL_INSTITUTION_RENDER_COUNT = 90
 const INSTITUTION_RENDER_STEP = 90
+const DIRECTORY_CACHE_TTL = 120_000
+
+type CachedValue<T> = { expiresAt: number; value: T }
+
+const mentorInstitutionCache = new Map<string, CachedValue<MentorInstitution[]>>()
+const mentorInstitutionPending = new Map<string, Promise<MentorInstitution[]>>()
+const mentorDetailCache = new Map<string, CachedValue<MentorDetail>>()
+const mentorProfileCache = new Map<string, CachedValue<MentorProfileWithReviews>>()
+
+function readCache<T>(cache: Map<string, CachedValue<T>>, key: string) {
+  const hit = cache.get(key)
+  if (hit && hit.expiresAt > Date.now()) return hit.value
+  cache.delete(key)
+  return null
+}
+
+function writeCache<T>(cache: Map<string, CachedValue<T>>, key: string, value: T) {
+  cache.set(key, { value, expiresAt: Date.now() + DIRECTORY_CACHE_TTL })
+  return value
+}
+
+function mentorInstitutionKey(query: string) {
+  return JSON.stringify({ q: query, limit: query ? 300 : 240 })
+}
+
+async function loadMentorInstitutions(query: string) {
+  const key = mentorInstitutionKey(query)
+  const cached = readCache(mentorInstitutionCache, key)
+  if (cached) return cached
+  const pending = mentorInstitutionPending.get(key)
+  if (pending) return pending
+  const request = api.mentorInstitutions({ limit: query ? 300 : 240, q: query })
+    .then((rows) => writeCache(mentorInstitutionCache, key, rows))
+    .finally(() => mentorInstitutionPending.delete(key))
+  mentorInstitutionPending.set(key, request)
+  return request
+}
+
+async function loadMentorDetail(name: string) {
+  const cached = readCache(mentorDetailCache, name)
+  if (cached) return cached
+  const detail = await api.mentorDetail(name)
+  return writeCache(mentorDetailCache, name, detail)
+}
+
+async function loadMentorProfile(name: string) {
+  const cached = readCache(mentorProfileCache, name)
+  if (cached) return cached
+  const profile = await api.mentorProfile(name)
+  return writeCache(mentorProfileCache, name, profile)
+}
 
 function initials(name: string) {
   return name
@@ -210,6 +261,9 @@ export default function MentorsPage() {
   const [visibleInstitutionCount, setVisibleInstitutionCount] = useState(INITIAL_INSTITUTION_RENDER_COUNT)
   const [recentOnly, setRecentOnly] = useState(false)
   const deferredQuery = useDeferredValue(debouncedQuery)
+  const institutionRequestId = useRef(0)
+  const detailRequestId = useRef(0)
+  const profileRequestId = useRef(0)
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const params = useParams()
@@ -234,12 +288,19 @@ export default function MentorsPage() {
 
   useEffect(() => {
     const normalized = deferredQuery.trim()
+    const requestId = ++institutionRequestId.current
     setLoadingInstitutions(true)
     setError('')
-    api.mentorInstitutions({ limit: normalized ? 300 : 240, q: normalized })
-      .then(setInstitutions)
-      .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
-      .finally(() => setLoadingInstitutions(false))
+    loadMentorInstitutions(normalized)
+      .then((rows) => {
+        if (requestId === institutionRequestId.current) setInstitutions(rows)
+      })
+      .catch((err) => {
+        if (requestId === institutionRequestId.current) setError(err instanceof Error ? err.message : '加载机构列表失败')
+      })
+      .finally(() => {
+        if (requestId === institutionRequestId.current) setLoadingInstitutions(false)
+      })
   }, [deferredQuery])
 
   useEffect(() => {
@@ -251,12 +312,19 @@ export default function MentorsPage() {
       setDetail(null)
       return
     }
+    const requestId = ++detailRequestId.current
     setLoadingDetail(true)
     setError('')
-    api.mentorDetail(institution)
-      .then(setDetail)
-      .catch((err) => setError(err instanceof Error ? err.message : '加载导师列表失败'))
-      .finally(() => setLoadingDetail(false))
+    loadMentorDetail(institution)
+      .then((row) => {
+        if (requestId === detailRequestId.current) setDetail(row)
+      })
+      .catch((err) => {
+        if (requestId === detailRequestId.current) setError(err instanceof Error ? err.message : '加载导师列表失败')
+      })
+      .finally(() => {
+        if (requestId === detailRequestId.current) setLoadingDetail(false)
+      })
   }, [institution])
 
   useEffect(() => {
@@ -264,12 +332,19 @@ export default function MentorsPage() {
       setProfile(null)
       return
     }
+    const requestId = ++profileRequestId.current
     setLoadingProfile(true)
     setError('')
-    api.mentorProfile(mentor)
-      .then(setProfile)
-      .catch((err) => setError(err instanceof Error ? err.message : '加载导师画像失败'))
-      .finally(() => setLoadingProfile(false))
+    loadMentorProfile(mentor)
+      .then((row) => {
+        if (requestId === profileRequestId.current) setProfile(row)
+      })
+      .catch((err) => {
+        if (requestId === profileRequestId.current) setError(err instanceof Error ? err.message : '加载导师画像失败')
+      })
+      .finally(() => {
+        if (requestId === profileRequestId.current) setLoadingProfile(false)
+      })
   }, [mentor])
 
   const filteredInstitutions = useMemo(() => {

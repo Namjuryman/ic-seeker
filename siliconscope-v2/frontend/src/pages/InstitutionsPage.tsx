@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
@@ -60,6 +60,8 @@ export default function InstitutionsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const listRequestId = useRef(0)
+  const detailRequestId = useRef(0)
   const params = useParams()
   const navigate = useNavigate()
   const rawName = params['*']?.trim()
@@ -68,6 +70,7 @@ export default function InstitutionsPage() {
     : ''
 
   useEffect(() => {
+    const requestId = ++listRequestId.current
     setLoadingList(true)
     setError('')
     Promise.all([
@@ -75,6 +78,7 @@ export default function InstitutionsPage() {
       api.mentorInstitutions({ limit: 1000 }).catch(() => [] as MentorInstitution[]),
     ])
       .then(([data, mentorRows]) => {
+        if (requestId !== listRequestId.current) return
         const mentorsByInstitution = new Map(mentorRows.map((row) => [row.name.toLowerCase(), row]))
         setList((data as InstitutionListItem[]).map((item) => {
           const mentorRow = mentorsByInstitution.get(item.name.toLowerCase())
@@ -83,8 +87,12 @@ export default function InstitutionsPage() {
             : item
         }))
       })
-      .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
-      .finally(() => setLoadingList(false))
+      .catch((err) => {
+        if (requestId === listRequestId.current) setError(err instanceof Error ? err.message : '加载机构列表失败')
+      })
+      .finally(() => {
+        if (requestId === listRequestId.current) setLoadingList(false)
+      })
   }, [])
 
   useEffect(() => {
@@ -93,10 +101,26 @@ export default function InstitutionsPage() {
       setMentorDetail(null)
       return
     }
+    const requestId = ++detailRequestId.current
     setLoadingDetail(true)
     setError('')
-    api.mentorDetail(name).then(setMentorDetail).catch(() => setMentorDetail(null))
-    api.institutionProfile(name).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载机构画像失败')).finally(() => setLoadingDetail(false))
+    api.mentorDetail(name)
+      .then((row) => {
+        if (requestId === detailRequestId.current) setMentorDetail(row)
+      })
+      .catch(() => {
+        if (requestId === detailRequestId.current) setMentorDetail(null)
+      })
+    api.institutionProfile(name)
+      .then((row) => {
+        if (requestId === detailRequestId.current) setDetail(row)
+      })
+      .catch((err) => {
+        if (requestId === detailRequestId.current) setError(err instanceof Error ? err.message : '加载机构画像失败')
+      })
+      .finally(() => {
+        if (requestId === detailRequestId.current) setLoadingDetail(false)
+      })
   }, [name])
 
   const filtered = useMemo(() => {
