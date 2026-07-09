@@ -1,7 +1,7 @@
 import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
 import { billingService } from "./billing.service.js";
-import { learningRoadmaps, dailyLessons } from "../data/learning-catalog.js";
+import { learningContentService } from "./learning-content.service.js";
 import {
   WATCHLIST_VALID_TYPES,
   canonicalizeWatchlistQueryJson,
@@ -57,11 +57,13 @@ export const watchlistService = {
       : [];
     const companyMap = new Map(companyRows.map((r) => [r.id, r]));
 
-    // Enrich roadmaps from learning catalog
-    const roadmapMap = new Map(learningRoadmaps.map((r) => [r.slug, r]));
+    const { roadmaps, lessons } = learningContentService.activeContent();
 
-    // Enrich lessons from daily lessons
-    const lessonMap = new Map(dailyLessons.map((l) => [l.id, l]));
+    // Enrich roadmaps from active learning content
+    const roadmapMap = new Map(roadmaps.map((r) => [r.slug, r]));
+
+    // Enrich lessons from active learning content
+    const lessonMap = new Map(lessons.map((l) => [l.id, l]));
 
     return {
       companies: all

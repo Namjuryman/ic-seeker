@@ -1,7 +1,7 @@
 import { sqlite as metadataSqlite } from "../db/connection.js";
 import { appSqlite } from "../db/app-db.js";
 import { toPaperRow } from "./paper-row.js";
-import { learningRoadmaps } from "../data/learning-catalog-v3.js";
+import { learningContentService } from "./learning-content.service.js";
 import { escapeLike } from "./company-utils.js";
 
 const ORDER_BY_COLUMNS: Record<string, string> = {
@@ -579,7 +579,7 @@ export const companyService = {
     };
 
     const matchedRoadmaps = [];
-    for (const roadmap of learningRoadmaps) {
+    for (const roadmap of learningContentService.activeContent().roadmaps) {
       const roadmapDomains = new Set(roadmap.relatedTopics.map((t) => t.toLowerCase()));
       const roadmapQueries = [
         roadmap.paperQuery || "",

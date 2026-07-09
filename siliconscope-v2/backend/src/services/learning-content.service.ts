@@ -13,6 +13,8 @@ import type {
   RouteFamilySeed,
 } from "../data/learning-catalog-v3.js";
 
+export type { DailyLessonSeed, LearningRoadmapSeed };
+
 type LearningItemKind = "roadmap" | "lesson" | "route_family" | "foundation_group";
 type LearningItemStatus = "published" | "draft" | "archived";
 

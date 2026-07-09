@@ -1,5 +1,5 @@
 ﻿import { topicService } from "./topic.service.js";
-import { learningRoadmaps } from "../data/learning-catalog.js";
+import { learningContentService } from "./learning-content.service.js";
 import { appDb } from "../db/app-db.js";
 import { companies } from "../db/schema.js";
 import { sql } from "drizzle-orm";
@@ -40,7 +40,7 @@ export const topicReportService = {
       }));
 
     // Find related roadmaps from learning catalog
-    const relatedRoadmaps = learningRoadmaps
+    const relatedRoadmaps = learningContentService.activeContent().roadmaps
       .filter((r) => {
         const text = [
           r.title,
