@@ -49,7 +49,7 @@ export default function RoadmapDetailPage() {
     },
   })
 
-  if (roadmap.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading roadmap...</p></div>
+  if (roadmap.isLoading) return <div className="ss-skeleton-page"><p>Loading roadmap...</p></div>
   if (roadmap.isError || !roadmap.data) return <div className="ss-empty-state">Roadmap not found.</div>
 
   const data = roadmap.data

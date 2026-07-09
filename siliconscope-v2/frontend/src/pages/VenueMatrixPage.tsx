@@ -72,7 +72,7 @@ export default function VenueMatrixPage() {
         </div>
       </section>
 
-      {loading && <div className="ss-skeleton-page"><div /><p>Loading venue matrix...</p></div>}
+      {loading && <div className="ss-skeleton-page"><p>Loading venue matrix...</p></div>}
       {error && <div className="ss-empty-state">{error}</div>}
 
       {!loading && !error && (

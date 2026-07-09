@@ -2,6 +2,9 @@ const PERFORMANCE_INDEXES = [
   "CREATE INDEX IF NOT EXISTS idx_papers_year_score ON papers(year DESC, quality_score DESC)",
   "CREATE INDEX IF NOT EXISTS idx_papers_score_year ON papers(quality_score DESC, year DESC)",
   "CREATE INDEX IF NOT EXISTS idx_papers_citations_score ON papers(citation_count DESC, quality_score DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_papers_venue_domain_score_year_id ON papers(venue, domain, quality_score DESC, year DESC, id DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_papers_rank_year_score_id ON papers(venue_rank, year DESC, quality_score DESC, id DESC)",
+  "CREATE INDEX IF NOT EXISTS idx_papers_citations_score_id ON papers(citation_count DESC, quality_score DESC, id DESC)",
   "CREATE INDEX IF NOT EXISTS idx_papers_venue ON papers(venue)",
   "CREATE INDEX IF NOT EXISTS idx_papers_domain ON papers(domain)",
   "CREATE INDEX IF NOT EXISTS idx_papers_venue_rank ON papers(venue_rank)",
@@ -143,6 +146,68 @@ function ensureIdentityTables(sqlite: any) {
       confidence INTEGER NOT NULL DEFAULT 100,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS author_profiles (
+      id TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL,
+      photo_url TEXT,
+      photo_local_path TEXT,
+      homepage_url TEXT,
+      affiliation TEXT,
+      title TEXT,
+      source_url TEXT,
+      source_type TEXT NOT NULL DEFAULT 'manual',
+      license_note TEXT,
+      verification_status TEXT NOT NULL DEFAULT 'pending',
+      notes TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_author_profiles_normalized
+      ON author_profiles(normalized_name);
+
+    CREATE TABLE IF NOT EXISTS institution_roster_sources (
+      id TEXT PRIMARY KEY,
+      institution_name TEXT NOT NULL,
+      normalized_institution TEXT NOT NULL,
+      source_url TEXT NOT NULL,
+      source_kind TEXT NOT NULL DEFAULT 'official-faculty-page',
+      parser_hint TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_status TEXT,
+      last_fetched_at TEXT,
+      last_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_institution_roster_sources_url
+      ON institution_roster_sources(source_url);
+    CREATE INDEX IF NOT EXISTS idx_institution_roster_sources_institution
+      ON institution_roster_sources(normalized_institution, enabled);
+
+    CREATE TABLE IF NOT EXISTS mentor_roster_verifications (
+      id TEXT PRIMARY KEY,
+      institution_name TEXT NOT NULL,
+      normalized_institution TEXT NOT NULL,
+      author_name TEXT NOT NULL,
+      normalized_author TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unverified',
+      role_title TEXT,
+      evidence_url TEXT,
+      evidence_text TEXT,
+      source_id TEXT,
+      source_kind TEXT NOT NULL DEFAULT 'official-faculty-page',
+      confidence INTEGER NOT NULL DEFAULT 0,
+      verified_at TEXT,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_mentor_roster_verifications_author_institution
+      ON mentor_roster_verifications(normalized_institution, normalized_author);
+    CREATE INDEX IF NOT EXISTS idx_mentor_roster_verifications_status
+      ON mentor_roster_verifications(normalized_institution, status);
   `);
 }
 

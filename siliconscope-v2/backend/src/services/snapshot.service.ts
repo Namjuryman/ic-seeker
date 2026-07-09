@@ -14,6 +14,7 @@ type SnapshotRow = {
 
 type AnySnapshot = Record<string, any>;
 type MentorDetailSnapshot = { mentors?: Array<{ name: string }> };
+type MentorInstitutionSnapshot = { name?: string };
 
 function stableJson(value: unknown): string {
   return JSON.stringify(value);
@@ -162,8 +163,15 @@ export const snapshotService = {
   },
 
   getMentorInstitutions(params: Record<string, string>) {
-    if (!params.q && !params.region && !params.recentOnly) {
-      return getOrBuild("mentor:institutions", coreSnapshotBuilders["mentor:institutions"]);
+    const limit = Math.max(0, Math.min(1000, Number(params.limit || 0) || 0));
+    if (!params.region && !params.recentOnly) {
+      const q = String(params.q || "").trim().toLowerCase();
+      const rows = getOrBuild<MentorInstitutionSnapshot[]>(
+        "mentor:institutions",
+        () => coreSnapshotBuilders["mentor:institutions"]() as MentorInstitutionSnapshot[]
+      );
+      const filtered = q ? rows.filter((row) => String(row.name || "").toLowerCase().includes(q)) : rows;
+      return limit ? filtered.slice(0, limit) : filtered;
     }
     return mentorService.getInstitutionsWithMentors(params);
   },

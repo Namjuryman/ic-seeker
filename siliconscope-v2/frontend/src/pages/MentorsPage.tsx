@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
-import type { MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, MentorReviewStats, PaperRow } from '../types'
+import type { AuthorProfileMetadata, MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, MentorReviewStats, PaperRow } from '../types'
 
 const scoreFields = [
   ['mentorship', '指导质量'],
@@ -19,6 +19,9 @@ const scoreFields = [
 
 type MentorProfileWithReviews = MentorProfile & { reviews?: MentorReview[]; reviewStats?: MentorReviewStats }
 
+const INITIAL_INSTITUTION_RENDER_COUNT = 90
+const INSTITUTION_RENDER_STEP = 90
+
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -30,6 +33,25 @@ function initials(name: string) {
 
 function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
   return `S+ ${item.sPlus || 0} / S ${item.s || 0} / A ${item.a || 0}`
+}
+
+function ScholarAvatar({
+  name,
+  profile,
+  className = 'ss-avatar',
+}: {
+  name: string
+  profile?: AuthorProfileMetadata | null
+  className?: string
+}) {
+  const photoUrl = profile?.photoUrl?.trim()
+
+  return (
+    <span className={className} aria-label={name}>
+      {photoUrl && <img src={photoUrl} alt={name} loading="lazy" onError={(event) => { event.currentTarget.hidden = true }} />}
+      <span>{initials(name) || 'M'}</span>
+    </span>
+  )
 }
 
 function trendText(trend?: string) {
@@ -184,7 +206,10 @@ export default function MentorsPage() {
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [visibleInstitutionCount, setVisibleInstitutionCount] = useState(INITIAL_INSTITUTION_RENDER_COUNT)
   const [recentOnly, setRecentOnly] = useState(false)
+  const deferredQuery = useDeferredValue(debouncedQuery)
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const params = useParams()
@@ -203,13 +228,23 @@ export default function MentorsPage() {
     : ''
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 180)
+    return () => window.clearTimeout(timer)
+  }, [query])
+
+  useEffect(() => {
+    const normalized = deferredQuery.trim()
     setLoadingInstitutions(true)
     setError('')
-    api.mentorInstitutions()
+    api.mentorInstitutions({ limit: normalized ? 300 : 240, q: normalized })
       .then(setInstitutions)
       .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
       .finally(() => setLoadingInstitutions(false))
-  }, [])
+  }, [deferredQuery])
+
+  useEffect(() => {
+    setVisibleInstitutionCount(INITIAL_INSTITUTION_RENDER_COUNT)
+  }, [deferredQuery])
 
   useEffect(() => {
     if (!institution) {
@@ -238,10 +273,15 @@ export default function MentorsPage() {
   }, [mentor])
 
   const filteredInstitutions = useMemo(() => {
-    const normalized = query.trim().toLowerCase()
+    const normalized = deferredQuery.trim().toLowerCase()
     const rows = normalized ? institutions.filter((item) => item.name.toLowerCase().includes(normalized)) : institutions
     return [...rows].sort((a, b) => b.institutionScore - a.institutionScore)
-  }, [institutions, query])
+  }, [institutions, deferredQuery])
+
+  const visibleInstitutions = useMemo(
+    () => filteredInstitutions.slice(0, visibleInstitutionCount),
+    [filteredInstitutions, visibleInstitutionCount]
+  )
 
   const mentors = useMemo(() => {
     const rows = detail?.mentors || []
@@ -265,17 +305,25 @@ export default function MentorsPage() {
         </button>
 
         <section className="ss-profile-hero">
-          <div className="ss-avatar">{initials(profile.name)}</div>
+          <ScholarAvatar name={profile.name} profile={profile.profile} />
           <div>
             <p className="ss-kicker">Mentor profile</p>
             <h1>{profile.name}</h1>
             <div className="ss-chip-row">
+              {profile.profile?.title && <span>{profile.profile.title}</span>}
+              {profile.profile?.affiliation && <span>{profile.profile.affiliation}</span>}
               <span>{profile.paperCount} papers</span>
               <span>Score {profile.authorScore}</span>
               <span>{profile.roleStage || '阶段待校验'}</span>
               <span>{profile.firstYear || '-'} - {profile.lastYear || '-'}</span>
             </div>
           </div>
+          {(profile.profile?.homepageUrl || profile.profile?.sourceUrl) && (
+            <div className="ss-profile-actions">
+              {profile.profile.homepageUrl && <a href={profile.profile.homepageUrl} target="_blank" rel="noreferrer">Homepage</a>}
+              {profile.profile.sourceUrl && <a href={profile.profile.sourceUrl} target="_blank" rel="noreferrer">Photo source</a>}
+            </div>
+          )}
         </section>
 
         <div className="ss-profile-grid">
@@ -342,6 +390,11 @@ export default function MentorsPage() {
           </label>
         </section>
 
+        <section className="ss-caveat compact">
+          {detail.mentorCountSource === 'official-roster' ? '当前列表已按官方 roster 核验。' : '当前列表是“近期活跃导师候选”：优先要求近年机构论文和资深作者位证据。'}
+          历史资深作者 {detail.historicalSeniorAuthorCount || 0} 位，疑似学生/协作者 {detail.excludedLikelyStudentCount} 位；最终任职仍应以学院主页、ORCID 或人工 roster 为准。
+        </section>
+
         <div className="ss-chip-row wide">
           {detail.domains.slice(0, 10).map((domain) => <span key={domain.key}>{domain.key} ({domain.count})</span>)}
         </div>
@@ -350,12 +403,14 @@ export default function MentorsPage() {
           {mentors.map((item: MentorAuthor, index) => (
             <button key={item.name} className="ss-mentor-card" onClick={() => navigate(`/mentors/${encodeURIComponent(item.name)}?institution=${encodeURIComponent(institution)}`)}>
               <span className="ss-rank">{index + 1}</span>
-              <i>{initials(item.name)}</i>
+              <ScholarAvatar name={item.name} profile={item.profile} className="ss-mentor-avatar" />
               <div>
                 <h3>{item.name}</h3>
                 <p>Score {item.authorScore} · {item.papers} papers · {trendText(item.trend)}</p>
                 <em>{rankLine(item)}</em>
                 <div>
+                  {item.rosterVerification?.status === 'verified_current' && <span>Official roster</span>}
+                  <span>Senior evidence · {item.seniorAuthorPapers || 0}</span>
                   {item.topDomains.slice(0, 3).map((domain) => <span key={domain.key}>{domain.key} · {domain.count}</span>)}
                 </div>
               </div>
@@ -385,7 +440,7 @@ export default function MentorsPage() {
 
       <section className="ss-card-grid institution">
         {loadingInstitutions && <SkeletonState variant="list" title="正在加载导师机构" description="按 IC 论文实力、导师候选和 QS 信息排序。" />}
-        {!loadingInstitutions && filteredInstitutions.map((item, index) => (
+        {!loadingInstitutions && visibleInstitutions.map((item, index) => (
           <button key={item.name} className="ss-institution-card" onClick={() => setSearchParams({ institution: item.name })}>
             <div className="ss-card-head">
               <span className="ss-rank">{index + 1}</span>
@@ -404,6 +459,14 @@ export default function MentorsPage() {
           <EmptyState title="没有匹配机构" description="换一个学校英文名、缩写或地区线索试试。" />
         )}
       </section>
+      {!loadingInstitutions && visibleInstitutions.length < filteredInstitutions.length && (
+        <div className="ss-load-more">
+          <button type="button" onClick={() => setVisibleInstitutionCount((count) => count + INSTITUTION_RENDER_STEP)}>
+            Show {Math.min(INSTITUTION_RENDER_STEP, filteredInstitutions.length - visibleInstitutions.length)} more
+          </button>
+          <span>{visibleInstitutions.length} / {filteredInstitutions.length}</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -120,13 +120,13 @@ export const api = {
     return res.data
   },
 
-  async search(params: Record<string, string | number | boolean>) {
-    const res = await axios.get<SearchResult>('/api/search', { params })
+  async search(params: Record<string, string | number | boolean>, options?: { signal?: AbortSignal }) {
+    const res = await axios.get<SearchResult>('/api/search', { params, signal: options?.signal })
     return res.data
   },
 
-  async searchSuggestions(params: { q: string }) {
-    const res = await axios.get<SearchSuggestionResult>('/api/search/suggestions', { params })
+  async searchSuggestions(params: { q: string }, options?: { signal?: AbortSignal }) {
+    const res = await axios.get<SearchSuggestionResult>('/api/search/suggestions', { params, signal: options?.signal })
     return res.data
   },
 
@@ -460,8 +460,8 @@ export const api = {
     return res.data
   },
 
-  async mentorInstitutions() {
-    const res = await axios.get<MentorInstitution[]>('/api/mentor/institutions')
+  async mentorInstitutions(params?: Record<string, string | number>) {
+    const res = await axios.get<MentorInstitution[]>('/api/mentor/institutions', { params })
     return res.data
   },
 
@@ -475,8 +475,8 @@ export const api = {
     return res.data
   },
 
-  async paper(id: number) {
-    const res = await axios.get<PaperRow & { note?: string }>(`/api/papers/${id}`)
+  async paper(id: number, options?: { signal?: AbortSignal }) {
+    const res = await axios.get<PaperRow & { note?: string }>(`/api/papers/${id}`, { signal: options?.signal })
     return res.data
   },
 
@@ -505,8 +505,8 @@ export const api = {
     return res.data
   },
 
-  async paperComments(id: number, params?: { limit?: number; offset?: number }) {
-    const res = await axios.get<PaperComment[]>(`/api/papers/${id}/comments`, { params })
+  async paperComments(id: number, params?: { limit?: number; offset?: number }, options?: { signal?: AbortSignal }) {
+    const res = await axios.get<PaperComment[]>(`/api/papers/${id}/comments`, { params, signal: options?.signal })
     return res.data
   },
 

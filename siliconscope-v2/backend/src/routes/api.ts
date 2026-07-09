@@ -4,6 +4,7 @@ import { statsService } from "../services/stats.service.js";
 import { searchService } from "../services/search.service.js";
 import { paperService } from "../services/paper.service.js";
 import { profileService } from "../services/profile.service.js";
+import { authorProfileService } from "../services/author-profile.service.js";
 import { topicService } from "../services/topic.service.js";
 import { topicTaxonomyService } from "../services/topic-taxonomy.service.js";
 import { geoService } from "../services/geo.service.js";
@@ -56,16 +57,23 @@ import { featureCompletionService } from "../services/feature-completion.service
 
 const router = Router();
 
+function privateCache(res: { setHeader: (name: string, value: string) => void }, seconds: number) {
+  res.setHeader("cache-control", `private, max-age=${seconds}`);
+}
+
 router.get("/stats", requireAuth, async (req: AuthenticatedRequest, res) => {
   const userId = req.user?.userId ?? 0;
+  privateCache(res, 30);
   res.json(memoCache(`stats:${userId}`, 30_000, () => statsService.getStats(userId)));
 });
 
 router.get("/platform", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(platformService.getOverview());
 });
 
 router.get("/topic-taxonomy", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(topicTaxonomyService.list());
 });
 
@@ -106,6 +114,7 @@ router.post("/admin/topic-taxonomy/paper-edges/refresh", requireAdmin, async (re
 });
 
 router.get("/site-settings", requireAuth, async (_req, res) => {
+  privateCache(res, 60);
   res.json(siteSettingsService.publicSettings());
 });
 
@@ -126,6 +135,7 @@ router.post("/access-requests", async (req, res) => {
 });
 
 router.get("/billing/plans", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(billingService.getPlans());
 });
 
@@ -758,24 +768,44 @@ router.post("/import/doi", requireAuth, async (req, res) => {
 });
 
 router.get("/professors", requireAuth, async (req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getProfessors(req.query as Record<string, string>));
 });
 
 router.get("/authors/:name", requireAuth, async (req, res) => {
   const name = decodeURIComponent(req.params.name);
+  privateCache(res, 300);
   res.json(snapshotService.getAuthorProfile(name));
 });
 
+router.get("/author-profiles/:id/photo", requireAuth, async (req, res) => {
+  try {
+    const photo = await authorProfileService.readLocalPhoto(decodeURIComponent(req.params.id));
+    if (!photo) {
+      res.status(404).json({ error: "Author photo not found" });
+      return;
+    }
+    res.setHeader("content-type", photo.contentType);
+    res.setHeader("cache-control", "private, max-age=86400");
+    res.end(photo.bytes);
+  } catch {
+    res.status(404).json({ error: "Author photo not found" });
+  }
+});
+
 router.get("/institutions", requireAuth, async (req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getInstitutions(req.query as Record<string, string>));
 });
 
 router.get("/institutions/:name", requireAuth, async (req, res) => {
   const name = decodeURIComponent(req.params.name);
+  privateCache(res, 300);
   res.json(snapshotService.getInstitutionProfile(name));
 });
 
 router.get("/topics", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getTopics());
 });
 
@@ -785,30 +815,37 @@ router.get("/topics/detail", requireAuth, async (req, res) => {
     res.status(400).json({ error: "field is required" });
     return;
   }
+  privateCache(res, 300);
   res.json(snapshotService.getTopicDetail(field));
 });
 
 router.get("/geo", requireAuth, async (req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getGeo(req.query as Record<string, string>));
 });
 
 router.get("/venue-matrix", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getVenueMatrix());
 });
 
 router.get("/learning", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(learningService.getDashboard());
 });
 
 router.get("/learning/route-families", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(learningService.listRouteFamilies());
 });
 
 router.get("/learning/foundations", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(learningService.listFoundations());
 });
 
 router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(learningService.listRoadmaps());
 });
 
@@ -818,6 +855,7 @@ router.get("/learning/roadmaps/:slug", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Roadmap not found", requested: req.params.slug });
     return;
   }
+  privateCache(res, 300);
   res.json(roadmap);
 });
 
@@ -831,14 +869,17 @@ router.get("/learning/roadmaps/:slug/related-papers", requireAuth, async (req: A
 });
 
 router.get("/learning/lessons", requireAuth, async (req, res) => {
+  privateCache(res, 300);
   res.json(learningService.listLessons(req.query as Record<string, string>));
 });
 
 router.get("/learning/today", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(learningService.getTodayLesson());
 });
 
 router.get("/daily-circuit", requireAuth, async (req, res) => {
+  privateCache(res, 120);
   res.json(dailyCircuitService.list({ roadmapSlug: req.query.roadmapSlug as string | undefined, limit: Number(req.query.limit || 80) }));
 });
 
@@ -900,6 +941,7 @@ router.get("/learning/lessons/:lessonId", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Lesson not found" });
     return;
   }
+  privateCache(res, 300);
   res.json(lesson);
 });
 
@@ -913,16 +955,19 @@ router.get("/learning/lessons/:lessonId/related-papers", requireAuth, async (req
 });
 
 router.get("/mentor/institutions", requireAuth, async (req, res) => {
+  privateCache(res, 300);
   res.json(snapshotService.getMentorInstitutions(req.query as Record<string, string>));
 });
 
 router.get("/mentor/institutions/:name", requireAuth, async (req, res) => {
   const name = decodeURIComponent(req.params.name);
+  privateCache(res, 300);
   res.json(snapshotService.getMentorInstitution(name, req.query as Record<string, string>));
 });
 
 router.get("/mentor/authors/:name", requireAuth, async (req, res) => {
   const name = decodeURIComponent(req.params.name);
+  privateCache(res, 120);
   const profile = snapshotService.getMentorProfile(name, req.query as Record<string, string>);
   const reviews = reviewService.listReviews(name);
   const stats = reviewService.getReviewStats(name);
@@ -959,6 +1004,7 @@ router.post("/mentor/authors/:name/reviews", requireAuth, async (req: Authentica
 // Company / Employer Intelligence
 router.get("/companies", requireAuth, async (req, res) => {
   try {
+    privateCache(res, 60);
     const result = companyService.listCompanies(req.query as Record<string, string>);
     res.json(result);
   } catch (err) {
@@ -967,10 +1013,12 @@ router.get("/companies", requireAuth, async (req, res) => {
 });
 
 router.get("/companies/types", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(companyService.getCompanyTypes());
 });
 
 router.get("/companies/domains", requireAuth, async (_req, res) => {
+  privateCache(res, 300);
   res.json(companyService.getDomains());
 });
 
@@ -980,6 +1028,7 @@ router.get("/companies/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Company not found" });
     return;
   }
+  privateCache(res, 120);
   res.json(company);
 });
 

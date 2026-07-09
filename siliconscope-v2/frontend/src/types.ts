@@ -111,8 +111,26 @@ export interface TopicDetail {
   recentPapers: PaperRow[];
 }
 
+export interface AuthorProfileMetadata {
+  id: string;
+  displayName: string;
+  normalizedName: string;
+  photoUrl?: string | null;
+  photoLocalPath?: string | null;
+  homepageUrl?: string | null;
+  affiliation?: string | null;
+  title?: string | null;
+  sourceUrl?: string | null;
+  sourceType: string;
+  licenseNote?: string | null;
+  verificationStatus: string;
+  notes?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface AuthorProfile {
   name: string;
+  profile?: AuthorProfileMetadata | null;
   paperCount: number;
   authorScore: number;
   scoreSum: number;
@@ -191,10 +209,13 @@ export interface MentorInstitution {
   s: number;
   a: number;
   qs?: { qs_world_rank: number | null; qs_region_rank: number | null; region: string | null } | null;
+  mentorCountSource?: 'official-roster' | 'publication-heuristic' | 'industry-publication-heuristic';
 }
 
 export interface MentorAuthor {
   name: string;
+  normalizedKey?: string;
+  profile?: AuthorProfileMetadata | null;
   papers: number;
   citations: number;
   sPlus: number;
@@ -205,6 +226,19 @@ export interface MentorAuthor {
   topDomains: Array<{ key: string; count: number }>;
   yearlyActivity: Array<{ year: number; count: number }>;
   recentPapers: number;
+  seniorAuthorPapers?: number;
+  firstAuthorPapers?: number;
+  recentSeniorAuthorPapers?: number;
+  mentorConfidence?: number;
+  rosterVerification?: {
+    authorName: string;
+    normalizedAuthor: string;
+    status: string;
+    roleTitle?: string | null;
+    evidenceUrl?: string | null;
+    confidence: number;
+    verifiedAt?: string | null;
+  } | null;
   trend: 'rising' | 'cooling' | 'stable';
   roleStage: string;
   likelyMentor: boolean;
@@ -215,14 +249,20 @@ export interface MentorAuthor {
 
 export interface MentorDetail {
   institution: string;
+  entityKind?: 'academic' | 'company';
+  companyId?: string | null;
   mentors: MentorAuthor[];
   mentorCandidateCount: number;
+  mentorCountSource?: 'official-roster' | 'publication-heuristic' | 'industry-publication-heuristic';
+  officialRosterMatchedCount?: number;
   excludedLikelyStudentCount: number;
+  historicalSeniorAuthorCount?: number;
   domains: Array<{ key: string; count: number }>;
 }
 
 export interface MentorProfile {
   name: string;
+  profile?: AuthorProfileMetadata | null;
   paperCount: number;
   authorScore: number;
   roleStage: string;

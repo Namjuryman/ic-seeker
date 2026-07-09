@@ -1,0 +1,416 @@
+[
+  {
+    "institutionName": "Tsinghua University",
+    "sourceUrl": "https://www.sic.tsinghua.edu.cn/en/People/Faculty.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-integrated-circuits"
+  },
+  {
+    "institutionName": "Tsinghua University",
+    "sourceUrl": "https://www.sic.tsinghua.edu.cn/en/People/Faculty/System1/Institute_of_Integrated_Circuit_Design_and_Desig.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-integrated-circuits; institute-of-ic-design-and-eda"
+  },
+  {
+    "institutionName": "Tsinghua University",
+    "sourceUrl": "https://www.sic.tsinghua.edu.cn/en/People/Faculty/System1/Institute_of_Integrated_Circuit_Fabrication.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-integrated-circuits; institute-of-ic-fabrication"
+  },
+  {
+    "institutionName": "Tsinghua University",
+    "sourceUrl": "https://www.sic.tsinghua.edu.cn/en/People/Faculty/System1/Institute_of_Integrated_Nanoelectronics_Science.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-integrated-circuits; institute-of-integrated-nanoelectronics"
+  },
+  {
+    "institutionName": "KAIST",
+    "sourceUrl": "https://ee.kaist.ac.kr/en/research/integrated-circuits-semiconductor-systems/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-semiconductor-systems"
+  },
+  {
+    "institutionName": "Delft University of Technology",
+    "sourceUrl": "https://www.microelectronics.tudelft.nl/People/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "department-of-microelectronics"
+  },
+  {
+    "institutionName": "National Yang Ming Chiao Tung University",
+    "sourceUrl": "https://iee.nycu.edu.tw/en/teacher/index.php",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "institute-of-electronics; integrated-circuit-design"
+  },
+  {
+    "institutionName": "Chinese Academy of Sciences",
+    "sourceUrl": "https://english.ime.cas.cn/pe/fas/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "institute-of-microelectronics-cas"
+  },
+  {
+    "institutionName": "Chinese Academy of Sciences",
+    "sourceUrl": "https://sme.ucas.ac.cn/index.php/en/people/faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; school-of-microelectronics-ucas; cas-institutes"
+  },
+  {
+    "institutionName": "Southeast University",
+    "sourceUrl": "https://electronic.seu.edu.cn/master/wlectronicwcienceandwechnology/list.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; electronic-science-technology"
+  },
+  {
+    "institutionName": "Fudan University",
+    "sourceUrl": "https://me.fudan.edu.cn/7b/81/c31577a424833/page.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; microelectronics-faculty"
+  },
+  {
+    "institutionName": "Huazhong University of Science and Technology",
+    "sourceUrl": "https://ei.hust.edu.cn/English/Faculty.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; electronic-information-faculty"
+  },
+  {
+    "institutionName": "Xidian University",
+    "sourceUrl": "https://sme.xidian.edu.cn/English/Faculty.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-microelectronics"
+  },
+  {
+    "institutionName": "Xi'an Jiaotong University",
+    "sourceUrl": "https://eie.xjtu.edu.cn/en/Faculty.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; electronic-information-engineering"
+  },
+  {
+    "institutionName": "Harbin Institute of Technology",
+    "sourceUrl": "https://ise.hit.edu.cn/English/Faculty.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; integrated-circuits-hit"
+  },
+  {
+    "institutionName": "Peking University",
+    "sourceUrl": "https://www.ece.pku.edu.cn/en/People/Faculty1/ALL/Integrated_Circuit_Science_and_Engineering.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuit-science-and-engineering"
+  },
+  {
+    "institutionName": "Zhejiang University",
+    "sourceUrl": "https://www.isee.zju.edu.cn/iseenglish/InstituteofIntegratedMicroelectronicSystemswIMSw/list.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-microelectronic-systems"
+  },
+  {
+    "institutionName": "Shanghai Jiao Tong University",
+    "sourceUrl": "https://english.seiee.sjtu.edu.cn/english/list/2100-1-20.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; department-of-microelectronics"
+  },
+  {
+    "institutionName": "University of Electronic Science and Technology of China",
+    "sourceUrl": "https://icse.uestc.edu.cn/szdw/jsmlzl.htm",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "school-of-integrated-circuit-science-and-engineering; chinese-teacher-roster"
+  },
+  {
+    "institutionName": "National University of Singapore",
+    "sourceUrl": "https://cde.nus.edu.sg/ece/research/research-areas/integrated-circuits-embedded-systems/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-embedded-systems"
+  },
+  {
+    "institutionName": "National Taiwan University",
+    "sourceUrl": "https://giee.ntu.edu.tw/en/ics_faculty.php",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-systems"
+  },
+  {
+    "institutionName": "National Taiwan University",
+    "sourceUrl": "https://giee.ntu.edu.tw/en/faculty/all/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; giee-all-faculty"
+  },
+  {
+    "institutionName": "National Tsing Hua University",
+    "sourceUrl": "https://www.ee.nthu.edu.tw/iframe/list_teacher_eng.php",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "Nanyang Technological University",
+    "sourceUrl": "https://www.ntu.edu.sg/cics/faculty-directory",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "centre-for-integrated-circuits-and-systems"
+  },
+  {
+    "institutionName": "The Hong Kong University of Science and Technology",
+    "sourceUrl": "https://icdc.hkust.edu.hk/faculty-members",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuit-design-center"
+  },
+  {
+    "institutionName": "National University of Singapore",
+    "sourceUrl": "https://cde.nus.edu.sg/ece/about-us/people/academic-staff/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-academic-staff"
+  },
+  {
+    "institutionName": "Massachusetts Institute of Technology",
+    "sourceUrl": "https://www.eecs.mit.edu/role/faculty-ee/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty-role"
+  },
+  {
+    "institutionName": "Stanford University",
+    "sourceUrl": "https://ee.stanford.edu/research/integrated-circuits-and-systems",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-and-systems"
+  },
+  {
+    "institutionName": "Stanford University",
+    "sourceUrl": "https://ee.stanford.edu/people/faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "University of California, Berkeley",
+    "sourceUrl": "https://www2.eecs.berkeley.edu/Research/Areas/INC/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-research-area"
+  },
+  {
+    "institutionName": "University of Michigan",
+    "sourceUrl": "https://micl.engin.umich.edu/people/faculty/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "michigan-integrated-circuits-lab"
+  },
+  {
+    "institutionName": "University of California San Diego",
+    "sourceUrl": "https://ece.ucsd.edu/faculty-research/ece-research-areas/electronic-circuits-systems-impacted",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "electronic-circuits-systems"
+  },
+  {
+    "institutionName": "University of California, Los Angeles",
+    "sourceUrl": "https://www.ee.ucla.edu/circuits-embedded-systems/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "circuits-embedded-systems"
+  },
+  {
+    "institutionName": "Georgia Institute of Technology",
+    "sourceUrl": "https://ece.gatech.edu/directory/tig/eda",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "electronic-design-and-applications"
+  },
+  {
+    "institutionName": "KU Leuven",
+    "sourceUrl": "https://micas.esat.kuleuven.be/people",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "micas-integrated-circuit-and-sensor-design"
+  },
+  {
+    "institutionName": "Seoul National University",
+    "sourceUrl": "https://ece.snu.ac.kr/en/research-faculty/faculty/fulltime",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-fulltime-faculty"
+  },
+  {
+    "institutionName": "Seoul National University",
+    "sourceUrl": "https://ece.snu.ac.kr/en/research-faculty/research/groups",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-research-groups"
+  },
+  {
+    "institutionName": "EPFL",
+    "sourceUrl": "https://www.epfl.ch/labs/inl/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-neurotechnologies-lab"
+  },
+  {
+    "institutionName": "University of Illinois Urbana-Champaign",
+    "sourceUrl": "https://ece.illinois.edu/research/areas/circuits",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "circuits-research-area"
+  },
+  {
+    "institutionName": "Columbia University",
+    "sourceUrl": "https://www.ee.columbia.edu/integrated-circuits-and-systems",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-and-systems"
+  },
+  {
+    "institutionName": "Columbia University",
+    "sourceUrl": "https://www.ee.columbia.edu/faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "University of Toronto",
+    "sourceUrl": "https://www.ece.utoronto.ca/research/electronics/faculty/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "electronics-faculty"
+  },
+  {
+    "institutionName": "University of Texas at Austin",
+    "sourceUrl": "https://ece.utexas.edu/research/groups/integrated-circuits-and-systems-group",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-circuits-and-systems-group"
+  },
+  {
+    "institutionName": "The Chinese University of Hong Kong",
+    "sourceUrl": "https://www.ee.cuhk.edu.hk/en-gb/people/academic-staff",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-academic-staff"
+  },
+  {
+    "institutionName": "ETH Zurich",
+    "sourceUrl": "https://ee.ethz.ch/the-department/faculty.html",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; d-itet-faculty"
+  },
+  {
+    "institutionName": "Texas A and M University",
+    "sourceUrl": "https://engineering.tamu.edu/electrical/profiles/index.html",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "University of Tokyo",
+    "sourceUrl": "https://www.eeis.t.u-tokyo.ac.jp/en/research/research-fields/electronics/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "electronics-research-field"
+  },
+  {
+    "institutionName": "City University of Hong Kong",
+    "sourceUrl": "https://www.ee.cityu.edu.hk/people/academic-staff",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-academic-staff"
+  },
+  {
+    "institutionName": "Yonsei University",
+    "sourceUrl": "https://ee.yonsei.ac.kr/ee_en/faculty/faculty.do",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "Pohang University of Science and Technology",
+    "sourceUrl": "https://eee.postech.ac.kr/eng/professor/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; eee-faculty"
+  },
+  {
+    "institutionName": "Purdue University",
+    "sourceUrl": "https://engineering.purdue.edu/ECE/People/Faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "University of Pavia",
+    "sourceUrl": "https://webing.unipv.eu/personale-docente/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; engineering-faculty"
+  },
+  {
+    "institutionName": "The University of Texas At Dallas",
+    "sourceUrl": "https://ece.utdallas.edu/people/faculty/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "Arizona State University",
+    "sourceUrl": "https://search.asu.edu/search?search-tabs=all&search-term=electrical%20engineering%20faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; asu-search"
+  },
+  {
+    "institutionName": "Korea University",
+    "sourceUrl": "https://ee.korea.edu/ee_en/professor/professor.do",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "University of Hong Kong",
+    "sourceUrl": "https://www.eee.hku.hk/people/academic-staff/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; eee-academic-staff"
+  },
+  {
+    "institutionName": "Southern University of Science and Technology",
+    "sourceUrl": "https://ese.sustech.edu.cn/en/people/faculty.html",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; electronic-science-engineering"
+  },
+  {
+    "institutionName": "University of Southern California",
+    "sourceUrl": "https://minghsiehece.usc.edu/people/faculty/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "University of California Santa Barbara",
+    "sourceUrl": "https://www.ece.ucsb.edu/people/faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "Eindhoven University of Technology",
+    "sourceUrl": "https://www.tue.nl/en/research/research-groups/electronic-systems/people",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "electronic-systems-people"
+  },
+  {
+    "institutionName": "National Cheng Kung University",
+    "sourceUrl": "https://www.ee.ncku.edu.tw/index.php?lang=en&option=module&task=pageinfo&id=136&index=3",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ee-faculty"
+  },
+  {
+    "institutionName": "South China University of Technology",
+    "sourceUrl": "https://www2.scut.edu.cn/eie_en/Faculty/list.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; electronic-information-engineering"
+  },
+  {
+    "institutionName": "University of Science and Technology of China",
+    "sourceUrl": "https://en.eeis.ustc.edu.cn/Faculty/list.htm",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; eeis-faculty"
+  },
+  {
+    "institutionName": "Sungkyunkwan University",
+    "sourceUrl": "https://ice.skku.edu/eng_ice/professor/professor.do",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ice-faculty"
+  },
+  {
+    "institutionName": "Technical University of Munich",
+    "sourceUrl": "https://www.ce.cit.tum.de/en/lis/people/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "integrated-systems-people"
+  },
+  {
+    "institutionName": "Cornell University",
+    "sourceUrl": "https://www.ece.cornell.edu/ece/people/faculty",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "University of Washington",
+    "sourceUrl": "https://www.ece.uw.edu/people/faculty/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; ece-faculty"
+  },
+  {
+    "institutionName": "Imperial London",
+    "sourceUrl": "https://www.imperial.ac.uk/electrical-engineering/people/academic-staff/",
+    "sourceKind": "official-department-faculty-page",
+    "parserHint": "candidate-only; eee-academic-staff"
+  },
+  {
+    "institutionName": "University of Macau",
+    "sourceUrl": "https://ime.um.edu.mo/category/people/faculty/",
+    "sourceKind": "official-ic-faculty-page",
+    "parserHint": "wordpress-category; institute-of-microelectronics"
+  }
+]

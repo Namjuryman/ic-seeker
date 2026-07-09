@@ -17,6 +17,8 @@ const rankAliases: Array<[RegExp, string, number]> = [
   [/\btcas-?ii\b|transactions on circuits and systems ii/i, "A", 62],
   [/\btvlsi\b|very large scale integration/i, "A", 62],
   [/\bt-?mtt\b|microwave theory and techniques/i, "A+", 78],
+  [/\bssc-?l\b|solid-state circuits letters/i, "A", 70],
+  [/\btpel\b|transactions on power electronics/i, "A", 70],
   [/\biscas\b/i, "B", 54],
   [/\bted\b|electron devices/i, "B+", 50],
 ];

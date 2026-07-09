@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { searchPath } from '../utils/routes'
-import type { InstitutionProfile, PaperRow } from '../types'
+import type { InstitutionProfile, MentorAuthor, MentorDetail, MentorInstitution, PaperRow } from '../types'
 
 interface InstitutionListItem {
   name: string
@@ -13,6 +13,8 @@ interface InstitutionListItem {
   s: number
   a: number
   citations: number
+  mentorCount?: number
+  mentorCountSource?: 'official-roster' | 'publication-heuristic' | 'industry-publication-heuristic'
 }
 
 function initials(name: string) {
@@ -44,9 +46,16 @@ function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
   return `S+ ${item.sPlus ?? 0} / S ${item.s ?? 0} / A ${item.a ?? 0}`
 }
 
+function mentorCountLabel(item: InstitutionListItem) {
+  if (typeof item.mentorCount !== 'number') return '-'
+  if (item.mentorCountSource === 'industry-publication-heuristic') return `${item.mentorCount} industry`
+  return item.mentorCountSource === 'official-roster' ? `${item.mentorCount} official` : `${item.mentorCount} est.`
+}
+
 export default function InstitutionsPage() {
   const [list, setList] = useState<InstitutionListItem[]>([])
   const [detail, setDetail] = useState<InstitutionProfile | null>(null)
+  const [mentorDetail, setMentorDetail] = useState<MentorDetail | null>(null)
   const [loadingList, setLoadingList] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [error, setError] = useState('')
@@ -61,8 +70,19 @@ export default function InstitutionsPage() {
   useEffect(() => {
     setLoadingList(true)
     setError('')
-    api.institutions({ limit: 80, minPapers: 2 })
-      .then((data) => setList(data as InstitutionListItem[]))
+    Promise.all([
+      api.institutions({ limit: 80, minPapers: 2 }),
+      api.mentorInstitutions({ limit: 1000 }).catch(() => [] as MentorInstitution[]),
+    ])
+      .then(([data, mentorRows]) => {
+        const mentorsByInstitution = new Map(mentorRows.map((row) => [row.name.toLowerCase(), row]))
+        setList((data as InstitutionListItem[]).map((item) => {
+          const mentorRow = mentorsByInstitution.get(item.name.toLowerCase())
+          return mentorRow
+            ? { ...item, mentorCount: mentorRow.mentorCount, mentorCountSource: mentorRow.mentorCountSource }
+            : item
+        }))
+      })
       .catch((err) => setError(err instanceof Error ? err.message : '加载机构列表失败'))
       .finally(() => setLoadingList(false))
   }, [])
@@ -70,10 +90,12 @@ export default function InstitutionsPage() {
   useEffect(() => {
     if (!name) {
       setDetail(null)
+      setMentorDetail(null)
       return
     }
     setLoadingDetail(true)
     setError('')
+    api.mentorDetail(name).then(setMentorDetail).catch(() => setMentorDetail(null))
     api.institutionProfile(name).then(setDetail).catch((err) => setError(err instanceof Error ? err.message : '加载机构画像失败')).finally(() => setLoadingDetail(false))
   }, [name])
 
@@ -84,7 +106,7 @@ export default function InstitutionsPage() {
   }, [list, query])
 
   if (name && loadingDetail) {
-    return <div className="ss-skeleton-page"><div /><p>正在加载机构画像...</p></div>
+    return <div className="ss-skeleton-page"><p>正在加载机构画像...</p></div>
   }
 
   if (name && error) {
@@ -142,6 +164,34 @@ export default function InstitutionsPage() {
           </main>
 
           <aside className="ss-profile-side">
+            {mentorDetail && (
+              <section className="ss-panel">
+                <div className="ss-panel-head compact">
+                  <h2>{mentorDetail.entityKind === 'company' ? 'IC 产业作者' : 'IC 老师'}</h2>
+                  <span>{mentorDetail.mentorCountSource === 'official-roster' ? 'Official roster' : mentorDetail.mentorCountSource === 'industry-publication-heuristic' ? 'Industry heuristic' : 'Heuristic'}</span>
+                </div>
+                <div className="ss-caveat compact">
+                  {mentorDetail.mentorCountSource === 'official-roster'
+                    ? `已按官方 roster 核验 ${mentorDetail.officialRosterMatchedCount || mentorDetail.mentors.length} 位。`
+                    : mentorDetail.mentorCountSource === 'industry-publication-heuristic'
+                      ? `产业论文作者候选 ${mentorDetail.mentorCandidateCount || mentorDetail.mentors.length} 位，不等同于公司员工名录。`
+                      : `论文启发式候选 ${mentorDetail.mentorCandidateCount || mentorDetail.mentors.length} 位，需继续官网核验。`}
+                </div>
+                <div className="ss-link-list">
+                  {mentorDetail.mentors.slice(0, 14).map((mentor: MentorAuthor) => (
+                    <button key={mentor.name} onClick={() => navigate(`/mentors/${encodeURIComponent(mentor.name)}?institution=${encodeURIComponent(detail.name)}`)}>
+                      <span>{mentor.name}</span>
+                      <strong>{mentor.rosterVerification?.roleTitle || `${mentor.papers || 0} papers`}</strong>
+                    </button>
+                  ))}
+                  {!mentorDetail.mentors.length && <span className="ss-muted-line">暂无可展示的 IC 候选。</span>}
+                </div>
+                <button className="ss-back-button" type="button" onClick={() => navigate(`/mentors?institution=${encodeURIComponent(detail.name)}`)}>
+                  查看完整导师页
+                </button>
+              </section>
+            )}
+
             <section className="ss-panel">
               <div className="ss-panel-head compact"><h2>活跃学者</h2></div>
               <div className="ss-link-list">
@@ -228,6 +278,7 @@ export default function InstitutionsPage() {
           <span>Rank</span>
           <span>Institution</span>
           <span>Papers</span>
+          <span>IC People</span>
           <span>S+</span>
           <span>Citations</span>
           <span>Score</span>
@@ -242,6 +293,7 @@ export default function InstitutionsPage() {
               <em>{rankLine(institution)}</em>
             </span>
             <span>{institution.papers ?? 0}</span>
+            <span title={institution.mentorCountSource === 'official-roster' ? 'official roster' : institution.mentorCountSource === 'industry-publication-heuristic' ? 'industry publication heuristic' : 'publication heuristic'}>{mentorCountLabel(institution)}</span>
             <span>{institution.sPlus ?? 0}</span>
             <span>{institution.citations ?? 0}</span>
             <span>{institution.institutionScore ?? 0}</span>

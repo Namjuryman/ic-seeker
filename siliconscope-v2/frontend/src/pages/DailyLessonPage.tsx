@@ -72,7 +72,7 @@ export default function DailyLessonPage({ today = false }: { today?: boolean }) 
     },
   })
 
-  if (lessonQuery.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading lesson...</p></div>
+  if (lessonQuery.isLoading) return <div className="ss-skeleton-page"><p>Loading lesson...</p></div>
   if (lessonQuery.isError || !lessonQuery.data) return <div className="ss-empty-state">Lesson not found.</div>
 
   const lesson = lessonQuery.data

@@ -43,9 +43,35 @@ const PricingPage = lazy(() => import('./pages/PricingPage'))
 const AdminRedirectPage = lazy(() => import('./pages/AdminRedirectPage'))
 const AccessRequestPage = lazy(() => import('./pages/AccessRequestPage'))
 
+const routePreloads: Record<string, () => Promise<unknown>> = {
+  '/': () => import('./pages/HomePage'),
+  '/intelligence': () => import('./pages/IntelligenceHubPage'),
+  '/learning': () => import('./pages/LearningDashboardPage'),
+  '/workspace': () => import('./pages/WorkspaceHubPage'),
+  '/account': () => import('./pages/AccountHubPage'),
+}
+
+const preloadedRoutes = new Set<string>()
+
+function preloadRoute(path: string) {
+  if (preloadedRoutes.has(path)) return
+  preloadedRoutes.add(path)
+  routePreloads[path]?.().catch(() => preloadedRoutes.delete(path))
+}
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
 })
+
+function RouteLoadingFallback() {
+  const { t } = useI18n()
+  return (
+    <div className="ss-route-loading" role="status" aria-live="polite">
+      <span aria-hidden="true" />
+      <p>{t('loading.page')}</p>
+    </div>
+  )
+}
 
 function LoginGate({ children, initialStatus }: { children: React.ReactNode; initialStatus?: AuthStatus }) {
   const { t } = useI18n()
@@ -146,6 +172,8 @@ function Layout({
                   key={item.to}
                   to={item.to}
                   end={item.to === '/'}
+                  onFocus={() => preloadRoute(item.to)}
+                  onMouseEnter={() => preloadRoute(item.to)}
                   className={({ isActive }) => `ss-nav-item ${isActive ? 'active' : ''}`}
                 >
                   <i aria-hidden="true">{item.icon}</i>
@@ -183,12 +211,11 @@ function Layout({
 
 function App() {
   const { themeMode, setThemeMode } = useThemeMode()
-  const { t } = useI18n()
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Suspense fallback={<SkeletonState title={t('loading.page')} description={t('loading.module')} />}>
+        <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />

@@ -106,7 +106,7 @@ export default function DailyCircuitPage() {
   const today = useQuery({ queryKey: ['daily-circuit', 'today'], queryFn: () => api.todayDailyCircuit() })
   const list = useQuery({ queryKey: ['daily-circuit', 'list'], queryFn: () => api.dailyCircuit({ limit: 18 }) })
 
-  if (today.isLoading || list.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading Daily Circuit...</p></div>
+  if (today.isLoading || list.isLoading) return <div className="ss-skeleton-page"><p>Loading Daily Circuit...</p></div>
   if (today.isError || list.isError) return <div className="ss-empty-state">Daily Circuit failed to load.</div>
 
   const rows = list.data?.rows || []

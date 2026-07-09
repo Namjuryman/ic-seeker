@@ -1,5 +1,59 @@
 # SiliconScope v2 Worklog
 
+## 2026-07-08 数据修复：OpenAlex 富化 + 前言垃圾清理
+
+### 背景
+数据体检发现主表血肉残缺：affiliations 缺 54.7%、abstract 缺 53.9%、citation 缺 22%，
+并混入大量会议前言页（Committees / Welcome Message / Information for Authors / 期刊刊头等）
+被当成论文。DOI 基本齐全（98.7%），骨架完好，故选择「基于 DOI 回填富化 + 清垃圾」而非重拉。
+
+### 新增脚本
+| 脚本 | npm | 说明 |
+|------|-----|------|
+| `backend/src/scripts/enrich-openalex.ts` | `enrich:openalex` | 按 DOI 批量（50/次）向 OpenAlex 回填 affiliations/abstract/authors/citation，修复截断标题，重建 FTS 行与 quality_score。支持 `--dry-run`/`--limit`/`--overwrite`/`--refresh-citations`，断点续跑，限流。 |
+| `backend/src/scripts/clean-frontmatter.ts` | `clean:frontmatter` | 删除非论文的前言/刊头行。三条规则：A=无作者+无摘要+零引用；B=管理类标题且无机构；C=期刊刊头/严格管理短语（无视机构）。默认干跑，`--apply` 才删，级联清理 FTS/provenance/用户数据/topic-edges/AI 标注等所有引用表。 |
+
+### 数据变更（一次性执行）
+- 富化 OpenAlex：21,188 候选 → 命中 21,165（99.9%），补机构 18,125、补摘要 18,619、更新引用 8,233、domain 重分类 2,809。
+- 清理垃圾：分三轮删除 1,445 + 469 + 226 = 2,140 行前言/刊头。
+- 结果：papers 38,950 → 36,810；affiliations 空 54.7%→3.3%，abstract 空 53.9%→1.9%，authors 空 4.9%→0.3%；重复 DOI=0，无信号残余=0，FTS 与主表行数一致。
+- 备份：`backups/ic_papers_before_enrich_2026-07-08T10-27-49.sqlite`（富化前全量在线备份）。
+- 已 `snapshots:refresh` 重算全部快照（画像/排行榜/导师/地图）。
+
+### 运行环境注意
+OpenAlex 在中国网络下经 Node `fetch`（undici）可正常访问；PowerShell 的 `Invoke-RestMethod`
+对 OpenAlex 会静默返回空，勿用其测试。富化脚本走 Node，无此问题。
+
+### 后续可选
+- ACM（DAC/ICCAD/DATE）少量缩写标题（如 `AOS`/`nZDC`）全名在 Crossref 的 subtitle 字段，
+  OpenAlex 未收；如需修全名可加一个 Crossref `title+subtitle` 小补丁。
+- 剩余 58 组同标题均为唯一 DOI 的不同论文（非重复记录），无需处理。
+
+## 2026-07-08 覆盖完整性：按目录补全缺失论文
+
+### 背景
+按关键词搜索建库不保证某会议某年的完整目录，旗舰论文会漏。抽查 ISSCC 2024：
+库里 232 篇，DBLP 权威目录 246 篇真论文，**缺 51 篇**（含 AMD MI300 Chiplet、GDDR7 DRAM、
+160GS/s TI-DAC 等顶会论文）。OpenAlex 对近年会议的 per-year source 只建到 2022，按年枚举返回 0，
+故会议改用 DBLP 目录为权威基准。
+
+### 新增脚本
+| 脚本 | npm | 说明 |
+|------|-----|------|
+| `backend/src/scripts/backfill-venue.ts` | `backfill:venue` | 按 venue+year 用权威目录补缺失论文。会议走 DBLP `stream:conf/<key>:<year>`（分页），按 DOI 与库 diff，缺失者用 OpenAlex 批量取全元数据后入库（正确 venue/rank/domain/quality_score + FTS 行）。`--venue`/`--year`/`--years=a-b`/`--apply`，默认干跑。DBLP 会议键内置 ISSCC/CICC/DAC/ICCAD/DATE/IEDM/ASSCC/ESSCIRC/VLSI。 |
+
+### 测试结果（ISSCC 2024）
+- DBLP 真论文 246，库里 232，缺 51；OpenAlex 51/51 全部取到元数据 → 已入库。
+- ISSCC 2024：232 → 282（241 篇带 session 编号的真报告）；无新增重复；FTS 同步（36,810→36,861）。
+- 补入行 `collection_method='backfill:dblp+openalex'`，易回滚。
+
+### 方法论要点
+- **会议**（ISSCC/VLSI/CICC/DAC/ICCAD/DATE/IEDM/ASSCC/ESSCIRC）→ DBLP 目录权威，`total` 即真实篇数。
+- **期刊**（JSSC/TCAS-I/II/TCAD/TVLSI）→ 用 OpenAlex 按 ISSN/source + 年枚举，或 Crossref 按 ISSN+年（期刊在 OpenAlex 可按年枚举，会议不行）。backfill 脚本的期刊分支待接入。
+- 超出官方 234/DBLP 246 的部分是原库 ~37 条非论文会议条目（panel/plenary/forum），可选二次微清理。
+
+---
+
 ## 2025-06-19 第三轮融合：身份消歧 + 地理地图增强
 
 ### 后端改动

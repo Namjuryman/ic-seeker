@@ -148,7 +148,7 @@ export default function LearningPathPage() {
   const hasFoundations = commonFoundations.length > 0
 
   if (!hasRoadmaps && !roadmapsQuery.isError && (roadmapsQuery.isLoading || familiesQuery.isLoading || foundationsQuery.isLoading)) {
-    return <div className="ss-skeleton-page"><div /><p>Loading route library...</p></div>
+    return <div className="ss-skeleton-page"><p>Loading route library...</p></div>
   }
 
   function pickFamily(family: RouteFamily) {

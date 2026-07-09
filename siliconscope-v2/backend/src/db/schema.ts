@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   integer,
+  index,
   real,
   sqliteTable,
   text,
@@ -407,6 +408,27 @@ export const authorAliases = sqliteTable("author_aliases", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const authorProfiles = sqliteTable("author_profiles", {
+  id: text("id").primaryKey(),
+  displayName: text("display_name").notNull(),
+  normalizedName: text("normalized_name").notNull(),
+  photoUrl: text("photo_url"),
+  photoLocalPath: text("photo_local_path"),
+  homepageUrl: text("homepage_url"),
+  affiliation: text("affiliation"),
+  title: text("title"),
+  sourceUrl: text("source_url"),
+  sourceType: text("source_type").notNull().default("manual"),
+  licenseNote: text("license_note"),
+  verificationStatus: text("verification_status").notNull().default("pending"),
+  notes: text("notes"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("idx_author_profiles_normalized").on(table.normalizedName),
+]);
 
 // FTS5 virtual table is handled via raw SQL in migrations since Drizzle doesn't natively support FTS5
 export const papersFts = sqliteTable("papers_fts", {

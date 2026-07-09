@@ -62,6 +62,126 @@ const tabSpecs = [
 
 const topicShortcuts = ['ADC', 'PLL', 'DC-DC', 'LDO', 'RF', 'SerDes', 'SRAM', 'Bandgap']
 
+const zhHomeCopy = {
+  scopeAll: '全部',
+  scopePapers: '论文',
+  scopeAuthors: '作者',
+  scopeInstitutions: '机构',
+  searchLoading: '搜索中...',
+  search: '搜索',
+  advancedSearch: '高级搜索',
+  watchlist: '收藏夹',
+  history: '历史：',
+  suggestion: '建议：',
+  noAbstract: '暂无摘要。',
+  favorited: '已收藏',
+  openPaper: '论文',
+  save: '收藏',
+  previousPage: '上一页',
+  nextPage: '下一页',
+  nextBatch: '下一批',
+  pageOf: '第 {page} / {pages} 页',
+  detail: '论文详情',
+  detailEmpty: '点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。',
+  openFull: '打开完整页',
+  close: '关闭',
+  openDoi: '打开 DOI',
+  openPdf: '打开 PDF',
+  source: '来源',
+  authors: '作者',
+  institution: '机构',
+  status: '状态',
+  dataSource: '数据源',
+  citations: '引用数',
+  abstract: '摘要',
+  quickCitation: '快捷引用',
+  readingNotes: '阅读与笔记',
+  tags: '标签',
+  note: '笔记',
+  notePlaceholder: '写一点自己的阅读笔记...',
+  unsave: '取消收藏',
+  discussion: '讨论',
+  noComments: '暂无评论。',
+  imported: 'DOI 导入完成',
+  privateTools: '私人工具',
+  privateToolsHint: '只导入 metadata；PDF 保持在本地私库，或通过出版社官网跳转。',
+  importDoi: '导入 DOI',
+  emptyHint: '试试放宽年份、会议或语义条件。',
+  suggestionFallback: '换一个电路模块、会议或作者试试。',
+  searchFailed: '搜索失败',
+  statsFailed: '统计数据加载失败',
+  copiedLink: '搜索链接已复制',
+  savedSearch: '搜索已保存',
+  savedSearchExists: '搜索已保存（已存在）',
+  saveFailed: '保存失败',
+  metrics: {
+    timeRange: '时间范围',
+    adjustable: '可在左侧调整',
+    resultCount: '结果数量',
+    pdfLibrary: 'PDF 私库',
+    matched: '已匹配',
+    ieee: 'IEEE 精修',
+    pending: '待接入',
+    enableAfterKey: 'API key 后启用',
+    trust: '数据可信度',
+    trustHint: '机构/作者消歧待加强',
+  },
+  filters: {
+    title: '精炼搜索',
+    clear: '清空',
+    startYear: '开始年份',
+    endYear: '结束年份',
+    recent5: '近 5 年',
+    recent10: '近 10 年',
+    recent15: '近 15 年',
+    venue: '会议/期刊',
+    addVenue: '添加会议/期刊',
+    field: '研究方向',
+    all: '全部',
+    rank: '期刊/会议等级',
+    author: '作者',
+    institution: '机构',
+    country: '国家/地区',
+    minScore: '最低分',
+    minCitations: '最低引用',
+    semantic: '语义扩展',
+    localPdf: '仅看本地 PDF',
+    favoritesOnly: '仅看收藏',
+    apply: '应用筛选',
+  },
+  result: {
+    rows: '条结果',
+    expanded: '扩展查询：{query}',
+    relevance: '相关度',
+    score: '综合',
+    year: '最新',
+    citations: '引用数',
+    title: '标题',
+    copy: '复制链接',
+    save: '保存搜索',
+    list: '列表',
+    export: '导出',
+    emptyTitle: '没有匹配论文',
+  },
+  tabs: {
+    all: '全部',
+    sPlus: '论文(S+)',
+    mentors: '导师/机构',
+    topics: '方向',
+    geo: 'Geo',
+    authors: '专家',
+    institutions: '机构',
+    venues: '会议/期刊',
+  },
+  reading: {
+    unread: '未读',
+    reading: '在读',
+    read: '已读',
+    important: '重点',
+    skip: '跳过',
+  },
+} as const
+
 function homeCopy(language: Language) {
   if (language === 'en') {
     return {
@@ -184,6 +304,7 @@ function homeCopy(language: Language) {
       },
     }
   }
+  return zhHomeCopy
   return {
     scopeAll: '全部',
     scopePapers: '论文',
@@ -559,11 +680,15 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
       setPaper(null)
       return
     }
+    const controller = new AbortController()
     let alive = true
     async function load() {
       const [data, nextComments] = await Promise.all([
-        api.paper(paperId!),
-        api.paperComments(paperId!, { limit: COMMENT_LIMIT, offset: 0 }).catch(() => []),
+        api.paper(paperId!, { signal: controller.signal }),
+        api.paperComments(paperId!, { limit: COMMENT_LIMIT, offset: 0 }, { signal: controller.signal }).catch((err) => {
+          if (controller.signal.aborted) throw err
+          return []
+        }),
       ])
       if (!alive) return
       setPaper(data)
@@ -572,8 +697,13 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
       setTagText((data.tags || []).map((tag) => tag.name).join(', '))
       setComments(nextComments)
     }
-    load().catch(console.error)
-    return () => { alive = false }
+    load().catch((err) => {
+      if (!controller.signal.aborted) console.error(err)
+    })
+    return () => {
+      alive = false
+      controller.abort()
+    }
   }, [paperId])
 
   async function saveState(nextFavorite = paper?.favorite) {
@@ -739,6 +869,7 @@ export default function HomePage() {
   const [emptyHint, setEmptyHint] = useState('')
   const [history, setHistory] = useState<string[]>(() => loadSearchHistory())
   const requestId = useRef(0)
+  const searchAbortRef = useRef<AbortController | null>(null)
   const didMount = useRef(false)
 
   const page = Math.max(1, Number(searchParams.get('page') || 1))
@@ -751,6 +882,9 @@ export default function HomePage() {
 
   const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1, nextCursor = '') => {
     const id = ++requestId.current
+    searchAbortRef.current?.abort()
+    const controller = new AbortController()
+    searchAbortRef.current = controller
     setLoading(true)
     setError('')
     try {
@@ -762,7 +896,7 @@ export default function HomePage() {
         limit: PAGE_SIZE,
         offset: nextCursor ? 0 : (nextPage - 1) * PAGE_SIZE,
         ...(nextCursor ? { cursor: nextCursor } : {}),
-      })
+      }, { signal: controller.signal })
       if (id !== requestId.current) return
       setResults(res)
       setSelectedId((current) => (current && res.rows.some((row) => row.id === current) ? current : res.rows[0]?.id ?? null))
@@ -772,7 +906,10 @@ export default function HomePage() {
         setHistory(saveSearchHistory(query))
       }
       if (query && !res.rows.length) {
-        const hint = await api.searchSuggestions({ q: query }).catch(() => null)
+        const hint = await api.searchSuggestions({ q: query }, { signal: controller.signal }).catch((err) => {
+          if (controller.signal.aborted) throw err
+          return null
+        })
         if (id === requestId.current) {
           setSuggestions(hint?.rows || [])
           setEmptyHint(hint?.emptyState || text.suggestionFallback)
@@ -782,12 +919,14 @@ export default function HomePage() {
         setEmptyHint('')
       }
     } catch (err) {
+      if (controller.signal.aborted) return
       if (id === requestId.current) {
         setError(err instanceof Error ? err.message : text.searchFailed)
         console.error(err)
       }
     } finally {
-      if (id === requestId.current) setLoading(false)
+      if (searchAbortRef.current === controller) searchAbortRef.current = null
+      if (id === requestId.current && !controller.signal.aborted) setLoading(false)
     }
   }, [text.searchFailed, text.suggestionFallback])
 
@@ -797,6 +936,10 @@ export default function HomePage() {
       setError(err instanceof Error ? err.message : text.statsFailed)
     })
   }, [text.statsFailed])
+
+  useEffect(() => {
+    return () => searchAbortRef.current?.abort()
+  }, [])
 
   useEffect(() => {
     const next = controlsFromParams(searchParams)
@@ -814,7 +957,7 @@ export default function HomePage() {
       if (JSON.stringify(urlControls) !== controlsSignature) {
         setSearchParams(paramsFromControls(controls, 1), { replace: true })
       }
-    }, 250)
+    }, controls.q.trim() ? 450 : 250)
     return () => window.clearTimeout(timer)
   }, [controls, controlsSignature, searchParams, setSearchParams])
 

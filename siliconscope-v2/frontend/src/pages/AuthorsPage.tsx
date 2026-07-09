@@ -4,7 +4,7 @@ import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
 import { institutionPath, searchPath } from '../utils/routes'
-import type { AuthorProfile, PaperRow } from '../types'
+import type { AuthorProfile, AuthorProfileMetadata, PaperRow } from '../types'
 
 interface AuthorListItem {
   name: string
@@ -14,6 +14,7 @@ interface AuthorListItem {
   s: number
   a: number
   citations: number
+  profile?: AuthorProfileMetadata | null
 }
 
 const RESERVED_AUTHOR_ROUTES = new Set(['', 'authors', 'author', 'profile', 'scholar', 'scholar-graph'])
@@ -37,6 +38,25 @@ function initials(name: string) {
 
 function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
   return `S+ ${item.sPlus ?? 0} / S ${item.s ?? 0} / A ${item.a ?? 0}`
+}
+
+function ScholarAvatar({
+  name,
+  profile,
+  className = 'ss-avatar',
+}: {
+  name: string
+  profile?: AuthorProfileMetadata | null
+  className?: string
+}) {
+  const photoUrl = profile?.photoUrl?.trim()
+
+  return (
+    <span className={className} aria-label={name}>
+      {photoUrl && <img src={photoUrl} alt={name} loading="lazy" onError={(event) => { event.currentTarget.hidden = true }} />}
+      <span>{initials(name)}</span>
+    </span>
+  )
 }
 
 function MiniPaper({ paper }: { paper: PaperRow }) {
@@ -136,11 +156,13 @@ export default function AuthorsPage() {
         <button className="ss-back-button" onClick={() => navigate('/authors')}>返回学者列表</button>
 
         <section className="ss-profile-hero">
-          <div className="ss-avatar">{initials(detail.name)}</div>
+          <ScholarAvatar name={detail.name} profile={detail.profile} />
           <div>
             <p className="ss-kicker">Author profile</p>
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
+              {detail.profile?.title && <span>{detail.profile.title}</span>}
+              {detail.profile?.affiliation && <span>{detail.profile.affiliation}</span>}
               <span>{detail.paperCount ?? 0} papers</span>
               <span>Score {Math.round(detail.authorScore ?? 0)}</span>
               <span>{rankLine(detail.ranks)}</span>
@@ -149,6 +171,8 @@ export default function AuthorsPage() {
             </div>
           </div>
           <div className="ss-profile-actions">
+            {detail.profile?.homepageUrl && <a href={detail.profile.homepageUrl} target="_blank" rel="noreferrer">Homepage</a>}
+            {detail.profile?.sourceUrl && <a href={detail.profile.sourceUrl} target="_blank" rel="noreferrer">Photo source</a>}
             <a href={detail.external?.googleScholar} target="_blank" rel="noreferrer">Scholar</a>
             <a href={detail.external?.webSearch} target="_blank" rel="noreferrer">Web search</a>
           </div>
@@ -255,7 +279,7 @@ export default function AuthorsPage() {
           <button key={author.name} onClick={() => navigate(`/authors/${encodeURIComponent(author.name)}`)}>
             <span>{index + 1}</span>
             <span>
-              <i>{initials(author.name)}</i>
+              <ScholarAvatar name={author.name} profile={author.profile} className="ss-author-avatar" />
               <strong>{author.name}</strong>
               <em>{rankLine(author)}</em>
             </span>

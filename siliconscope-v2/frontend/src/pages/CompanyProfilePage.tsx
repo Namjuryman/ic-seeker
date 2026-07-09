@@ -129,7 +129,6 @@ export default function CompanyProfilePage() {
   if (loading) {
     return (
       <div className="ss-skeleton-page">
-        <div />
         <p>Loading company profile...</p>
       </div>
     )

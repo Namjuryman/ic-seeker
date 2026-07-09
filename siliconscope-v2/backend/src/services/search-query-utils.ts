@@ -2,11 +2,11 @@ const semanticAliases = new Map<string, string[]>([
   ["adc", ["analog to digital", "a/d", "converter", "sar", "pipeline", "delta sigma"]],
   ["dac", ["digital to analog", "d/a", "converter", "current steering"]],
   ["pll", ["phase locked loop", "clock generator", "jitter", "frequency synthesizer"]],
-  ["ldo", ["low dropout", "regulator", "power management"]],
-  ["dcdc", ["buck", "boost", "switched capacitor", "charge pump", "pmic"]],
-  ["dc-dc", ["dcdc", "buck", "boost", "switched capacitor", "charge pump", "pmic"]],
-  ["dc/dc", ["dcdc", "buck", "boost", "switched capacitor", "charge pump", "pmic"]],
-  ["pmic", ["power management", "dc-dc", "dcdc", "ldo", "buck", "boost"]],
+  ["ldo", ['"low dropout"', '"low dropout regulator"']],
+  ["dcdc", ['"dc dc"', "buck", "boost", '"switched capacitor"', '"charge pump"', "pmic"]],
+  ["dc-dc", ["dcdc", '"dc dc"', "buck", "boost", '"switched capacitor"', '"charge pump"', "pmic"]],
+  ["dc/dc", ["dcdc", '"dc dc"', "buck", "boost", '"switched capacitor"', '"charge pump"', "pmic"]],
+  ["pmic", ['"power management"', "dcdc", '"dc dc"', "buck", "boost"]],
   ["bandgap", ["voltage reference", "reference circuit", "temperature coefficient"]],
   ["serdes", ["wireline", "transceiver", "equalizer", "cdr"]],
   ["rf", ["radio frequency", "mixer", "pa", "lna", "oscillator"]],
@@ -72,13 +72,19 @@ export function searchAliasSuggestions(input: string) {
 }
 
 export function ftsQuery(input: string, operator: "AND" | "OR" = "AND"): string {
-  const terms = String(input || "")
+  const source = String(input || "").normalize("NFKC").toLowerCase();
+  const phrases = [...source.matchAll(/"([^"]+)"/g)]
+    .map((match) => match[1])
+    .map((phrase) => phrase.match(/[\p{L}\p{N}_]+/gu)?.join(" ").trim() || "")
+    .filter((phrase) => phrase.length > 1)
+    .map((phrase) => `"${phrase.replace(/"/g, "")}"`);
+  const terms = source
+    .replace(/"[^"]+"/g, " ")
     .normalize("NFKC")
-    .toLowerCase()
     .match(/[\p{L}\p{N}_]+/gu);
-  if (!terms) return "";
-  const cleanTerms = [...new Set(terms)]
+  const cleanTerms = [...new Set([...(terms || [])
     .filter((term) => term.length > 1 || /^[a-z]$/i.test(term) === false)
+    .map((term) => `${term.replace(/"/g, "")}*`), ...phrases])]
     .slice(0, 12);
-  return cleanTerms.map((term) => `${term.replace(/"/g, "")}*`).join(` ${operator} `);
+  return cleanTerms.join(` ${operator} `);
 }

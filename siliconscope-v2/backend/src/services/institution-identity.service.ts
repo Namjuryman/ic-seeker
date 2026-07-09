@@ -22,19 +22,24 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
   { canonicalName: "University of Southern California", aliases: ["usc", "university of southern california"], countryCode: "US", countryName: "United States", city: "Los Angeles" },
   { canonicalName: "University of Texas at Austin", aliases: ["ut austin", "university of texas at austin", "the university of texas at austin"], countryCode: "US", countryName: "United States", city: "Austin" },
   { canonicalName: "Cornell University", aliases: ["cornell", "cornell university"], countryCode: "US", countryName: "United States", city: "Ithaca" },
-  { canonicalName: "Purdue University", aliases: ["purdue", "purdue university"], countryCode: "US", countryName: "United States", city: "West Lafayette" },
+  { canonicalName: "Purdue University", aliases: ["purdue", "purdue university", "purdue university west lafayette"], countryCode: "US", countryName: "United States", city: "West Lafayette" },
+  { canonicalName: "Virginia Tech", aliases: ["virginia tech", "virginia technology", "virginia polytechnic institute and state university"], countryCode: "US", countryName: "United States", city: "Blacksburg" },
   { canonicalName: "IBM Research", aliases: ["ibm research", "ibm t j watson research center", "ibm thomas j watson research center"], countryCode: "US", countryName: "United States", city: "Yorktown Heights" },
   { canonicalName: "Intel", aliases: ["intel", "intel corporation", "intel labs", "intel foundry"], countryCode: "US", countryName: "United States", city: "Santa Clara" },
   { canonicalName: "Tsinghua University", aliases: ["tsinghua", "tsinghua university"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Peking University", aliases: ["peking university", "pku"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Fudan University", aliases: ["fudan", "fudan university"], countryCode: "CN", countryName: "China", city: "Shanghai" },
   { canonicalName: "Shanghai Jiao Tong University", aliases: ["shanghai jiao tong university", "sjtu"], countryCode: "CN", countryName: "China", city: "Shanghai" },
+  { canonicalName: "Xi'an Jiaotong University", aliases: ["xi'an jiaotong university", "xian jiaotong university", "xi an jiaotong university"], countryCode: "CN", countryName: "China", city: "Xi'an" },
   { canonicalName: "Zhejiang University", aliases: ["zhejiang university", "zju"], countryCode: "CN", countryName: "China", city: "Hangzhou" },
+  { canonicalName: "Harbin Institute of Technology", aliases: ["harbin institute of technology", "harbin technology"], countryCode: "CN", countryName: "China", city: "Harbin" },
+  { canonicalName: "Beijing Institute of Technology", aliases: ["beijing institute of technology", "beijing technology"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Southeast University", aliases: ["southeast university", "seu"], countryCode: "CN", countryName: "China", city: "Nanjing" },
   { canonicalName: "Xidian University", aliases: ["xidian university", "xdu"], countryCode: "CN", countryName: "China", city: "Xi'an" },
   { canonicalName: "University of Electronic Science and Technology of China", aliases: ["uestc", "university of electronic science and technology of china", "electronic science and technology of china"], countryCode: "CN", countryName: "China", city: "Chengdu" },
   { canonicalName: "Institute of Microelectronics, Chinese Academy of Sciences", aliases: ["ime cas", "imcas", "institute of microelectronics chinese academy of sciences", "institute of microelectronics cas"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "Chinese Academy of Sciences", aliases: ["cas", "chinese academy of sciences"], countryCode: "CN", countryName: "China", city: "Beijing" },
+  { canonicalName: "Institute of Computing Technology, Chinese Academy of Sciences", aliases: ["institute of computing technology", "computing technology", "ict cas"], countryCode: "CN", countryName: "China", city: "Beijing" },
   { canonicalName: "The Chinese University of Hong Kong, Shenzhen", aliases: ["cuhk-shenzhen", "cuhk shenzhen", "cuhk sz", "the chinese university of hong kong shenzhen", "chinese university of hong kong shenzhen"], countryCode: "CN", countryName: "China", city: "Shenzhen" },
   { canonicalName: "The Hong Kong University of Science and Technology", aliases: ["hkust", "hong kong university of science and technology"], countryCode: "HK", countryName: "Hong Kong", city: "Hong Kong" },
   { canonicalName: "The Chinese University of Hong Kong", aliases: ["cuhk", "chinese university of hong kong", "the chinese university of hong kong"], countryCode: "HK", countryName: "Hong Kong", city: "Hong Kong" },
@@ -50,6 +55,7 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
   { canonicalName: "EPFL", aliases: ["epfl", "école polytechnique fédérale de lausanne", "ecole polytechnique federale de lausanne"], countryCode: "CH", countryName: "Switzerland", city: "Lausanne" },
   { canonicalName: "KU Leuven", aliases: ["ku leuven", "katholieke universiteit leuven"], countryCode: "BE", countryName: "Belgium", city: "Leuven" },
   { canonicalName: "University of Tokyo", aliases: ["university of tokyo", "the university of tokyo", "tokyo university"], countryCode: "JP", countryName: "Japan", city: "Tokyo" },
+  { canonicalName: "Tokyo Institute of Technology", aliases: ["tokyo institute of technology", "tokyo technology"], countryCode: "JP", countryName: "Japan", city: "Tokyo" },
   { canonicalName: "KAIST", aliases: ["kaist", "korea advanced institute of science and technology"], countryCode: "KR", countryName: "South Korea", city: "Daejeon" },
   { canonicalName: "Samsung Electronics", aliases: ["samsung", "samsung electronics", "samsung electronics co"], countryCode: "KR", countryName: "South Korea", city: "Suwon" },
   { canonicalName: "SK hynix", aliases: ["sk hynix", "sk hynix inc", "hynix"], countryCode: "KR", countryName: "South Korea", city: "Icheon" },
@@ -57,6 +63,8 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
 
 function normalizeKey(value: string): string {
   return String(value || "")
+    .replace(/&#x([0-9a-f]+);?/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_match, code) => String.fromCodePoint(parseInt(code, 10)))
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
@@ -74,6 +82,20 @@ const builtinAliasIndex = new Map<string, BuiltinInstitution>();
 for (const inst of BUILTIN_INSTITUTIONS) {
   builtinAliasIndex.set(normalizeKey(inst.canonicalName), inst);
   for (const alias of inst.aliases) builtinAliasIndex.set(normalizeKey(alias), inst);
+}
+
+type CanonicalInstitution = ReturnType<typeof buildCanonicalInstitution>;
+const canonicalizeCache = new Map<string, CanonicalInstitution>();
+
+const containedBuiltinCandidates = BUILTIN_INSTITUTIONS.flatMap((inst) => [inst.canonicalName, ...inst.aliases].map((alias) => ({
+  inst,
+  aliasKey: normalizeKey(alias),
+}))).filter(({ aliasKey }) => aliasKey.length >= 12 && /\b(university|institute|academy|college|polytechnic|technology)\b/.test(aliasKey));
+
+function containedBuiltin(key: string): BuiltinInstitution | undefined {
+  return containedBuiltinCandidates
+    .filter(({ aliasKey }) => key.includes(aliasKey))
+    .sort((a, b) => b.aliasKey.length - a.aliasKey.length)[0]?.inst;
 }
 
 function titleCaseInstitution(value: string): string {
@@ -102,54 +124,80 @@ function manualAliasRows(keys: string[]) {
   }
 }
 
+function buildCanonicalInstitution(raw: string) {
+  const original = String(raw || "").trim();
+  const key = normalizeKey(original);
+  if (!key) return { raw: original, canonicalName: "", normalizedKey: "", confidence: 0, source: "empty" as const };
+
+  const manual = manualAliasRows([key, original.toLowerCase()])[0];
+  if (manual) {
+    return {
+      raw: original,
+      canonicalName: manual.canonicalName,
+      normalizedKey: normalizeKey(manual.canonicalName),
+      countryCode: manual.countryCode || undefined,
+      countryName: manual.countryName || undefined,
+      city: manual.city || undefined,
+      confidence: Number(manual.confidence || 100) / 100,
+      source: "manual" as const,
+    };
+  }
+
+  const builtin = builtinAliasIndex.get(key);
+  if (builtin) {
+    return {
+      raw: original,
+      canonicalName: builtin.canonicalName,
+      normalizedKey: normalizeKey(builtin.canonicalName),
+      countryCode: builtin.countryCode,
+      countryName: builtin.countryName,
+      city: builtin.city,
+      confidence: 0.95,
+      source: "builtin" as const,
+    };
+  }
+
+  const contained = containedBuiltin(key);
+  if (contained) {
+    return {
+      raw: original,
+      canonicalName: contained.canonicalName,
+      normalizedKey: normalizeKey(contained.canonicalName),
+      countryCode: contained.countryCode,
+      countryName: contained.countryName,
+      city: contained.city,
+      confidence: 0.85,
+      source: "builtin" as const,
+    };
+  }
+
+  return {
+    raw: original,
+    canonicalName: titleCaseInstitution(key),
+    normalizedKey: key,
+    confidence: 0.45,
+    source: "normalized" as const,
+  };
+}
+
 export const institutionIdentityService = {
   normalizeKey,
 
   canonicalize(raw: string) {
     const original = String(raw || "").trim();
-    const key = normalizeKey(original);
-    if (!key) return { raw: original, canonicalName: "", normalizedKey: "", confidence: 0, source: "empty" as const };
-
-    const manual = manualAliasRows([key, original.toLowerCase()])[0];
-    if (manual) {
-      return {
-        raw: original,
-        canonicalName: manual.canonicalName,
-        normalizedKey: normalizeKey(manual.canonicalName),
-        countryCode: manual.countryCode || undefined,
-        countryName: manual.countryName || undefined,
-        city: manual.city || undefined,
-        confidence: Number(manual.confidence || 100) / 100,
-        source: "manual" as const,
-      };
-    }
-
-    const builtin = builtinAliasIndex.get(key);
-    if (builtin) {
-      return {
-        raw: original,
-        canonicalName: builtin.canonicalName,
-        normalizedKey: normalizeKey(builtin.canonicalName),
-        countryCode: builtin.countryCode,
-        countryName: builtin.countryName,
-        city: builtin.city,
-        confidence: 0.95,
-        source: "builtin" as const,
-      };
-    }
-
-    return {
-      raw: original,
-      canonicalName: titleCaseInstitution(key),
-      normalizedKey: key,
-      confidence: 0.45,
-      source: "normalized" as const,
-    };
+    const cacheKey = `${normalizeKey(original)}\n${original.toLowerCase()}`;
+    const cached = canonicalizeCache.get(cacheKey);
+    if (cached) return cached;
+    const value = buildCanonicalInstitution(original);
+    canonicalizeCache.set(cacheKey, value);
+    return value;
   },
 
   canonicalizeList(rawAffiliations: string) {
     const seen = new Set<string>();
     return String(rawAffiliations || "")
+      .replace(/&#x([0-9a-f]+);?/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
+      .replace(/&#(\d+);?/g, (_match, code) => String.fromCodePoint(parseInt(code, 10)))
       .split(";")
       .map((item) => this.canonicalize(item))
       .filter((item) => {

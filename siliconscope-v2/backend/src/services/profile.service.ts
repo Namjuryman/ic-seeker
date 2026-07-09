@@ -3,6 +3,7 @@ import { papers, qsRankings } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
 import { authorIdentityService } from "./author-identity.service.js";
+import { authorProfileService } from "./author-profile.service.js";
 
 function splitList(value: string): string[] {
   return String(value || "").split(";").map((item) => item.trim()).filter(Boolean);
@@ -168,7 +169,7 @@ export const profileService = {
       }
     }
 
-    return [...byAuthor.values()]
+    const ranked = [...byAuthor.values()]
       .map((item) => ({
         ...item,
         aliases: [...item.aliases].slice(0, 8),
@@ -179,6 +180,12 @@ export const profileService = {
       .filter((item) => item.papers >= minPapers)
       .sort((a, b) => b.authorScore - a.authorScore || b.papers - a.papers)
       .slice(0, limit);
+
+    const profiles = authorProfileService.getMapByNormalizedNames(ranked.map((item) => item.normalizedKey));
+    return ranked.map((item) => ({
+      ...item,
+      profile: profiles.get(item.normalizedKey) || null,
+    }));
   },
 
   getAuthorProfile(name: string) {
@@ -213,6 +220,7 @@ export const profileService = {
     return {
       name: requestedIdentity.canonicalName || name,
       requestedName: name,
+      profile: authorProfileService.getByName(requestedIdentity.canonicalName || name),
       paperCount: summary.papers,
       authorScore,
       identity: {

@@ -35,33 +35,46 @@ function aliasRows(keys: string[]) {
   }
 }
 
+type CanonicalAuthor = ReturnType<typeof buildCanonicalAuthor>;
+const canonicalizeCache = new Map<string, CanonicalAuthor>();
+
+function buildCanonicalAuthor(rawName: string) {
+  const raw = String(rawName || "").trim();
+  const key = normalizeAuthorName(raw);
+  if (!key) return { raw, canonicalName: "", normalizedKey: "", confidence: 0, source: "empty" as const };
+
+  const manual = aliasRows([key, raw.toLowerCase()])[0];
+  if (manual) {
+    return {
+      raw,
+      canonicalName: manual.canonicalName,
+      normalizedKey: normalizeAuthorName(manual.canonicalName),
+      institutionHint: manual.institutionHint || undefined,
+      confidence: Number(manual.confidence || 100) / 100,
+      source: "manual" as const,
+    };
+  }
+
+  return {
+    raw,
+    canonicalName: titleCaseName(key),
+    normalizedKey: key,
+    confidence: 0.55,
+    source: "normalized" as const,
+  };
+}
+
 export const authorIdentityService = {
   normalizeAuthorName,
 
   canonicalize(rawName: string) {
     const raw = String(rawName || "").trim();
-    const key = normalizeAuthorName(raw);
-    if (!key) return { raw, canonicalName: "", normalizedKey: "", confidence: 0, source: "empty" as const };
-
-    const manual = aliasRows([key, raw.toLowerCase()])[0];
-    if (manual) {
-      return {
-        raw,
-        canonicalName: manual.canonicalName,
-        normalizedKey: normalizeAuthorName(manual.canonicalName),
-        institutionHint: manual.institutionHint || undefined,
-        confidence: Number(manual.confidence || 100) / 100,
-        source: "manual" as const,
-      };
-    }
-
-    return {
-      raw,
-      canonicalName: titleCaseName(key),
-      normalizedKey: key,
-      confidence: 0.55,
-      source: "normalized" as const,
-    };
+    const cacheKey = `${normalizeAuthorName(raw)}\n${raw.toLowerCase()}`;
+    const cached = canonicalizeCache.get(cacheKey);
+    if (cached) return cached;
+    const value = buildCanonicalAuthor(raw);
+    canonicalizeCache.set(cacheKey, value);
+    return value;
   },
 
   variantsFor(name: string) {

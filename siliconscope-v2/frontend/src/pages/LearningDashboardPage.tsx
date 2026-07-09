@@ -8,7 +8,7 @@ export default function LearningDashboardPage() {
   const dashboard = useQuery({ queryKey: ['learning-dashboard'], queryFn: () => api.learningDashboard() })
   const progress = useQuery({ queryKey: ['learning-progress'], queryFn: () => api.learningProgressList() })
 
-  if (dashboard.isLoading) return <div className="ss-skeleton-page"><div /><p>Loading learning workspace...</p></div>
+  if (dashboard.isLoading) return <div className="ss-skeleton-page"><p>Loading learning workspace...</p></div>
   if (dashboard.isError || !dashboard.data) return <div className="ss-empty-state">Learning workspace failed to load.</div>
 
   const data = dashboard.data
