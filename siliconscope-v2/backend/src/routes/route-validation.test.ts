@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aiEnrichmentRunBodySchema,
   backupPruneBodySchema,
+  billingCheckoutBodySchema,
   billingPlanUpdateBodySchema,
   contentQualitySyncBodySchema,
   ingestionJobCreateBodySchema,
@@ -41,6 +42,11 @@ describe("route body validation", () => {
   it("accepts known billing plans only", () => {
     expect(parseBody(billingPlanUpdateBodySchema, { planId: "lab" })).toEqual({ planId: "lab", reason: "" });
     expect(() => parseBody(billingPlanUpdateBodySchema, { planId: "god-mode" })).toThrow(/Invalid enum value/);
+  });
+
+  it("validates billing checkout plan IDs", () => {
+    expect(parseBody(billingCheckoutBodySchema, { planId: "pro" })).toEqual({ planId: "pro" });
+    expect(() => parseBody(billingCheckoutBodySchema, { planId: "" })).toThrow(/Invalid enum value/);
   });
 
   it("normalizes bounded backup retention", () => {

@@ -37,6 +37,10 @@ export const billingPlanUpdateBodySchema = z.object({
   reason: z.string().trim().max(500).optional().default(""),
 }).strict();
 
+export const billingCheckoutBodySchema = z.object({
+  planId: z.enum(["free", "pro", "lab", "enterprise", "internal"]),
+}).strict();
+
 export const searchIndexRebuildBodySchema = z.object({
   target: z.enum(["all", "papers", "companies", "learning_routes"]).optional().default("all"),
 }).strict();

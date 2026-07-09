@@ -32,7 +32,6 @@ import { adminService } from "../services/admin.service.js";
 import { adminAuditService } from "../services/admin-audit.service.js";
 import { runtimeHealthService } from "../services/runtime-health.service.js";
 import { notificationService } from "../services/notification.service.js";
-import { billingService } from "../services/billing.service.js";
 import { backupService } from "../services/backup.service.js";
 import { maintenanceService, type MaintenanceJobId } from "../services/maintenance.service.js";
 import { observabilityService } from "../services/observability.service.js";
@@ -41,7 +40,6 @@ import { jobOperationsService } from "../services/job-operations.service.js";
 import { ingestionJobService } from "../services/ingestion-job.service.js";
 import { ingestionRunnerService } from "../services/ingestion-runner.service.js";
 import { siteSettingsService } from "../services/site-settings.service.js";
-import { exportService, type ExportFormat } from "../services/export.service.js";
 import { accessRequestService } from "../services/access-request.service.js";
 import { learningContentService } from "../services/learning-content.service.js";
 import { learningProgressService } from "../services/learning-progress.service.js";
@@ -59,7 +57,6 @@ import {
   accessRequestUpdateBodySchema,
   backupCreateBodySchema,
   backupPruneBodySchema,
-  billingPlanUpdateBodySchema,
   contentQualityStatusBodySchema,
   contentQualitySyncBodySchema,
   ingestionJobCreateBodySchema,
@@ -75,6 +72,8 @@ import {
   snapshotClearBodySchema,
   snapshotRefreshBodySchema,
 } from "./route-validation.js";
+import { exportsRouter } from "./exports.js";
+import { adminBillingRouter, billingRouter } from "./billing.js";
 
 const router = Router();
 
@@ -155,132 +154,14 @@ router.post("/access-requests", async (req, res) => {
   }
 });
 
-router.get("/billing/plans", requireAuth, async (_req, res) => {
-  privateCache(res, 300);
-  res.json(billingService.getPlans());
-});
-
-router.get("/billing/status", requireAuth, async (req: AuthenticatedRequest, res) => {
-  res.json(billingService.getBillingStatus(req.user?.userId ?? 0));
-});
-
-router.get("/billing/usage", requireAuth, async (req: AuthenticatedRequest, res) => {
-  res.json(billingService.getUsageSummary(req.user?.userId ?? 0));
-});
-
-router.post("/billing/checkout", requireAuth, async (req: AuthenticatedRequest, res) => {
-  const planId = String(req.body?.planId || "");
-  if (!planId) {
-    res.status(400).json({ error: "planId is required" });
-    return;
-  }
-  const result = billingService.createCheckoutSession(req.user?.userId ?? 0, planId);
-  res.status(result.checkoutAvailable ? 501 : 400).json(result);
-});
-
-function exportFormat(value: unknown): ExportFormat {
-  const format = String(value || "markdown").toLowerCase();
-  if (format === "json" || format === "markdown" || format === "csv") return format;
-  throw new Error("format must be one of json, markdown, csv");
-}
-
-function sendExport(req: AuthenticatedRequest, res: any, create: (format: ExportFormat) => ReturnType<typeof exportService.exportTopicReport>) {
-  const userId = req.user?.userId ?? 0;
-  const quota = billingService.checkQuota(userId, "exportsPerMonth", 1);
-  if (!quota.allowed) {
-    res.status(402).json({ error: quota.reason || "Export quota exceeded", quota });
-    return;
-  }
-
-  const payload = create(exportFormat(req.query.format));
-  billingService.recordUsageEvent({
-    userId,
-    metric: "exportsPerMonth",
-    source: "export-center",
-    resourceType: payload.kind,
-    resourceId: payload.filename,
-    metadata: { format: payload.format, source: payload.source },
-  });
-
-  res.setHeader("content-type", payload.contentType);
-  res.setHeader("content-disposition", `attachment; filename="${payload.filename}"`);
-  res.send(payload.content);
-}
-
-router.get("/exports/topic-report", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    sendExport(req, res, (format) => exportService.exportTopicReport(req.query as Record<string, unknown>, format));
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
-
-router.get("/exports/:kind", requireAuth, async (req: AuthenticatedRequest, res) => {
-  try {
-    const kind = String(req.params.kind || "");
-    if (!["company-compare", "institution-compare", "author-compare", "mentor-compare"].includes(kind)) {
-      res.status(404).json({ error: "Unknown export kind" });
-      return;
-    }
-    sendExport(req, res, (format) => exportService.exportCompare(kind as any, req.query as Record<string, unknown>, format));
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+router.use("/billing", billingRouter);
+router.use("/exports", exportsRouter);
 
 router.get("/admin/overview", requireAdmin, async (req: AuthenticatedRequest, res) => {
   res.json(await adminService.getOverview(req.user?.userId ?? 0));
 });
 
-router.get("/admin/billing", requireAdmin, async (_req, res) => {
-  res.json(billingService.getAdminBillingOverview());
-});
-
-router.get("/admin/billing/users", requireAdmin, async (req, res) => {
-  res.json(billingService.listBillingUsers(req.query));
-});
-
-router.get("/admin/billing/users/:id", requireAdmin, async (req, res) => {
-  const userId = Number(req.params.id);
-  if (!Number.isFinite(userId)) {
-    res.status(400).json({ error: "Invalid user ID" });
-    return;
-  }
-  const user = billingService.getBillingUser(userId);
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return;
-  }
-  res.json(user);
-});
-
-router.patch("/admin/billing/users/:id/plan", requireAdmin, async (req: AuthenticatedRequest, res) => {
-  const userId = Number(req.params.id);
-  if (!Number.isFinite(userId)) {
-    res.status(400).json({ error: "Invalid user ID" });
-    return;
-  }
-  try {
-    const body = parseBody(billingPlanUpdateBodySchema, req.body);
-    const result = billingService.updateUserPlan({
-      userId,
-      planId: body.planId,
-      reason: body.reason,
-      actorUserId: req.user?.userId ?? 0,
-    });
-    adminAuditService.record({
-      req,
-      action: "billing.update_plan",
-      resourceType: "user",
-      resourceId: userId,
-      metadata: { planId: body.planId, reason: body.reason },
-    });
-    res.json(result);
-  } catch (err) {
-    adminAuditService.record({ req, action: "billing.update_plan", resourceType: "user", resourceId: userId, status: "failure", error: err });
-    res.status(400).json({ error: (err as Error).message });
-  }
-});
+router.use("/admin/billing", adminBillingRouter);
 
 router.get("/admin/runtime", requireAdmin, async (_req, res) => {
   const runtime = runtimeHealthService.getHealth();
