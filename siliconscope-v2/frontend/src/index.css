@@ -4587,6 +4587,77 @@
     filter: saturate(1.12) contrast(1.08);
   }
 
+  .geo-region-zooms {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .geo-region-zoom {
+    overflow: hidden;
+    border: 1px solid rgba(126, 145, 177, .34);
+    border-radius: 14px;
+    background:
+      radial-gradient(circle at 12% 18%, rgba(67, 109, 196, .08), transparent 34%),
+      linear-gradient(180deg, #fbfdff, #f0f6fd);
+    box-shadow: 0 12px 28px rgba(31, 49, 83, .09);
+  }
+
+  .geo-region-zoom-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 13px 8px;
+  }
+
+  .geo-region-zoom-head strong {
+    display: block;
+    color: #17213a;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .geo-region-zoom-head span,
+  .geo-region-zoom-head em {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+  }
+
+  .geo-region-zoom-head span {
+    display: block;
+    margin-top: 2px;
+    line-height: 1.35;
+  }
+
+  .geo-region-zoom-head em {
+    white-space: nowrap;
+  }
+
+  .geo-region-zoom-map {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1.72;
+    border-top: 1px solid rgba(188, 202, 222, .55);
+  }
+
+  .geo-region-zoom-map .geo-world-country {
+    stroke-width: .08;
+  }
+
+  .geo-region-zoom-map .geo-world-country.has-data:hover,
+  .geo-region-zoom-map .geo-world-country.has-data.active {
+    stroke-width: .16;
+  }
+
+  .geo-region-zoom-map .geo-label text {
+    stroke-width: .22px;
+    font-size: .88px;
+  }
+
   .geo-year-control {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 360px) 132px;
@@ -6116,6 +6187,7 @@
       height: calc(100% - 150px);
     }
     .geo-inset-tray,
+    .geo-region-zooms,
     .identity-grid,
     .identity-review-grid {
       grid-template-columns: 1fr;

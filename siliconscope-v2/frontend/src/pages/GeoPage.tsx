@@ -18,6 +18,11 @@ import { simpleheat, type HeatPoint } from '../vendor/simpleheat'
 
 type GeoMode = 'overall' | 'institutions' | 'topic'
 
+const regionalZooms = [
+  { key: 'europe', title: 'Europe zoom', subtitle: 'UK, Benelux, DACH, France, Italy and Nordic/Eastern Europe', viewBox: '48.8 9.2 20.8 16.2', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
+  { key: 'east-asia', title: 'East Asia zoom', subtitle: 'Mainland China, Hong Kong/Macau, Taiwan, Korea and Japan', viewBox: '83.8 16.4 18.9 15.8', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP'] },
+]
+
 function metric(country: GeoCountry, mode: GeoMode) {
   if (mode === 'institutions') return Number(country.institutionCount || country.topInstitutions?.length || 0)
   if (mode === 'topic') return Number(country.score || 0)
@@ -46,6 +51,40 @@ function yearDensityMetric(country: GeoCountry, mode: GeoMode, selectedYear: num
 function institutionMetric(institution: GeoCountry['topInstitutions'][number], selectedYear: number | 'all') {
   if (selectedYear === 'all') return Number(institution.count || 0)
   return Number(institution.byYear?.find((row) => Number(row.year) === selectedYear)?.papers || 0)
+}
+
+function buildGeoHeatPoints(countries: GeoCountry[], mode: GeoMode, selectedYear: number | 'all') {
+  const bins = new Map<string, HeatPoint>()
+  const addHeatPoint = (x: number, y: number, weight: number, precision = 2.5) => {
+    const key = `${Math.round(x * precision) / precision}:${Math.round(y * precision) / precision}`
+    const current = bins.get(key)
+    if (current) current[2] += weight
+    else bins.set(key, [x, y, weight])
+  }
+  for (const country of countries) {
+    const countryValue = yearDensityMetric(country, mode, selectedYear)
+    const countryMass = Math.pow(Math.max(0, countryValue), mode === 'institutions' ? .72 : .82) * .58
+    const countryProfile = geoHotspotProfiles[country.code] || [{ lon: country.x / 100 * 360 - 180, lat: 83 - (country.y / 100) * 141, weight: 1 }]
+    for (const spot of countryProfile) {
+      const projected = projectWorldPoint(spot.lon, spot.lat)
+      addHeatPoint(projected.x, projected.y, countryMass * spot.weight, 1.6)
+    }
+    for (const institution of (country.topInstitutions || [])
+      .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
+      .slice(0, 80)) {
+      const value = institutionMetric(institution, selectedYear)
+      if (value <= 0) continue
+      const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
+      const weight = mode === 'institutions' ? 1 : Math.pow(value, .9)
+      addHeatPoint(projected.x, projected.y, weight)
+    }
+  }
+  return [...bins.values()]
+}
+
+function heatMaxFor(points: HeatPoint[], percentile = .88) {
+  const weights = points.map((point) => point[2]).sort((a, b) => a - b)
+  return Math.max(1, weights[Math.floor(weights.length * percentile)] || weights[weights.length - 1] || 1)
 }
 
 function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
@@ -165,38 +204,8 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
 
 function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
-  const heatPoints = useMemo(() => {
-    const bins = new Map<string, HeatPoint>()
-    const addHeatPoint = (x: number, y: number, weight: number, precision = 2.5) => {
-      const key = `${Math.round(x * precision) / precision}:${Math.round(y * precision) / precision}`
-      const current = bins.get(key)
-      if (current) current[2] += weight
-      else bins.set(key, [x, y, weight])
-    }
-    for (const country of countries) {
-      const countryValue = yearDensityMetric(country, mode, selectedYear)
-      const countryMass = Math.pow(Math.max(0, countryValue), mode === 'institutions' ? .72 : .82) * .58
-      const countryProfile = geoHotspotProfiles[country.code] || [{ lon: country.x / 100 * 360 - 180, lat: 83 - (country.y / 100) * 141, weight: 1 }]
-      for (const spot of countryProfile) {
-        const projected = projectWorldPoint(spot.lon, spot.lat)
-        addHeatPoint(projected.x, projected.y, countryMass * spot.weight, 1.6)
-      }
-      for (const institution of (country.topInstitutions || [])
-        .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
-        .slice(0, 80)) {
-        const value = institutionMetric(institution, selectedYear)
-        if (value <= 0) continue
-        const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-        const weight = mode === 'institutions' ? 1 : Math.pow(value, .9)
-        addHeatPoint(projected.x, projected.y, weight)
-      }
-    }
-    return [...bins.values()]
-  }, [countries, mode, selectedYear])
-  const heatMax = useMemo(() => {
-    const weights = heatPoints.map((point) => point[2]).sort((a, b) => a - b)
-    return Math.max(1, weights[Math.floor(weights.length * .88)] || weights[weights.length - 1] || 1)
-  }, [heatPoints])
+  const heatPoints = useMemo(() => buildGeoHeatPoints(countries, mode, selectedYear), [countries, mode, selectedYear])
+  const heatMax = useMemo(() => heatMaxFor(heatPoints), [heatPoints])
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
@@ -280,6 +289,67 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
         <strong>high</strong>
       </div>
     </div>
+  )
+}
+
+function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
+  const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
+  const heatPoints = useMemo(() => buildGeoHeatPoints(countries, mode, selectedYear), [countries, mode, selectedYear])
+  const heatMax = useMemo(() => heatMaxFor(heatPoints, .86), [heatPoints])
+  const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
+  const countryByCode = new Map(countries.map((country) => [country.code, country]))
+
+  return (
+    <section className="geo-region-zooms" aria-label="Dense region zoom maps">
+      {regionalZooms.map((zoom) => {
+        const zoomCountries = zoom.codes.map((code) => countryByCode.get(code)).filter(Boolean) as GeoCountry[]
+        return (
+          <article key={zoom.key} className="geo-region-zoom">
+            <div className="geo-region-zoom-head">
+              <div>
+                <strong>{zoom.title}</strong>
+                <span>{zoom.subtitle}</span>
+              </div>
+              <em>{zoomCountries.length} regions</em>
+            </div>
+            <svg viewBox={zoom.viewBox} role="img" className="geo-region-zoom-map">
+              <rect x="0" y="0" width="110" height="66" fill="#f8fbff" />
+              <g className="geo-world-layer">
+                {(worldMap?.features || []).map((feature) => {
+                  const country = countryByFeature.get(feature.code)
+                  const selected = country?.code === selectedCode
+                  const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
+                  const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
+                  return (
+                    <path
+                      key={`${zoom.key}-${feature.code}-${feature.name}`}
+                      className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
+                      style={{ '--geo-density': density.toFixed(3) } as React.CSSProperties}
+                      d={feature.path}
+                      onClick={() => country && onSelect(country)}
+                    />
+                  )
+                })}
+              </g>
+              <foreignObject x="0" y="0" width="110" height="66" className="geo-heat-layer">
+                <GeoHeatCanvas points={heatPoints} max={heatMax} />
+              </foreignObject>
+              <g className="geo-country-layer">
+                {zoomCountries.map((country) => {
+                  const projected = geoCountryAnchor(country)
+                  const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 }
+                  return (
+                    <g key={`${zoom.key}-${country.code}`} className={`geo-label ${country.code === selectedCode ? 'active' : ''}`} onClick={() => onSelect(country)}>
+                      <text x={(projected.x + offset.dx * .34).toFixed(2)} y={(projected.y + offset.dy * .34).toFixed(2)} textAnchor="middle">{country.code}</text>
+                    </g>
+                  )
+                })}
+              </g>
+            </svg>
+          </article>
+        )
+      })}
+    </section>
   )
 }
 
@@ -474,9 +544,10 @@ export default function GeoPage() {
         <section className="geo-map-panel">
           <h3>Global IC activity map</h3>
           <p className="hint">Darker regions mean denser mapped IC research output. Hover/click a country to inspect strength, institutions, and yearly trend.</p>
-          <p className="hint">Green to red encodes relative density/strength. Dots are institution-level locations from the cleaned master table.</p>
+          <p className="hint">Blue to orange encodes relative density/strength from country strength and institution-level locations.</p>
           <p className="hint">Country filtering is based on affiliation text and institution normalization. Treat it as a directional signal.</p>
           <GeoMap countries={countries} selectedCode={selectedCountry?.code} selectedYear={selectedYear} mode={mode} worldMap={worldMap} onSelect={setSelected} />
+          <RegionalZoomMaps countries={countries} selectedCode={selectedCountry?.code} selectedYear={selectedYear} mode={mode} worldMap={worldMap} onSelect={setSelected} />
         </section>
         <aside className="geo-side"><CountryDetail country={selectedCountry} mode={mode} /></aside>
       </div>
