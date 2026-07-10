@@ -137,16 +137,16 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
         simpleheat(canvas)
           .data(scaled)
           .max(1)
-          .radius(Math.max(10, Math.min(21, width / 76)), Math.max(15, Math.min(30, width / 58)))
+          .radius(Math.max(10, Math.min(19, width / 82)), Math.max(11, Math.min(24, width / 70)))
           .gradient({
-            .16: 'rgba(125, 211, 252, .16)',
-            .36: '#38bdf8',
-            .56: '#6366f1',
-            .74: '#f43f5e',
-            .9: '#fb7185',
+            .14: 'rgba(125, 211, 252, .12)',
+            .32: '#38bdf8',
+            .5: '#6366f1',
+            .68: '#e879f9',
+            .82: '#fb7185',
             1: '#f97316',
           })
-          .draw(.045)
+          .draw(.04)
       })
     }
 
