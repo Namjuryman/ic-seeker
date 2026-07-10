@@ -8,6 +8,7 @@ import {
   countryFeatureCode,
   geoCountryAnchor,
   geoDenseRegionCodes,
+  geoHotspotProfiles,
   geoLabelOffsets,
   prepareWorldMap,
   projectWorldPoint,
@@ -166,18 +167,28 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
   const heatPoints = useMemo(() => {
     const bins = new Map<string, HeatPoint>()
+    const addHeatPoint = (x: number, y: number, weight: number, precision = 2.5) => {
+      const key = `${Math.round(x * precision) / precision}:${Math.round(y * precision) / precision}`
+      const current = bins.get(key)
+      if (current) current[2] += weight
+      else bins.set(key, [x, y, weight])
+    }
     for (const country of countries) {
+      const countryValue = yearDensityMetric(country, mode, selectedYear)
+      const countryMass = Math.pow(Math.max(0, countryValue), mode === 'institutions' ? .72 : .82) * .58
+      const countryProfile = geoHotspotProfiles[country.code] || [{ lon: country.x / 100 * 360 - 180, lat: 83 - (country.y / 100) * 141, weight: 1 }]
+      for (const spot of countryProfile) {
+        const projected = projectWorldPoint(spot.lon, spot.lat)
+        addHeatPoint(projected.x, projected.y, countryMass * spot.weight, 1.6)
+      }
       for (const institution of (country.topInstitutions || [])
         .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
         .slice(0, 80)) {
         const value = institutionMetric(institution, selectedYear)
         if (value <= 0) continue
         const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-        const key = `${Math.round(projected.x * 2.5) / 2.5}:${Math.round(projected.y * 2.5) / 2.5}`
         const weight = mode === 'institutions' ? 1 : Math.pow(value, .9)
-        const current = bins.get(key)
-        if (current) current[2] += weight
-        else bins.set(key, [projected.x, projected.y, weight])
+        addHeatPoint(projected.x, projected.y, weight)
       }
     }
     return [...bins.values()]
