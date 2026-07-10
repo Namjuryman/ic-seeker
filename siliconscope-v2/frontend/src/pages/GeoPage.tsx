@@ -46,14 +46,6 @@ function institutionMetric(institution: GeoCountry['topInstitutions'][number], s
   return Number(institution.byYear?.find((row) => Number(row.year) === selectedYear)?.papers || 0)
 }
 
-function heatColor(intensity: number, selected = false) {
-  const t = Math.max(0, Math.min(1, intensity))
-  const hue = Math.round(145 - t * 145)
-  const saturation = 74 + Math.round(t * 10)
-  const lightness = selected ? 36 - Math.round(t * 6) : 82 - Math.round(t * 38)
-  return `hsl(${hue} ${saturation}% ${Math.max(28, lightness)}%)`
-}
-
 function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
   const normalized = rows.map((row) => ({
     key: String(row.key ?? row.year ?? '-'),
@@ -119,7 +111,6 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
 }
 
 function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
-  const max = Math.max(1, ...countries.map((country) => yearMetric(country, mode, selectedYear)))
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
   const institutionMax = Math.max(1, ...countries.flatMap((country) => country.topInstitutions || []).map((institution) => institutionMetric(institution, selectedYear)))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
@@ -140,25 +131,24 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
             <stop offset="0%" stopColor="#f9fbff" />
             <stop offset="100%" stopColor="#eef4fb" />
           </linearGradient>
+          <filter id="geoHeatSoft" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation=".68" />
+          </filter>
         </defs>
         <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
         <g className="geo-world-layer">
           {(worldMap?.features || []).map((feature) => {
             const country = countryByFeature.get(feature.code)
             const selected = country?.code === selectedCode
-            const value = country ? yearMetric(country, mode, selectedYear) : 0
             const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
             const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
-            const intensity = country ? Math.max(.18, Math.min(.95, value / max)) : 0
             if (country) renderedFeatureCodes.add(feature.code)
             return (
               <path
                 key={feature.code + feature.name}
                 className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
                 style={{
-                  '--geo-alpha': intensity.toFixed(3),
                   '--geo-density': density.toFixed(3),
-                  fill: country ? heatColor(density, selected) : undefined,
                 } as React.CSSProperties}
                 d={feature.path}
                 onClick={() => country && onSelect(country)}
@@ -168,7 +158,7 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
             )
           })}
         </g>
-        <g className="geo-point-layer">
+        <g className="geo-heat-layer" filter="url(#geoHeatSoft)">
           {countries.flatMap((country) => (country.topInstitutions || [])
             .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
             .map((institution) => {
@@ -176,19 +166,21 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
               if (value <= 0) return null
               const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
               const scale = Math.sqrt(value / institutionMax)
+              const radius = Math.max(1.55, Math.min(7.4, 1.85 + scale * 5.55))
+              const alpha = Math.max(.18, Math.min(.78, .2 + scale * .6))
               const active = country.code === selectedCode
               return (
-                <circle
+                <g
                   key={`${country.code}-${institution.name}-${selectedYear}`}
-                  className={`geo-institution-point ${active ? 'active' : ''}`}
-                  cx={projected.x.toFixed(2)}
-                  cy={projected.y.toFixed(2)}
-                  r={Math.max(.42, Math.min(2.35, .46 + scale * 1.9)).toFixed(2)}
-                  style={{ '--geo-point-alpha': Math.max(.38, Math.min(.92, .35 + scale * .6)).toFixed(3) } as React.CSSProperties}
+                  className={`geo-heat-source ${active ? 'active' : ''}`}
+                  style={{ '--geo-heat-alpha': alpha.toFixed(3) } as React.CSSProperties}
                   onClick={() => onSelect(country)}
                 >
-                  <title>{institution.name} · {institution.city || country.name}: {value} papers{selectedYear === 'all' ? '' : ` in ${selectedYear}`}</title>
-                </circle>
+                  <circle className="geo-heat-cool" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * 1.64).toFixed(2)} />
+                  <circle className="geo-heat-warm" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .98).toFixed(2)} />
+                  <circle className="geo-heat-hot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .46).toFixed(2)} />
+                  <title>{institution.name} - {institution.city || country.name}: {value} papers{selectedYear === 'all' ? '' : ` in ${selectedYear}`}</title>
+                </g>
               )
             }))}
         </g>
@@ -224,7 +216,7 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
         ))}
       </div>
       <div className="geo-heat-legend" aria-label="IC research output density legend">
-        <span>{mode === 'institutions' ? 'Institution density' : 'Research strength'}</span>
+        <span>{mode === 'institutions' ? 'Institution heat' : 'Output heat'}</span>
         <i />
         <em>low</em>
         <strong>high</strong>
