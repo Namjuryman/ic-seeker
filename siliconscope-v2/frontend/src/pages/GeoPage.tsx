@@ -21,6 +21,8 @@ type GeoMode = 'overall' | 'institutions' | 'topic'
 const regionalZooms = [
   { key: 'europe', title: 'Europe zoom', subtitle: 'UK, Benelux, DACH, France, Italy and Nordic/Eastern Europe', viewBox: '48.8 9.2 20.8 16.2', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
   { key: 'east-asia', title: 'East Asia zoom', subtitle: 'Mainland China, Hong Kong/Macau, Taiwan, Korea and Japan', viewBox: '83.8 16.4 18.9 15.8', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP'] },
+  { key: 'southeast-asia', title: 'Southeast Asia zoom', subtitle: 'Singapore, Malaysia, Thailand, Vietnam, Indonesia and the Philippines', viewBox: '82.8 28.4 12.2 15.2', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
+  { key: 'eastern-europe', title: 'Eastern Europe zoom', subtitle: 'Russia, Poland, Czechia, Hungary, Romania, Ukraine and neighbors', viewBox: '58.2 10.2 17.8 12.5', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
 ]
 
 function metric(country: GeoCountry, mode: GeoMode) {
@@ -213,6 +215,8 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
   const regionalGroups = [
     { title: 'East Asia', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP', 'SG'] },
     { title: 'Europe', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
+    { title: 'Southeast Asia', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
+    { title: 'Eastern Europe', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
   ].map((group) => ({ ...group, countries: group.codes.map((code) => countries.find((country) => country.code === code)).filter(Boolean) as GeoCountry[] }))
     .filter((group) => group.countries.length)
 
