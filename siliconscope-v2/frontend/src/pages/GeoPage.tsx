@@ -22,6 +22,19 @@ function metric(country: GeoCountry, mode: GeoMode) {
   return Number(country.recentScore || country.score || 0)
 }
 
+function densityMetric(country: GeoCountry, mode: GeoMode) {
+  if (mode === 'institutions') return Number(country.topInstitutions?.length || 0)
+  return Number(country.papers || metric(country, mode) || 0)
+}
+
+function heatColor(intensity: number, selected = false) {
+  const t = Math.max(0, Math.min(1, intensity))
+  const hue = 215 + Math.round(t * 28)
+  const saturation = 76 + Math.round(t * 10)
+  const lightness = selected ? 34 - Math.round(t * 8) : 88 - Math.round(t * 55)
+  return `hsl(${hue} ${saturation}% ${Math.max(20, lightness)}%)`
+}
+
 function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
   const normalized = rows.map((row) => ({
     key: String(row.key ?? row.year ?? '-'),
@@ -88,6 +101,7 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
 
 function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
   const max = Math.max(1, ...countries.map((country) => metric(country, mode)))
+  const densityMax = Math.max(1, ...countries.map((country) => densityMetric(country, mode)))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
@@ -117,17 +131,23 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             const country = countryByFeature.get(feature.code)
             const selected = country?.code === selectedCode
             const value = country ? metric(country, mode) : 0
+            const densityValue = country ? densityMetric(country, mode) : 0
+            const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
             const intensity = country ? Math.max(.18, Math.min(.95, value / max)) : 0
             if (country) renderedFeatureCodes.add(feature.code)
             return (
               <path
                 key={feature.code + feature.name}
                 className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
-                style={{ '--geo-alpha': intensity.toFixed(3) } as React.CSSProperties}
+                style={{
+                  '--geo-alpha': intensity.toFixed(3),
+                  '--geo-density': density.toFixed(3),
+                  fill: country ? heatColor(density, selected) : undefined,
+                } as React.CSSProperties}
                 d={feature.path}
                 onClick={() => country && onSelect(country)}
               >
-                <title>{country ? `${country.name}: ${Math.round(value)}` : feature.name}</title>
+                <title>{country ? `${country.name}: ${Math.round(densityValue)} mapped outputs` : feature.name}</title>
               </path>
             )
           })}
@@ -180,6 +200,12 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             </div>
           </section>
         ))}
+      </div>
+      <div className="geo-heat-legend" aria-label="IC research output density legend">
+        <span>Output density</span>
+        <i />
+        <em>low</em>
+        <strong>high</strong>
       </div>
     </div>
   )
@@ -344,8 +370,8 @@ export default function GeoPage() {
       <div className="geo-grid">
         <section className="geo-map-panel">
           <h3>Global IC activity map</h3>
-          <p className="hint">Hover/click a country to inspect strength, institutions, and yearly trend.</p>
-          <p className="hint">City-level rays are schematic hotspots until institution geocoding is connected.</p>
+          <p className="hint">Darker regions mean denser mapped IC research output. Hover/click a country to inspect strength, institutions, and yearly trend.</p>
+          <p className="hint">Hotspot rays show schematic sub-region concentration until institution geocoding is connected.</p>
           <p className="hint">Country filtering is based on affiliation text and institution normalization. Treat it as a directional signal.</p>
           <GeoMap countries={countries} selectedCode={selectedCountry?.code} mode={mode} worldMap={worldMap} onSelect={setSelected} />
         </section>
