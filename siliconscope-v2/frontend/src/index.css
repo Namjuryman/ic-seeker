@@ -4564,7 +4564,7 @@
     display: block;
     height: 9px;
     border-radius: 999px;
-    background: linear-gradient(90deg, #8bd3ff, #8b5cf6, #f43f5e, #fb923c);
+    background: linear-gradient(90deg, #7dd3fc, #38bdf8, #6366f1, #f43f5e, #f97316);
     box-shadow: inset 0 0 0 1px rgba(31, 58, 115, .12);
   }
 
@@ -4579,11 +4579,29 @@
     pointer-events: none;
   }
 
+  .geo-heat-core-layer {
+    pointer-events: none;
+  }
+
+  .geo-heat-core-halo {
+    fill: #f43f5e;
+    opacity: calc(.08 + var(--heat-intensity) * .18);
+    stroke: rgba(255, 255, 255, .72);
+    stroke-width: .06;
+  }
+
+  .geo-heat-core-dot {
+    fill: #fff7ed;
+    opacity: calc(.36 + var(--heat-intensity) * .38);
+    stroke: #f97316;
+    stroke-width: .08;
+  }
+
   .geo-heat-canvas {
     display: block;
     width: 100%;
     height: 100%;
-    opacity: .92;
+    opacity: .98;
   }
 
   .geo-year-control {

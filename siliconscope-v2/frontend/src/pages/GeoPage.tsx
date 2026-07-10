@@ -132,20 +132,21 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
         const scaled = points.map(([x, y, value]) => [
           x / 110 * width,
           y / 66 * height,
-          Math.min(1, value / max),
+          Math.min(1, Math.pow(Math.max(0, value / max), .62)),
         ] as HeatPoint)
         simpleheat(canvas)
           .data(scaled)
           .max(1)
-          .radius(Math.max(9, Math.min(20, width / 78)), Math.max(10, Math.min(22, width / 76)))
+          .radius(Math.max(8, Math.min(18, width / 86)), Math.max(9, Math.min(20, width / 84)))
           .gradient({
-            .18: 'rgba(96, 165, 250, .14)',
-            .42: '#38bdf8',
-            .62: '#8b5cf6',
-            .8: '#f43f5e',
-            1: '#fb923c',
+            .12: 'rgba(125, 211, 252, .18)',
+            .3: '#38bdf8',
+            .48: '#6366f1',
+            .66: '#f43f5e',
+            .86: '#fb7185',
+            1: '#f97316',
           })
-          .draw(.04)
+          .draw(.055)
       })
     }
 
@@ -168,7 +169,7 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
     for (const country of countries) {
       for (const institution of (country.topInstitutions || [])
         .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
-        .slice(0, 48)) {
+        .slice(0, 80)) {
         const value = institutionMetric(institution, selectedYear)
         if (value <= 0) continue
         const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
@@ -183,8 +184,13 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
   }, [countries, mode, selectedYear])
   const heatMax = useMemo(() => {
     const weights = heatPoints.map((point) => point[2]).sort((a, b) => a - b)
-    return Math.max(1, weights[Math.floor(weights.length * .94)] || weights[weights.length - 1] || 1)
+    return Math.max(1, weights[Math.floor(weights.length * .88)] || weights[weights.length - 1] || 1)
   }, [heatPoints])
+  const heatCores = useMemo(() => heatPoints
+    .map(([x, y, value]) => ({ x, y, intensity: Math.min(1, Math.pow(Math.max(0, value / heatMax), .62)) }))
+    .filter((point) => point.intensity >= .32)
+    .sort((a, b) => b.intensity - a.intensity)
+    .slice(0, 96), [heatPoints, heatMax])
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
@@ -230,6 +236,14 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
         <foreignObject x="0" y="0" width="110" height="66" className="geo-heat-layer">
           <GeoHeatCanvas points={heatPoints} max={heatMax} />
         </foreignObject>
+        <g className="geo-heat-core-layer" aria-hidden="true">
+          {heatCores.map((point, index) => (
+            <g key={`${point.x.toFixed(2)}:${point.y.toFixed(2)}:${index}`} style={{ '--heat-intensity': point.intensity.toFixed(3) } as React.CSSProperties}>
+              <circle className="geo-heat-core-halo" cx={point.x.toFixed(2)} cy={point.y.toFixed(2)} r={(.34 + point.intensity * .46).toFixed(2)} />
+              <circle className="geo-heat-core-dot" cx={point.x.toFixed(2)} cy={point.y.toFixed(2)} r={(.09 + point.intensity * .17).toFixed(2)} />
+            </g>
+          ))}
+        </g>
         <g className="geo-country-layer">
           {countries.map((country) => {
             const featureCode = countryFeatureCode(country.code)
