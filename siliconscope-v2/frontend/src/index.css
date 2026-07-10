@@ -4579,24 +4579,6 @@
     pointer-events: none;
   }
 
-  .geo-heat-core-layer {
-    pointer-events: none;
-  }
-
-  .geo-heat-core-halo {
-    fill: #f43f5e;
-    opacity: calc(.08 + var(--heat-intensity) * .18);
-    stroke: rgba(255, 255, 255, .72);
-    stroke-width: .06;
-  }
-
-  .geo-heat-core-dot {
-    fill: #fff7ed;
-    opacity: calc(.36 + var(--heat-intensity) * .38);
-    stroke: #f97316;
-    stroke-width: .08;
-  }
-
   .geo-heat-canvas {
     display: block;
     width: 100%;
