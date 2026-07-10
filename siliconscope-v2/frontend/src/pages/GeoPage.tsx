@@ -131,8 +131,8 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
             <stop offset="0%" stopColor="#f9fbff" />
             <stop offset="100%" stopColor="#eef4fb" />
           </linearGradient>
-          <filter id="geoHeatSoft" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation=".68" />
+          <filter id="geoHeatSoft" x="-45%" y="-45%" width="190%" height="190%">
+            <feGaussianBlur stdDeviation=".34" />
           </filter>
         </defs>
         <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
@@ -166,8 +166,8 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
               if (value <= 0) return null
               const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
               const scale = Math.sqrt(value / institutionMax)
-              const radius = Math.max(1.55, Math.min(7.4, 1.85 + scale * 5.55))
-              const alpha = Math.max(.18, Math.min(.78, .2 + scale * .6))
+              const radius = Math.max(.74, Math.min(3.05, .82 + scale * 2.25))
+              const alpha = Math.max(.16, Math.min(.72, .2 + scale * .52))
               const active = country.code === selectedCode
               return (
                 <g
@@ -176,9 +176,9 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
                   style={{ '--geo-heat-alpha': alpha.toFixed(3) } as React.CSSProperties}
                   onClick={() => onSelect(country)}
                 >
-                  <circle className="geo-heat-cool" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * 1.64).toFixed(2)} />
-                  <circle className="geo-heat-warm" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .98).toFixed(2)} />
-                  <circle className="geo-heat-hot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .46).toFixed(2)} />
+                  <circle className="geo-heat-cool" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * 1.22).toFixed(2)} />
+                  <circle className="geo-heat-warm" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .78).toFixed(2)} />
+                  <circle className="geo-heat-hot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .34).toFixed(2)} />
                   <title>{institution.name} - {institution.city || country.name}: {value} papers{selectedYear === 'all' ? '' : ` in ${selectedYear}`}</title>
                 </g>
               )

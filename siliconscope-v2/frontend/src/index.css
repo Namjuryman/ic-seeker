@@ -4495,9 +4495,9 @@
     border: 1px solid rgba(126, 145, 177, .34);
     border-radius: var(--radius-lg);
     background:
-      radial-gradient(circle at 18% 22%, rgba(67, 109, 196, .12), transparent 28%),
-      radial-gradient(circle at 78% 34%, rgba(45, 157, 167, .10), transparent 30%),
-      linear-gradient(180deg, #f8fbff 0%, #eef5fb 100%);
+      radial-gradient(circle at 18% 22%, rgba(67, 109, 196, .06), transparent 28%),
+      radial-gradient(circle at 78% 34%, rgba(45, 157, 167, .05), transparent 30%),
+      linear-gradient(180deg, #f8fbff 0%, #f1f6fb 100%);
     overflow: hidden;
     box-shadow: 0 18px 44px rgba(31, 49, 83, .13);
   }
@@ -4518,23 +4518,23 @@
   }
 
   .geo-world-country {
-    fill: #e5ebf3;
-    stroke: rgba(255, 255, 255, .72);
-    stroke-width: .14;
+    fill: #dce5ef;
+    stroke: rgba(118, 145, 182, .38);
+    stroke-width: .12;
     transition: fill .16s ease, stroke .16s ease, stroke-width .16s ease, filter .16s ease;
   }
 
   .geo-world-country.has-data {
     cursor: pointer;
-    fill: rgba(212, 224, 238, calc(.18 + var(--geo-density) * .1));
-    stroke: rgba(255, 255, 255, .62);
-    stroke-width: .16;
-    filter: drop-shadow(0 1px 1px rgba(26, 49, 93, .06));
+    fill: rgba(201, 216, 232, calc(.48 + var(--geo-density) * .08));
+    stroke: rgba(92, 122, 165, .44);
+    stroke-width: .14;
+    filter: drop-shadow(0 1px 1px rgba(26, 49, 93, .04));
   }
 
   .geo-world-country.has-data:hover,
   .geo-world-country.has-data.active {
-    fill: rgba(192, 210, 233, .42);
+    fill: rgba(184, 204, 227, .66);
     stroke: #092d79;
     stroke-width: .38;
     filter: drop-shadow(0 2px 4px rgba(20, 45, 99, .24));
@@ -4587,15 +4587,15 @@
   }
 
   .geo-heat-cool {
-    fill: rgba(40, 169, 255, calc(var(--geo-heat-alpha) * .25));
+    fill: rgba(40, 169, 255, calc(var(--geo-heat-alpha) * .2));
   }
 
   .geo-heat-warm {
-    fill: rgba(255, 214, 38, calc(var(--geo-heat-alpha) * .46));
+    fill: rgba(255, 214, 38, calc(var(--geo-heat-alpha) * .38));
   }
 
   .geo-heat-hot {
-    fill: rgba(224, 22, 22, calc(var(--geo-heat-alpha) * .7));
+    fill: rgba(224, 22, 22, calc(var(--geo-heat-alpha) * .64));
   }
 
   .geo-heat-source:hover .geo-heat-hot,
