@@ -132,12 +132,12 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
         const scaled = points.map(([x, y, value]) => [
           x / 110 * width,
           y / 66 * height,
-          value,
+          Math.min(1, value / max),
         ] as HeatPoint)
         simpleheat(canvas)
           .data(scaled)
-          .max(max)
-          .radius(Math.max(8, Math.min(18, width / 90)), Math.max(9, Math.min(20, width / 82)))
+          .max(1)
+          .radius(Math.max(9, Math.min(20, width / 78)), Math.max(10, Math.min(22, width / 76)))
           .gradient({
             .18: 'rgba(96, 165, 250, .14)',
             .42: '#38bdf8',
@@ -145,7 +145,7 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
             .8: '#f43f5e',
             1: '#fb923c',
           })
-          .draw(.025)
+          .draw(.04)
       })
     }
 
@@ -172,8 +172,8 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
         const value = institutionMetric(institution, selectedYear)
         if (value <= 0) continue
         const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-        const key = `${Math.round(projected.x * 5) / 5}:${Math.round(projected.y * 5) / 5}`
-        const weight = mode === 'institutions' ? 1 : Math.pow(value, .82)
+        const key = `${Math.round(projected.x * 2.5) / 2.5}:${Math.round(projected.y * 2.5) / 2.5}`
+        const weight = mode === 'institutions' ? 1 : Math.pow(value, .9)
         const current = bins.get(key)
         if (current) current[2] += weight
         else bins.set(key, [projected.x, projected.y, weight])
