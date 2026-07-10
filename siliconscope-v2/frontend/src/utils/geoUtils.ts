@@ -51,11 +51,12 @@ export const geoHotspotProfiles: Record<string, Array<{ lon: number; lat: number
   CN: [
     { lon: 116.4, lat: 39.9, weight: .24 }, { lon: 121.5, lat: 31.2, weight: .22 },
     { lon: 120.2, lat: 30.3, weight: .12 }, { lon: 113.3, lat: 23.1, weight: .16 },
-    { lon: 118.8, lat: 32.1, weight: .10 }
+    { lon: 118.8, lat: 32.1, weight: .10 }, { lon: 104.1, lat: 30.6, weight: .12 },
+    { lon: 108.9, lat: 34.3, weight: .09 }
   ],
   TW: [{ lon: 121.0, lat: 24.8, weight: .55 }, { lon: 120.7, lat: 24.1, weight: .22 }, { lon: 121.5, lat: 25.0, weight: .18 }],
   HK: [{ lon: 114.2, lat: 22.3, weight: 1 }], MO: [{ lon: 113.5, lat: 22.2, weight: 1 }],
-  KR: [{ lon: 127.0, lat: 37.5, weight: .45 }, { lon: 127.4, lat: 36.4, weight: .34 }, { lon: 129.1, lat: 35.2, weight: .14 }],
+  KR: [{ lon: 127.0, lat: 37.25, weight: .45 }, { lon: 127.4, lat: 36.35, weight: .34 }, { lon: 129.1, lat: 35.2, weight: .14 }],
   JP: [{ lon: 139.7, lat: 35.7, weight: .42 }, { lon: 135.5, lat: 34.7, weight: .22 }, { lon: 140.9, lat: 38.3, weight: .18 }],
   SG: [{ lon: 103.8, lat: 1.35, weight: 1 }],
   MY: [{ lon: 101.7, lat: 3.1, weight: .5 }, { lon: 103.7, lat: 1.5, weight: .18 }, { lon: 100.3, lat: 5.4, weight: .14 }, { lon: 102.3, lat: 2.2, weight: .12 }],

@@ -25,6 +25,17 @@ const regionalZooms = [
   { key: 'eastern-europe', title: 'Eastern Europe zoom', subtitle: 'Russia, Poland, Czechia, Hungary, Romania, Ukraine and neighbors', viewBox: '58.2 10.2 17.8 12.5', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
 ]
 
+const regionalZoomLabelOffsets: Record<string, Record<string, { dx: number; dy: number }>> = {
+  'east-asia': {
+    CN: { dx: -1.3, dy: .8 },
+    HK: { dx: -.5, dy: .9 },
+    MO: { dx: -.8, dy: 1.3 },
+    TW: { dx: .9, dy: 1.2 },
+    KR: { dx: .9, dy: .35 },
+    JP: { dx: 1.1, dy: .35 },
+  },
+}
+
 function metric(country: GeoCountry, mode: GeoMode) {
   if (mode === 'institutions') return Number(country.institutionCount || country.topInstitutions?.length || 0)
   if (mode === 'topic') return Number(country.score || 0)
@@ -87,6 +98,16 @@ function buildGeoHeatPoints(countries: GeoCountry[], mode: GeoMode, selectedYear
 function heatMaxFor(points: HeatPoint[], percentile = .88) {
   const weights = points.map((point) => point[2]).sort((a, b) => a - b)
   return Math.max(1, weights[Math.floor(weights.length * percentile)] || weights[weights.length - 1] || 1)
+}
+
+function parseViewBox(viewBox: string) {
+  const [x, y, width, height] = viewBox.split(/\s+/).map(Number)
+  return { x, y, width, height }
+}
+
+function pointsInView(points: HeatPoint[], viewBox: string, pad = 1.8) {
+  const box = parseViewBox(viewBox)
+  return points.filter(([x, y]) => x >= box.x - pad && x <= box.x + box.width + pad && y >= box.y - pad && y <= box.y + box.height + pad)
 }
 
 function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
@@ -299,7 +320,6 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
 function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
   const heatPoints = useMemo(() => buildGeoHeatPoints(countries, mode, selectedYear), [countries, mode, selectedYear])
-  const heatMax = useMemo(() => heatMaxFor(heatPoints, .86), [heatPoints])
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const countryByCode = new Map(countries.map((country) => [country.code, country]))
 
@@ -307,6 +327,9 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
     <section className="geo-region-zooms" aria-label="Dense region zoom maps">
       {regionalZooms.map((zoom) => {
         const zoomCountries = zoom.codes.map((code) => countryByCode.get(code)).filter(Boolean) as GeoCountry[]
+        const visibleHeatPoints = pointsInView(heatPoints, zoom.viewBox)
+        const heatMax = heatMaxFor(visibleHeatPoints, .88)
+        const labelOffsets = regionalZoomLabelOffsets[zoom.key] || {}
         return (
           <article key={zoom.key} className="geo-region-zoom">
             <div className="geo-region-zoom-head">
@@ -317,6 +340,14 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
               <em>{zoomCountries.length} regions</em>
             </div>
             <svg viewBox={zoom.viewBox} role="img" className="geo-region-zoom-map">
+              <defs>
+                <radialGradient id={`geoRegionHeat-${zoom.key}`}>
+                  <stop offset="0%" stopColor="#f97316" stopOpacity=".95" />
+                  <stop offset="34%" stopColor="#fb7185" stopOpacity=".72" />
+                  <stop offset="62%" stopColor="#38bdf8" stopOpacity=".32" />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                </radialGradient>
+              </defs>
               <rect x="0" y="0" width="110" height="66" fill="#f8fbff" />
               <g className="geo-world-layer">
                 {(worldMap?.features || []).map((feature) => {
@@ -335,16 +366,34 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
                   )
                 })}
               </g>
-              <foreignObject x="0" y="0" width="110" height="66" className="geo-heat-layer">
-                <GeoHeatCanvas points={heatPoints} max={heatMax} />
-              </foreignObject>
+              <g className="geo-region-heat-layer" aria-hidden="true">
+                {visibleHeatPoints.map(([x, y, value], index) => {
+                  const intensity = Math.min(1, Math.pow(Math.max(0, value / heatMax), .62))
+                  return (
+                    <circle
+                      key={`${zoom.key}-heat-${x.toFixed(2)}-${y.toFixed(2)}-${index}`}
+                      className="geo-region-heat-spot"
+                      cx={x.toFixed(2)}
+                      cy={y.toFixed(2)}
+                      r={(.34 + intensity * 1.28).toFixed(2)}
+                      fill={`url(#geoRegionHeat-${zoom.key})`}
+                      opacity={(.2 + intensity * .58).toFixed(3)}
+                    />
+                  )
+                })}
+              </g>
+              <g className="geo-region-border-layer" aria-hidden="true">
+                {(worldMap?.features || []).map((feature) => (
+                  <path key={`${zoom.key}-border-${feature.code}-${feature.name}`} d={feature.path} />
+                ))}
+              </g>
               <g className="geo-country-layer">
                 {zoomCountries.map((country) => {
                   const projected = geoCountryAnchor(country)
-                  const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 }
+                  const offset = labelOffsets[country.code] || { dx: 0, dy: -1.05 }
                   return (
                     <g key={`${zoom.key}-${country.code}`} className={`geo-label ${country.code === selectedCode ? 'active' : ''}`} onClick={() => onSelect(country)}>
-                      <text x={(projected.x + offset.dx * .34).toFixed(2)} y={(projected.y + offset.dy * .34).toFixed(2)} textAnchor="middle">{country.code}</text>
+                      <text x={(projected.x + offset.dx).toFixed(2)} y={(projected.y + offset.dy).toFixed(2)} textAnchor="middle">{country.code}</text>
                     </g>
                   )
                 })}

@@ -4653,6 +4653,26 @@
     stroke-width: .16;
   }
 
+  .geo-region-heat-layer {
+    pointer-events: none;
+    mix-blend-mode: multiply;
+  }
+
+  .geo-region-heat-spot {
+    filter: blur(.08px) saturate(1.08);
+  }
+
+  .geo-region-border-layer {
+    pointer-events: none;
+  }
+
+  .geo-region-border-layer path {
+    fill: none;
+    stroke: rgba(58, 91, 139, .68);
+    stroke-width: .055;
+    vector-effect: non-scaling-stroke;
+  }
+
   .geo-region-zoom-map .geo-label text {
     stroke-width: .22px;
     font-size: .88px;
