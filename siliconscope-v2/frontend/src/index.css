@@ -4575,32 +4575,15 @@
     color: var(--text-muted);
   }
 
-  .geo-heat-source {
-    cursor: pointer;
-    mix-blend-mode: normal;
+  .geo-heat-layer {
+    pointer-events: none;
   }
 
-  .geo-heat-source circle {
-    pointer-events: visiblePainted;
-    vector-effect: non-scaling-stroke;
-    transition: fill .16s ease, opacity .16s ease;
-  }
-
-  .geo-heat-cool {
-    fill: rgba(14, 165, 233, calc(var(--geo-heat-alpha) * .26));
-  }
-
-  .geo-heat-warm {
-    fill: rgba(139, 92, 246, calc(var(--geo-heat-alpha) * .36));
-  }
-
-  .geo-heat-hot {
-    fill: rgba(244, 63, 94, calc(var(--geo-heat-alpha) * .62));
-  }
-
-  .geo-heat-source:hover .geo-heat-hot,
-  .geo-heat-source.active .geo-heat-hot {
-    fill: rgba(251, 113, 133, .82);
+  .geo-heat-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    opacity: .92;
   }
 
   .geo-year-control {

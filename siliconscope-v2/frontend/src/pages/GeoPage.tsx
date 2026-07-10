@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
@@ -13,6 +13,7 @@ import {
   projectWorldPoint,
   type PreparedWorldMap,
 } from '../utils/geoUtils'
+import { simpleheat, type HeatPoint } from '../vendor/simpleheat'
 
 type GeoMode = 'overall' | 'institutions' | 'topic'
 
@@ -110,9 +111,62 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
   )
 }
 
+function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const draw = () => {
+      const rect = canvas.getBoundingClientRect()
+      const width = Math.max(1, Math.round(rect.width * window.devicePixelRatio))
+      const height = Math.max(1, Math.round(rect.height * window.devicePixelRatio))
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width
+        canvas.height = height
+      }
+      const scaled = points.map(([x, y, value]) => [
+        x / 110 * width,
+        y / 66 * height,
+        value,
+      ] as HeatPoint)
+      simpleheat(canvas)
+        .data(scaled)
+        .max(max)
+        .radius(Math.max(8, Math.min(18, width / 90)), Math.max(9, Math.min(20, width / 82)))
+        .gradient({
+          .18: 'rgba(96, 165, 250, .14)',
+          .42: '#38bdf8',
+          .62: '#8b5cf6',
+          .8: '#f43f5e',
+          1: '#fb923c',
+        })
+        .draw(.025)
+    }
+
+    draw()
+    const observer = new ResizeObserver(draw)
+    observer.observe(canvas)
+    return () => observer.disconnect()
+  }, [points, max])
+
+  return <canvas ref={canvasRef} className="geo-heat-canvas" aria-hidden="true" />
+}
+
 function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
-  const institutionMax = Math.max(1, ...countries.flatMap((country) => country.topInstitutions || []).map((institution) => institutionMetric(institution, selectedYear)))
+  const heatPoints = countries.flatMap((country) => (country.topInstitutions || [])
+    .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
+    .slice(0, 42)
+    .map((institution) => {
+      const value = institutionMetric(institution, selectedYear)
+      if (value <= 0) return null
+      const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
+      return [projected.x, projected.y, Math.pow(value, .82)] as HeatPoint
+    })
+    .filter((point): point is HeatPoint => Boolean(point)))
+  const heatMax = Math.max(1, ...heatPoints.map((point) => point[2]))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
@@ -131,9 +185,6 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
             <stop offset="0%" stopColor="#f9fbff" />
             <stop offset="100%" stopColor="#eef4fb" />
           </linearGradient>
-          <filter id="geoHeatSoft" x="-45%" y="-45%" width="190%" height="190%">
-            <feGaussianBlur stdDeviation=".34" />
-          </filter>
         </defs>
         <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
         <g className="geo-world-layer">
@@ -158,33 +209,9 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
             )
           })}
         </g>
-        <g className="geo-heat-layer" filter="url(#geoHeatSoft)">
-          {countries.flatMap((country) => (country.topInstitutions || [])
-            .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
-            .slice(0, 28)
-            .map((institution) => {
-              const value = institutionMetric(institution, selectedYear)
-              if (value <= 0) return null
-              const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-              const scale = Math.pow(value / institutionMax, .38)
-              const radius = Math.max(.82, Math.min(2.9, .9 + scale * 2))
-              const alpha = Math.max(.24, Math.min(.68, .24 + scale * .44))
-              const active = country.code === selectedCode
-              return (
-                <g
-                  key={`${country.code}-${institution.name}-${selectedYear}`}
-                  className={`geo-heat-source ${active ? 'active' : ''}`}
-                  style={{ '--geo-heat-alpha': alpha.toFixed(3) } as React.CSSProperties}
-                  onClick={() => onSelect(country)}
-                >
-                  <circle className="geo-heat-cool" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * 1.22).toFixed(2)} />
-                  <circle className="geo-heat-warm" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .78).toFixed(2)} />
-                  <circle className="geo-heat-hot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r={(radius * .34).toFixed(2)} />
-                  <title>{institution.name} - {institution.city || country.name}: {value} papers{selectedYear === 'all' ? '' : ` in ${selectedYear}`}</title>
-                </g>
-              )
-            }))}
-        </g>
+        <foreignObject x="0" y="0" width="110" height="66" className="geo-heat-layer">
+          <GeoHeatCanvas points={heatPoints} max={heatMax} />
+        </foreignObject>
         <g className="geo-country-layer">
           {countries.map((country) => {
             const featureCode = countryFeatureCode(country.code)
