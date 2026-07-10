@@ -117,38 +117,45 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    let frame = 0
 
     const draw = () => {
-      const rect = canvas.getBoundingClientRect()
-      const width = Math.max(1, Math.round(rect.width * window.devicePixelRatio))
-      const height = Math.max(1, Math.round(rect.height * window.devicePixelRatio))
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width
-        canvas.height = height
-      }
-      const scaled = points.map(([x, y, value]) => [
-        x / 110 * width,
-        y / 66 * height,
-        value,
-      ] as HeatPoint)
-      simpleheat(canvas)
-        .data(scaled)
-        .max(max)
-        .radius(Math.max(8, Math.min(18, width / 90)), Math.max(9, Math.min(20, width / 82)))
-        .gradient({
-          .18: 'rgba(96, 165, 250, .14)',
-          .42: '#38bdf8',
-          .62: '#8b5cf6',
-          .8: '#f43f5e',
-          1: '#fb923c',
-        })
-        .draw(.025)
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const rect = canvas.getBoundingClientRect()
+        const width = Math.max(1, Math.round(rect.width * window.devicePixelRatio))
+        const height = Math.max(1, Math.round(rect.height * window.devicePixelRatio))
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width
+          canvas.height = height
+        }
+        const scaled = points.map(([x, y, value]) => [
+          x / 110 * width,
+          y / 66 * height,
+          value,
+        ] as HeatPoint)
+        simpleheat(canvas)
+          .data(scaled)
+          .max(max)
+          .radius(Math.max(8, Math.min(18, width / 90)), Math.max(9, Math.min(20, width / 82)))
+          .gradient({
+            .18: 'rgba(96, 165, 250, .14)',
+            .42: '#38bdf8',
+            .62: '#8b5cf6',
+            .8: '#f43f5e',
+            1: '#fb923c',
+          })
+          .draw(.025)
+      })
     }
 
     draw()
     const observer = new ResizeObserver(draw)
     observer.observe(canvas)
-    return () => observer.disconnect()
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
   }, [points, max])
 
   return <canvas ref={canvasRef} className="geo-heat-canvas" aria-hidden="true" />
@@ -156,17 +163,28 @@ function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
 
 function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
   const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
-  const heatPoints = countries.flatMap((country) => (country.topInstitutions || [])
-    .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
-    .slice(0, 42)
-    .map((institution) => {
-      const value = institutionMetric(institution, selectedYear)
-      if (value <= 0) return null
-      const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-      return [projected.x, projected.y, Math.pow(value, .82)] as HeatPoint
-    })
-    .filter((point): point is HeatPoint => Boolean(point)))
-  const heatMax = Math.max(1, ...heatPoints.map((point) => point[2]))
+  const heatPoints = useMemo(() => {
+    const bins = new Map<string, HeatPoint>()
+    for (const country of countries) {
+      for (const institution of (country.topInstitutions || [])
+        .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
+        .slice(0, 48)) {
+        const value = institutionMetric(institution, selectedYear)
+        if (value <= 0) continue
+        const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
+        const key = `${Math.round(projected.x * 5) / 5}:${Math.round(projected.y * 5) / 5}`
+        const weight = mode === 'institutions' ? 1 : Math.pow(value, .82)
+        const current = bins.get(key)
+        if (current) current[2] += weight
+        else bins.set(key, [projected.x, projected.y, weight])
+      }
+    }
+    return [...bins.values()]
+  }, [countries, mode, selectedYear])
+  const heatMax = useMemo(() => {
+    const weights = heatPoints.map((point) => point[2]).sort((a, b) => a - b)
+    return Math.max(1, weights[Math.floor(weights.length * .94)] || weights[weights.length - 1] || 1)
+  }, [heatPoints])
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
