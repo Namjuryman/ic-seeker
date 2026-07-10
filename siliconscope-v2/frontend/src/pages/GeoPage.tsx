@@ -119,7 +119,7 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
   if (selectedCode) labelled.add(selectedCode)
   const regionalGroups = [
     { title: 'East Asia', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP', 'SG'] },
-    { title: 'Europe', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT'] },
+    { title: 'Europe', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
   ].map((group) => ({ ...group, countries: group.codes.map((code) => countries.find((country) => country.code === code)).filter(Boolean) as GeoCountry[] }))
     .filter((group) => group.countries.length)
 
@@ -161,13 +161,14 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
         <g className="geo-heat-layer" filter="url(#geoHeatSoft)">
           {countries.flatMap((country) => (country.topInstitutions || [])
             .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
+            .slice(0, 28)
             .map((institution) => {
               const value = institutionMetric(institution, selectedYear)
               if (value <= 0) return null
               const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-              const scale = Math.sqrt(value / institutionMax)
-              const radius = Math.max(.74, Math.min(3.05, .82 + scale * 2.25))
-              const alpha = Math.max(.16, Math.min(.72, .2 + scale * .52))
+              const scale = Math.pow(value / institutionMax, .38)
+              const radius = Math.max(.82, Math.min(2.9, .9 + scale * 2))
+              const alpha = Math.max(.24, Math.min(.68, .24 + scale * .44))
               const active = country.code === selectedCode
               return (
                 <g

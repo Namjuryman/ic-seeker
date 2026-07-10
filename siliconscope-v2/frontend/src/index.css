@@ -4564,7 +4564,7 @@
     display: block;
     height: 9px;
     border-radius: 999px;
-    background: linear-gradient(90deg, hsl(145 74% 82%), hsl(54 82% 58%), hsl(0 84% 44%));
+    background: linear-gradient(90deg, #8bd3ff, #8b5cf6, #f43f5e, #fb923c);
     box-shadow: inset 0 0 0 1px rgba(31, 58, 115, .12);
   }
 
@@ -4577,7 +4577,7 @@
 
   .geo-heat-source {
     cursor: pointer;
-    mix-blend-mode: multiply;
+    mix-blend-mode: normal;
   }
 
   .geo-heat-source circle {
@@ -4587,20 +4587,20 @@
   }
 
   .geo-heat-cool {
-    fill: rgba(40, 169, 255, calc(var(--geo-heat-alpha) * .2));
+    fill: rgba(14, 165, 233, calc(var(--geo-heat-alpha) * .26));
   }
 
   .geo-heat-warm {
-    fill: rgba(255, 214, 38, calc(var(--geo-heat-alpha) * .38));
+    fill: rgba(139, 92, 246, calc(var(--geo-heat-alpha) * .36));
   }
 
   .geo-heat-hot {
-    fill: rgba(224, 22, 22, calc(var(--geo-heat-alpha) * .64));
+    fill: rgba(244, 63, 94, calc(var(--geo-heat-alpha) * .62));
   }
 
   .geo-heat-source:hover .geo-heat-hot,
   .geo-heat-source.active .geo-heat-hot {
-    fill: rgba(178, 0, 0, .86);
+    fill: rgba(251, 113, 133, .82);
   }
 
   .geo-year-control {

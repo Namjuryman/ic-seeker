@@ -2,6 +2,7 @@ import { db as metadataDb } from "../db/connection.js";
 import { papers } from "../db/schema.js";
 import { sql } from "drizzle-orm";
 import { institutionIdentityService } from "./institution-identity.service.js";
+import institutionMasterRows from "../data/institution-master-strict.json" with { type: "json" };
 
 interface CountryPattern {
   code: string;
@@ -11,6 +12,13 @@ interface CountryPattern {
   y: number;
   patterns: string[];
 }
+
+type InstitutionMasterRow = {
+  country_code?: string | null;
+  country_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+};
 
 const countryPatterns: CountryPattern[] = [
   { code: "US", name: "United States", region: "North America", x: 24, y: 42, patterns: ["united states", "usa", "u.s.a", "california", "stanford", "mit", "massachusetts institute", "berkeley", "ucla", "uc san", "university of california", "caltech", "princeton", "cornell", "columbia university", "georgia tech", "university of texas", "texas instruments", "intel labs", "analog devices"] },
@@ -33,7 +41,63 @@ const countryPatterns: CountryPattern[] = [
   { code: "IT", name: "Italy", region: "Europe", x: 50, y: 43, patterns: ["italy", "politecnico di milano", "university of pavia", "university of bologna"] },
 ];
 
-const countryByCode = new Map(countryPatterns.map((country) => [country.code, country]));
+function countryRegion(code: string): string {
+  if (["US", "CA", "MX"].includes(code)) return "North America";
+  if (["BR", "AR", "CL", "CO", "UY"].includes(code)) return "Latin America";
+  if (["CN", "HK", "MO", "TW", "KR", "JP"].includes(code)) return "East Asia";
+  if (["SG", "MY", "TH", "VN", "ID", "PH"].includes(code)) return "Southeast Asia";
+  if (["IN", "PK", "BD", "NP", "LK"].includes(code)) return "South Asia";
+  if (["AU", "NZ"].includes(code)) return "Oceania";
+  if (["RU"].includes(code)) return "Eastern Europe";
+  if (["GB", "UK", "IE", "NL", "BE", "CH", "DE", "FR", "IT", "ES", "PT", "DK", "SE", "NO", "FI", "AT", "PL", "CZ", "HU", "RO", "BG", "GR", "UA"].includes(code)) return "Europe";
+  if (["IL", "TR", "SA", "AE", "QA", "LB"].includes(code)) return "Middle East";
+  return "Other";
+}
+
+function normalizeCountryCode(code: string) {
+  const normalized = String(code || "").trim().toUpperCase();
+  return normalized === "GB" ? "UK" : normalized;
+}
+
+function countryAnchorFromLatLon(lat: number, lon: number) {
+  return {
+    x: Math.max(0, Math.min(100, ((lon + 180) / 360) * 100)),
+    y: Math.max(0, Math.min(100, ((83 - lat) / 141) * 100)),
+  };
+}
+
+function buildCountryRegistry() {
+  const registry = new Map(countryPatterns.map((country) => [country.code, country]));
+  const masterByCountry = new Map<string, { name: string; latSum: number; lonSum: number; count: number }>();
+  for (const row of institutionMasterRows as InstitutionMasterRow[]) {
+    const code = normalizeCountryCode(String(row.country_code || ""));
+    const name = String(row.country_name || code).trim();
+    const lat = Number(row.latitude);
+    const lon = Number(row.longitude);
+    if (!code || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const current = masterByCountry.get(code) || { name: code === "UK" ? "United Kingdom" : name, latSum: 0, lonSum: 0, count: 0 };
+    current.name = current.name || name;
+    current.latSum += lat;
+    current.lonSum += lon;
+    current.count += 1;
+    masterByCountry.set(code, current);
+  }
+  for (const [code, value] of masterByCountry.entries()) {
+    if (registry.has(code)) continue;
+    const anchor = countryAnchorFromLatLon(value.latSum / value.count, value.lonSum / value.count);
+    registry.set(code, {
+      code,
+      name: value.name,
+      region: countryRegion(code),
+      x: Math.round(anchor.x * 10) / 10,
+      y: Math.round(anchor.y * 10) / 10,
+      patterns: [value.name, code],
+    });
+  }
+  return registry;
+}
+
+const countryByCode = buildCountryRegistry();
 
 const cacheTtlMs = 10 * 60 * 1000;
 const affiliationCountryCache = new Map<string, CountryPattern | null>();
@@ -127,8 +191,9 @@ function countryForAffiliation(value: string): CountryPattern | null {
   const cacheKey = identity.normalizedKey || normalize(value);
   if (affiliationCountryCache.has(cacheKey)) return affiliationCountryCache.get(cacheKey)!;
 
-  if (identity.countryCode && countryByCode.has(identity.countryCode)) {
-    const country = countryByCode.get(identity.countryCode)!;
+  const identityCountryCode = normalizeCountryCode(identity.countryCode || "");
+  if (identityCountryCode && countryByCode.has(identityCountryCode)) {
+    const country = countryByCode.get(identityCountryCode)!;
     affiliationCountryCache.set(cacheKey, country);
     return country;
   }
