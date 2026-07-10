@@ -152,6 +152,7 @@ export interface AuthorProfile {
 
 export interface InstitutionProfile {
   name: string;
+  metadata?: InstitutionMetadata | null;
   paperCount: number;
   institutionScore: number;
   scoreSum: number;
@@ -163,9 +164,47 @@ export interface InstitutionProfile {
   byDomain: Array<{ key: string; count: number }>;
   authors: Array<{ key: string; count: number }>;
   qs: { qs_world_rank: number; qs_region_rank: number; region: string } | null;
-  identity?: { canonicalName: string; normalizedKey: string; aliases: string[]; confidence: number; countryCode?: string; countryName?: string; city?: string; caveat?: string };
+  identity?: InstitutionIdentity;
   requestedName?: string;
   papers: PaperRow[];
+}
+
+export interface InstitutionMetadata {
+  canonicalName: string;
+  aliases: string[];
+  countryCode?: string;
+  countryName?: string;
+  city?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  acronym?: string;
+  rorId?: string;
+  paperCount?: number;
+  rawMentionCount?: number;
+  geoConfidence?: number;
+  matchStatus?: string;
+  mergedSubunits?: string[];
+}
+
+export interface InstitutionIdentity {
+  canonicalName: string;
+  normalizedKey: string;
+  aliases: string[];
+  confidence: number;
+  countryCode?: string;
+  countryName?: string;
+  city?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  acronym?: string;
+  rorId?: string;
+  paperCount?: number;
+  rawMentionCount?: number;
+  geoConfidence?: number;
+  matchStatus?: string;
+  mergedSubunits?: string[];
+  source?: string;
+  caveat?: string;
 }
 
 export interface GeoCountry {
@@ -181,7 +220,22 @@ export interface GeoCountry {
   citations: number;
   ranks: { sPlus: number; s: number; a: number; other: number };
   topField: string;
-  topInstitutions: Array<{ name: string; count: number }>;
+  institutionCount: number;
+  cityMappedInstitutions: number;
+  countryOnlyInstitutions: number;
+  topInstitutions: Array<{
+    name: string;
+    count: number;
+    byYear: Array<{ year: number; papers: number }>;
+    city: string | null;
+    countryCode: string;
+    countryName: string;
+    lat: number | null;
+    lon: number | null;
+    confidence: number;
+    source: string;
+    cityMapped: boolean;
+  }>;
   byField: Array<{ key: string; count: number }>;
   byYear: Array<{ year: number; papers: number; score: number }>;
 }
@@ -192,6 +246,15 @@ export interface GeoResult {
   fields: string[];
   skippedWithoutCountry: number;
   totalRows: number;
+  institutionSummary: {
+    affiliationMentions: number;
+    distinctRawAffiliations: number;
+    distinctCanonicalInstitutions: number;
+    mappedInstitutions: number;
+    cityMappedInstitutions: number;
+    countryOnlyInstitutions: number;
+    unmappedInstitutions: number;
+  };
   countries: GeoCountry[];
   regionTrends: Array<{ region: string; year: number; papers: number; score: number }>;
   topPapers: PaperRow[];

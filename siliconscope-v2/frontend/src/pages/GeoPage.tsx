@@ -8,31 +8,50 @@ import {
   countryFeatureCode,
   geoCountryAnchor,
   geoDenseRegionCodes,
-  geoHotspots,
   geoLabelOffsets,
   prepareWorldMap,
+  projectWorldPoint,
   type PreparedWorldMap,
 } from '../utils/geoUtils'
 
 type GeoMode = 'overall' | 'institutions' | 'topic'
 
 function metric(country: GeoCountry, mode: GeoMode) {
-  if (mode === 'institutions') return Number(country.topInstitutions?.length || 0)
+  if (mode === 'institutions') return Number(country.institutionCount || country.topInstitutions?.length || 0)
   if (mode === 'topic') return Number(country.score || 0)
   return Number(country.recentScore || country.score || 0)
 }
 
 function densityMetric(country: GeoCountry, mode: GeoMode) {
-  if (mode === 'institutions') return Number(country.topInstitutions?.length || 0)
+  if (mode === 'institutions') return Number(country.institutionCount || country.topInstitutions?.length || 0)
   return Number(country.papers || metric(country, mode) || 0)
+}
+
+function yearMetric(country: GeoCountry, mode: GeoMode, selectedYear: number | 'all') {
+  if (selectedYear === 'all') return metric(country, mode)
+  const row = country.byYear?.find((item) => Number(item.year) === selectedYear)
+  if (!row) return 0
+  return mode === 'institutions' ? Number(country.topInstitutions?.filter((inst) => inst.byYear?.some((year) => year.year === selectedYear && year.papers > 0)).length || 0) : Number(row.score || row.papers || 0)
+}
+
+function yearDensityMetric(country: GeoCountry, mode: GeoMode, selectedYear: number | 'all') {
+  if (selectedYear === 'all') return densityMetric(country, mode)
+  const row = country.byYear?.find((item) => Number(item.year) === selectedYear)
+  if (!row) return 0
+  return mode === 'institutions' ? yearMetric(country, mode, selectedYear) : Number(row.papers || row.score || 0)
+}
+
+function institutionMetric(institution: GeoCountry['topInstitutions'][number], selectedYear: number | 'all') {
+  if (selectedYear === 'all') return Number(institution.count || 0)
+  return Number(institution.byYear?.find((row) => Number(row.year) === selectedYear)?.papers || 0)
 }
 
 function heatColor(intensity: number, selected = false) {
   const t = Math.max(0, Math.min(1, intensity))
-  const hue = 215 + Math.round(t * 28)
-  const saturation = 76 + Math.round(t * 10)
-  const lightness = selected ? 34 - Math.round(t * 8) : 88 - Math.round(t * 55)
-  return `hsl(${hue} ${saturation}% ${Math.max(20, lightness)}%)`
+  const hue = Math.round(145 - t * 145)
+  const saturation = 74 + Math.round(t * 10)
+  const lightness = selected ? 36 - Math.round(t * 6) : 82 - Math.round(t * 38)
+  return `hsl(${hue} ${saturation}% ${Math.max(28, lightness)}%)`
 }
 
 function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
@@ -99,9 +118,10 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
   )
 }
 
-function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
-  const max = Math.max(1, ...countries.map((country) => metric(country, mode)))
-  const densityMax = Math.max(1, ...countries.map((country) => densityMetric(country, mode)))
+function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
+  const max = Math.max(1, ...countries.map((country) => yearMetric(country, mode, selectedYear)))
+  const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
+  const institutionMax = Math.max(1, ...countries.flatMap((country) => country.topInstitutions || []).map((institution) => institutionMetric(institution, selectedYear)))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
@@ -120,18 +140,14 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             <stop offset="0%" stopColor="#f9fbff" />
             <stop offset="100%" stopColor="#eef4fb" />
           </linearGradient>
-          <filter id="geoGlow" x="-30%" y="-70%" width="160%" height="220%">
-            <feGaussianBlur stdDeviation=".95" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
         </defs>
         <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
         <g className="geo-world-layer">
           {(worldMap?.features || []).map((feature) => {
             const country = countryByFeature.get(feature.code)
             const selected = country?.code === selectedCode
-            const value = country ? metric(country, mode) : 0
-            const densityValue = country ? densityMetric(country, mode) : 0
+            const value = country ? yearMetric(country, mode, selectedYear) : 0
+            const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
             const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
             const intensity = country ? Math.max(.18, Math.min(.95, value / max)) : 0
             if (country) renderedFeatureCodes.add(feature.code)
@@ -152,23 +168,29 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             )
           })}
         </g>
-        <g className="geo-hotspot-layer" filter="url(#geoGlow)">
-          {countries.flatMap((country) => geoHotspots(country, max, metric(country, mode)).map((spot) => {
-            const isActive = country.code === selectedCode
-            return (
-              <g
-                key={`${country.code}-${spot.index}`}
-                className={`geo-hotspot ${isActive ? 'active' : ''}`}
-                style={{ '--geo-hot-alpha': spot.alpha.toFixed(3) } as React.CSSProperties}
-                onClick={() => onSelect(country)}
-              >
-                <line x1={spot.x.toFixed(2)} y1={spot.y.toFixed(2)} x2={spot.x.toFixed(2)} y2={(spot.y - spot.height).toFixed(2)} />
-                <circle cx={spot.x.toFixed(2)} cy={spot.y.toFixed(2)} r={spot.radius.toFixed(2)} />
-                <circle className="geo-hot-tip" cx={spot.x.toFixed(2)} cy={(spot.y - spot.height).toFixed(2)} r={Math.max(.32, spot.radius * .34).toFixed(2)} />
-                <title>{country.name} hotspot: {Math.round(metric(country, mode))}</title>
-              </g>
-            )
-          }))}
+        <g className="geo-point-layer">
+          {countries.flatMap((country) => (country.topInstitutions || [])
+            .filter((institution) => Number.isFinite(institution.lat) && Number.isFinite(institution.lon))
+            .map((institution) => {
+              const value = institutionMetric(institution, selectedYear)
+              if (value <= 0) return null
+              const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
+              const scale = Math.sqrt(value / institutionMax)
+              const active = country.code === selectedCode
+              return (
+                <circle
+                  key={`${country.code}-${institution.name}-${selectedYear}`}
+                  className={`geo-institution-point ${active ? 'active' : ''}`}
+                  cx={projected.x.toFixed(2)}
+                  cy={projected.y.toFixed(2)}
+                  r={Math.max(.42, Math.min(2.35, .46 + scale * 1.9)).toFixed(2)}
+                  style={{ '--geo-point-alpha': Math.max(.38, Math.min(.92, .35 + scale * .6)).toFixed(3) } as React.CSSProperties}
+                  onClick={() => onSelect(country)}
+                >
+                  <title>{institution.name} · {institution.city || country.name}: {value} papers{selectedYear === 'all' ? '' : ` in ${selectedYear}`}</title>
+                </circle>
+              )
+            }))}
         </g>
         <g className="geo-country-layer">
           {countries.map((country) => {
@@ -194,7 +216,7 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
             <div className="geo-inset-grid">
               {group.countries.map((country) => (
                 <button key={country.code} className={`geo-region-button ${country.code === selectedCode ? 'active' : ''}`} onClick={() => onSelect(country)}>
-                  <span>{country.code}</span><em>{country.papers ?? 0}</em>
+                  <span>{country.code}</span><em>{country.institutionCount || country.papers || 0}</em>
                 </button>
               ))}
             </div>
@@ -202,7 +224,7 @@ function GeoMap({ countries, selectedCode, mode, worldMap, onSelect }: { countri
         ))}
       </div>
       <div className="geo-heat-legend" aria-label="IC research output density legend">
-        <span>Output density</span>
+        <span>{mode === 'institutions' ? 'Institution density' : 'Research strength'}</span>
         <i />
         <em>low</em>
         <strong>high</strong>
@@ -244,6 +266,8 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
           </strong>
         </div>
         <div className="metric"><span>Score</span><strong>{country.score ?? 0}</strong></div>
+        <div className="metric"><span>Institutions</span><strong>{country.institutionCount ?? 0}</strong></div>
+        <div className="metric"><span>City mapped</span><strong>{country.cityMappedInstitutions ?? 0}</strong></div>
         <div className="metric">
           <span>Top field</span>
           <strong
@@ -260,15 +284,18 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
         <div>
           <h4>Top institutions</h4>
           <div className="geo-institution-list">
-            {country.topInstitutions?.length ? country.topInstitutions.slice(0, 8).map((row, index) => (
+            {country.topInstitutions?.length ? country.topInstitutions.slice(0, 30).map((row, index) => (
               <div className="geo-institution-row" key={row.name}>
                 <span>{index + 1}</span>
-                <strong
-                  className="cursor-pointer hover:text-brand-600"
-                  onClick={() => navigate(`/institutions/${encodeURIComponent(row.name)}`)}
-                >
-                  {row.name}
-                </strong>
+                <div>
+                  <strong
+                    className="cursor-pointer hover:text-brand-600"
+                    onClick={() => navigate(`/institutions/${encodeURIComponent(row.name)}`)}
+                  >
+                    {row.name}
+                  </strong>
+                  <small>{row.city || 'country only'} · {row.confidence ?? 0}% mapped</small>
+                </div>
                 <em>{row.count ?? 0} papers</em>
               </div>
             )) : <p className="text-xs text-ink-muted">No matched institutions yet.</p>}
@@ -309,6 +336,7 @@ export default function GeoPage() {
   const [data, setData] = useState<GeoResult | null>(null)
   const [selected, setSelected] = useState<GeoCountry | null>(null)
   const [mode, setMode] = useState<GeoMode>('overall')
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all')
   const [field, setField] = useState('')
   const [worldMap, setWorldMap] = useState<PreparedWorldMap | null>(null)
   const [error, setError] = useState('')
@@ -333,6 +361,11 @@ export default function GeoPage() {
   }, [mode, field])
 
   const countries = data?.countries || []
+  const years = useMemo(() => {
+    const set = new Set<number>()
+    for (const country of countries) for (const row of country.byYear || []) if (Number.isFinite(Number(row.year))) set.add(Number(row.year))
+    return [...set].sort((a, b) => a - b)
+  }, [countries])
   const selectedCountry = selected || countries[0] || null
   const mapped = countries.reduce((sum, country) => sum + country.papers, 0)
   const regionMomentum = useMemo(() => {
@@ -350,7 +383,8 @@ export default function GeoPage() {
         <div>
           <p className="profile-kicker">Regional intelligence</p>
           <h2>{mode === 'topic' && data.field ? data.field : 'Academic strength'}</h2>
-          <p>{mapped} mapped papers / {data.skippedWithoutCountry} unmapped affiliations · {countries.length} countries/regions</p>
+          <p>{mapped} mapped papers / {data.skippedWithoutCountry} unmapped papers · {countries.length} countries/regions</p>
+          <p>{data.institutionSummary.mappedInstitutions} / {data.institutionSummary.distinctCanonicalInstitutions} institutions mapped · {data.institutionSummary.cityMappedInstitutions} city-level</p>
         </div>
         <div className="geo-controls">
           <button className={`profile-filter ${mode === 'overall' ? 'active' : ''}`} onClick={() => setMode('overall')}>Academic strength</button>
@@ -363,17 +397,36 @@ export default function GeoPage() {
         </div>
       </section>
 
+      <section className="geo-year-control">
+        <div>
+          <strong>{selectedYear === 'all' ? 'All years' : selectedYear}</strong>
+          <span>Yearly heat map updates country color and institution point size.</span>
+        </div>
+        <button className={selectedYear === 'all' ? 'active' : ''} onClick={() => setSelectedYear('all')}>All</button>
+        <input
+          type="range"
+          min={years[0] || 2000}
+          max={years[years.length - 1] || 2026}
+          value={selectedYear === 'all' ? years[years.length - 1] || 2026 : selectedYear}
+          onChange={(event) => setSelectedYear(Number(event.target.value))}
+        />
+        <select value={selectedYear} onChange={(event) => setSelectedYear(event.target.value === 'all' ? 'all' : Number(event.target.value))}>
+          <option value="all">All years</option>
+          {years.map((year) => <option key={year} value={year}>{year}</option>)}
+        </select>
+      </section>
+
       <div className="mb-4 rounded-lg border border-line bg-surface-panel px-3 py-2 text-xs text-ink-muted">
-        Geo analysis depends on affiliation metadata and institution normalization. Treat it as a directional signal.
+        Institution mapping is based on normalized affiliation strings plus a local country/city gazetteer. Unmapped rows stay visible in the quality counters instead of being guessed.
       </div>
 
       <div className="geo-grid">
         <section className="geo-map-panel">
           <h3>Global IC activity map</h3>
           <p className="hint">Darker regions mean denser mapped IC research output. Hover/click a country to inspect strength, institutions, and yearly trend.</p>
-          <p className="hint">Hotspot rays show schematic sub-region concentration until institution geocoding is connected.</p>
+          <p className="hint">Green to red encodes relative density/strength. Dots are institution-level locations from the cleaned master table.</p>
           <p className="hint">Country filtering is based on affiliation text and institution normalization. Treat it as a directional signal.</p>
-          <GeoMap countries={countries} selectedCode={selectedCountry?.code} mode={mode} worldMap={worldMap} onSelect={setSelected} />
+          <GeoMap countries={countries} selectedCode={selectedCountry?.code} selectedYear={selectedYear} mode={mode} worldMap={worldMap} onSelect={setSelected} />
         </section>
         <aside className="geo-side"><CountryDetail country={selectedCountry} mode={mode} /></aside>
       </div>

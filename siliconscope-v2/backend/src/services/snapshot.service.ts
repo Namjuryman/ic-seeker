@@ -79,7 +79,7 @@ const coreSnapshotBuilders: Record<string, () => unknown> = {
   "profiles:professors:top80": () => profileService.getProfessors({ limit: "80", minPapers: "2" }),
   "profiles:institutions:top80": () => profileService.getInstitutions({ limit: "80", minPapers: "2" }),
   "topics:list": () => topicService.getTopics(),
-  "geo:overall": () => geoService.getGeo({}),
+  "geo:overall:v2": () => geoService.getGeo({}),
   "venue-matrix": () => venueMatrixService.getVenueMatrix(),
   "mentor:institutions": () => mentorService.getInstitutionsWithMentors({}),
 };
@@ -108,7 +108,8 @@ export const snapshotService = {
     authorProfile: (name: string) => `profile:author:${keyPart(name)}`,
     institutionProfile: (name: string) => `profile:institution:${keyPart(name)}`,
     topicDetail: (field: string) => `topic:detail:${keyPart(field)}`,
-    geoField: (field: string) => `geo:field:${keyPart(field)}`,
+    geoOverall: () => "geo:overall:v2",
+    geoField: (field: string) => `geo:field:v2:${keyPart(field)}`,
     mentorInstitution: (name: string) => `mentor:institution:${keyPart(name)}`,
     mentorProfile: (name: string) => `mentor:author:${keyPart(name)}`,
   },
@@ -149,7 +150,7 @@ export const snapshotService = {
 
   getGeo(params: Record<string, string>) {
     if (!params.field && !params.mode && !params.country) {
-      return getOrBuild("geo:overall", coreSnapshotBuilders["geo:overall"]);
+      return getOrBuild(this.keys.geoOverall(), coreSnapshotBuilders["geo:overall:v2"]);
     }
     if (params.field && !params.mode && !params.country) {
       const field = String(params.field);

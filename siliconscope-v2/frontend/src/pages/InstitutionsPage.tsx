@@ -7,6 +7,7 @@ import type { InstitutionProfile, MentorAuthor, MentorDetail, MentorInstitution,
 
 interface InstitutionListItem {
   name: string
+  metadata?: InstitutionProfile['metadata']
   papers: number
   institutionScore: number
   sPlus: number
@@ -150,6 +151,7 @@ export default function InstitutionsPage() {
             <div className="ss-chip-row">
               <span>{detail.paperCount ?? 0} papers</span>
               <span>Score {detail.institutionScore ?? 0}</span>
+              {detail.identity?.acronym && <span>{detail.identity.acronym}</span>}
               <span>{rankLine(detail.ranks)}</span>
               {detail.identity?.countryName && (
                 <span
@@ -163,6 +165,27 @@ export default function InstitutionsPage() {
             </div>
           </div>
         </section>
+
+        {(detail.identity?.city || detail.identity?.rorId || detail.identity?.mergedSubunits?.length) && (
+          <section className="ss-panel">
+            <div className="ss-panel-head compact">
+              <h2>Institution metadata</h2>
+              <span>{detail.identity?.matchStatus || detail.identity?.source || 'normalized'}</span>
+            </div>
+            <div className="ss-chip-row">
+              {detail.identity?.city && <span>{detail.identity.city}</span>}
+              {detail.identity?.countryName && <span>{detail.identity.countryName}</span>}
+              {typeof detail.identity?.latitude === 'number' && typeof detail.identity?.longitude === 'number' && (
+                <span>{Number(detail.identity?.latitude).toFixed(3)}, {Number(detail.identity?.longitude).toFixed(3)}</span>
+              )}
+              {detail.identity?.geoConfidence && <span>{detail.identity.geoConfidence}% geo confidence</span>}
+              {detail.identity?.rorId && <span>{detail.identity.rorId.replace('https://ror.org/', 'ROR ')}</span>}
+            </div>
+            {detail.identity?.mergedSubunits?.length ? (
+              <p className="text-xs text-ink-muted mt-3">Merged subunits: {detail.identity.mergedSubunits.slice(0, 8).join(' / ')}</p>
+            ) : null}
+          </section>
+        )}
 
         <section className="ss-caveat">
           机构归一化仍会受到分校、实验室、企业团队和历史名称影响。当前结果用于探索，不作为最终排名；未来会结合 IEEE affiliation、机构官网和人工 alias 审核。
@@ -314,7 +337,7 @@ export default function InstitutionsPage() {
             <span>
               <i>{initials(institution.name)}</i>
               <strong>{institution.name}</strong>
-              <em>{rankLine(institution)}</em>
+              <em>{[institution.metadata?.acronym, institution.metadata?.city, institution.metadata?.countryCode].filter(Boolean).join(' · ') || rankLine(institution)}</em>
             </span>
             <span>{institution.papers ?? 0}</span>
             <span title={institution.mentorCountSource === 'official-roster' ? 'official roster' : institution.mentorCountSource === 'industry-publication-heuristic' ? 'industry publication heuristic' : 'publication heuristic'}>{mentorCountLabel(institution)}</span>

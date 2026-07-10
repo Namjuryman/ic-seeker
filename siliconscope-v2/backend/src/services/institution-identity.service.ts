@@ -1,6 +1,7 @@
 import { appDb } from "../db/app-db.js";
 import { institutionAliases } from "../db/schema.js";
 import { eq, inArray } from "drizzle-orm";
+import institutionMasterRows from "../data/institution-master-strict.json" with { type: "json" };
 
 type BuiltinInstitution = {
   canonicalName: string;
@@ -8,6 +9,32 @@ type BuiltinInstitution = {
   countryCode?: string;
   countryName?: string;
   city?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  acronym?: string;
+  rorId?: string;
+  paperCount?: number;
+  rawMentionCount?: number;
+  geoConfidence?: number;
+  matchStatus?: string;
+  mergedSubunits?: string[];
+};
+
+type InstitutionMasterRow = {
+  institution_id?: string | null;
+  canonical_name?: string | null;
+  acronym?: string | null;
+  country_code?: string | null;
+  country_name?: string | null;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  ror_id?: string | null;
+  paper_count?: number | null;
+  raw_mention_count?: number | null;
+  geo_confidence?: number | null;
+  match_status?: string | null;
+  merged_subunits?: string | null;
 };
 
 const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
@@ -61,6 +88,38 @@ const BUILTIN_INSTITUTIONS: BuiltinInstitution[] = [
   { canonicalName: "SK hynix", aliases: ["sk hynix", "sk hynix inc", "hynix"], countryCode: "KR", countryName: "South Korea", city: "Icheon" },
 ];
 
+function splitMergedSubunits(value: string | null | undefined) {
+  return String(value || "")
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+const MASTER_INSTITUTIONS: BuiltinInstitution[] = (institutionMasterRows as InstitutionMasterRow[])
+  .map((row) => ({
+    canonicalName: String(row.canonical_name || "").trim(),
+    aliases: [
+      row.canonical_name,
+      row.acronym,
+      ...splitMergedSubunits(row.merged_subunits),
+    ].map((item) => String(item || "").trim()).filter(Boolean),
+    countryCode: row.country_code || undefined,
+    countryName: row.country_name || undefined,
+    city: row.city || undefined,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
+    acronym: row.acronym || undefined,
+    rorId: row.ror_id || row.institution_id || undefined,
+    paperCount: Number(row.paper_count || 0),
+    rawMentionCount: Number(row.raw_mention_count || 0),
+    geoConfidence: Number(row.geo_confidence || 0),
+    matchStatus: row.match_status || undefined,
+    mergedSubunits: splitMergedSubunits(row.merged_subunits),
+  }))
+  .filter((row) => row.canonicalName);
+
+const ALL_INSTITUTIONS = [...MASTER_INSTITUTIONS, ...BUILTIN_INSTITUTIONS];
+
 function normalizeKey(value: string): string {
   return String(value || "")
     .replace(/&#x([0-9a-f]+);?/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
@@ -79,7 +138,7 @@ function normalizeKey(value: string): string {
 }
 
 const builtinAliasIndex = new Map<string, BuiltinInstitution>();
-for (const inst of BUILTIN_INSTITUTIONS) {
+for (const inst of ALL_INSTITUTIONS) {
   builtinAliasIndex.set(normalizeKey(inst.canonicalName), inst);
   for (const alias of inst.aliases) builtinAliasIndex.set(normalizeKey(alias), inst);
 }
@@ -87,7 +146,7 @@ for (const inst of BUILTIN_INSTITUTIONS) {
 type CanonicalInstitution = ReturnType<typeof buildCanonicalInstitution>;
 const canonicalizeCache = new Map<string, CanonicalInstitution>();
 
-const containedBuiltinCandidates = BUILTIN_INSTITUTIONS.flatMap((inst) => [inst.canonicalName, ...inst.aliases].map((alias) => ({
+const containedBuiltinCandidates = ALL_INSTITUTIONS.flatMap((inst) => [inst.canonicalName, ...inst.aliases].map((alias) => ({
   inst,
   aliasKey: normalizeKey(alias),
 }))).filter(({ aliasKey }) => aliasKey.length >= 12 && /\b(university|institute|academy|college|polytechnic|technology)\b/.test(aliasKey));
@@ -138,6 +197,8 @@ function buildCanonicalInstitution(raw: string) {
       countryCode: manual.countryCode || undefined,
       countryName: manual.countryName || undefined,
       city: manual.city || undefined,
+      latitude: undefined,
+      longitude: undefined,
       confidence: Number(manual.confidence || 100) / 100,
       source: "manual" as const,
     };
@@ -152,8 +213,17 @@ function buildCanonicalInstitution(raw: string) {
       countryCode: builtin.countryCode,
       countryName: builtin.countryName,
       city: builtin.city,
-      confidence: 0.95,
-      source: "builtin" as const,
+      latitude: builtin.latitude,
+      longitude: builtin.longitude,
+      acronym: builtin.acronym,
+      rorId: builtin.rorId,
+      paperCount: builtin.paperCount,
+      rawMentionCount: builtin.rawMentionCount,
+      geoConfidence: builtin.geoConfidence,
+      matchStatus: builtin.matchStatus,
+      mergedSubunits: builtin.mergedSubunits,
+      confidence: builtin.geoConfidence ? Math.max(0.8, Math.min(1, builtin.geoConfidence / 100)) : 0.95,
+      source: builtin.rorId ? "institution-master" as const : "builtin" as const,
     };
   }
 
@@ -166,8 +236,17 @@ function buildCanonicalInstitution(raw: string) {
       countryCode: contained.countryCode,
       countryName: contained.countryName,
       city: contained.city,
-      confidence: 0.85,
-      source: "builtin" as const,
+      latitude: contained.latitude,
+      longitude: contained.longitude,
+      acronym: contained.acronym,
+      rorId: contained.rorId,
+      paperCount: contained.paperCount,
+      rawMentionCount: contained.rawMentionCount,
+      geoConfidence: contained.geoConfidence,
+      matchStatus: contained.matchStatus,
+      mergedSubunits: contained.mergedSubunits,
+      confidence: contained.geoConfidence ? Math.max(0.72, Math.min(0.95, contained.geoConfidence / 100)) : 0.85,
+      source: contained.rorId ? "institution-master" as const : "builtin" as const,
     };
   }
 
@@ -211,7 +290,7 @@ export const institutionIdentityService = {
     const canonical = this.canonicalize(name);
     const variants = new Set([name, canonical.canonicalName]);
     const canonicalKey = normalizeKey(canonical.canonicalName || name);
-    for (const inst of BUILTIN_INSTITUTIONS) {
+    for (const inst of ALL_INSTITUTIONS) {
       if (normalizeKey(inst.canonicalName) === canonicalKey) {
         variants.add(inst.canonicalName);
         for (const alias of inst.aliases) variants.add(alias);
@@ -224,5 +303,11 @@ export const institutionIdentityService = {
       // table may not exist in older dev DBs before startup migration
     }
     return [...variants].filter(Boolean);
+  },
+
+  metadataFor(name: string) {
+    const canonical = this.canonicalize(name);
+    const key = normalizeKey(canonical.canonicalName || name);
+    return ALL_INSTITUTIONS.find((inst) => normalizeKey(inst.canonicalName) === key) || null;
   },
 };

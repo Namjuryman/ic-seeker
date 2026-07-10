@@ -295,6 +295,7 @@ export const profileService = {
     return [...byInstitution.values()]
       .map((item) => ({
         ...item,
+        metadata: institutionIdentityService.metadataFor(item.name),
         aliases: [...item.aliases].slice(0, 8),
         avgScore: Math.round((item.scoreSum / Math.max(1, item.papers)) * 10) / 10,
         institutionScore: scoreAuthor(item),
@@ -323,9 +324,11 @@ export const profileService = {
     }
 
     const summary = summarizePaperRows(rows);
+    const metadata = institutionIdentityService.metadataFor(requestedIdentity.canonicalName || name);
     return {
       name: requestedIdentity.canonicalName || name,
       requestedName: name,
+      metadata,
       paperCount: summary.papers,
       institutionScore: scoreAuthor({
         scoreSum: summary.scoreSum,
@@ -341,6 +344,15 @@ export const profileService = {
         countryCode: requestedIdentity.countryCode,
         countryName: requestedIdentity.countryName,
         city: requestedIdentity.city,
+        latitude: requestedIdentity.latitude,
+        longitude: requestedIdentity.longitude,
+        acronym: requestedIdentity.acronym,
+        rorId: requestedIdentity.rorId,
+        paperCount: requestedIdentity.paperCount,
+        rawMentionCount: requestedIdentity.rawMentionCount,
+        geoConfidence: requestedIdentity.geoConfidence,
+        matchStatus: requestedIdentity.matchStatus,
+        mergedSubunits: requestedIdentity.mergedSubunits,
         caveat: "Institution identity uses alias normalization and may still need ROR/OpenAlex/manual verification.",
       },
       ...summary,
