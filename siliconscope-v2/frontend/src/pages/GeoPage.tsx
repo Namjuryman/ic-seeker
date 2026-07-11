@@ -1,28 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import { searchPath } from '../utils/routes'
 import type { GeoResult, GeoCountry, PaperRow } from '../types'
 import {
   countryFeatureCode,
   geoCountryAnchor,
   geoDenseRegionCodes,
-  geoHotspotProfiles,
   geoLabelOffsets,
   prepareWorldMap,
   projectWorldPoint,
   type PreparedWorldMap,
 } from '../utils/geoUtils'
-import { simpleheat, type HeatPoint } from '../vendor/simpleheat'
 
 type GeoMode = 'overall' | 'institutions' | 'topic'
+type GeoHeatPoint = { x: number; y: number; value: number; countryCode: string }
 
 const regionalZooms = [
-  { key: 'europe', title: 'Europe zoom', subtitle: 'UK, Benelux, DACH, France, Italy and Nordic/Eastern Europe', viewBox: '48.8 9.2 20.8 16.2', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
-  { key: 'east-asia', title: 'East Asia zoom', subtitle: 'Mainland China, Hong Kong/Macau, Taiwan, Korea and Japan', viewBox: '83.8 16.4 18.9 15.8', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP'] },
-  { key: 'southeast-asia', title: 'Southeast Asia zoom', subtitle: 'Singapore, Malaysia, Thailand, Vietnam, Indonesia and the Philippines', viewBox: '82.8 28.4 12.2 15.2', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
-  { key: 'eastern-europe', title: 'Eastern Europe zoom', subtitle: 'Russia, Poland, Czechia, Hungary, Romania, Ukraine and neighbors', viewBox: '58.2 10.2 17.8 12.5', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
+  { key: 'europe', title: '欧洲放大', subtitle: '英国、荷比卢、德法瑞意、北欧与东欧重点机构', viewBox: '48.8 9.2 20.8 16.2', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
+  { key: 'east-asia', title: '东亚放大', subtitle: '中国大陆、港澳台、韩国与日本的城市级产出', viewBox: '83.8 16.4 18.9 15.8', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP'] },
+  { key: 'southeast-asia', title: '东南亚放大', subtitle: '新加坡、马来西亚、泰国、越南、印尼和菲律宾', viewBox: '82.8 28.4 12.2 15.2', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
+  { key: 'eastern-europe', title: '东欧放大', subtitle: '俄罗斯、波兰、捷克、匈牙利、罗马尼亚、乌克兰及邻近地区', viewBox: '58.2 10.2 17.8 12.5', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
 ]
 
 const regionalZoomLabelOffsets: Record<string, Record<string, { dx: number; dy: number }>> = {
@@ -61,42 +62,31 @@ function yearDensityMetric(country: GeoCountry, mode: GeoMode, selectedYear: num
   return mode === 'institutions' ? yearMetric(country, mode, selectedYear) : Number(row.papers || row.score || 0)
 }
 
-function institutionMetric(institution: GeoCountry['topInstitutions'][number], selectedYear: number | 'all') {
-  if (selectedYear === 'all') return Number(institution.count || 0)
-  return Number(institution.byYear?.find((row) => Number(row.year) === selectedYear)?.papers || 0)
-}
-
 function buildGeoHeatPoints(countries: GeoCountry[], mode: GeoMode, selectedYear: number | 'all') {
-  const bins = new Map<string, HeatPoint>()
-  const addHeatPoint = (x: number, y: number, weight: number, precision = 2.5) => {
-    const key = `${Math.round(x * precision) / precision}:${Math.round(y * precision) / precision}`
+  const bins = new Map<string, GeoHeatPoint>()
+  const addHeatPoint = (countryCode: string, x: number, y: number, weight: number, precision = 4) => {
+    const key = `${countryCode}:${Math.round(x * precision) / precision}:${Math.round(y * precision) / precision}`
     const current = bins.get(key)
-    if (current) current[2] += weight
-    else bins.set(key, [x, y, weight])
+    if (current) current.value += weight
+    else bins.set(key, { x, y, value: weight, countryCode })
   }
   for (const country of countries) {
-    const countryValue = yearDensityMetric(country, mode, selectedYear)
-    const countryMass = Math.pow(Math.max(0, countryValue), mode === 'institutions' ? .72 : .82) * .58
-    const countryProfile = geoHotspotProfiles[country.code] || [{ lon: country.x / 100 * 360 - 180, lat: 83 - (country.y / 100) * 141, weight: 1 }]
-    for (const spot of countryProfile) {
-      const projected = projectWorldPoint(spot.lon, spot.lat)
-      addHeatPoint(projected.x, projected.y, countryMass * spot.weight, 1.6)
-    }
-    for (const institution of (country.topInstitutions || [])
-      .filter((item) => Number.isFinite(item.lat) && Number.isFinite(item.lon))
-      .slice(0, 80)) {
-      const value = institutionMetric(institution, selectedYear)
+    for (const city of country.cityHeatPoints || []) {
+      const year = selectedYear === 'all' ? null : city.byYear?.find((row) => Number(row.year) === selectedYear)
+      const value = mode === 'institutions'
+        ? Number(selectedYear === 'all' ? city.institutions : year?.institutions || 0)
+        : Number(selectedYear === 'all' ? city.papers : year?.papers || 0)
       if (value <= 0) continue
-      const projected = projectWorldPoint(Number(institution.lon), Number(institution.lat))
-      const weight = mode === 'institutions' ? 1 : Math.pow(value, .9)
-      addHeatPoint(projected.x, projected.y, weight)
+      const projected = projectWorldPoint(Number(city.lon), Number(city.lat))
+      const weight = mode === 'institutions' ? Math.pow(value, .78) : Math.pow(value, .72)
+      addHeatPoint(country.code, projected.x, projected.y, weight)
     }
   }
   return [...bins.values()]
 }
 
-function heatMaxFor(points: HeatPoint[], percentile = .88) {
-  const weights = points.map((point) => point[2]).sort((a, b) => a - b)
+function heatMaxFor(points: GeoHeatPoint[], percentile = .96) {
+  const weights = points.map((point) => point.value).sort((a, b) => a - b)
   return Math.max(1, weights[Math.floor(weights.length * percentile)] || weights[weights.length - 1] || 1)
 }
 
@@ -105,18 +95,34 @@ function parseViewBox(viewBox: string) {
   return { x, y, width, height }
 }
 
-function pointsInView(points: HeatPoint[], viewBox: string, pad = 1.8) {
+function pointsInView(points: GeoHeatPoint[], viewBox: string, pad = 1.8) {
   const box = parseViewBox(viewBox)
-  return points.filter(([x, y]) => x >= box.x - pad && x <= box.x + box.width + pad && y >= box.y - pad && y <= box.y + box.height + pad)
+  return points.filter(({ x, y }) => x >= box.x - pad && x <= box.x + box.width + pad && y >= box.y - pad && y <= box.y + box.height + pad)
 }
 
-function MiniBars({ rows, label = 'papers', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
+function heatPointsByCountry(points: GeoHeatPoint[]) {
+  const grouped = new Map<string, GeoHeatPoint[]>()
+  for (const point of points) {
+    const rows = grouped.get(point.countryCode) || []
+    rows.push(point)
+    grouped.set(point.countryCode, rows)
+  }
+  return grouped
+}
+
+function fallbackClipRadius(countryCode: string) {
+  if (countryCode === 'MO') return .14
+  if (countryCode === 'HK' || countryCode === 'SG') return .22
+  return .48
+}
+
+function MiniBars({ rows, label = '论文', onRowClick }: { rows: Array<{ key?: string; year?: number; count?: number; papers?: number; score?: number }>; label?: string; onRowClick?: (key: string) => void }) {
   const normalized = rows.map((row) => ({
     key: String(row.key ?? row.year ?? '-'),
     count: Number(row.count ?? row.papers ?? row.score ?? 0),
   })).slice(-10)
   const max = Math.max(1, ...normalized.map((row) => row.count))
-  if (!normalized.length) return <p className="text-xs text-ink-muted">No data yet.</p>
+  if (!normalized.length) return <p className="text-xs text-ink-muted">暂无数据。</p>
   return (
     <div className="mini-bars">
       {normalized.map((row) => (
@@ -143,7 +149,7 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
     country,
   }))
   const other = countries.slice(7).reduce((sum, country) => sum + metric(country, mode), 0)
-  if (other > 0) rows.push({ code: 'Other', name: 'Other', count: Math.round(other), country: countries[0] })
+  if (other > 0) rows.push({ code: 'Other', name: '其他', count: Math.round(other), country: countries[0] })
   const total = Math.max(1, rows.reduce((sum, row) => sum + row.count, 0))
   let cursor = 0
   const colors = ['#3654c8', '#1f9d73', '#6f7fb8', '#d18b2c', '#40a0c4', '#825ec9', '#cb5b7b', '#aab6c8']
@@ -174,129 +180,132 @@ function SharePie({ countries, mode, selected, onSelect }: { countries: GeoCount
   )
 }
 
-function GeoHeatCanvas({ points, max }: { points: HeatPoint[]; max: number }) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    let frame = 0
-
-    const draw = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const rect = canvas.getBoundingClientRect()
-        const width = Math.max(1, Math.round(rect.width * window.devicePixelRatio))
-        const height = Math.max(1, Math.round(rect.height * window.devicePixelRatio))
-        if (canvas.width !== width || canvas.height !== height) {
-          canvas.width = width
-          canvas.height = height
-        }
-        const scaled = points.map(([x, y, value]) => [
-          x / 110 * width,
-          y / 66 * height,
-          Math.min(1, Math.pow(Math.max(0, value / max), .62)),
-        ] as HeatPoint)
-        simpleheat(canvas)
-          .data(scaled)
-          .max(1)
-          .radius(Math.max(10, Math.min(19, width / 82)), Math.max(11, Math.min(24, width / 70)))
-          .gradient({
-            .14: 'rgba(125, 211, 252, .12)',
-            .32: '#38bdf8',
-            .5: '#6366f1',
-            .68: '#e879f9',
-            .82: '#fb7185',
-            1: '#f97316',
-          })
-          .draw(.04)
-      })
-    }
-
-    draw()
-    const observer = new ResizeObserver(draw)
-    observer.observe(canvas)
-    return () => {
-      cancelAnimationFrame(frame)
-      observer.disconnect()
-    }
-  }, [points, max])
-
-  return <canvas ref={canvasRef} className="geo-heat-canvas" aria-hidden="true" />
-}
-
 function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
-  const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
   const heatPoints = useMemo(() => buildGeoHeatPoints(countries, mode, selectedYear), [countries, mode, selectedYear])
   const heatMax = useMemo(() => heatMaxFor(heatPoints), [heatPoints])
+  const heatByCountry = useMemo(() => heatPointsByCountry(heatPoints), [heatPoints])
+  const featureByCode = new Map((worldMap?.features || []).map((feature) => [feature.code, feature]))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const renderedFeatureCodes = new Set<string>()
   const labelled = new Set(countries.filter((country) => !geoDenseRegionCodes.has(country.code)).slice(0, 6).map((country) => country.code))
   if (selectedCode) labelled.add(selectedCode)
   const regionalGroups = [
-    { title: 'East Asia', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP', 'SG'] },
-    { title: 'Europe', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
-    { title: 'Southeast Asia', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
-    { title: 'Eastern Europe', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
+    { title: '东亚', codes: ['CN', 'HK', 'MO', 'TW', 'KR', 'JP', 'SG'] },
+    { title: '欧洲', codes: ['UK', 'NL', 'BE', 'DE', 'FR', 'CH', 'IT', 'DK', 'SE', 'FI', 'ES', 'PT', 'PL', 'CZ', 'HU', 'RU'] },
+    { title: '东南亚', codes: ['SG', 'MY', 'TH', 'VN', 'ID', 'PH'] },
+    { title: '东欧', codes: ['RU', 'PL', 'CZ', 'HU', 'RO', 'UA', 'BG', 'SK', 'SI', 'HR', 'EE', 'LV', 'LT'] },
   ].map((group) => ({ ...group, countries: group.codes.map((code) => countries.find((country) => country.code === code)).filter(Boolean) as GeoCountry[] }))
     .filter((group) => group.countries.length)
 
   return (
-    <div className="geo-map-canvas" aria-label="Regional intelligence map">
-      <svg viewBox="0 0 110 66" role="img" className="geo-map-bg">
-        <defs>
-          <linearGradient id="geoOcean" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#f9fbff" />
-            <stop offset="100%" stopColor="#eef4fb" />
-          </linearGradient>
-        </defs>
-        <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
-        <g className="geo-world-layer">
-          {(worldMap?.features || []).map((feature) => {
-            const country = countryByFeature.get(feature.code)
-            const selected = country?.code === selectedCode
-            const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
-            const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
-            if (country) renderedFeatureCodes.add(feature.code)
-            return (
-              <path
-                key={feature.code + feature.name}
-                className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
-                style={{
-                  '--geo-density': density.toFixed(3),
-                } as React.CSSProperties}
-                d={feature.path}
-                onClick={() => country && onSelect(country)}
-              >
-                <title>{country ? `${country.name}: ${Math.round(densityValue)} mapped outputs` : feature.name}</title>
-              </path>
-            )
-          })}
-        </g>
-        <foreignObject x="0" y="0" width="110" height="66" className="geo-heat-layer">
-          <GeoHeatCanvas points={heatPoints} max={heatMax} />
-        </foreignObject>
-        <g className="geo-country-layer">
-          {countries.map((country) => {
-            const featureCode = countryFeatureCode(country.code)
-            const isPathBacked = renderedFeatureCodes.has(featureCode)
-            const projected = geoCountryAnchor(country)
-            const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 }
-            const shouldLabel = labelled.has(country.code) || (!isPathBacked && country.code === selectedCode)
-            if (!shouldLabel) return null
-            return (
-              <g key={country.code} className={`geo-label ${country.code === selectedCode ? 'active' : ''} ${isPathBacked ? '' : 'marker-label'}`} onClick={() => onSelect(country)}>
-                {isPathBacked ? null : <circle className="geo-marker-dot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r=".75" />}
-                <text x={(projected.x + offset.dx).toFixed(2)} y={(projected.y + offset.dy).toFixed(2)} textAnchor="middle">{country.code}</text>
-              </g>
-            )
-          })}
-        </g>
-      </svg>
-      <div className="geo-inset-tray" aria-label="Dense region selectors">
+    <>
+      <div className="geo-map-canvas" aria-label="全球 IC 研究活动地图">
+        <div className="geo-map-stage">
+          <svg viewBox="0 0 110 66" role="img" className="geo-map-bg">
+          <defs>
+            <linearGradient id="geoOcean" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#f9fbff" />
+              <stop offset="100%" stopColor="#eef4fb" />
+            </linearGradient>
+            <radialGradient id="geoWorldCityHeat">
+              <stop offset="0%" stopColor="#dc2626" stopOpacity=".96" />
+              <stop offset="34%" stopColor="#f97316" stopOpacity=".76" />
+              <stop offset="62%" stopColor="#facc15" stopOpacity=".38" />
+              <stop offset="82%" stopColor="#22c55e" stopOpacity=".2" />
+              <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+            </radialGradient>
+            {countries.map((country) => {
+              const feature = featureByCode.get(countryFeatureCode(country.code))
+              const anchor = geoCountryAnchor(country)
+              return (
+                <clipPath key={`geo-world-clip-${country.code}`} id={`geoWorldClip-${country.code}`} clipPathUnits="userSpaceOnUse">
+                  {feature
+                    ? <path d={feature.path} />
+                    : <circle cx={anchor.x.toFixed(2)} cy={anchor.y.toFixed(2)} r={fallbackClipRadius(country.code)} />}
+                </clipPath>
+              )
+            })}
+          </defs>
+          <rect x=".75" y=".75" width="108.5" height="64.5" rx="5.5" fill="url(#geoOcean)" />
+          <g className="geo-world-layer">
+            {(worldMap?.features || []).map((feature) => {
+              const country = countryByFeature.get(feature.code)
+              const selected = country?.code === selectedCode
+              const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
+              if (country) renderedFeatureCodes.add(feature.code)
+              return (
+                <path
+                  key={feature.code + feature.name}
+                  className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
+                  style={{
+                    '--geo-density': country ? '.12' : '0',
+                  } as React.CSSProperties}
+                  d={feature.path}
+                  onClick={() => country && onSelect(country)}
+                >
+                  <title>{country ? `${country.name}: ${Math.round(densityValue)} 已定位产出` : feature.name}</title>
+                </path>
+              )
+            })}
+          </g>
+          <g className="geo-region-heat-layer" aria-hidden="true">
+            {countries.map((country) => {
+              const points = heatByCountry.get(country.code)
+              if (!points?.length) return null
+              return (
+                <g key={`geo-world-heat-${country.code}`} clipPath={`url(#geoWorldClip-${country.code})`}>
+                  {points.map(({ x, y, value }, index) => {
+                    const intensity = Math.min(1, Math.pow(Math.max(0, value / heatMax), .88))
+                    return (
+                      <circle
+                        key={`geo-world-spot-${country.code}-${x.toFixed(2)}-${y.toFixed(2)}-${index}`}
+                        className="geo-region-heat-spot"
+                        cx={x.toFixed(2)}
+                        cy={y.toFixed(2)}
+                        r={(.12 + intensity * .42).toFixed(2)}
+                        fill="url(#geoWorldCityHeat)"
+                        opacity={(.16 + intensity * .7).toFixed(3)}
+                      />
+                    )
+                  })}
+                </g>
+              )
+            })}
+          </g>
+          <g className="geo-region-border-layer" aria-hidden="true">
+            {(worldMap?.features || []).map((feature) => (
+              <path key={`geo-world-border-${feature.code}-${feature.name}`} d={feature.path} />
+            ))}
+          </g>
+          <g className="geo-country-layer">
+            {countries.map((country) => {
+              const featureCode = countryFeatureCode(country.code)
+              const isPathBacked = renderedFeatureCodes.has(featureCode)
+              const projected = geoCountryAnchor(country)
+              const offset = geoLabelOffsets[country.code] || { dx: 0, dy: -1.8 }
+              const shouldLabel = labelled.has(country.code) || (!isPathBacked && country.code === selectedCode)
+              if (!shouldLabel) return null
+              return (
+                <g key={country.code} className={`geo-label ${country.code === selectedCode ? 'active' : ''} ${isPathBacked ? '' : 'marker-label'}`} onClick={() => onSelect(country)}>
+                  {isPathBacked ? null : <circle className="geo-marker-dot" cx={projected.x.toFixed(2)} cy={projected.y.toFixed(2)} r=".75" />}
+                  <text x={(projected.x + offset.dx).toFixed(2)} y={(projected.y + offset.dy).toFixed(2)} textAnchor="middle">{country.code}</text>
+                </g>
+              )
+            })}
+          </g>
+          </svg>
+          <div className="geo-heat-legend" aria-label="IC 研究产出密度图例">
+            <span>{mode === 'institutions' ? '城市机构密度' : '城市研究产出密度'}</span>
+            <i />
+            <em>低</em>
+            <strong>高</strong>
+          </div>
+        </div>
+      </div>
+      <div className="geo-map-quickbar" aria-label="重点区域快捷选择">
         {regionalGroups.map((group) => (
           <section key={group.title} className="geo-inset-card">
-            <div className="geo-inset-head"><strong>{group.title}</strong><span>{group.countries.length} regions</span></div>
+            <div className="geo-inset-head"><strong>{group.title}</strong><span>{group.countries.length} 个地区</span></div>
             <div className="geo-inset-grid">
               {group.countries.map((country) => (
                 <button key={country.code} className={`geo-region-button ${country.code === selectedCode ? 'active' : ''}`} onClick={() => onSelect(country)}>
@@ -307,28 +316,23 @@ function GeoMap({ countries, selectedCode, selectedYear, mode, worldMap, onSelec
           </section>
         ))}
       </div>
-      <div className="geo-heat-legend" aria-label="IC research output density legend">
-        <span>{mode === 'institutions' ? 'Institution heat' : 'Output heat'}</span>
-        <i />
-        <em>low</em>
-        <strong>high</strong>
-      </div>
-    </div>
+    </>
   )
 }
 
 function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMap, onSelect }: { countries: GeoCountry[]; selectedCode?: string; selectedYear: number | 'all'; mode: GeoMode; worldMap: PreparedWorldMap | null; onSelect: (country: GeoCountry) => void }) {
-  const densityMax = Math.max(1, ...countries.map((country) => yearDensityMetric(country, mode, selectedYear)))
   const heatPoints = useMemo(() => buildGeoHeatPoints(countries, mode, selectedYear), [countries, mode, selectedYear])
+  const featureByCode = new Map((worldMap?.features || []).map((feature) => [feature.code, feature]))
   const countryByFeature = new Map(countries.map((country) => [countryFeatureCode(country.code), country]))
   const countryByCode = new Map(countries.map((country) => [country.code, country]))
 
   return (
-    <section className="geo-region-zooms" aria-label="Dense region zoom maps">
+    <section className="geo-region-zooms" aria-label="重点区域放大地图">
       {regionalZooms.map((zoom) => {
         const zoomCountries = zoom.codes.map((code) => countryByCode.get(code)).filter(Boolean) as GeoCountry[]
         const visibleHeatPoints = pointsInView(heatPoints, zoom.viewBox)
-        const heatMax = heatMaxFor(visibleHeatPoints, .88)
+        const visibleHeatByCountry = heatPointsByCountry(visibleHeatPoints)
+        const heatMax = heatMaxFor(visibleHeatPoints, .96)
         const labelOffsets = regionalZoomLabelOffsets[zoom.key] || {}
         return (
           <article key={zoom.key} className="geo-region-zoom">
@@ -337,29 +341,39 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
                 <strong>{zoom.title}</strong>
                 <span>{zoom.subtitle}</span>
               </div>
-              <em>{zoomCountries.length} regions</em>
+              <em>{zoomCountries.length} 个地区</em>
             </div>
             <svg viewBox={zoom.viewBox} role="img" className="geo-region-zoom-map">
               <defs>
                 <radialGradient id={`geoRegionHeat-${zoom.key}`}>
-                  <stop offset="0%" stopColor="#f97316" stopOpacity=".95" />
-                  <stop offset="34%" stopColor="#fb7185" stopOpacity=".72" />
-                  <stop offset="62%" stopColor="#38bdf8" stopOpacity=".32" />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#dc2626" stopOpacity=".96" />
+                  <stop offset="34%" stopColor="#f97316" stopOpacity=".76" />
+                  <stop offset="62%" stopColor="#facc15" stopOpacity=".38" />
+                  <stop offset="82%" stopColor="#22c55e" stopOpacity=".2" />
+                  <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
                 </radialGradient>
+                {countries.map((country) => {
+                  const feature = featureByCode.get(countryFeatureCode(country.code))
+                  const anchor = geoCountryAnchor(country)
+                  return (
+                    <clipPath key={`${zoom.key}-clip-${country.code}`} id={`geoRegionClip-${zoom.key}-${country.code}`} clipPathUnits="userSpaceOnUse">
+                      {feature
+                        ? <path d={feature.path} />
+                        : <circle cx={anchor.x.toFixed(2)} cy={anchor.y.toFixed(2)} r={fallbackClipRadius(country.code)} />}
+                    </clipPath>
+                  )
+                })}
               </defs>
               <rect x="0" y="0" width="110" height="66" fill="#f8fbff" />
               <g className="geo-world-layer">
                 {(worldMap?.features || []).map((feature) => {
                   const country = countryByFeature.get(feature.code)
                   const selected = country?.code === selectedCode
-                  const densityValue = country ? yearDensityMetric(country, mode, selectedYear) : 0
-                  const density = country ? Math.max(.08, Math.min(1, Math.log1p(densityValue) / Math.log1p(densityMax))) : 0
                   return (
                     <path
                       key={`${zoom.key}-${feature.code}-${feature.name}`}
                       className={`geo-world-country ${country ? 'has-data' : ''} ${selected ? 'active' : ''}`}
-                      style={{ '--geo-density': density.toFixed(3) } as React.CSSProperties}
+                      style={{ '--geo-density': country ? '.12' : '0' } as React.CSSProperties}
                       d={feature.path}
                       onClick={() => country && onSelect(country)}
                     />
@@ -367,18 +381,26 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
                 })}
               </g>
               <g className="geo-region-heat-layer" aria-hidden="true">
-                {visibleHeatPoints.map(([x, y, value], index) => {
-                  const intensity = Math.min(1, Math.pow(Math.max(0, value / heatMax), .62))
+                {countries.map((country) => {
+                  const points = visibleHeatByCountry.get(country.code)
+                  if (!points?.length) return null
                   return (
-                    <circle
-                      key={`${zoom.key}-heat-${x.toFixed(2)}-${y.toFixed(2)}-${index}`}
-                      className="geo-region-heat-spot"
-                      cx={x.toFixed(2)}
-                      cy={y.toFixed(2)}
-                      r={(.34 + intensity * 1.28).toFixed(2)}
-                      fill={`url(#geoRegionHeat-${zoom.key})`}
-                      opacity={(.2 + intensity * .58).toFixed(3)}
-                    />
+                    <g key={`${zoom.key}-heat-${country.code}`} clipPath={`url(#geoRegionClip-${zoom.key}-${country.code})`}>
+                      {points.map(({ x, y, value }, index) => {
+                        const intensity = Math.min(1, Math.pow(Math.max(0, value / heatMax), .88))
+                        return (
+                          <circle
+                            key={`${zoom.key}-spot-${country.code}-${x.toFixed(2)}-${y.toFixed(2)}-${index}`}
+                            className="geo-region-heat-spot"
+                            cx={x.toFixed(2)}
+                            cy={y.toFixed(2)}
+                            r={(.12 + intensity * .38).toFixed(2)}
+                            fill={`url(#geoRegionHeat-${zoom.key})`}
+                            opacity={(.2 + intensity * .58).toFixed(3)}
+                          />
+                        )
+                      })}
+                    </g>
                   )
                 })}
               </g>
@@ -408,7 +430,7 @@ function RegionalZoomMaps({ countries, selectedCode, selectedYear, mode, worldMa
 
 function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: GeoMode }) {
   const navigate = useNavigate()
-  if (!country) return <div className="empty">Hover or click a country to inspect strength, institutions, and yearly trend.</div>
+  if (!country) return <div className="empty">点击国家或地区，查看论文产出、机构线索和年度变化。</div>
   return (
     <section className="geo-country-detail">
       <div className="geo-detail-head">
@@ -430,7 +452,7 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
       </div>
       <div className="profile-grid geo-metrics">
         <div className="metric">
-          <span>Papers</span>
+          <span>论文</span>
           <strong
             className="cursor-pointer hover:text-brand-600"
             onClick={() => navigate(searchPath({ country: country.code }))}
@@ -438,11 +460,11 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
             {country.papers ?? 0}
           </strong>
         </div>
-        <div className="metric"><span>Score</span><strong>{country.score ?? 0}</strong></div>
-        <div className="metric"><span>Institutions</span><strong>{country.institutionCount ?? 0}</strong></div>
-        <div className="metric"><span>City mapped</span><strong>{country.cityMappedInstitutions ?? 0}</strong></div>
+        <div className="metric"><span>产出信号</span><strong>{country.score ?? 0}</strong></div>
+        <div className="metric"><span>机构</span><strong>{country.institutionCount ?? 0}</strong></div>
+        <div className="metric"><span>城市坐标</span><strong>{country.cityMappedInstitutions ?? 0}</strong></div>
         <div className="metric">
-          <span>Top field</span>
+          <span>主要方向</span>
           <strong
             className="cursor-pointer hover:text-brand-600"
             onClick={() => country.topField && navigate(searchPath({ field: country.topField }))}
@@ -452,10 +474,10 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
         </div>
         <div className="metric"><span>S+ / S / A</span><strong>{country.ranks?.sPlus ?? 0} / {country.ranks?.s ?? 0} / {country.ranks?.a ?? 0}</strong></div>
       </div>
-      <MiniBars rows={country.byYear || []} label={mode === 'institutions' ? 'papers' : 'strength'} />
+      <MiniBars rows={country.byYear || []} label={mode === 'institutions' ? '论文' : '产出信号'} />
       <section className="geo-detail-columns">
         <div>
-          <h4>Top institutions</h4>
+          <h4>代表机构</h4>
           <div className="geo-institution-list">
             {country.topInstitutions?.length ? country.topInstitutions.slice(0, 30).map((row, index) => (
               <div className="geo-institution-row" key={row.name}>
@@ -467,15 +489,15 @@ function CountryDetail({ country, mode }: { country: GeoCountry | null; mode: Ge
                   >
                     {row.name}
                   </strong>
-                  <small>{row.city || 'country only'} · {row.confidence ?? 0}% mapped</small>
+                  <small>{row.city || '仅国家级'} · {row.confidence ?? 0}% 坐标可信</small>
                 </div>
-                <em>{row.count ?? 0} papers</em>
+                <em>{row.count ?? 0} 篇</em>
               </div>
-            )) : <p className="text-xs text-ink-muted">No matched institutions yet.</p>}
+            )) : <p className="text-xs text-ink-muted">暂无已匹配机构。</p>}
           </div>
         </div>
         <div>
-          <h4>Domains</h4>
+          <h4>方向分布</h4>
           <MiniBars
             rows={country.byField || []}
             onRowClick={(field) => navigate(searchPath({ field, country: country.code }))}
@@ -492,12 +514,12 @@ function PaperList({ papers }: { papers: PaperRow[] }) {
       {papers.slice(0, 6).map((p) => (
         <div key={p.id} className="border-b border-line-subtle last:border-0 pb-2 last:pb-0">
           <div className="text-xs text-ink-text font-medium">
-            <PaperLink id={p.id} title={p.title ?? 'Untitled'} />
+            <PaperLink id={p.id} title={p.title ?? '未命名论文'} />
           </div>
           <div className="flex gap-1 mt-1 text-xs flex-wrap">
             <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.venue ?? '-'}</span>
             <span className="px-1 py-0.5 rounded bg-surface-soft text-ink-secondary">{p.year ?? '-'}</span>
-            <span className="px-1 py-0.5 rounded bg-brand-50 text-brand-700">{p.rank ?? '-'}</span>
+            <span className="px-1 py-0.5 rounded bg-brand-50 text-brand-700">{paperRankLabel(p.rank)}</span>
           </div>
         </div>
       ))}
@@ -529,7 +551,7 @@ export default function GeoPage() {
       setData(next)
       setSelected((prev) => next.countries.find((country) => country.code === prev?.code) || next.countries[0] || null)
     }).catch((err) => {
-      setError(err instanceof Error ? err.message : '加载地理数据失败')
+      setError(friendlyError(err, '加载地理数据失败'))
     })
   }, [mode, field])
 
@@ -554,17 +576,22 @@ export default function GeoPage() {
     <div className="geo-page">
       <section className="geo-hero">
         <div>
-          <p className="profile-kicker">Regional intelligence</p>
-          <h2>{mode === 'topic' && data.field ? data.field : 'Academic strength'}</h2>
-          <p>{mapped} mapped papers / {data.skippedWithoutCountry} unmapped papers · {countries.length} countries/regions</p>
-          <p>{data.institutionSummary.mappedInstitutions} / {data.institutionSummary.distinctCanonicalInstitutions} institutions mapped · {data.institutionSummary.cityMappedInstitutions} city-level</p>
+          <p className="profile-kicker">地域情报</p>
+          <h2>{mode === 'topic' && data.field ? data.field : 'IC 产出密度'}</h2>
+          <p>{mapped} 篇已定位论文 / {data.skippedWithoutCountry} 篇未定位 · {countries.length} 个国家或地区</p>
+          <p>{data.institutionSummary.mappedInstitutions} / {data.institutionSummary.distinctCanonicalInstitutions} 个机构已定位 · {data.institutionSummary.cityMappedInstitutions} 个具备城市坐标</p>
+          <div className="ss-chip-row">
+            <span>城市坐标优先</span>
+            <span>边界内裁剪</span>
+            <span>非学校排名</span>
+          </div>
         </div>
         <div className="geo-controls">
-          <button className={`profile-filter ${mode === 'overall' ? 'active' : ''}`} onClick={() => setMode('overall')}>Academic strength</button>
-          <button className={`profile-filter ${mode === 'institutions' ? 'active' : ''}`} onClick={() => setMode('institutions')}>Institution view</button>
-          <button className={`profile-filter ${mode === 'topic' ? 'active' : ''}`} onClick={() => setMode('topic')}>Single-topic strength</button>
+          <button className={`profile-filter ${mode === 'overall' ? 'active' : ''}`} onClick={() => setMode('overall')}>综合产出</button>
+          <button className={`profile-filter ${mode === 'institutions' ? 'active' : ''}`} onClick={() => setMode('institutions')}>机构密度</button>
+          <button className={`profile-filter ${mode === 'topic' ? 'active' : ''}`} onClick={() => setMode('topic')}>单方向产出</button>
           <select value={field} onChange={(e) => { setField(e.target.value); setMode('topic') }}>
-            <option value="">Topic</option>
+            <option value="">选择方向</option>
             {data.fields.map((item) => <option key={item} value={item}>{item === 'Power Management' ? 'PMIC / Power Management' : item}</option>)}
           </select>
         </div>
@@ -572,10 +599,10 @@ export default function GeoPage() {
 
       <section className="geo-year-control">
         <div>
-          <strong>{selectedYear === 'all' ? 'All years' : selectedYear}</strong>
-          <span>Yearly heat map updates country color and institution point size.</span>
+          <strong>{selectedYear === 'all' ? '全部年份' : selectedYear}</strong>
+          <span>逐年查看已核验城市密度和机构论文信号。</span>
         </div>
-        <button className={selectedYear === 'all' ? 'active' : ''} onClick={() => setSelectedYear('all')}>All</button>
+        <button className={selectedYear === 'all' ? 'active' : ''} onClick={() => setSelectedYear('all')}>全部</button>
         <input
           type="range"
           min={years[0] || 2000}
@@ -584,21 +611,21 @@ export default function GeoPage() {
           onChange={(event) => setSelectedYear(Number(event.target.value))}
         />
         <select value={selectedYear} onChange={(event) => setSelectedYear(event.target.value === 'all' ? 'all' : Number(event.target.value))}>
-          <option value="all">All years</option>
+          <option value="all">全部年份</option>
           {years.map((year) => <option key={year} value={year}>{year}</option>)}
         </select>
       </section>
 
       <div className="mb-4 rounded-lg border border-line bg-surface-panel px-3 py-2 text-xs text-ink-muted">
-        Institution mapping is based on normalized affiliation strings plus a local country/city gazetteer. Unmapped rows stay visible in the quality counters instead of being guessed.
+        热力图只使用已归一化且有可信坐标的机构；未经核验的 affiliation 片段不会进入城市热力，避免把学生、历史单位或模糊地址直接当成现任机构画像。
       </div>
 
       <div className="geo-grid">
         <section className="geo-map-panel">
-          <h3>Global IC activity map</h3>
-          <p className="hint">Darker regions mean denser mapped IC research output. Hover/click a country to inspect strength, institutions, and yearly trend.</p>
-          <p className="hint">Blue to orange encodes relative density/strength from country strength and institution-level locations.</p>
-          <p className="hint">Country filtering is based on affiliation text and institution normalization. Treat it as a directional signal.</p>
+          <h3>全球 IC 活动地图</h3>
+          <p className="hint">绿色到红色表示城市级 IC 产出或机构密度，底图只作为国家边界参照。</p>
+          <p className="hint">热力已按国家/地区边界裁剪，并在当前视野内归一化，便于观察东亚、欧洲等高密度区域。</p>
+          <p className="hint">点击国家或地区可查看代表机构、方向分布和年度趋势。</p>
           <GeoMap countries={countries} selectedCode={selectedCountry?.code} selectedYear={selectedYear} mode={mode} worldMap={worldMap} onSelect={setSelected} />
           <RegionalZoomMaps countries={countries} selectedCode={selectedCountry?.code} selectedYear={selectedYear} mode={mode} worldMap={worldMap} onSelect={setSelected} />
         </section>
@@ -606,13 +633,13 @@ export default function GeoPage() {
       </div>
 
       <section className="geo-lower">
-        <div className="geo-card"><h3>Regional strength change</h3><MiniBars rows={regionMomentum} label="strength" /></div>
-        <div className="geo-card"><h3>Country share</h3><SharePie countries={countries} mode={mode} selected={selectedCountry?.code} onSelect={setSelected} /></div>
-        <div className="geo-card"><h3>Representative papers</h3><PaperList papers={data.topPapers || []} /></div>
+        <div className="geo-card"><h3>区域产出变化</h3><MiniBars rows={regionMomentum} label="产出信号" /></div>
+        <div className="geo-card"><h3>国家/地区占比</h3><SharePie countries={countries} mode={mode} selected={selectedCountry?.code} onSelect={setSelected} /></div>
+        <div className="geo-card"><h3>代表论文</h3><PaperList papers={data.topPapers || []} /></div>
       </section>
 
       <section className="geo-card mt-4">
-        <h3>Top countries</h3>
+        <h3>高产国家/地区</h3>
         <div className="geo-country-list">
           {countries.slice(0, 14).map((country, index) => (
             <button key={country.code} className={`geo-country-row ${country.code === selectedCountry?.code ? 'active' : ''}`} onClick={() => setSelected(country)}>
@@ -626,7 +653,7 @@ export default function GeoPage() {
               >
                 {country.name}
               </strong>
-              <em>{country.papers ?? 0} papers / {country.score ?? 0}</em>
+              <em>{country.papers ?? 0} 篇 / 产出信号 {country.score ?? 0}</em>
             </button>
           ))}
         </div>

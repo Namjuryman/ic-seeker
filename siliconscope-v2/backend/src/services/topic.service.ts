@@ -77,7 +77,7 @@ export const topicService = {
 
   getTopicDetail(field: string) {
     const target = String(field || "").trim();
-    if (!target) throw new Error("Topic field is required");
+    if (!target) throw new Error("请输入一个研究方向。");
 
     const rows = metadataDb.select().from(papers)
       .where(sql`${papers.domain} = ${target} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)

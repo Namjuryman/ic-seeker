@@ -4,6 +4,8 @@ import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
 import { PaperLink } from '../components/PaperLink'
 import { LearningProgressActions } from '../components/LearningProgressActions'
+import { paperRankLabel } from '../utils/displayLabels'
+import { formatLearningDomain, formatLearningFamily, formatLearningLevel } from '../utils/learningLabels'
 import { lessonPath, searchPath, todayLessonPath } from '../utils/routes'
 
 function getSuitableCompanyTypes(domain: string): string[] {
@@ -35,6 +37,36 @@ function getSuitableCompanyTypes(domain: string): string[] {
   return result.slice(0, 5)
 }
 
+const companyTypeLabels: Record<string, string> = {
+  'Power Semiconductor': '功率半导体',
+  'Analog / Mixed-Signal': '模拟 / 数模混合',
+  'Fabless IC Design': 'Fabless IC 设计',
+  'RF / Wireless Semiconductor': '射频 / 无线芯片',
+  'Telecom Equipment': '通信设备',
+  'Processor / SoC': '处理器 / SoC',
+  'Memory Semiconductor': '存储芯片',
+  IDM: 'IDM',
+  'High-Speed Interface': '高速接口',
+  'Sensor / MEMS': '传感器 / MEMS',
+  'EDA / IP': 'EDA / IP',
+  Foundry: '晶圆代工',
+  'Semiconductor Equipment': '半导体设备',
+  'Test & Measurement': '测试测量',
+  OSAT: '封测',
+  'AI Chip': 'AI 芯片',
+  'Automotive Semiconductor': '汽车半导体',
+  'Tier-1 Supplier': '一级供应商',
+  'Photonics / Optoelectronics': '光子 / 光电',
+}
+
+const resourceKindLabels: Record<string, string> = {
+  course: '课程',
+  book: '书籍',
+  tool: '工具',
+  paper: '论文入口',
+  guide: '指南',
+}
+
 export default function RoadmapDetailPage() {
   const { slug = '' } = useParams()
   const queryClient = useQueryClient()
@@ -49,23 +81,28 @@ export default function RoadmapDetailPage() {
     },
   })
 
-  if (roadmap.isLoading) return <div className="ss-skeleton-page"><p>Loading roadmap...</p></div>
-  if (roadmap.isError || !roadmap.data) return <div className="ss-empty-state">Roadmap not found.</div>
+  if (roadmap.isLoading) return <div className="ss-skeleton-page"><p>正在加载学习路线...</p></div>
+  if (roadmap.isError || !roadmap.data) return <div className="ss-empty-state">没有找到这条学习路线。</div>
 
   const data = roadmap.data
+  const meta = [
+    formatLearningDomain(data.domain),
+    formatLearningLevel(data.level),
+    formatLearningFamily(data.family),
+  ].filter(Boolean).join(' · ')
 
   return (
     <div className="learning-page learning-workbench">
       <section className="learning-overview learning-detail-hero" style={{ borderLeftColor: data.accent || undefined }}>
         <div>
-          <span>{data.domain}{data.level ? ` · ${data.level}` : ''}{data.family ? ` · ${data.family}` : ''}</span>
+          <span>{meta}</span>
           <h2 style={{ color: data.accent || undefined }}>{data.title}</h2>
           {data.subtitle && <p className="learning-muted" style={{ fontStyle: 'italic' }}>{data.subtitle}</p>}
           <p>{data.description}</p>
           <div className="learning-outcome-list">
             {data.targetUsers?.map((user) => <span key={user}>{user}</span>) ?? <span>—</span>}
-            <Link to="/learning">Daily Circuit workspace</Link>
-            <Link to="/learning-path">Full route library</Link>
+            <Link to="/learning">每日电路工作区</Link>
+            <Link to="/learning-path">完整路线库</Link>
           </div>
         </div>
         <div className="learning-venue-strip">
@@ -81,8 +118,8 @@ export default function RoadmapDetailPage() {
         <article className="learning-section">
           <div className="learning-section-head">
             <div>
-              <span>Prerequisites</span>
-              <h3>Before this route</h3>
+              <span>前置知识</span>
+              <h3>开始前建议补齐</h3>
             </div>
           </div>
           <div className="learning-chip-row">
@@ -114,15 +151,15 @@ export default function RoadmapDetailPage() {
         <article className="learning-section">
           <div className="learning-section-head">
             <div>
-              <span>SiliconScope links</span>
-              <h3>Research entry points</h3>
+              <span>SiliconScope 入口</span>
+              <h3>论文与方向检索</h3>
             </div>
-            <Link to={todayLessonPath()}>Today</Link>
+            <Link to={todayLessonPath()}>今日卡片</Link>
           </div>
           {data.paperQuery && (
             <div className="learning-progress-actions">
               <Link className="learning-action-link" to={searchPath({ q: data.paperQuery, scope: 'all', semantic: 1 })}>
-                Search: {data.paperQuery}
+                搜索：{data.paperQuery}
               </Link>
             </div>
           )}
@@ -148,7 +185,7 @@ export default function RoadmapDetailPage() {
             </div>
           )}
           {!data.paperQuery && (!data.venues || data.venues.length === 0) && (!data.relatedTopics || data.relatedTopics.length === 0) && (!data.relatedSearchQueries || data.relatedSearchQueries.length === 0) && (
-            <p className="learning-muted">No research links available.</p>
+            <p className="learning-muted">暂无研究检索入口。</p>
           )}
         </article>
       </section>
@@ -156,8 +193,8 @@ export default function RoadmapDetailPage() {
       <section className="learning-section">
         <div className="learning-section-head">
           <div>
-            <span>Stage timeline</span>
-            <h3>Modules and lesson placeholders</h3>
+            <span>阶段路线</span>
+            <h3>模块与学习卡片</h3>
           </div>
           <p>{data.caveat}</p>
         </div>
@@ -179,7 +216,7 @@ export default function RoadmapDetailPage() {
                   <div className="learning-resource-grid">
                     {stage.resources.map((resource) => (
                       <a key={resource.title} className="learning-resource" href={resource.url} target="_blank" rel="noreferrer">
-                        <span>{resource.kind}</span>
+                        <span>{resourceKindLabels[resource.kind] || resource.kind}</span>
                         <strong>{resource.title}</strong>
                         <em>{resource.provider}</em>
                         <p>{resource.note}</p>
@@ -200,7 +237,7 @@ export default function RoadmapDetailPage() {
                 </div>
               </div>
             </article>
-          )) ?? <p className="learning-muted">No stages defined.</p>}
+          )) ?? <p className="learning-muted">暂无阶段内容。</p>}
         </div>
       </section>
 
@@ -208,7 +245,7 @@ export default function RoadmapDetailPage() {
         <section className="learning-section learning-projects">
           <div className="learning-section-head">
             <div>
-              <span>Practice</span>
+              <span>练习</span>
               <h3>可做的小项目</h3>
             </div>
           </div>
@@ -227,26 +264,26 @@ export default function RoadmapDetailPage() {
         <article className="learning-section">
           <div className="learning-section-head">
             <div>
-              <span>Daily lesson pool</span>
-              <h3>Lessons in this roadmap</h3>
+              <span>每日卡片池</span>
+              <h3>本路线课程</h3>
             </div>
           </div>
           <div className="learning-link-list">
             {(data.lessons ?? []).slice(0, 12).map((lesson) => (
               <Link key={lesson.id} to={lessonPath(lesson.id)}>
                 <strong>{lesson.title}</strong>
-                <span>{lesson.estimatedMinutes} min</span>
+                <span>{lesson.estimatedMinutes} 分钟</span>
               </Link>
             ))}
-            {(data.lessons ?? []).length === 0 && <p className="learning-muted">No lessons available.</p>}
+            {(data.lessons ?? []).length === 0 && <p className="learning-muted">暂无课程卡片。</p>}
           </div>
         </article>
 
         <article className="learning-section">
           <div className="learning-section-head">
             <div>
-              <span>Related papers</span>
-              <h3>Metadata search preview</h3>
+              <span>相关论文</span>
+              <h3>元数据推荐</h3>
             </div>
           </div>
           <div className="learning-paper-list">
@@ -254,18 +291,18 @@ export default function RoadmapDetailPage() {
               <div key={paper.id} className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <PaperLink id={paper.id} title={paper.title} />
-                  <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paper.rank}</span>
+                  <span><EntityLink kind="venue" value={paper.venue}>{paper.venue}</EntityLink> · {paper.year} · {paperRankLabel(paper.rank)}</span>
                 </div>
                 <button
                   className="text-xs px-2 py-0.5 rounded border border-line hover:bg-surface-elevated shrink-0"
                   onClick={() => addToQueue.mutate({ paperId: paper.id, status: 'review_later' })}
                   disabled={addToQueue.isPending}
-                  title="Add to reading queue"
+                  title="加入阅读队列"
                 >
                   + 队列
                 </button>
               </div>
-            )) ?? <p className="learning-muted">Loading related papers...</p>}
+            )) ?? <p className="learning-muted">正在加载相关论文...</p>}
           </div>
         </article>
       </section>
@@ -273,23 +310,23 @@ export default function RoadmapDetailPage() {
       <section className="learning-section">
         <div className="learning-section-head">
           <div>
-            <span>Career</span>
-            <h3>Career Directions</h3>
+            <span>职业</span>
+            <h3>相关公司方向</h3>
           </div>
         </div>
         <div className="learning-chip-row" style={{ marginBottom: '0.75rem' }}>
           {getSuitableCompanyTypes(data.domain).map((type) => (
-            <span key={type}>{type}</span>
+            <span key={type}>{companyTypeLabels[type] || type}</span>
           ))}
         </div>
         <div className="learning-progress-actions">
           <Link to={searchPath({ q: data.paperQuery || data.title, scope: 'all', semantic: 1 })}>
-            Search: {data.paperQuery || data.title}
+            搜索：{data.paperQuery || data.title}
           </Link>
-          <Link to="/companies">Explore companies →</Link>
+          <Link to="/companies">查看公司 →</Link>
         </div>
         <p className="learning-muted" style={{ fontSize: 12, marginTop: '0.5rem' }}>
-          Company type suggestions are based on domain matching, not verified employer listings.
+          公司类型由方向匹配推断，不等同于已核验雇主列表或实时招聘信息。
         </p>
       </section>
     </div>

@@ -37,8 +37,8 @@ export const reviewService = {
       .all();
     return rows.map((row) => ({
       ...row,
-      publicAlias: "Anonymous Verified Reviewer",
-      public_alias: "Anonymous Verified Reviewer",
+      publicAlias: "匿名已验证评价者",
+      public_alias: "匿名已验证评价者",
       scores: row.structuredScoresJson ? JSON.parse(row.structuredScoresJson) : {},
       // Never expose nickname/email/school here. The frontend should also enforce display thresholds.
     }));
@@ -59,13 +59,13 @@ export const reviewService = {
 
   addReview(professorId: string, userId: number, body: Record<string, unknown>) {
     const target = String(professorId || "").trim();
-    if (!target) throw new Error("Professor id is required");
-    if (userId === undefined || userId === null || Number.isNaN(Number(userId))) throw new Error("Login required");
+    if (!target) throw new Error("研究者 ID 不能为空。");
+    if (userId === undefined || userId === null || Number.isNaN(Number(userId))) throw new Error("需要登录后才能提交评价。");
 
     const result = appDb.insert(mentorReviews).values({
       professorId: target,
       userId: Number(userId),
-      publicAlias: "Anonymous Verified Reviewer",
+      publicAlias: "匿名已验证评价者",
       isVerifiedReview: true,
       relationshipType: safeRelationship(body.relationshipType),
       structuredScoresJson: JSON.stringify(normalizeScores(body.scores)),
@@ -74,6 +74,6 @@ export const reviewService = {
       fitText: trimText(body.fitText),
       moderationStatus: "pending",
     }).returning({ id: mentorReviews.id }).get();
-    return { id: result.id, publicAlias: "Anonymous Verified Reviewer", moderationStatus: "pending" };
+    return { id: result.id, publicAlias: "匿名已验证评价者", moderationStatus: "pending" };
   },
 };

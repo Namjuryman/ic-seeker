@@ -199,7 +199,7 @@ export const companyService = {
   createCompany(body: Record<string, unknown>) {
     const id = generateId();
     const name = String(body.name || "").trim();
-    if (!name) throw new Error("Company name is required");
+    if (!name) throw new Error("企业名称不能为空");
 
     const cleanText = (v: unknown) => (v ? String(v).trim() : null);
     const cleanNumber = (v: unknown) => {
@@ -272,7 +272,7 @@ export const companyService = {
       generateId(),
       id,
       "manual",
-      "Admin manual entry",
+      "后台手动录入",
       cleanText(body.website),
       new Date().toISOString(),
       cleanNumber(body.dataConfidence) ?? 50,
@@ -284,7 +284,7 @@ export const companyService = {
 
   updateCompany(id: string, body: Record<string, unknown>) {
     const existing = appSqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
-    if (!existing) throw new Error("Company not found");
+    if (!existing) throw new Error("未找到企业");
 
     const cleanText = (v: unknown) => (v !== undefined ? String(v || "").trim() || null : undefined);
     const cleanNumber = (v: unknown) => {
@@ -372,7 +372,7 @@ export const companyService = {
 
   deleteCompany(id: string) {
     const existing = appSqlite.prepare("SELECT id FROM companies WHERE id = ?").get(id) as { id: string } | undefined;
-    if (!existing) throw new Error("Company not found");
+    if (!existing) throw new Error("未找到企业");
 
     appSqlite.prepare("DELETE FROM company_sources WHERE company_id = ?").run(id);
     appSqlite.prepare("DELETE FROM company_aliases WHERE company_id = ?").run(id);
@@ -390,7 +390,7 @@ export const companyService = {
       .filter(Boolean) as Record<string, any>[];
 
     if (rows.length < 2) {
-      throw new Error("At least 2 valid companies are required for comparison");
+      throw new Error("至少需要 2 个有效企业才能对比");
     }
 
     const domains = new Set<string>();
@@ -412,7 +412,7 @@ export const companyService = {
       sharedCountries: [...countries],
       sharedProductLines: [...productLines],
       fitMatching: this.computeFitMatching(rows),
-      caveat: "This comparison is based on public metadata and may be incomplete. It is not an investment recommendation or a final employer ranking.",
+      caveat: "企业对比基于公开元数据，可能不完整或过期；不构成投资建议，也不是最终雇主评价排序。",
     };
   },
 
@@ -469,7 +469,7 @@ export const companyService = {
 
     const allNames = [...new Set([...primaryNames, ...safeAliases])];
     if (!allNames.length) {
-      return { rows: [], total: 0, limit, offset: 0, engine: "sqlite-affiliation", query: "", caveat: "based on affiliation text matching" };
+      return { rows: [], total: 0, limit, offset: 0, engine: "sqlite-affiliation", query: "", caveat: "基于论文 affiliation 文本匹配" };
     }
 
     // Total count using all names
@@ -546,7 +546,7 @@ export const companyService = {
       offset: 0,
       engine: "sqlite-affiliation",
       query: allNames.join(" | "),
-      caveat: "based on affiliation text matching",
+      caveat: "基于论文 affiliation 文本匹配",
     };
   },
 

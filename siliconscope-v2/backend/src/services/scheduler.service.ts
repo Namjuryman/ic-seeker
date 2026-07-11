@@ -23,8 +23,8 @@ export type SchedulerJob = {
 const schedulerSpecs: Array<Omit<SchedulerJob, "enabled" | "lastRunAt" | "nextRunAt" | "lastStatus" | "lastRunId" | "updatedAt"> & { defaultEnabled: boolean }> = [
   {
     id: "daily-backup",
-    title: "Daily database restore point",
-    description: "Create a local SQLite restore point for rollback before weekly imports and public demo changes.",
+    title: "每日数据库还原点",
+    description: "为周度导入和公开演示变更前的回滚准备本地 SQLite 还原点。",
     maintenanceJobId: "backup",
     intervalMinutes: Number(process.env.SCHEDULER_BACKUP_INTERVAL_MINUTES || 24 * 60),
     defaultEnabled: false,
@@ -32,8 +32,8 @@ const schedulerSpecs: Array<Omit<SchedulerJob, "enabled" | "lastRunAt" | "nextRu
   },
   {
     id: "core-snapshots",
-    title: "Core intelligence snapshot refresh",
-    description: "Refresh hot profile, topic, venue, geo, and mentor cache entries used by public pages.",
+    title: "核心情报快照刷新",
+    description: "刷新公开页面使用的热门画像、主题、会议、地域和研究者缓存。",
     maintenanceJobId: "snapshot-core",
     intervalMinutes: Number(process.env.SCHEDULER_SNAPSHOT_INTERVAL_MINUTES || 6 * 60),
     defaultEnabled: false,
@@ -41,8 +41,8 @@ const schedulerSpecs: Array<Omit<SchedulerJob, "enabled" | "lastRunAt" | "nextRu
   },
   {
     id: "data-quality",
-    title: "Daily data quality scan",
-    description: "Run bounded duplicate/topic/affiliation checks and surface issues to the notification center.",
+    title: "每日数据质量扫描",
+    description: "运行受控的重复、主题和单位检查，并把问题推送到通知中心。",
     maintenanceJobId: "data-quality",
     intervalMinutes: Number(process.env.SCHEDULER_QUALITY_INTERVAL_MINUTES || 24 * 60),
     defaultEnabled: false,
@@ -169,12 +169,12 @@ async function runScheduledJob(job: SchedulerJob, actor = "scheduler") {
       userId: 0,
       kind: "scheduler",
       severity: run.status === "failure" ? "critical" : "success",
-      title: `${job.title} ${run.status}`,
+      title: `${job.title}：${run.status === "failure" ? "失败" : "完成"}`,
       body: run.status === "failure"
-        ? `Scheduled job failed: ${run.error || "unknown error"}`
-        : `Scheduled job finished in ${run.durationMs ?? 0}ms.`,
+        ? `调度任务失败：${run.error || "未知错误"}`
+        : `调度任务已完成，用时 ${run.durationMs ?? 0}ms。`,
       href: "/maintenance",
-      actionLabel: "Open maintenance",
+      actionLabel: "查看维护任务",
       metadata: { schedulerJobId: job.id, maintenanceJobId: job.maintenanceJobId, runId: run.id },
     });
 
@@ -201,7 +201,7 @@ export const schedulerService = {
 
   update(id: SchedulerJobId, input: { enabled?: boolean; intervalMinutes?: number; payload?: Record<string, unknown> }) {
     const existing = getJob(id);
-    if (!existing) throw new Error(`Unknown scheduler job: ${id}`);
+    if (!existing) throw new Error(`未知调度任务：${id}`);
     const enabled = input.enabled == null ? existing.enabled : Boolean(input.enabled);
     const intervalMinutes = input.intervalMinutes == null
       ? existing.intervalMinutes
@@ -224,7 +224,7 @@ export const schedulerService = {
 
   async runNow(id: SchedulerJobId, actor = "admin") {
     const job = getJob(id);
-    if (!job) throw new Error(`Unknown scheduler job: ${id}`);
+    if (!job) throw new Error(`未知调度任务：${id}`);
     return runScheduledJob(job, actor);
   },
 

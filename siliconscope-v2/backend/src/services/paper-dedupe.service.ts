@@ -228,10 +228,10 @@ export const paperDedupeService = {
   },
 
   updateStatus(id: string, status: DedupeStatus) {
-    if (!["open", "ignored", "merged", "reviewed"].includes(status)) throw new Error("Invalid dedupe status");
+    if (!["open", "ignored", "merged", "reviewed"].includes(status)) throw new Error("去重状态无效。");
     sqlite.prepare("UPDATE paper_dedupe_candidates SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(status, id);
     const row = sqlite.prepare("SELECT * FROM paper_dedupe_candidates WHERE id = ?").get(id);
-    if (!row) throw new Error("Dedupe candidate not found");
+    if (!row) throw new Error("去重候选项不存在。");
     return mapRow(row);
   },
 };

@@ -141,10 +141,10 @@ export const paperIngestionControlService = {
       },
       requiredSecrets: options.sources.filter((source) => source === "ieee").map(() => "IEEE_API_KEY or IEEE_XPLORE_API_KEY"),
       nextSteps: [
-        "Run dry-run against selected sources",
-        "Review low metadata-confidence records",
-        "Persist trusted/usable records",
-        "Refresh topic edges and snapshots",
+        "先对选定来源执行预检",
+        "复核元数据置信度较低的记录",
+        "写入可信且可用的记录",
+        "刷新主题关联和快照",
       ],
     };
   },

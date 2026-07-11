@@ -142,7 +142,7 @@ export const dataQualityService = {
   updateFinding(id: number, input: { status: string }) {
     const nextStatus = String(input.status || "").trim();
     if (!["open", "ignored", "resolved"].includes(nextStatus)) {
-      throw new Error("status must be open, ignored, or resolved");
+      throw new Error("数据质量问题状态必须是 open、ignored 或 resolved。");
     }
     const resolvedAt = nextStatus === "resolved" ? new Date().toISOString() : null;
     sqlite.prepare(`
@@ -165,8 +165,8 @@ export const dataQualityService = {
         severity: "high",
         targetType: "doi",
         targetId: row.key,
-        title: `Duplicate DOI: ${row.key}`,
-        summary: `${row.count} papers share the same DOI.`,
+        title: `重复 DOI：${row.key}`,
+        summary: `${row.count} 篇论文使用同一个 DOI。`,
         evidence: row,
       });
     }
@@ -177,8 +177,8 @@ export const dataQualityService = {
         severity: "medium",
         targetType: "paper_group",
         targetId: row.key,
-        title: "Duplicate title/year candidate",
-        summary: `${row.count} papers share the same normalized title and year.`,
+        title: "标题/年份重复候选",
+        summary: `${row.count} 篇论文拥有相同的归一化标题和年份。`,
         evidence: row,
       });
     }
@@ -189,8 +189,8 @@ export const dataQualityService = {
         severity: "medium",
         targetType: "venue",
         targetId: String(row.venue || "empty"),
-        title: `Weak venue mapping: ${row.venue || "(empty)"}`,
-        summary: `${row.count} papers have unknown, user, empty, or zero-score venue metadata.`,
+        title: `会议/期刊映射较弱：${row.venue || "(空)"}`,
+        summary: `${row.count} 篇论文的会议/期刊元数据为空、仍是未核验标记，或排序信号为 0。`,
         evidence: row,
       });
     }
@@ -201,8 +201,8 @@ export const dataQualityService = {
         severity: "medium",
         targetType: "topic",
         targetId: String(row.field || "empty"),
-        title: `Low-confidence topic group: ${row.field || "(empty)"}`,
-        summary: `${row.count} papers have weak topic evidence in this group.`,
+        title: `低置信方向分组：${row.field || "(空)"}`,
+        summary: `${row.count} 篇论文在该方向下的关键词证据较弱。`,
         evidence: row,
       });
     }
@@ -213,8 +213,8 @@ export const dataQualityService = {
         severity: "high",
         targetType: "paper",
         targetId: String(row.id),
-        title: `Venue mismatch: ${row.venue} vs ${row.publicationTitle}`,
-        summary: "The normalized venue label conflicts with the source publication title.",
+        title: `会议/期刊错配：${row.venue} vs ${row.publicationTitle}`,
+        summary: "归一化会议/期刊标签与来源 publication title 不一致。",
         evidence: row,
       });
     }
@@ -225,8 +225,8 @@ export const dataQualityService = {
         severity: Number(row.confidence || 0) < 0.35 ? "high" : "medium",
         targetType: "paper",
         targetId: String(row.paperId),
-        title: `AI annotation review: ${row.title}`,
-        summary: `Confidence ${Math.round(Number(row.confidence || 0) * 100)}%, primary domain ${row.primaryDomain || "-"}.`,
+        title: `AI 标注待复核：${row.title}`,
+        summary: `置信度 ${Math.round(Number(row.confidence || 0) * 100)}%，主方向 ${row.primaryDomain || "-"}。`,
         evidence: row,
       });
     }
@@ -238,8 +238,8 @@ export const dataQualityService = {
         severity: Number(row.metadataConfidence || 0) < 40 ? "high" : "medium",
         targetType: "paper",
         targetId: String(row.id),
-        title: `Low metadata confidence: ${row.title}`,
-        summary: `Metadata confidence ${row.metadataConfidence}/100; flags: ${(row.flags || []).join(", ") || "none"}.`,
+        title: `低元数据置信度：${row.title}`,
+        summary: `元数据置信度 ${row.metadataConfidence}/100；标记：${(row.flags || []).join(", ") || "无"}。`,
         evidence: row,
       });
     }
@@ -250,8 +250,8 @@ export const dataQualityService = {
         severity: "medium",
         targetType: "institution",
         targetId: row.key,
-        title: `Institution alias candidate: ${row.key}`,
-        summary: `${row.variants.length} variants across ${row.count} sampled appearances.`,
+        title: `机构别名候选：${row.key}`,
+        summary: `${row.count} 次抽样出现中包含 ${row.variants.length} 个写法变体。`,
         evidence: row,
       });
     }
@@ -262,8 +262,8 @@ export const dataQualityService = {
         severity: "medium",
         targetType: "author",
         targetId: row.key,
-        title: `Ambiguous author name: ${row.key}`,
-        summary: `${row.count} papers span ${row.variants.length} name variants and ${row.venues.length} venues.`,
+        title: `作者姓名歧义：${row.key}`,
+        summary: `${row.count} 篇论文覆盖 ${row.variants.length} 个姓名写法和 ${row.venues.length} 个会议/期刊。`,
         evidence: row,
       });
     }
@@ -274,8 +274,8 @@ export const dataQualityService = {
         severity: "low",
         targetType: "database",
         targetId: "papers.affiliations",
-        title: "Papers missing affiliation metadata",
-        summary: `${report.missingAffiliations} scanned papers have no affiliation string.`,
+        title: "论文缺少 affiliation 元数据",
+        summary: `${report.missingAffiliations} 篇已扫描论文没有 affiliation 字符串。`,
         evidence: { count: report.missingAffiliations, scannedRows: report.scannedRows },
       });
     }
@@ -538,14 +538,14 @@ export const dataQualityService = {
       ambiguousAuthors,
       missingAffiliations,
       recommendations: [
-        "Review duplicate DOI groups first; they are highest-confidence duplicates.",
-        "Move broad-journal filters into data/venue_filters/journal_extensions.json and log relevance evidence.",
-        "Normalize institutions before treating regional maps and institution rankings as serious intelligence.",
-        "Do not auto-merge ambiguous authors by name only; use IDs, affiliations, coauthors, topics, and manual overrides.",
-        "Use review queues for broad-journal papers near the relevance threshold.",
-        "Review venue/publication-title mismatches before trusting venue rank, score, and institution rankings.",
-        "Use the AI enrichment review queue to find non-IC leakage, missing topic edges, and low-confidence labels.",
-        "Treat metadata_confidence as an ingestion quality gate: low-confidence papers should enter admin review before powering reports or compare pages."
+        "优先复核重复 DOI 分组；这是置信度最高的重复候选。",
+        "把宽口径期刊过滤规则沉淀到 data/venue_filters/journal_extensions.json，并记录相关性证据。",
+        "在把地域地图和机构画像当成重要情报入口前，先完成机构归一化。",
+        "不要只按姓名自动合并作者；应结合 ID、机构、合作者、方向和人工 override。",
+        "宽口径期刊中接近相关性阈值的论文应进入复核队列。",
+        "在使用会议等级、排序信号和机构画像前，先复核会议名与出版物标题的错配。",
+        "使用 AI 辅助复核队列发现非 IC 泄漏、缺失方向关联和低置信标签。",
+        "把 metadata_confidence 当作导入质量门槛：低置信论文应先进入后台复核，再进入报告或对比页面。"
       ]
     };
   }

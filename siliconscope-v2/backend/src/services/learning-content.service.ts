@@ -398,16 +398,16 @@ function validateActiveContent() {
 
   for (const family of routeFamilies) {
     for (const routeId of family.routeIds) {
-      if (!slugs.has(routeId)) errors.push(`Route family "${family.id}" references missing roadmap "${routeId}".`);
+      if (!slugs.has(routeId)) errors.push(`路线族 "${family.id}" 引用了不存在的学习路线 "${routeId}"。`);
     }
   }
   for (const lesson of lessons) {
-    if (!slugs.has(lesson.roadmapSlug)) errors.push(`Lesson "${lesson.id}" references missing roadmap "${lesson.roadmapSlug}".`);
-    if (!lesson.relatedSearchQueries?.length) warnings.push(`Lesson "${lesson.id}" has no relatedSearchQueries.`);
+    if (!slugs.has(lesson.roadmapSlug)) errors.push(`课程 "${lesson.id}" 引用了不存在的学习路线 "${lesson.roadmapSlug}"。`);
+    if (!lesson.relatedSearchQueries?.length) warnings.push(`课程 "${lesson.id}" 缺少论文检索词。`);
   }
   for (const roadmap of roadmaps) {
-    if (!roadmap.stages?.length) errors.push(`Roadmap "${roadmap.slug}" has no stages.`);
-    if (!roadmap.relatedSearchQueries?.length && !roadmap.paperQuery) warnings.push(`Roadmap "${roadmap.slug}" has no search query fallback.`);
+    if (!roadmap.stages?.length) errors.push(`学习路线 "${roadmap.slug}" 缺少阶段内容。`);
+    if (!roadmap.relatedSearchQueries?.length && !roadmap.paperQuery) warnings.push(`学习路线 "${roadmap.slug}" 缺少论文检索入口。`);
   }
 
   return { errors, warnings };
@@ -435,27 +435,27 @@ function contentQualityReport() {
 
   for (const roadmap of roadmaps) {
     const target = `roadmap:${roadmap.slug}`;
-    addCheck(Boolean(roadmap.description && roadmap.description.length > 80), 2, "medium", target, "Description is too thin for a public product route.");
-    addCheck((roadmap.stages?.length || 0) >= 3, 3, "high", target, "Route should have at least three learning stages.");
-    addCheck(roadmap.stages.every((stage) => (stage.modules?.length || 0) > 0), 2, "high", target, "Every stage needs at least one module.");
-    addCheck((roadmap.relatedSearchQueries?.length || 0) >= 4 || Boolean(roadmap.paperQuery), 2, "medium", target, "Route needs enough search hooks for paper discovery.");
-    addCheck((roadmap.relatedVenues?.length || 0) >= 3, 1, "low", target, "Route should link to representative venues.");
-    addCheck((roadmap.outcomes?.length || 0) >= 3, 1, "low", target, "Route needs concrete learning outcomes.");
-    addCheck((roadmap.projectIdeas?.length || 0) >= 2, 1, "low", target, "Route should include practical project outputs.");
-    addCheck((lessonRoadmaps.get(roadmap.slug) || 0) >= 1, 2, "medium", target, "Route has no daily lesson entry.");
+    addCheck(Boolean(roadmap.description && roadmap.description.length > 80), 2, "medium", target, "路线描述过薄，公开页面需要更明确的学习对象、边界和价值。");
+    addCheck((roadmap.stages?.length || 0) >= 3, 3, "high", target, "路线至少应包含三个学习阶段。");
+    addCheck(roadmap.stages.every((stage) => (stage.modules?.length || 0) > 0), 2, "high", target, "每个阶段至少需要一个模块。");
+    addCheck((roadmap.relatedSearchQueries?.length || 0) >= 4 || Boolean(roadmap.paperQuery), 2, "medium", target, "路线需要足够的论文检索入口。");
+    addCheck((roadmap.relatedVenues?.length || 0) >= 3, 1, "low", target, "路线应关联代表性会议或期刊。");
+    addCheck((roadmap.outcomes?.length || 0) >= 3, 1, "low", target, "路线需要具体、可验证的学习成果。");
+    addCheck((roadmap.projectIdeas?.length || 0) >= 2, 1, "low", target, "路线应包含可以落地的小项目输出。");
+    addCheck((lessonRoadmaps.get(roadmap.slug) || 0) >= 1, 2, "medium", target, "路线还没有关联每日电路课程。");
   }
 
   for (const lesson of lessons) {
     const target = `lesson:${lesson.id}`;
-    addCheck(roadmapSlugs.has(lesson.roadmapSlug), 3, "high", target, "Lesson points to a missing roadmap.");
-    addCheck((lesson.relatedSearchQueries?.length || 0) >= 1, 1, "medium", target, "Lesson needs at least one paper search query.");
-    addCheck((lesson.relatedTopics?.length || 0) >= 1, 1, "medium", target, "Lesson needs at least one topic link.");
-    addCheck((lesson.relatedVenues?.length || 0) >= 1, 1, "low", target, "Lesson should include representative venues.");
-    addCheck(lesson.estimatedMinutes >= 10 && lesson.estimatedMinutes <= 45, 1, "low", target, "Lesson time estimate should be realistic.");
+    addCheck(roadmapSlugs.has(lesson.roadmapSlug), 3, "high", target, "课程指向了不存在的学习路线。");
+    addCheck((lesson.relatedSearchQueries?.length || 0) >= 1, 1, "medium", target, "课程至少需要一个论文检索词。");
+    addCheck((lesson.relatedTopics?.length || 0) >= 1, 1, "medium", target, "课程至少需要一个主题入口。");
+    addCheck((lesson.relatedVenues?.length || 0) >= 1, 1, "low", target, "课程应关联代表性会议或期刊。");
+    addCheck(lesson.estimatedMinutes >= 10 && lesson.estimatedMinutes <= 45, 1, "low", target, "课程时长估计应保持在可完成的范围内。");
   }
 
-  addCheck(routeFamilies.length >= 5, 2, "medium", "route_families", "Route library should preserve at least five route families.");
-  addCheck(commonFoundations.length >= 4, 2, "medium", "foundation_groups", "Common base should cover math, physics, circuits, and tools.");
+  addCheck(routeFamilies.length >= 5, 2, "medium", "route_families", "路线库应保留至少五个方向族群。");
+  addCheck(commonFoundations.length >= 4, 2, "medium", "foundation_groups", "公共基础应覆盖数学、物理、电路和工程工具。");
 
   const score = possible > 0 ? Math.round((earned / possible) * 100) : 0;
   return {
@@ -556,7 +556,7 @@ export const learningContentService = {
     const kind = normalizeKind(kindInput);
     const current = rowById(kind, itemId);
     if (!current) {
-      throw new Error("Learning content item not found");
+      throw new Error("没有找到这个学习内容项。");
     }
 
     const nextStatus = input.status == null ? current.status : normalizeStatus(input.status);
@@ -568,11 +568,11 @@ export const learningContentService = {
       try {
         parsed = JSON.parse(input.payloadJson);
       } catch (err) {
-        throw new Error(`payloadJson is not valid JSON: ${(err as Error).message}`);
+        throw new Error(`内容 JSON 格式不正确：${(err as Error).message}`);
       }
       const identity = payloadIdentity(kind, parsed);
       if (kind !== "foundation_group" && identity.id !== itemId) {
-        throw new Error(`payload id "${identity.id}" must match item id "${itemId}"`);
+        throw new Error(`内容 id "${identity.id}" 必须和当前内容项 id "${itemId}" 一致。`);
       }
       nextTitle = identity.title || nextTitle;
       nextPayloadJson = stableJson(parsed);
@@ -608,7 +608,7 @@ export const learningContentService = {
       if (nextStatus === "published") {
         const validation = validateActiveContent();
         if (validation.errors.length) {
-          throw new Error(`Published learning content would be invalid: ${validation.errors.join("; ")}`);
+          throw new Error(`发布后的学习内容无法通过校验：${validation.errors.join("; ")}`);
         }
       }
       refreshProjections();
@@ -616,7 +616,7 @@ export const learningContentService = {
     tx();
 
     const next = this.getItem(kind, itemId);
-    if (!next) throw new Error("Learning content item disappeared after update");
+    if (!next) throw new Error("学习内容保存后未能重新读取，请刷新后确认。");
     return next;
   },
 

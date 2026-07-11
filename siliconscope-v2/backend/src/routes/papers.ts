@@ -30,12 +30,12 @@ router.get("/search/suggestions", requireAuth, async (req, res) => {
 router.get("/papers/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid paper ID" });
+    res.status(400).json({ error: "论文 ID 无效。" });
     return;
   }
   const paper = paperService.getPaper(id, req.user?.userId ?? 0);
   if (!paper) {
-    res.status(404).json({ error: "Paper not found" });
+    res.status(404).json({ error: "论文不存在。" });
     return;
   }
   res.json(paper);
@@ -44,14 +44,14 @@ router.get("/papers/:id", requireAuth, async (req: AuthenticatedRequest, res) =>
 router.post("/papers/:id/ai-summary", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid paper ID" });
+    res.status(400).json({ error: "论文 ID 无效。" });
     return;
   }
   try {
     const body = parseBody(paperAiSummaryBodySchema, req.body);
     const summary = await paperAiEnrichmentService.getOrCreatePaperSummary(id, body);
     if (!summary) {
-      res.status(404).json({ error: "Paper not found" });
+      res.status(404).json({ error: "论文不存在。" });
       return;
     }
     res.json(summary);
@@ -64,7 +64,7 @@ router.put("/private/papers/:id/state", requireAuth, async (req: AuthenticatedRe
   const id = Number(req.params.id);
   const paper = paperService.upsertPaperState(id, req.body, req.user?.userId ?? 0);
   if (!paper) {
-    res.status(404).json({ error: "Paper not found" });
+    res.status(404).json({ error: "论文不存在。" });
     return;
   }
   clearCache();

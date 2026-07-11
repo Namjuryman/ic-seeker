@@ -43,7 +43,7 @@ Runtime certification is intentionally **not** marked complete in this zip becau
    - Mentor intelligence route now keeps threshold-safe review handling. Backend threshold protection remains the source of truth.
 
 12. **Institution intelligence pages**
-   - Added institution intelligence API shape with publication metadata, geo point, trends, strengths, collaborators, and caveats.
+   - Added institution intelligence API shape with publication metadata, geo point, trends, active-field signals, collaborators, and caveats.
 
 13. **Geo academic map 2.0**
    - Added `institution_geo_points` and city aggregation API foundation for city/institution hotspots and topic filters.

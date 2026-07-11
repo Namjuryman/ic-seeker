@@ -6,8 +6,8 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 
 - Separate facts, inference, and opinion. A paper DOI is a fact; mentor-school membership may be inferred; student reviews are opinion and require moderation.
 - Prefer IC-specific structure over generic academic search fields.
-- Make every high-value page answer: what is it, why does it matter, who works on it, where is it strong, what papers prove it, and what should I read next.
-- Treat every content item as versioned. Weekly updates should create diffs, not silently change rankings.
+- Make every high-value page answer: what is it, why does it matter, who works on it, where activity is concentrated, what papers support the view, and what should I read next.
+- Treat every content item as versioned. Weekly updates should create diffs, not silently change metadata-derived ordering.
 - Keep public/demo content metadata-only; private paid modes can unlock workflow depth, watchlists, exports, and private notes.
 
 ## Content Maturity Levels
@@ -25,15 +25,15 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 
 | Area | Current state | What to add next | Why it matters |
 | --- | --- | --- | --- |
-| Paper corpus | Large local metadata corpus with heuristic ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and rankings defensible |
+| Paper corpus | Large local metadata corpus with heuristic venue ranks and topics | Source completeness dashboard by venue/year, DOI/IEEE article verification, abstract coverage, affiliation confidence | Makes search and sorting signals defensible |
 | Topic taxonomy | Hierarchical seed, DB projection, and heuristic paper-topic edges exist | Sample review, manual correction, and UI exposure for topic confidence | Fixes misclassification and enables better filters |
 | AI enrichment | Local rule-based MVP tables, CLI, and admin API exist | Add provider adapter, admin review UI, validation dashboard, and search/report integration | Gives the product semantic understanding without expensive per-page inference |
 | Learning routes | 24 routes and 39 daily lessons exist | Route depth map, representative paper bundles, equations/figures checklist, project outputs, bilingual lesson bodies | Turns learning from a directory into a product |
-| Mentor profiles | Inferred professor pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
-| Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield strength and trend explanations | Makes school ranking less noisy |
+| Mentor profiles | Inferred mentor-candidate pages and reviews exist | Verified faculty source, current affiliation, role/title, lab homepage, career timeline, publication-stage explanation | Needed before public-facing mentor intelligence |
+| Institution profiles | Publication-derived pages exist | Alias audit, department/lab split, city/country verification, subfield activity and trend explanations | Makes institution profiles less noisy |
 | Company intelligence | Seeded company directory exists | Product-node mapping, fab/process nodes, EDA/IP/tool stack, job signals, related papers, public sources per field | Connects research to jobs and industry |
 | Geo intelligence | Country/region map exists | City-level geocoding, institution coordinates, regional trend snapshots, uncertainty display | Makes maps useful rather than decorative |
-| Venue matrix | Venue/year/domain matrix exists | Venue policy explanations, hidden/low-weight venue rationale, completeness warning, rank-change history | Prevents rankings from being skewed by odd venues |
+| Venue matrix | Venue/year/domain matrix exists | Venue policy explanations, hidden/low-weight venue rationale, completeness warning, rank-change history | Prevents metadata signals from being skewed by odd venues |
 | Reports/exports | Deterministic exports exist | Topic/institution/company report templates with caveats and evidence tables | A natural paid feature |
 | Community content | Comments/reviews/moderation exist | Review quality prompts, abuse taxonomy, verified reviewer badges, public/private visibility rules | Needed for safe user-generated content |
 
@@ -58,8 +58,8 @@ SiliconScope v2 already has a dense feature surface. The next product lift is co
 The paper database should gradually connect every high-value entity to source-backed facts instead of only inferred strings:
 
 - Mentor profiles: current affiliation, title, lab page, scholar page, photo URL, ORCID/IEEE author ID when available, verified source links, inferred career stage, research topics, yearly activity, collaborators, and representative papers.
-- Institution profiles: canonical name, aliases, school/lab/department split, city, country/region, coordinates, homepage, logo, short introduction, field strengths, yearly trends, and uncertainty notes.
-- Geo profiles: country/region/city summaries, coordinates, top institutions, subfield mix, yearly strength change, data coverage, and geocoding confidence.
+- Institution profiles: canonical name, aliases, school/lab/department split, city, country/region, coordinates, homepage, logo, short introduction, active fields, yearly trends, and uncertainty notes.
+- Geo profiles: country/region/city summaries, coordinates, top institutions, subfield mix, yearly output-density change, data coverage, and geocoding confidence.
 - Venue profiles: official name, aliases, rank policy, hidden/low-weight rationale, year completeness, DOI/source coverage, and topic mix.
 - Company profiles: stock ticker, exchange, market cap or valuation bucket when public, public-source timestamp, product lines, specialties, related papers, related routes, and hiring signals.
 
@@ -114,7 +114,7 @@ Recommended new projection tables after the current registry stabilizes:
 4. Add admin manual correction for topic aliases, keyword rules, paper-topic edges, and generated AI topic paths.
 5. Add representative paper bundles to each learning route and expose them as a reading queue action.
 6. Add source-backed company facts: website, headquarters, employee count, product lines, market-cap/valuation bucket for public companies, stock-style up/down indicators where legally safe, and confidence.
-7. Add venue-year completeness warnings so rankings show whether a missing year is a data gap.
+7. Add venue-year completeness warnings so sorted lists show whether a missing year is a data gap.
 8. Add mentor/institution verification queues before treating inferred affiliations as final.
 9. Add report templates for topic, institution, company, and mentor comparison pages.
 
@@ -134,7 +134,7 @@ Recommended new projection tables after the current registry stabilizes:
 4. Run `paper-topics:refresh` for deterministic topic edges
 5. Run `ai:annotate-papers` for missing/stale/weak metadata-only annotations
 6. Run content-quality checks and produce a diff
-7. Refresh snapshots and rankings
+7. Refresh snapshots and metadata-derived lists
 8. Rebuild Meilisearch indexes
 9. Publish dashboard summary and admin review queues
 ```

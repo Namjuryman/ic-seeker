@@ -53,9 +53,9 @@ function bibtexKey(paper: CitationPaper) {
 }
 
 export function paperCitation(paper: CitationPaper, format: CitationFormatName): string {
-  const title = String(paper.title || "Untitled paper").trim();
+  const title = String(paper.title || "未命名论文").trim();
   const authors = authorList(paper.authors);
-  const authorText = authors.join(", ") || "Unknown author";
+  const authorText = authors.join(", ") || "作者待补全";
   const year = String(paper.year || "n.d.");
   const venue = String(paper.publicationTitle || paper.venue || "").trim();
   const doi = String(paper.doi || "").trim();
@@ -63,7 +63,7 @@ export function paperCitation(paper: CitationPaper, format: CitationFormatName):
   if (format === "bibtex") {
     const fields = [
       `  title={${title}}`,
-      `  author={${authors.join(" and ") || "Unknown author"}}`,
+      `  author={${authors.join(" and ") || "作者待补全"}}`,
       `  year={${year}}`,
       venue ? `  journal={${venue}}` : "",
       doi ? `  doi={${doi}}` : "",
@@ -78,7 +78,7 @@ export function paperCitation(paper: CitationPaper, format: CitationFormatName):
 
 function paperRows(papers: Array<Record<string, any>>) {
   return papers.map((paper) => [
-    "paper",
+    "论文",
     paper.title,
     paper.year,
     paper.venue,
@@ -90,51 +90,51 @@ function paperRows(papers: Array<Record<string, any>>) {
 
 export function topicMarkdown(report: any, generatedAt = new Date().toISOString()) {
   const lines = [
-    `# ${report.field} Topic Report`,
+    `# ${report.field} 方向报告`,
     "",
-    `Generated: ${generatedAt}`,
+    `生成时间：${generatedAt}`,
     "",
-    "Generated from SiliconScope metadata and user-selected inputs. Verify papers, companies, institutions, and mentor-related information manually before making decisions.",
+    "本报告由 SiliconScope 元数据和用户输入生成。用于决策前，请人工复核论文、企业、机构和研究者相关信息。",
     "",
-    "## Filters",
+    "## 筛选条件",
     "",
-    `- field: ${report.field}`,
+    `- 方向：${report.field}`,
     "",
-    "## Overview",
+    "## 概览",
     "",
-    `- Total papers: ${report.overview.totalPapers}`,
-    `- Recent papers: ${report.overview.recentPapers}`,
-    `- Year range: ${report.overview.yearRange || "-"}`,
+    `- 论文总数：${report.overview.totalPapers}`,
+    `- 近年论文：${report.overview.recentPapers}`,
+    `- 年份范围：${report.overview.yearRange || "-"}`,
     "",
-    "## Yearly Trend",
+    "## 年度趋势",
     "",
     ...(report.trend || []).map((row: any) => `- ${row.year}: ${row.count}`),
     "",
-    "## Top Venues",
+    "## 主要会议/期刊",
     "",
     ...(report.topVenues || []).map((row: any) => `- ${row.key}: ${row.count}`),
     "",
-    "## Representative Papers",
+    "## 代表论文",
     "",
-    ...(report.representativePapers || []).map((paper: any) => `- ${paper.title} (${paper.year || "n.d."}, ${paper.venue || "unknown venue"}) ${paper.doi ? `DOI: ${paper.doi}` : ""}`),
+    ...(report.representativePapers || []).map((paper: any) => `- ${paper.title} (${paper.year || "n.d."}, ${paper.venue || "会议/期刊待补全"}) ${paper.doi ? `DOI: ${paper.doi}` : ""}`),
     "",
-    "## Active Authors",
+    "## 作者线索",
     "",
-    ...(report.activeAuthors || []).map((row: any) => `- ${row.name}: ${row.papers} papers, score ${row.scoreSum}, citations ${row.citations}`),
+    ...(report.activeAuthors || []).map((row: any) => `- ${row.name}: ${row.papers} 篇论文，元数据信号 ${row.scoreSum}，引用 ${row.citations}`),
     "",
-    "## Strong Institutions",
+    "## 机构线索",
     "",
-    ...(report.strongInstitutions || []).map((row: any) => `- ${row.name}: ${row.papers} papers, score ${row.scoreSum}, citations ${row.citations}`),
+    ...(report.strongInstitutions || []).map((row: any) => `- ${row.name}: ${row.papers} 篇论文，元数据信号 ${row.scoreSum}，引用 ${row.citations}`),
     "",
-    "## Related Companies",
+    "## 相关企业",
     "",
-    ...(report.relatedCompanies || []).map((row: any) => `- ${row.name}: confidence ${row.confidence ?? "unknown"}`),
+    ...(report.relatedCompanies || []).map((row: any) => `- ${row.name}: 可信度 ${row.confidence ?? "待补全"}`),
     "",
-    "## Related Learning Roadmaps",
+    "## 相关学习路线",
     "",
     ...(report.relatedRoadmaps || []).map((row: any) => `- ${row.title} (${row.slug})`),
     "",
-    "## Caveat",
+    "## 使用提示",
     "",
     report.caveat,
   ];
@@ -143,42 +143,42 @@ export function topicMarkdown(report: any, generatedAt = new Date().toISOString(
 
 export function topicCsv(report: any, generatedAt = new Date().toISOString()) {
   const rows = [
-    ["meta", "generatedAt", generatedAt, "", "", "", ""],
-    ["filter", "field", report.field, "", "", "", ""],
-    ["caveat", "caveat", report.caveat, "", "", "", ""],
-    ["overview", "totalPapers", report.overview.totalPapers, "", "", "", ""],
-    ["overview", "recentPapers", report.overview.recentPapers, "", "", "", ""],
-    ...((report.trend || []).map((row: any) => ["trend", row.year, row.count, "", "", "", ""])),
-    ...((report.topVenues || []).map((row: any) => ["venue", row.key, row.count, "", "", "", ""])),
-    ...((report.activeAuthors || []).map((row: any) => ["author", row.name, row.papers, row.scoreSum, row.citations, "", ""])),
-    ...((report.strongInstitutions || []).map((row: any) => ["institution", row.name, row.papers, row.scoreSum, row.citations, "", ""])),
-    ...((report.relatedCompanies || []).map((row: any) => ["company", row.name, row.id, row.confidence, "", "", ""])),
-    ...((report.relatedRoadmaps || []).map((row: any) => ["roadmap", row.title, row.slug, "", "", "", ""])),
+    ["元信息", "生成时间", generatedAt, "", "", "", ""],
+    ["筛选条件", "方向", report.field, "", "", "", ""],
+    ["使用提示", "说明", report.caveat, "", "", "", ""],
+    ["概览", "论文总数", report.overview.totalPapers, "", "", "", ""],
+    ["概览", "近年论文", report.overview.recentPapers, "", "", "", ""],
+    ...((report.trend || []).map((row: any) => ["年度趋势", row.year, row.count, "", "", "", ""])),
+    ...((report.topVenues || []).map((row: any) => ["主要会议/期刊", row.key, row.count, "", "", "", ""])),
+    ...((report.activeAuthors || []).map((row: any) => ["作者线索", row.name, row.papers, row.scoreSum, row.citations, "", ""])),
+    ...((report.strongInstitutions || []).map((row: any) => ["机构线索", row.name, row.papers, row.scoreSum, row.citations, "", ""])),
+    ...((report.relatedCompanies || []).map((row: any) => ["相关企业", row.name, row.id, row.confidence, "", "", ""])),
+    ...((report.relatedRoadmaps || []).map((row: any) => ["相关学习路线", row.title, row.slug, "", "", "", ""])),
     ...paperRows(report.representativePapers || []),
   ];
-  return csv(["section", "name", "metric1", "metric2", "metric3", "metric4", "metric5"], rows);
+  return csv(["分区", "名称", "指标一", "指标二", "指标三", "指标四", "指标五"], rows);
 }
 
 export function compareMarkdown(title: string, items: any[], caveat: string, generatedAt = new Date().toISOString()) {
   const lines = [
     `# ${title}`,
     "",
-    `Generated: ${generatedAt}`,
+    `生成时间：${generatedAt}`,
     "",
-    "Metadata-based indicator only. Verify source completeness before using this for decisions.",
+    "仅作为基于元数据的指标参考。用于决策前，请复核来源完整性。",
     "",
     ...items.flatMap((item) => [
       `## ${item.name || item.title || item.legalName}`,
       "",
-      `- Papers: ${item.totalPapers ?? item.paperCount ?? item.papers ?? "-"}`,
-      `- Recent papers: ${item.recentPapers ?? "-"}`,
-      `- Average score: ${item.avgScore ?? "-"}`,
-      `- Citations: ${item.citations ?? "-"}`,
-      `- Country: ${item.country || "-"}`,
-      `- Type: ${item.companyType || item.visibilityLevel || "-"}`,
+      `- 论文数：${item.totalPapers ?? item.paperCount ?? item.papers ?? "-"}`,
+      `- 近年论文：${item.recentPapers ?? "-"}`,
+      `- 元数据信号均值：${item.avgScore ?? "-"}`,
+      `- 引用：${item.citations ?? "-"}`,
+      `- 国家/地区：${item.country || "-"}`,
+      `- 类型：${item.companyType || item.visibilityLevel || "-"}`,
       "",
     ]),
-    "## Caveat",
+    "## 使用提示",
     "",
     caveat,
   ];
@@ -187,7 +187,7 @@ export function compareMarkdown(title: string, items: any[], caveat: string, gen
 
 export function compareCsv(items: any[], generatedAt = new Date().toISOString()) {
   return csv(
-    ["generatedAt", "name", "type", "country", "papers", "recentPapers", "avgScore", "citations", "confidence"],
+    ["生成时间", "名称", "类型", "国家/地区", "论文数", "近年论文", "元数据信号均值", "引用", "来源可信度"],
     items.map((item) => [
       generatedAt,
       item.name || item.title || item.legalName,

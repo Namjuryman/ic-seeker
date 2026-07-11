@@ -79,7 +79,7 @@ function findQsRank(institutionName: string) {
 export const institutionCompareService = {
   compare(names: string[]) {
     const unique = [...new Set(names)].slice(0, 4);
-    if (unique.length < 2) throw new Error("At least 2 institutions are required");
+    if (unique.length < 2) throw new Error("请至少输入 2 个机构再进行对比。");
 
     const currentYear = new Date().getFullYear();
 
@@ -127,13 +127,13 @@ export const institutionCompareService = {
         representativePapers,
         qs: findQsRank(identity.canonicalName || name),
         metadataConfidence: identity.confidence,
-        normalizationCaveat: "Institution identity uses alias normalization and may still need ROR/OpenAlex/manual verification.",
+        normalizationCaveat: "机构身份使用别名归一，仍可能需要 ROR、OpenAlex 或人工复核。",
       };
     });
 
     return {
       institutions,
-      caveat: "This comparison is based on available publication metadata and institution name normalization. It is not a final ranking of academic strength.",
+      caveat: "机构对比基于可用论文元数据和机构名称归一结果，只适合作为研究线索，不代表最终学校评价或现任人员名录。",
     };
   },
 };

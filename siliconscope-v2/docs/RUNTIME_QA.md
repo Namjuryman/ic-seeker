@@ -45,7 +45,7 @@ npm run dev
 
 Navigate to `/companies`:
 - [ ] Company list loads with total count
-- [ ] If companies table is empty, shows: "No company data yet. Run npm run companies:seed or add companies in Admin."
+- [ ] If companies table is empty, shows a review-first admin guidance message rather than a public script command.
 - [ ] Search by keyword works
 - [ ] Filter by domain works
 
@@ -72,7 +72,7 @@ Navigate to the independent admin frontend at `http://localhost:5176/companies`:
 - [ ] Create company works
 - [ ] Edit company works
 - [ ] Delete company works
-- [ ] CSV Import shows "Coming soon" (not pretending to be usable)
+- [ ] CSV import section clearly says batch import is an admin/API workflow that requires manual review before public profiles.
 
 ### 7. Compare
 
@@ -88,7 +88,7 @@ curl http://127.0.0.1:8751/api/companies/:id/related-papers
 ```
 
 - [ ] Returns JSON with `rows` (max 20), `total` from `COUNT(*)`, `engine: "sqlite-affiliation"`
-- [ ] `caveat` field present: "based on affiliation text matching"
+- [ ] `caveat` field present: "基于论文 affiliation 文本匹配"
 - [ ] No SQL injection via company names (parameterized + ESCAPE)
 
 ### 9. Admin Routes Guard

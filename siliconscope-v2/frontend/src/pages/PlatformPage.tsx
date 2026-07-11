@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import type { PlatformModule } from '../types'
+import { providerLabel } from '../utils/displayLabels'
 
 const statusLabels: Record<PlatformModule['status'], string> = {
   ready: '可用',
-  partial: '进行中',
-  planned: '规划中',
+  partial: '部分可用',
+  planned: '准备中',
 }
 
 const trackLabels: Record<PlatformModule['track'], string> = {
@@ -19,7 +20,7 @@ const trackLabels: Record<PlatformModule['track'], string> = {
 }
 
 function infraState(configured: boolean) {
-  return configured ? '已配置' : '本地 / 待接入'
+  return configured ? '已配置' : '未配置'
 }
 
 const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5176'
@@ -35,7 +36,7 @@ function ModuleCard({ item }: { item: PlatformModule }) {
         <strong>{item.maturity}%</strong>
       </div>
       <p>{item.summary}</p>
-      <div className="platform-meter" aria-label={`${item.name} maturity ${item.maturity}%`}>
+      <div className="platform-meter" aria-label={`${item.name} 完成度 ${item.maturity}%`}>
         <i style={{ width: `${item.maturity}%` }} />
       </div>
       <div className="platform-module-columns">
@@ -64,7 +65,7 @@ export default function PlatformPage() {
   })
 
   if (overview.isLoading) {
-    return <div className="learning-muted">Loading platform overview...</div>
+    return <div className="learning-muted">正在加载平台概览...</div>
   }
 
   if (!overview.data) {
@@ -79,30 +80,30 @@ export default function PlatformPage() {
     <div className="platform-page">
       <section className="platform-hero">
         <div>
-          <span>Platform Console</span>
+          <span>平台控制台</span>
           <h1>平台中枢</h1>
           <p>
             把 SiliconScope v2 拆成长期可维护的科研、学习、产业、社区和商业基础设施模块。
-            这里展示当前成熟度、已完成能力，以及接下来最值得继续打磨的硬任务。
+            这里展示当前模块成熟度、已可用能力，以及接下来最值得继续打磨的重点。
           </p>
         </div>
         <div className="platform-score">
           <strong>{data.summary.averageMaturity}%</strong>
-          <span>平均成熟度</span>
+          <span>平均完成度</span>
         </div>
       </section>
 
       <section className="platform-summary">
         <div><span>模块总数</span><strong>{data.summary.modules}</strong></div>
         <div><span>可用</span><strong>{data.summary.ready}</strong></div>
-        <div><span>进行中</span><strong>{data.summary.partial}</strong></div>
-        <div><span>规划中</span><strong>{data.summary.planned}</strong></div>
+        <div><span>部分可用</span><strong>{data.summary.partial}</strong></div>
+        <div><span>准备中</span><strong>{data.summary.planned}</strong></div>
       </section>
 
       <section className="platform-grid">
         <div className="platform-panel platform-wide">
           <div className="platform-panel-head">
-            <span>Module Map</span>
+            <span>模块地图</span>
             <h2>产品模块地图</h2>
           </div>
           <div className="platform-track-grid">
@@ -110,7 +111,7 @@ export default function PlatformPage() {
               <div className="platform-track" key={track.id}>
                 <strong>{track.score}%</strong>
                 <span>{track.name}</span>
-                <small>{track.modules} modules</small>
+                <small>{track.modules} 个模块</small>
               </div>
             ))}
           </div>
@@ -118,30 +119,30 @@ export default function PlatformPage() {
 
         <div className="platform-panel">
           <div className="platform-panel-head">
-            <span>Data Layer</span>
+            <span>数据层</span>
             <h2>基础设施状态</h2>
           </div>
           <dl className="platform-infra">
-            <div><dt>Metadata</dt><dd>{topology.metadataStore.provider}</dd></div>
-            <div><dt>App DB</dt><dd>{topology.appStore.provider} / {infraState(topology.appStore.configured)}</dd></div>
-            <div><dt>Cache</dt><dd>{topology.cache.provider} / {infraState(topology.cache.configured)}</dd></div>
-            <div><dt>Search</dt><dd>{topology.search.provider} / {infraState(topology.search.configured)}</dd></div>
-            <div><dt>Storage</dt><dd>{topology.objectStorage.provider} / {infraState(topology.objectStorage.configured)}</dd></div>
-            <div><dt>Queue</dt><dd>{topology.queue.provider} / {infraState(topology.queue.configured)}</dd></div>
+            <div><dt>论文元数据</dt><dd>{providerLabel(topology.metadataStore.provider)}</dd></div>
+            <div><dt>应用数据库</dt><dd>{providerLabel(topology.appStore.provider)} / {infraState(topology.appStore.configured)}</dd></div>
+            <div><dt>缓存</dt><dd>{providerLabel(topology.cache.provider)} / {infraState(topology.cache.configured)}</dd></div>
+            <div><dt>搜索</dt><dd>{providerLabel(topology.search.provider)} / {infraState(topology.search.configured)}</dd></div>
+            <div><dt>对象存储</dt><dd>{providerLabel(topology.objectStorage.provider)} / {infraState(topology.objectStorage.configured)}</dd></div>
+            <div><dt>任务队列</dt><dd>{providerLabel(topology.queue.provider)} / {infraState(topology.queue.configured)}</dd></div>
           </dl>
         </div>
 
         <div className="platform-panel">
           <div className="platform-panel-head">
-            <span>Product Mode</span>
+            <span>产品模式</span>
             <h2>运营开关</h2>
           </div>
           <dl className="platform-infra">
-            <div><dt>Private beta</dt><dd>{publicSettings.invite_only_mode ? 'on' : 'off'}</dd></div>
-            <div><dt>Maintenance</dt><dd>{publicSettings.maintenance_mode ? 'on' : 'off'}</dd></div>
-            <div><dt>AI reports</dt><dd>{publicSettings.ai_reports_enabled ? 'enabled' : 'planned'}</dd></div>
-            <div><dt>Checkout</dt><dd>{publicSettings.checkout_enabled ? 'enabled' : 'disabled'}</dd></div>
-            <div><dt>Exports</dt><dd>{publicSettings.export_center_enabled ? 'enabled' : 'planned'}</dd></div>
+            <div><dt>受控访问</dt><dd>{publicSettings.invite_only_mode ? '开启' : '关闭'}</dd></div>
+            <div><dt>维护模式</dt><dd>{publicSettings.maintenance_mode ? '开启' : '关闭'}</dd></div>
+            <div><dt>AI 报告</dt><dd>{publicSettings.ai_reports_enabled ? '启用' : '未启用'}</dd></div>
+            <div><dt>支付</dt><dd>{publicSettings.checkout_enabled ? '启用' : '关闭'}</dd></div>
+            <div><dt>导出</dt><dd>{publicSettings.export_center_enabled ? '启用' : '未启用'}</dd></div>
           </dl>
           {publicSettings.data_readiness_banner && (
             <p className="learning-muted">{String(publicSettings.data_readiness_banner)}</p>
@@ -156,8 +157,8 @@ export default function PlatformPage() {
       <section className="platform-grid">
         <div className="platform-panel">
           <div className="platform-panel-head">
-            <span>Milestones</span>
-            <h2>下一阶段硬任务</h2>
+            <span>里程碑</span>
+            <h2>下一阶段重点</h2>
           </div>
           <ol className="platform-milestones">
             {data.nextMilestones.map((item) => <li key={item}>{item}</li>)}
@@ -165,7 +166,7 @@ export default function PlatformPage() {
         </div>
         <div className="platform-panel">
           <div className="platform-panel-head">
-            <span>Shortcuts</span>
+            <span>快捷入口</span>
             <h2>常用入口</h2>
           </div>
           <div className="platform-shortcuts">

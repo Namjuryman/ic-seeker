@@ -187,10 +187,10 @@ export const watchlistService = {
     queryJson?: Record<string, unknown> | string
   ) {
     if (!isValidTargetType(targetType)) {
-      return { ok: false, error: "Invalid target type" };
+      return { ok: false, error: "关注类型无效。" };
     }
     if (!targetId || targetId.length > 256) {
-      return { ok: false, error: "Invalid targetId" };
+      return { ok: false, error: "关注目标无效。" };
     }
 
     let finalQueryJson: string | null = null;
@@ -250,7 +250,7 @@ export const watchlistService = {
       if (err.message?.includes("UNIQUE constraint failed")) {
         return { ok: true, created: false, alreadyExists: true };
       }
-      return { ok: false, error: err.message || "Insert failed" };
+      return { ok: false, error: err.message || "保存关注项失败。" };
     }
   },
 
@@ -258,7 +258,7 @@ export const watchlistService = {
     const row = appSqlite
       .prepare("SELECT id FROM watchlist_items WHERE id = ? AND user_id = ?")
       .get(id, userId) as { id: number } | undefined;
-    if (!row) return { ok: false, error: "Not found or not authorized" };
+    if (!row) return { ok: false, error: "关注项不存在，或当前用户无权操作。" };
     appSqlite.prepare("DELETE FROM watchlist_items WHERE id = ?").run(id);
     return { ok: true };
   },

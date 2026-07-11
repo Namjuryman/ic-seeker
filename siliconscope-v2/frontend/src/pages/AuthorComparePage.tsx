@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { AutocompleteInput } from '../components/AutocompleteInput'
 import type { AuthorCompareResult } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 import { authorPath } from '../utils/routes'
 
 interface AuthorListItem {
@@ -32,7 +33,7 @@ export default function AuthorComparePage() {
     return authors.map((a) => ({
       label: a.name,
       value: a.name,
-      subtitle: `${a.papers} papers · Score ${a.authorScore} · S+ ${a.sPlus}`,
+      subtitle: `${a.papers} 篇 · 元数据信号 ${a.authorScore} · S+ ${a.sPlus}`,
     }))
   }, [authors])
 
@@ -58,7 +59,7 @@ export default function AuthorComparePage() {
   async function handleCompare() {
     const validNames = names.map((n) => n.trim()).filter(Boolean)
     if (validNames.length < 2) {
-      setError('At least 2 author names are required.')
+      setError('至少需要输入 2 位作者。')
       return
     }
     setLoading(true)
@@ -67,7 +68,7 @@ export default function AuthorComparePage() {
       const data = await api.compareAuthors(validNames)
       setResult(data)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to compare authors')
+      setError(friendlyError(err, '作者对比失败'))
     } finally {
       setLoading(false)
     }
@@ -79,10 +80,10 @@ export default function AuthorComparePage() {
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Intelligence</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">Compare Authors</h1>
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">作者对比</p>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">作者论文画像对比</h1>
           <p className="text-sm text-ink-muted mt-1">
-            Enter 2–4 author names to compare publication output, venues, and collaboration networks.
+            输入 2–4 位作者，对比论文覆盖、近年活跃度、方向、会议/期刊和合作网络。结果依赖姓名归一化，请把它当成研究线索。
           </p>
         </div>
       </section>
@@ -102,14 +103,14 @@ export default function AuthorComparePage() {
                 onChange={(val) => updateName(index, val)}
                 onSelect={(val) => updateName(index, val)}
                 options={autocompleteOptions}
-                placeholder={`Author name ${index + 1}`}
+                placeholder={`作者姓名 ${index + 1}`}
               />
               {names.length > 1 && (
                 <button
                   onClick={() => removeName(index)}
                   className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary hover:bg-surface-soft transition-colors"
                 >
-                  Remove
+                  移除
                 </button>
               )}
             </div>
@@ -122,14 +123,14 @@ export default function AuthorComparePage() {
             disabled={!canAdd}
             className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
           >
-            Add Author
+            添加作者
           </button>
           <button
             onClick={handleCompare}
             disabled={!canCompare || loading}
             className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
           >
-            {loading ? 'Comparing...' : 'Compare'}
+            {loading ? '对比中...' : '开始对比'}
           </button>
         </div>
       </section>
@@ -138,11 +139,11 @@ export default function AuthorComparePage() {
         <section className="space-y-5">
           {/* Basic Info Table */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm overflow-x-auto">
-            <h2 className="font-semibold text-ink-text mb-4">Overview</h2>
+            <h2 className="font-semibold text-ink-text mb-4">概览</h2>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                  <th className="py-2 pr-4 font-medium">Attribute</th>
+                  <th className="py-2 pr-4 font-medium">指标</th>
                   {result.authors.map((a) => (
                     <th key={a.name} className="py-2 pr-4 font-medium">
                       <Link to={authorPath(a.name)} className="hover:text-brand-600 transition-colors">
@@ -154,31 +155,31 @@ export default function AuthorComparePage() {
               </thead>
               <tbody className="divide-y divide-line-subtle">
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Total Papers</td>
+                  <td className="py-2 pr-4 text-ink-subtle">论文总数</td>
                   {result.authors.map((a) => (
                     <td key={a.name} className="py-2 pr-4 text-ink-secondary">{a.totalPapers}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Recent Papers (5y)</td>
+                  <td className="py-2 pr-4 text-ink-subtle">近 5 年论文</td>
                   {result.authors.map((a) => (
                     <td key={a.name} className="py-2 pr-4 text-ink-secondary">{a.recentPapers}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Avg Score</td>
+                  <td className="py-2 pr-4 text-ink-subtle">元数据信号均值</td>
                   {result.authors.map((a) => (
                     <td key={a.name} className="py-2 pr-4 text-ink-secondary">{a.avgScore}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Citations</td>
+                  <td className="py-2 pr-4 text-ink-subtle">引用</td>
                   {result.authors.map((a) => (
                     <td key={a.name} className="py-2 pr-4 text-ink-secondary">{a.citations.toLocaleString()}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Aliases</td>
+                  <td className="py-2 pr-4 text-ink-subtle">别名线索</td>
                   {result.authors.map((a) => (
                     <td key={a.name} className="py-2 pr-4 text-ink-secondary">
                       {a.aliases.length > 0 ? a.aliases.slice(0, 3).join(', ') : '-'}
@@ -191,7 +192,7 @@ export default function AuthorComparePage() {
 
           {/* Top Fields */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Top Fields</h2>
+            <h2 className="font-semibold text-ink-text mb-4">主要方向</h2>
             <div className="space-y-3">
               {result.authors.map((a) => (
                 <div key={a.name}>
@@ -202,7 +203,7 @@ export default function AuthorComparePage() {
                         {f.key} ({f.count})
                       </span>
                     ))}
-                    {a.topFields.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {a.topFields.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -211,7 +212,7 @@ export default function AuthorComparePage() {
 
           {/* Coauthors */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Top Coauthors</h2>
+            <h2 className="font-semibold text-ink-text mb-4">主要合作者</h2>
             <div className="space-y-3">
               {result.authors.map((a) => (
                 <div key={a.name}>
@@ -222,7 +223,7 @@ export default function AuthorComparePage() {
                         {c.name} ({c.count})
                       </span>
                     ))}
-                    {a.coauthors.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {a.coauthors.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -231,7 +232,7 @@ export default function AuthorComparePage() {
 
           {/* Institutions */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Affiliated Institutions</h2>
+            <h2 className="font-semibold text-ink-text mb-4">机构线索</h2>
             <div className="space-y-3">
               {result.authors.map((a) => (
                 <div key={a.name}>
@@ -242,7 +243,7 @@ export default function AuthorComparePage() {
                         {i.name} ({i.count})
                       </span>
                     ))}
-                    {a.institutions.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {a.institutions.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -251,7 +252,7 @@ export default function AuthorComparePage() {
 
           {/* Venue Rank Distribution */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Venue Rank Distribution</h2>
+            <h2 className="font-semibold text-ink-text mb-4">会议/期刊等级分布</h2>
             <div className="space-y-3">
               {result.authors.map((a) => (
                 <div key={a.name}>
@@ -267,7 +268,7 @@ export default function AuthorComparePage() {
                         {r.key}: {r.count}
                       </span>
                     ))}
-                    {a.venueRankDistribution.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {a.venueRankDistribution.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -278,13 +279,13 @@ export default function AuthorComparePage() {
 
       {activeNames.length === 0 && !result && (
         <div className="bg-surface-panel border border-line rounded-xl p-8 shadow-sm text-center">
-          <p className="text-ink-muted text-sm">Enter 2–4 author names to begin a comparison.</p>
+          <p className="text-ink-muted text-sm">输入 2–4 位作者后开始对比。</p>
         </div>
       )}
 
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <p className="text-xs text-ink-subtle leading-relaxed">
-          {result?.caveat || 'Author comparison is based on publication metadata and name-based normalization. It is not a final evaluation of academic quality.'}
+          {result?.caveat || '作者对比基于论文元数据和姓名归一化结果，不代表最终学术评价；同名作者、改名和机构变动仍需人工核验。'}
         </p>
       </section>
     </div>

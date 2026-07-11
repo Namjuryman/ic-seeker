@@ -16,16 +16,16 @@ function RouteTable({ title, rows, metric }: { title: string; rows: ObservedRout
   return (
     <section className="observability-panel">
       <div className="observability-panel-head">
-        <span>{metric === 'count' ? 'Traffic' : 'Latency'}</span>
+        <span>{metric === 'count' ? '流量' : '延迟'}</span>
         <h2>{title}</h2>
       </div>
       <div className="observability-table">
         <div className="observability-row observability-row-head">
-          <span>Route</span>
-          <span>Count</span>
-          <span>Avg</span>
-          <span>Max</span>
-          <span>Errors</span>
+          <span>路由</span>
+          <span>次数</span>
+          <span>平均</span>
+          <span>最大</span>
+          <span>错误</span>
         </div>
         {rows.map((row) => (
           <div className="observability-row" key={row.key}>
@@ -36,7 +36,7 @@ function RouteTable({ title, rows, metric }: { title: string; rows: ObservedRout
             <span>{row.errorCount || row.rateLimitedCount ? `${row.errorCount} / ${row.rateLimitedCount}` : '-'}</span>
           </div>
         ))}
-        {!rows.length && <p className="learning-muted">No traffic captured yet.</p>}
+        {!rows.length && <p className="learning-muted">暂未捕获流量。</p>}
       </div>
     </section>
   )
@@ -50,11 +50,11 @@ export default function ObservabilityPage() {
   })
 
   if (query.isLoading) {
-    return <div className="learning-muted">Loading runtime observability...</div>
+    return <div className="learning-muted">正在加载运行观测数据...</div>
   }
 
   if (!query.data) {
-    return <div className="learning-muted">Observability snapshot is not available.</div>
+    return <div className="learning-muted">运行观测快照暂不可用。</div>
   }
 
   const data = query.data
@@ -64,32 +64,32 @@ export default function ObservabilityPage() {
     <div className="observability-page">
       <section className="observability-hero">
         <div>
-          <span>Runtime Observability</span>
-          <h1>Production traffic console</h1>
+          <span>运行观测</span>
+          <h1>生产流量控制台</h1>
           <p>
-            Lightweight in-process request telemetry for the private/VPS edition. Use it before full Prometheus,
-            Grafana, Sentry, and log aggregation are connected.
+            为当前私有/VPS 版本提供轻量请求遥测。在完整接入 Prometheus、Grafana、Sentry 和日志聚合前，
+            可先用这里观察流量、错误和限流。
           </p>
         </div>
         <div className="observability-live">
           <strong>{data.requestsLastMinute}</strong>
-          <span>requests / min</span>
+          <span>次请求 / 分钟</span>
         </div>
       </section>
 
       <section className="observability-stats">
-        <div><span>Total requests</span><strong>{data.totalRequests.toLocaleString()}</strong><small>since {formatTime(data.startedAt)}</small></div>
-        <div><span>Error rate</span><strong>{formatPercent(data.errorRate)}</strong><small>{data.totalErrors} errors</small></div>
-        <div><span>Rate limited</span><strong>{data.totalRateLimited.toLocaleString()}</strong><small>HTTP 429</small></div>
-        <div><span>Average latency</span><strong>{data.averageDurationMs}ms</strong><small>max {data.maxDurationMs}ms</small></div>
-        <div><span>Last 5 minutes</span><strong>{data.requestsLastFiveMinutes}</strong><small>rolling window</small></div>
+        <div><span>总请求</span><strong>{data.totalRequests.toLocaleString()}</strong><small>自 {formatTime(data.startedAt)}</small></div>
+        <div><span>错误率</span><strong>{formatPercent(data.errorRate)}</strong><small>{data.totalErrors} 个错误</small></div>
+        <div><span>限流</span><strong>{data.totalRateLimited.toLocaleString()}</strong><small>HTTP 429</small></div>
+        <div><span>平均延迟</span><strong>{data.averageDurationMs}ms</strong><small>最大 {data.maxDurationMs}ms</small></div>
+        <div><span>最近 5 分钟</span><strong>{data.requestsLastFiveMinutes}</strong><small>滚动窗口</small></div>
       </section>
 
       <section className="observability-grid">
         <div className="observability-panel">
           <div className="observability-panel-head">
-            <span>Status</span>
-            <h2>Response buckets</h2>
+            <span>状态</span>
+            <h2>响应分布</h2>
           </div>
           <div className="observability-buckets">
             {Object.entries(data.statusBuckets).map(([bucket, value]) => (
@@ -99,31 +99,31 @@ export default function ObservabilityPage() {
                 <i style={{ width: `${statusTotal ? Math.max(4, Math.round((value / statusTotal) * 100)) : 0}%` }} />
               </div>
             ))}
-            {!Object.keys(data.statusBuckets).length && <p className="learning-muted">No status buckets yet.</p>}
+            {!Object.keys(data.statusBuckets).length && <p className="learning-muted">暂无响应状态分布。</p>}
           </div>
         </div>
 
         <div className="observability-panel">
           <div className="observability-panel-head">
-            <span>Recent</span>
-            <h2>Errors and rate limits</h2>
+            <span>最近</span>
+            <h2>错误与限流</h2>
           </div>
           <div className="observability-errors">
             {data.recentErrors.map((item) => (
               <div key={`${item.at}-${item.requestId || item.path}`}>
-                <strong>{item.status} {item.method} {item.path}</strong>
+                <strong>状态 {item.status} · {item.method} {item.path}</strong>
                 <span>{item.durationMs}ms · {formatTime(item.at)}</span>
-                <small>{item.requestId || 'no request id'}</small>
+                <small>{item.requestId || '无请求 ID'}</small>
               </div>
             ))}
-            {!data.recentErrors.length && <p className="learning-muted">No recent errors or rate-limit events.</p>}
+            {!data.recentErrors.length && <p className="learning-muted">最近没有错误或限流事件。</p>}
           </div>
         </div>
       </section>
 
       <section className="observability-grid">
-        <RouteTable title="Hot routes" rows={data.hotRoutes} metric="count" />
-        <RouteTable title="Slow routes" rows={data.slowRoutes} metric="latency" />
+        <RouteTable title="高频路由" rows={data.hotRoutes} metric="count" />
+        <RouteTable title="慢路由" rows={data.slowRoutes} metric="latency" />
       </section>
     </div>
   )

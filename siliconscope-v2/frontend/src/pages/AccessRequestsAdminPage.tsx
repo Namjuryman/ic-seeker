@@ -4,18 +4,26 @@ import { api } from '../api'
 import type { AccessRequestRow, AccessRequestStatus } from '../types'
 
 const statuses: Array<{ value: '' | AccessRequestStatus; label: string }> = [
-  { value: '', label: 'All' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'invited', label: 'Invited' },
-  { value: 'rejected', label: 'Rejected' },
+  { value: '', label: '全部' },
+  { value: 'pending', label: '待审核' },
+  { value: 'approved', label: '已通过' },
+  { value: 'invited', label: '已邀请' },
+  { value: 'rejected', label: '已拒绝' },
 ]
 
 const statusLabels: Record<AccessRequestStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  invited: 'Invited',
-  rejected: 'Rejected',
+  pending: '待审核',
+  approved: '已通过',
+  invited: '已邀请',
+  rejected: '已拒绝',
+}
+
+const planInterestLabels: Record<string, string> = {
+  research: '个人研究 / 学习',
+  pro: 'Pro 工作流',
+  lab: '课题组 / 实验室',
+  enterprise: '企业情报',
+  private_deploy: '私有化部署',
 }
 
 function formatTime(value?: string | null) {
@@ -41,19 +49,19 @@ function RequestRow({ row }: { row: AccessRequestRow }) {
       <div className="access-admin-main">
         <span>{statusLabels[row.status]}</span>
         <h3>{row.name || row.email}</h3>
-        <p>{row.email} · {row.affiliation || 'No affiliation'} · {row.planInterest}</p>
-        <small>{row.intendedUse || 'No use case submitted.'}</small>
+        <p>{row.email} · {row.affiliation || '未填写机构'} · {planInterestLabels[row.planInterest] || '使用方向待确认'}</p>
+        <small>{row.intendedUse || '未填写使用场景。'}</small>
       </div>
       <div className="access-admin-meta">
-        <div><span>Submitted</span><strong>{formatTime(row.createdAt)}</strong></div>
-        <div><span>Reviewed</span><strong>{formatTime(row.reviewedAt)}</strong></div>
+        <div><span>提交时间</span><strong>{formatTime(row.createdAt)}</strong></div>
+        <div><span>审核时间</span><strong>{formatTime(row.reviewedAt)}</strong></div>
       </div>
-      <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Admin notes, invitation channel, approval reason..." rows={3} />
+      <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="审核备注、邀请渠道、通过或拒绝原因..." rows={3} />
       <div className="access-admin-actions">
-        <button disabled={mutation.isPending} onClick={() => mutation.mutate('approved')}>Approve</button>
-        <button disabled={mutation.isPending} onClick={() => mutation.mutate('invited')}>Mark invited</button>
-        <button disabled={mutation.isPending} onClick={() => mutation.mutate('rejected')}>Reject</button>
-        <button disabled={mutation.isPending} onClick={() => mutation.mutate('pending')}>Restore pending</button>
+        <button disabled={mutation.isPending} onClick={() => mutation.mutate('approved')}>通过</button>
+        <button disabled={mutation.isPending} onClick={() => mutation.mutate('invited')}>标记已邀请</button>
+        <button disabled={mutation.isPending} onClick={() => mutation.mutate('rejected')}>拒绝</button>
+        <button disabled={mutation.isPending} onClick={() => mutation.mutate('pending')}>恢复待审核</button>
       </div>
     </article>
   )
@@ -70,55 +78,54 @@ export default function AccessRequestsAdminPage() {
 
   const stats = requests.data?.stats
   const rows = requests.data?.rows || []
-  const filteredNote = useMemo(() => status ? statusLabels[status as AccessRequestStatus] : 'all requests', [status])
+  const filteredNote = useMemo(() => status ? statusLabels[status as AccessRequestStatus] : '全部申请', [status])
 
   return (
     <div className="access-admin-page">
       <section className="launch-hero">
         <div>
-          <span>Private beta funnel</span>
-          <h1>Access requests</h1>
+          <span>访问申请队列</span>
+          <h1>访问申请审核</h1>
           <p>
-            Review visitor applications from the public request form. This is an admin-only queue;
-            user account creation and invitation delivery can be automated later.
+            集中处理公共申请表提交的访问请求。这里用于后台审核、记录处理意见，并衔接账号开通与邀请发送流程。
           </p>
         </div>
         <div className="launch-score launch-score-ok">
           <strong>{stats?.pending ?? 0}</strong>
-          <span>pending requests</span>
+          <span>待审核申请</span>
         </div>
       </section>
 
       <section className="scheduler-summary">
-        <div><span>Total</span><strong>{stats?.total ?? 0}</strong></div>
-        <div><span>Pending</span><strong>{stats?.pending ?? 0}</strong></div>
-        <div><span>Approved</span><strong>{stats?.approved ?? 0}</strong></div>
-        <div><span>Invited</span><strong>{stats?.invited ?? 0}</strong></div>
-        <div><span>Rejected</span><strong>{stats?.rejected ?? 0}</strong></div>
+        <div><span>总数</span><strong>{stats?.total ?? 0}</strong></div>
+        <div><span>待审核</span><strong>{stats?.pending ?? 0}</strong></div>
+        <div><span>已通过</span><strong>{stats?.approved ?? 0}</strong></div>
+        <div><span>已邀请</span><strong>{stats?.invited ?? 0}</strong></div>
+        <div><span>已拒绝</span><strong>{stats?.rejected ?? 0}</strong></div>
       </section>
 
       <section className="billing-admin-filters">
         <label>
-          Status
+          状态
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
             {statuses.map((item) => <option key={item.value || 'all'} value={item.value}>{item.label}</option>)}
           </select>
         </label>
         <label>
-          Search
-          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="email, name, affiliation, use case..." />
+          搜索
+          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="邮箱、姓名、机构、使用场景..." />
         </label>
       </section>
 
       <section className="admin-panel admin-panel-wide">
         <div className="admin-panel-head">
-          <span>{rows.length} visible · {filteredNote}</span>
-          <h2>Review queue</h2>
+          <span>{rows.length} 条可见 · {filteredNote}</span>
+          <h2>审核列表</h2>
         </div>
         <div className="access-admin-list">
-          {requests.isLoading && <p className="learning-muted">Loading access requests...</p>}
+          {requests.isLoading && <p className="learning-muted">正在加载访问申请...</p>}
           {rows.map((row) => <RequestRow key={row.id} row={row} />)}
-          {!requests.isLoading && rows.length === 0 && <p className="learning-muted">No requests match this filter.</p>}
+          {!requests.isLoading && rows.length === 0 && <p className="learning-muted">当前筛选条件下没有申请。</p>}
         </div>
       </section>
     </div>

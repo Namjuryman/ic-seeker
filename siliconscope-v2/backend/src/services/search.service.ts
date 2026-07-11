@@ -160,9 +160,9 @@ function firstMatchingTerms(row: Record<string, unknown>, rawQ: string) {
 
 function matchReason(row: Record<string, unknown>, rawQ: string, semantic: boolean, searchRank?: unknown) {
   const hits = firstMatchingTerms(row, rawQ);
-  if (hits.length) return `${semantic ? "semantic-lite" : "keyword"} match (${hits.join(", ")})`;
-  if (typeof searchRank === "number" && Number.isFinite(searchRank)) return `FTS rank ${searchRank.toFixed(3)}`;
-  return rawQ ? "metadata filter match" : "ranked by score and recency";
+  if (hits.length) return `${semantic ? "语义扩展" : "关键词"}匹配（${hits.join(", ")}）`;
+  if (typeof searchRank === "number" && Number.isFinite(searchRank)) return `全文检索匹配 ${searchRank.toFixed(3)}`;
+  return rawQ ? "元数据筛选匹配" : "按排序信号和近年记录排列";
 }
 
 function uniqueSuggestionRows(rows: Array<{ kind: string; label: string; query: string; detail?: string }>) {
@@ -202,7 +202,7 @@ export const searchService = {
         kind: "venue",
         label: row.venue,
         query: row.venue,
-        detail: `${row.n.toLocaleString()} papers in this venue`,
+        detail: `${row.n.toLocaleString()} 篇来自该会议/期刊`,
       })));
 
       const fieldRows = metadataDb.all<{ domain: string; n: number }>(sql`
@@ -217,7 +217,7 @@ export const searchService = {
         kind: "field",
         label: row.domain,
         query: row.domain,
-        detail: `${row.n.toLocaleString()} papers in this IC direction`,
+        detail: `${row.n.toLocaleString()} 篇来自该 IC 方向`,
       })));
 
       const authorRows = metadataDb.all<{ authors: string; n: number }>(sql`
@@ -243,7 +243,7 @@ export const searchService = {
           kind: "author",
           label: author,
           query: author,
-          detail: `${n.toLocaleString()} matching author rows`,
+          detail: `${n.toLocaleString()} 条作者匹配记录`,
         })));
 
       const institutionRows = metadataDb.all<{ affiliations: string; n: number }>(sql`
@@ -269,7 +269,7 @@ export const searchService = {
           kind: "institution",
           label: institution,
           query: institution,
-          detail: `${n.toLocaleString()} matching affiliation rows`,
+          detail: `${n.toLocaleString()} 条机构匹配记录`,
         })));
     }
 

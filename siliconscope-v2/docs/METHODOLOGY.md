@@ -18,15 +18,15 @@ The builder supports isolated output with `--out-root`, so each venue can be reb
 
 ## Author And Institution Profiles
 
-Author scores use name-based aggregation:
+Author metadata signals use name-based aggregation:
 
 ```text
 author_score = score_sum + 5 * s_plus_count + 2 * s_count + citation_count / 50
 ```
 
-Institution scores use the same formula over affiliation strings.
+Institution metadata signals use the same formula over normalized affiliation strings.
 
-These are useful for exploration, but not final bibliometric judgments. The next step should be identity normalization: ORCID, DBLP/OpenAlex author IDs, affiliation normalization, and manual merge/split rules.
+These values are sorting signals for exploration, not final bibliometric judgments, verified faculty rosters, or institutional evaluations. The next step should be identity normalization: ORCID, DBLP/OpenAlex author IDs, affiliation normalization, current-role verification, and manual merge/split rules.
 
 ## Known Coverage Notes
 

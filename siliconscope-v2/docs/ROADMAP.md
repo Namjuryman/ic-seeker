@@ -34,7 +34,7 @@ Still provisional:
 - mentor-vs-student filtering is heuristic
 - institution affiliation membership is inferred from metadata and needs verification
 - city-level geo hotspots are illustrative until institution geocoding is connected
-- learning lessons are structured placeholders, not polished course content
+- learning lessons are structured learning notes; long-form course polish and source-backed exercises still need expansion
 - learning route stages/modules/resources are still embedded in payload JSON; future structured editors should project them into dedicated tables
 
 The product can have three editions:
@@ -91,8 +91,8 @@ Potential public website modules:
 - Collaboration graph
 - Citation graph
 - Topic evolution
-- Rising-star ranking
-- School strength ranking
+- Emerging-author signals
+- School/institution metadata profiles
 - New-paper monitoring
 - Weekly research digest
 
@@ -167,7 +167,7 @@ Each daily lesson can include:
 - Typical metrics
 - Common design pitfalls
 - Representative papers
-- Recommended professors and institutions
+- Author and institution leads for follow-up reading
 - Small quiz
 - Save and review
 
@@ -177,7 +177,7 @@ The lesson should connect to the database:
 Daily topic: SAR ADC
 -> recent ISSCC/JSSC/VLSI SAR ADC papers
 -> professors active in SAR ADC
--> institutions strong in SAR ADC
+-> institutions active in SAR ADC
 -> suggested keywords
 ```
 
@@ -287,9 +287,9 @@ The current mentor/institution review page should be treated as an inferred prot
 
 Current behavior:
 
-- Institution strength is ranked by local IC paper metadata.
+- Institution profiles are ordered by local IC paper metadata signals, not by official institutional evaluation.
 - Mentor membership is inferred from author names and affiliation strings in indexed papers.
-- Mentor-vs-student status is inferred from publication accumulation, S+ count, career span, and score; low-evidence authors are filtered as likely students/collaborators by default.
+- Mentor-vs-student status is inferred from publication accumulation, S+ count, career span, and metadata signal; low-evidence authors are filtered as likely students/collaborators by default.
 - This is useful for navigation and early product testing, but it can confuse collaborators, visiting students, branch campuses, shared labs, renamed institutes, and historical affiliation moves.
 
 Future verification direction:
@@ -346,17 +346,17 @@ The current Geo Intelligence page is a product prototype:
 
 - country boundaries come from the local Natural Earth basemap
 - map labels show country codes only
-- exact numeric values are moved to country share, ranking, and detail panels
+- exact numeric values are moved to country share, sorted summary, and detail panels
 - city-level rays are schematic hotspots, not verified city-level statistics yet
 
-The long-term goal is a real IC geography database, not just country-level ranking. The map should eventually show regional density inside large countries, such as US West Coast vs East Coast, Texas, Beijing/Shanghai/Yangtze River Delta/Pearl River Delta, Hsinchu/Taipei, Seoul/Daejeon, Tokyo/Osaka/Sendai, Leuven/Eindhoven/Delft, and other IC clusters.
+The long-term goal is a real IC geography database, not just country-level aggregate ordering. The map should eventually show regional density inside large countries, such as US West Coast vs East Coast, Texas, Beijing/Shanghai/Yangtze River Delta/Pearl River Delta, Hsinchu/Taipei, Seoul/Daejeon, Tokyo/Osaka/Sendai, Leuven/Eindhoven/Delft, and other IC clusters.
 
 Required data upgrades:
 
 - Canonicalize institution names, including abbreviations, university branches, corporate labs, and translated names.
 - Add institution aliases, for example `UM`, `University of Macau`, `Universidade de Macau`, and lab-specific variants.
 - Add institution-to-city, city-to-region, and city-to-country mappings.
-- Store geocoding confidence scores so uncertain affiliations do not become hard rankings.
+- Store geocoding confidence scores so uncertain affiliations do not become hard claims or misleading city heat points.
 - Distinguish author affiliation, publisher address, sponsor/company mention, and paper text mentions.
 - Keep Hong Kong, Macau, Taiwan, Singapore, and branch-campus records auditable because small-region counts are easy to inflate.
 - Add QA reports for suspicious jumps, for example a small region suddenly receiving hundreds of papers from affiliation-string false positives.
@@ -445,8 +445,8 @@ Institution profile fields:
 - Total papers
 - S+/S/A/B counts
 - Recent five-year trend
-- Strong topics
-- Core professors
+- Active topics
+- Representative author/mentor candidates
 - Collaborating institutions
 - Representative papers
 
@@ -495,7 +495,7 @@ The current UI is a functional prototype. Product-grade UI ideas:
 - Compact filter sidebar.
 - Table/card view switch for papers.
 - Author profile pages with charts.
-- Institution profile pages with logos and strength charts.
+- Institution profile pages with logos, trend charts, and field-activity charts.
 - Venue coverage heatmap.
 - Topic trend charts.
 - Professor-vs-professor comparison.
@@ -588,7 +588,7 @@ API/data:
 1. Done: split local code into a cleaner API and frontend structure.
 2. Done: add a first learning roadmap and daily-circuit workspace.
 3. Next: add automatic database download/update, so users do not need to pull large database files through Git.
-4. Next: precompute heavy rankings, mentor/institution cards, venue matrices, and geo aggregates during weekly refresh jobs.
+4. Next: precompute heavy profile lists, mentor/institution cards, venue matrices, and geo aggregates during weekly refresh jobs.
 5. Next: add local PDF library with text extraction and private full-text search.
 6. Next: move learning roadmaps and lessons into editable database tables.
 7. Next: add topic/venue/professor/institution follow system.

@@ -77,12 +77,12 @@ const unlimited = -1;
 const plans: BillingPlan[] = [
   {
     id: "free",
-    name: "Free Preview",
-    audience: "Public demo users",
+    name: "免费预览",
+    audience: "公开演示和轻量试用用户",
     priceMonthlyUsd: 0,
-    badge: "Demo",
-    description: "Public metadata search, DOI/source links, and a small personal workflow for trying SiliconScope.",
-    features: ["Paper metadata search", "Topic and institution exploration", "DOI/source redirects", "Limited watchlist"],
+    badge: "演示",
+    description: "用于体验 SiliconScope 的公开元数据检索、DOI/来源链接和轻量个人工作流。",
+    features: ["论文元数据检索", "方向与机构画像浏览", "DOI/来源链接跳转", "有限关注列表"],
     limits: {
       savedSearches: 3,
       watchlistItems: 30,
@@ -98,12 +98,12 @@ const plans: BillingPlan[] = [
   },
   {
     id: "pro",
-    name: "Research Pro",
-    audience: "Students, IC engineers, and independent researchers",
+    name: "研究者 Pro",
+    audience: "学生、IC 工程师和独立研究者",
     priceMonthlyUsd: 19,
-    badge: "Individual",
-    description: "Higher personal limits for reading management, alerts, exports, and future AI paper assistance.",
-    features: ["Unlimited metadata search", "Large watchlist and reading queue", "Weekly topic alerts", "Export center", "Future AI reading credits"],
+    badge: "个人",
+    description: "提高个人阅读管理、提醒、导出和 AI 论文辅助的使用额度。",
+    features: ["不限量元数据检索", "更大的关注列表和阅读队列", "每周方向提醒", "导出中心", "AI 阅读辅助额度"],
     limits: {
       savedSearches: 50,
       watchlistItems: 500,
@@ -120,12 +120,12 @@ const plans: BillingPlan[] = [
   },
   {
     id: "lab",
-    name: "Lab",
-    audience: "Research groups and small IC teams",
+    name: "课题组",
+    audience: "研究组和小型 IC 团队",
     priceMonthlyUsd: 99,
-    badge: "Team",
-    description: "Shared workspace plan for labs that need team-level collections, imports, and internal evaluation workflows.",
-    features: ["Team watchlists", "Shared reading queues", "Professor/institution tracking", "Admin-reviewed imports", "Priority snapshot refresh"],
+    badge: "团队",
+    description: "面向需要团队级收藏、导入和内部评估流程的实验室共享工作区方案。",
+    features: ["团队关注列表", "共享阅读队列", "研究者/机构跟踪", "管理员复核导入", "优先快照刷新"],
     limits: {
       savedSearches: 500,
       watchlistItems: 5000,
@@ -141,12 +141,12 @@ const plans: BillingPlan[] = [
   },
   {
     id: "enterprise",
-    name: "Enterprise",
-    audience: "Companies, institutes, and paid private deployments",
+    name: "企业/机构",
+    audience: "企业、研究院和付费私有部署",
     priceMonthlyUsd: null,
-    badge: "Custom",
-    description: "Custom deployment with private data, API integrations, security review, and ingestion jobs.",
-    features: ["Private deployment", "Custom crawler/API policy", "SLA and backups", "Object storage integration", "SSO/OAuth roadmap"],
+    badge: "定制",
+    description: "支持私有数据、API 集成、安全审查和采集任务的定制部署。",
+    features: ["私有部署", "定制爬虫/API 策略", "SLA 与备份", "对象存储集成", "SSO/OAuth 路线图"],
     limits: {
       savedSearches: unlimited,
       watchlistItems: unlimited,
@@ -162,12 +162,12 @@ const plans: BillingPlan[] = [
   },
   {
     id: "internal",
-    name: "Internal Admin",
-    audience: "Owner and local operator",
+    name: "内部管理",
+    audience: "站点所有者和本地运营者",
     priceMonthlyUsd: null,
-    badge: "Owner",
-    description: "Internal operating mode for local development, admin maintenance, and private database curation.",
-    features: ["Admin console", "All private MVP workflows", "Data import operations", "Runtime and audit tools"],
+    badge: "所有者",
+    description: "用于本地开发、后台维护和私有数据库整理的内部运营模式。",
+    features: ["管理控制台", "全部私有 MVP 工作流", "数据导入操作", "运行时与审计工具"],
     limits: {
       savedSearches: unlimited,
       watchlistItems: unlimited,
@@ -194,7 +194,7 @@ function getPlan(planId?: string | null): BillingPlan {
 }
 
 function formatLimit(value: number, suffix = "") {
-  if (value < 0) return "Unlimited";
+  if (value < 0) return "不限";
   return `${value.toLocaleString()}${suffix}`;
 }
 
@@ -314,17 +314,17 @@ export const billingService = {
       paymentConfigured: configured,
       checkoutAvailable: configured,
       checkoutReason: configured
-        ? "Checkout adapter is configured."
-        : "Payment provider is disabled or missing credentials. This page is a commercial scaffold until Stripe/Paddle is wired.",
+        ? "支付通道已配置。"
+        : "支付通道暂未启用；当前页面仅展示方案、配额和用量，不会发起真实扣款。",
       currentPlan,
       plans,
       entitlementSummary: [
-        { label: "Watchlist", value: formatLimit(currentPlan.limits.watchlistItems), detail: "Companies, papers, searches, mentors, and topic monitors." },
-        { label: "Reading queue", value: formatLimit(currentPlan.limits.readingQueueItems), detail: "Personal or future team reading workflow." },
-        { label: "AI reading", value: formatLimit(currentPlan.limits.aiSummariesPerMonth, "/month"), detail: "Reserved for future OpenAI-powered paper reading." },
-        { label: "Exports", value: formatLimit(currentPlan.limits.exportsPerMonth, "/month"), detail: "CSV, BibTeX, and future report exports." },
-        { label: "Alerts", value: formatLimit(currentPlan.limits.alerts), detail: "Saved searches, topic digests, and journal update monitors." },
-        { label: "Private PDFs", value: formatLimit(currentPlan.limits.privatePdfStorageGb, " GB"), detail: "Reserved for private deployments with object storage." },
+        { label: "关注列表", value: formatLimit(currentPlan.limits.watchlistItems), detail: "企业、论文、搜索、研究者和方向监控。" },
+        { label: "阅读队列", value: formatLimit(currentPlan.limits.readingQueueItems), detail: "个人阅读流，也可衔接团队协作场景。" },
+        { label: "AI 阅读", value: formatLimit(currentPlan.limits.aiSummariesPerMonth, "/月"), detail: "用于论文摘要、阅读提示和报告辅助。" },
+        { label: "导出", value: formatLimit(currentPlan.limits.exportsPerMonth, "/月"), detail: "CSV、BibTeX 和研究组合导出。" },
+        { label: "提醒", value: formatLimit(currentPlan.limits.alerts), detail: "已保存搜索、方向摘要和期刊更新监控。" },
+        { label: "私有 PDF", value: formatLimit(currentPlan.limits.privatePdfStorageGb, " GB"), detail: "用于私有部署中的本地或对象存储索引。" },
       ],
       usage,
     };
@@ -337,13 +337,13 @@ export const billingService = {
       periodStart: start,
       periodEnd: end,
       items: [
-        usageItem(userId, plan, "savedSearches", "Saved searches", start, end, true),
-        usageItem(userId, plan, "watchlistItems", "Watchlist items", start, end, true),
-        usageItem(userId, plan, "readingQueueItems", "Reading queue", start, end, true),
-        usageItem(userId, plan, "aiSummariesPerMonth", "AI summaries", start, end, false),
-        usageItem(userId, plan, "exportsPerMonth", "Exports", start, end, false),
-        usageItem(userId, plan, "alerts", "Alerts", start, end, false),
-        usageItem(userId, plan, "apiRequestsPerMonth", "API requests", start, end, false),
+        usageItem(userId, plan, "savedSearches", "已保存搜索", start, end, true),
+        usageItem(userId, plan, "watchlistItems", "关注项目", start, end, true),
+        usageItem(userId, plan, "readingQueueItems", "阅读队列", start, end, true),
+        usageItem(userId, plan, "aiSummariesPerMonth", "AI 摘要", start, end, false),
+        usageItem(userId, plan, "exportsPerMonth", "导出", start, end, false),
+        usageItem(userId, plan, "alerts", "提醒", start, end, false),
+        usageItem(userId, plan, "apiRequestsPerMonth", "API 请求", start, end, false),
       ],
     };
   },
@@ -406,13 +406,13 @@ export const billingService = {
       },
       rollout: {
         publicSignup: false,
-        checkoutAdapter: configured ? "configured" : "not-configured",
-        entitlementEnforcement: "partial-watchlist-reading-queue",
+        checkoutAdapter: configured ? "已配置" : "未配置",
+        entitlementEnforcement: "部分接入：关注列表与阅读队列",
         notes: [
-          "Plan catalog and entitlement metadata are available now.",
-          "Usage events are recorded for quota-ready workflows.",
-          "No external payment provider is called until Stripe/Paddle adapters are implemented.",
-          "Current limits are enforced first on watchlist and reading queue, then later on exports, alerts, AI reading, and API access.",
+          "方案目录和权益元数据已可用。",
+          "已对具备配额能力的工作流记录用量事件。",
+          "支付通道未启用前，不会调用外部支付服务。",
+          "当前优先约束关注列表和阅读队列，导出、提醒、AI 阅读和 API 访问会逐步接入配额。",
         ],
       },
     };
@@ -519,7 +519,7 @@ export const billingService = {
   }) {
     const plan = getPlan(input.planId);
     const existing = this.getBillingUser(input.userId);
-    if (!existing) throw new Error("User not found");
+    if (!existing) throw new Error("用户不存在。");
     const now = new Date().toISOString();
     const subscriptionId = makeId("sub_manual");
 
@@ -574,8 +574,8 @@ export const billingService = {
       provider: appConfig.paymentProvider,
       checkoutAvailable: configured,
       reason: configured
-        ? "Checkout adapter boundary exists, but provider-specific session creation has not been implemented yet."
-        : "Payment provider is disabled or credentials are missing.",
+        ? "支付适配边界已就绪，但当前环境未开放在线支付会话。"
+        : "支付通道未启用或缺少凭据。",
     };
   },
 };

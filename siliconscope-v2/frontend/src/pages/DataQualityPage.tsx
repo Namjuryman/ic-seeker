@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import type { ContentQualityFindingResult, DataQualityReport } from '../types'
+import { paperRankLabel, targetTypeLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
+
+const severityLabels: Record<string, string> = {
+  high: '高优先级',
+  medium: '中优先级',
+  low: '低优先级',
+}
+
+const findingTypeLabels: Record<string, string> = {
+  duplicate_doi: '重复 DOI',
+  duplicate_title_year: '重复标题/年份',
+  unknown_venue: '会议/期刊待映射',
+  low_confidence_topic: '方向低置信',
+  missing_affiliation: '机构缺失',
+  venue_publication_mismatch: '来源错配',
+  low_metadata_confidence: '元数据低置信',
+  ai_review: 'AI 标注待复核',
+}
 
 function Card({ title, value, hint }: { title: string; value: string | number; hint?: string }) {
   return (
@@ -22,7 +41,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function SmallTable({ rows, columns }: { rows: any[]; columns: Array<{ key: string; label: string; render?: (row: any) => React.ReactNode }> }) {
-  if (!rows.length) return <p className="text-sm text-ink-muted">No issues found.</p>
+  if (!rows.length) return <p className="text-sm text-ink-muted">没有发现问题。</p>
   return (
     <div className="overflow-auto rounded-lg border border-line max-h-[420px]">
       <table className="min-w-full text-xs">
@@ -73,7 +92,7 @@ export default function DataQualityPage() {
     try {
       setReport(await api.dataQuality({ scanLimit, sampleLimit }))
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message)
+      setError(friendlyError(err, '数据质量报告加载失败'))
     } finally {
       setLoading(false)
     }
@@ -85,10 +104,10 @@ export default function DataQualityPage() {
     setSyncMessage('')
     try {
       const result = await api.syncContentQualityFindings({ scanLimit, sampleLimit })
-      setSyncMessage(`Synced ${result.total} current issues. Open queue: ${result.open}.`)
+      setSyncMessage(`已同步 ${result.total} 个当前问题。待处理队列：${result.open}。`)
       await loadFindings()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message)
+      setError(friendlyError(err, '数据质量状态更新失败'))
     } finally {
       setSyncing(false)
     }
@@ -102,47 +121,47 @@ export default function DataQualityPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-ink-text">Data Quality</h1>
+        <h1 className="text-2xl font-bold text-ink-text">数据质量</h1>
         <p className="text-sm text-ink-muted mt-1">
-          Scan the local paper database, then sync important issues into a persistent review queue.
-          This covers duplicates, weak topics, venue mismatches, affiliation gaps, aliases, and AI labels.
+          扫描本地论文库，并把重要问题同步到持久复核队列。这里覆盖重复论文、弱主题、会议期刊错配、
+          机构缺失、别名归一和 AI 标注风险。
         </p>
       </div>
 
       <section className="bg-surface-panel border border-line rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-end gap-3">
         <div>
-          <label className="text-xs text-ink-subtle block mb-1">Scan rows</label>
+          <label className="text-xs text-ink-subtle block mb-1">扫描行数</label>
           <select value={scanLimit} onChange={(event) => setScanLimit(Number(event.target.value))} className="px-3 py-2 rounded-lg border border-line bg-white text-sm">
             {[5000, 12000, 25000, 50000].map((value) => <option key={value} value={value}>{value.toLocaleString()}</option>)}
           </select>
         </div>
         <div>
-          <label className="text-xs text-ink-subtle block mb-1">Samples per issue</label>
+          <label className="text-xs text-ink-subtle block mb-1">每类问题样本数</label>
           <select value={sampleLimit} onChange={(event) => setSampleLimit(Number(event.target.value))} className="px-3 py-2 rounded-lg border border-line bg-white text-sm">
             {[25, 50, 100, 200].map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
         <button onClick={runAnalysis} disabled={loading} className="px-4 py-2 rounded-lg bg-brand-500 text-white text-sm disabled:opacity-50">
-          {loading ? 'Running analysis...' : 'Run analysis'}
+          {loading ? '分析中...' : '运行分析'}
         </button>
         <button onClick={syncFindings} disabled={syncing} className="px-4 py-2 rounded-lg border border-line bg-white text-sm text-ink-text disabled:opacity-50">
-          {syncing ? 'Syncing findings...' : 'Sync findings'}
+          {syncing ? '同步中...' : '同步问题'}
         </button>
-        {report && <span className="text-xs text-ink-muted">Latest: {report.generatedAt} / scanned {report.scannedRows ?? '-'} rows</span>}
+        {report && <span className="text-xs text-ink-muted">最近生成：{report.generatedAt} / 已扫描 {report.scannedRows ?? '-'} 行</span>}
       </section>
 
       {error && <div className="rounded-xl border p-3 text-sm bg-red-50 text-red-700 border-red-100">{error}</div>}
       {syncMessage && <div className="rounded-xl border p-3 text-sm bg-emerald-50 text-emerald-700 border-emerald-100">{syncMessage}</div>}
       {!report && !loading && !error && (
         <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">
-          No report has been generated yet. Click Run analysis when you want a bounded database scan.
+          还没有生成报告。需要有边界地扫描数据库时，点击“运行分析”。
         </div>
       )}
-      {loading && <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">Analyzing database... large datasets may take a few seconds.</div>}
+      {loading && <div className="text-sm text-ink-muted bg-surface-panel border border-line rounded-xl p-4">正在分析数据库，大数据量可能需要几秒。</div>}
 
-      <Section title={`Persistent findings${findings ? ` (${findings.total} open)` : ''}`}>
+      <Section title={`持久复核问题${findings ? `（${findings.total} 个待处理）` : ''}`}>
         {!findings?.rows.length ? (
-          <p className="text-sm text-ink-muted">No open persistent findings yet. Run Sync findings after an analysis pass.</p>
+          <p className="text-sm text-ink-muted">暂无待处理问题。完成一次分析后可点击“同步问题”。</p>
         ) : (
           <div className="space-y-2">
             {findings.rows.map((item) => (
@@ -150,18 +169,20 @@ export default function DataQualityPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[11px] px-2 py-1 rounded-full font-semibold ${item.severity === 'high' ? 'bg-red-50 text-red-700' : item.severity === 'medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                      {item.severity}
+                      {severityLabels[item.severity] || item.severity}
                     </span>
-                    <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold">{item.findingType}</span>
-                    <span className="text-xs text-ink-muted">{item.targetType}:{item.targetId}</span>
+                    <span className="text-[11px] px-2 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold">
+                      {findingTypeLabels[item.findingType] || item.findingType}
+                    </span>
+                    <span className="text-xs text-ink-muted">{targetTypeLabel(item.targetType)}：{item.targetId}</span>
                   </div>
                   <div className="text-sm font-semibold text-ink-text mt-2 break-words">{item.title}</div>
                   <div className="text-xs text-ink-secondary mt-1 break-words">{item.summary}</div>
-                  <div className="text-[11px] text-ink-muted mt-1">Last seen {item.lastSeenAt}</div>
+                  <div className="text-[11px] text-ink-muted mt-1">最近发现 {item.lastSeenAt}</div>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button onClick={() => updateFinding(item.id, 'ignored')} className="px-3 py-1.5 rounded-lg border border-line text-xs bg-white">Ignore</button>
-                  <button onClick={() => updateFinding(item.id, 'resolved')} className="px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs">Resolve</button>
+                  <button onClick={() => updateFinding(item.id, 'ignored')} className="px-3 py-1.5 rounded-lg border border-line text-xs bg-white">忽略</button>
+                  <button onClick={() => updateFinding(item.id, 'resolved')} className="px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs">标记解决</button>
                 </div>
               </div>
             ))}
@@ -172,83 +193,83 @@ export default function DataQualityPage() {
       {report && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-            <Card title="Papers" value={report.totalPapers} hint="current SQLite snapshot" />
-            <Card title="Scanned rows" value={report.scannedRows ?? '-'} hint="bounded for speed" />
-            <Card title="Duplicate DOI" value={report.duplicateDoi.length} hint="duplicate groups" />
-            <Card title="Missing affiliation" value={report.missingAffiliations} hint="affects geo/profiles" />
-            <Card title="Venue mismatch" value={report.venuePublicationMismatches?.length ?? 0} hint="rank/source risk" />
-            <Card title="Metadata confidence" value={report.lowMetadataConfidence?.length ?? 0} hint="review below 60" />
-            <Card title="AI review" value={report.aiReviewQueue?.length ?? 0} hint="low-confidence annotations" />
+            <Card title="论文总数" value={report.totalPapers} hint="当前本地快照" />
+            <Card title="扫描行数" value={report.scannedRows ?? '-'} hint="有边界扫描" />
+            <Card title="重复 DOI" value={report.duplicateDoi.length} hint="重复分组" />
+            <Card title="缺失机构" value={report.missingAffiliations} hint="影响地图和画像" />
+            <Card title="来源错配" value={report.venuePublicationMismatches?.length ?? 0} hint="影响来源和排序信号" />
+            <Card title="元数据置信度" value={report.lowMetadataConfidence?.length ?? 0} hint="低于 60 需复核" />
+            <Card title="AI 复核" value={report.aiReviewQueue?.length ?? 0} hint="低置信标注" />
           </div>
 
-          <Section title="Recommendations">
+          <Section title="建议">
             <ul className="list-disc pl-5 text-sm text-ink-secondary space-y-1">
               {report.recommendations.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </Section>
 
-          <Section title="Duplicate DOI candidates">
-            <SmallTable rows={report.duplicateDoi} columns={[{ key: 'key', label: 'DOI' }, { key: 'count', label: 'Count' }, { key: 'samples', label: 'Samples', render: (row) => <span className="break-words">{row.samples}</span> }]} />
+          <Section title="重复 DOI 候选">
+            <SmallTable rows={report.duplicateDoi} columns={[{ key: 'key', label: 'DOI' }, { key: 'count', label: '数量' }, { key: 'samples', label: '样本', render: (row) => <span className="break-words">{row.samples}</span> }]} />
           </Section>
 
-          <Section title="Duplicate title + year candidates">
-            <SmallTable rows={report.duplicateTitleYear} columns={[{ key: 'key', label: 'Title/year key' }, { key: 'count', label: 'Count' }, { key: 'samples', label: 'Samples', render: (row) => <span className="break-words">{row.samples}</span> }]} />
+          <Section title="重复标题 + 年份候选">
+            <SmallTable rows={report.duplicateTitleYear} columns={[{ key: 'key', label: '标题/年份键' }, { key: 'count', label: '数量' }, { key: 'samples', label: '样本', render: (row) => <span className="break-words">{row.samples}</span> }]} />
           </Section>
 
-          <Section title="Unknown or weak venue mapping">
-            <SmallTable rows={report.unknownVenues} columns={[{ key: 'venue', label: 'Venue' }, { key: 'rank', label: 'Rank' }, { key: 'count', label: 'Count' }, { key: 'avgScore', label: 'Avg score' }]} />
+          <Section title="未知或弱会议期刊映射">
+            <SmallTable rows={report.unknownVenues} columns={[{ key: 'venue', label: '会议/期刊' }, { key: 'rank', label: '等级', render: (row) => paperRankLabel(row.rank) }, { key: 'count', label: '数量' }, { key: 'avgScore', label: '平均排序信号' }]} />
           </Section>
 
-          <Section title="Low-confidence topic groups">
-            <SmallTable rows={report.lowConfidenceTopics} columns={[{ key: 'field', label: 'Field' }, { key: 'count', label: 'Count' }, { key: 'avgHits', label: 'Avg hits' }, { key: 'samples', label: 'Samples', render: (row) => <span className="break-words">{row.samples}</span> }]} />
+          <Section title="低置信主题分组">
+            <SmallTable rows={report.lowConfidenceTopics} columns={[{ key: 'field', label: '方向' }, { key: 'count', label: '数量' }, { key: 'avgHits', label: '平均命中' }, { key: 'samples', label: '样本', render: (row) => <span className="break-words">{row.samples}</span> }]} />
           </Section>
 
-          <Section title="Low metadata-confidence papers">
+          <Section title="低元数据置信度论文">
             <SmallTable
               rows={report.lowMetadataConfidence || []}
               columns={[
-                { key: 'id', label: 'Paper' },
-                { key: 'metadataConfidence', label: 'Score' },
-                { key: 'venue', label: 'Venue' },
-                { key: 'confidenceFlags', label: 'Flags', render: (row) => <span className="break-words">{row.confidenceFlags || '-'}</span> },
-                { key: 'title', label: 'Title', render: (row) => <span className="break-words">{row.title}</span> },
+                { key: 'id', label: '论文' },
+                { key: 'metadataConfidence', label: '元数据置信度' },
+                { key: 'venue', label: '会议/期刊' },
+                { key: 'confidenceFlags', label: '标记', render: (row) => <span className="break-words">{row.confidenceFlags || '-'}</span> },
+                { key: 'title', label: '标题', render: (row) => <span className="break-words">{row.title}</span> },
               ]}
             />
           </Section>
 
-          <Section title="Venue / publication-title mismatches">
+          <Section title="会议期刊 / 出版标题错配">
             <SmallTable
               rows={report.venuePublicationMismatches || []}
               columns={[
-                { key: 'id', label: 'Paper' },
-                { key: 'venue', label: 'Venue' },
-                { key: 'publicationTitle', label: 'Publication title' },
-                { key: 'domain', label: 'Domain' },
-                { key: 'title', label: 'Title', render: (row) => <span className="break-words">{row.title}</span> },
+                { key: 'id', label: '论文' },
+                { key: 'venue', label: '会议/期刊' },
+                { key: 'publicationTitle', label: '出版标题' },
+                { key: 'domain', label: '领域' },
+                { key: 'title', label: '标题', render: (row) => <span className="break-words">{row.title}</span> },
               ]}
             />
           </Section>
 
-          <Section title="AI enrichment review queue">
+          <Section title="AI 标注复核队列">
             <SmallTable
               rows={report.aiReviewQueue || []}
               columns={[
-                { key: 'paperId', label: 'Paper' },
-                { key: 'venue', label: 'Venue' },
-                { key: 'confidence', label: 'Conf.', render: (row) => `${Math.round(Number(row.confidence || 0) * 100)}%` },
-                { key: 'primaryDomain', label: 'Domain' },
-                { key: 'title', label: 'Title', render: (row) => <span className="break-words">{row.title}</span> },
-                { key: 'summary', label: 'Summary', render: (row) => <span className="break-words">{row.summary || '-'}</span> },
+                { key: 'paperId', label: '论文' },
+                { key: 'venue', label: '会议/期刊' },
+                { key: 'confidence', label: '置信度', render: (row) => `${Math.round(Number(row.confidence || 0) * 100)}%` },
+                { key: 'primaryDomain', label: '领域' },
+                { key: 'title', label: '标题', render: (row) => <span className="break-words">{row.title}</span> },
+                { key: 'summary', label: '摘要', render: (row) => <span className="break-words">{row.summary || '-'}</span> },
               ]}
             />
           </Section>
 
-          <Section title="Institution alias candidates">
-            <SmallTable rows={report.institutionVariants} columns={[{ key: 'key', label: 'Normalized key' }, { key: 'count', label: 'Count' }, { key: 'variants', label: 'Variants', render: (row) => <div className="space-y-1">{row.variants.map((value: string) => <div key={value}>{value}</div>)}</div> }]} />
+          <Section title="机构别名候选">
+            <SmallTable rows={report.institutionVariants} columns={[{ key: 'key', label: '归一键' }, { key: 'count', label: '数量' }, { key: 'variants', label: '变体', render: (row) => <div className="space-y-1">{row.variants.map((value: string) => <div key={value}>{value}</div>)}</div> }]} />
           </Section>
 
-          <Section title="Ambiguous author-name candidates">
-            <SmallTable rows={report.ambiguousAuthors} columns={[{ key: 'key', label: 'Name key' }, { key: 'count', label: 'Count' }, { key: 'variants', label: 'Variants', render: (row) => <div>{row.variants.join(' / ')}</div> }, { key: 'venues', label: 'Venues', render: (row) => <div>{row.venues.join(', ')}</div> }]} />
+          <Section title="作者重名/歧义候选">
+            <SmallTable rows={report.ambiguousAuthors} columns={[{ key: 'key', label: '姓名键' }, { key: 'count', label: '数量' }, { key: 'variants', label: '变体', render: (row) => <div>{row.variants.join(' / ')}</div> }, { key: 'venues', label: '会议/期刊', render: (row) => <div>{row.venues.join(', ')}</div> }]} />
           </Section>
         </>
       )}

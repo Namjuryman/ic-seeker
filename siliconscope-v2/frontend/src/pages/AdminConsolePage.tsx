@@ -2,20 +2,48 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import type { AdminOperation, RuntimeCheck } from '../types'
+import { providerLabel } from '../utils/displayLabels'
 
 const statusText: Record<AdminOperation['status'], string> = {
   ready: '正常',
-  partial: '建设中',
-  planned: '待接入',
+  partial: '部分可用',
+  planned: '准备中',
   attention: '需处理',
   'needs-refresh': '需刷新',
   'needs-seed': '需导入',
 }
 
 const runtimeText: Record<RuntimeCheck['status'], string> = {
-  ok: 'OK',
-  warn: 'WARN',
-  error: 'ERROR',
+  ok: '正常',
+  warn: '警告',
+  error: '异常',
+}
+
+const healthText: Record<string, string> = {
+  ok: '正常',
+  warn: '警告',
+  error: '异常',
+  online: '在线',
+  degraded: '降级',
+  unknown: '未知',
+}
+
+const authModeText: Record<string, string> = {
+  password: '密码登录',
+  'local-dev': '本地开发',
+}
+
+const moderationLabel: Record<string, string> = {
+  comments: '评论',
+  reviews: '评价',
+  reports: '举报',
+  paper_comment: '论文评论',
+  mentor_review: '研究者评价',
+  professor_review: '研究者评价',
+  company: '企业',
+  institution: '机构',
+  author: '作者',
+  paper: '论文',
 }
 
 function formatBytes(bytes: number) {
@@ -28,8 +56,13 @@ function formatUptime(seconds = 0) {
   if (!Number.isFinite(seconds) || seconds <= 0) return '刚启动'
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (hours > 0) return `${hours} 小时 ${minutes} 分钟`
+  return `${minutes} 分钟`
+}
+
+function displayHealth(value?: string | null) {
+  if (!value) return '-'
+  return healthText[value] || value
 }
 
 function OperationCard({ item }: { item: AdminOperation }) {
@@ -76,46 +109,47 @@ export default function AdminConsolePage() {
   const summary = data.summary
   const topology = data.platform.topology
   const runtime = data.runtime
+  const runtimeStatus = runtime?.status || data.health.backend
 
   return (
     <div className="admin-page">
       <section className="admin-hero">
         <div>
-          <span>Admin Console</span>
+          <span>后台总览</span>
           <h1>管理员控制台</h1>
           <p>
             面向独立后台域名的运营入口：检查生产就绪状态、任务台账、备份、快照、审核队列、API key、企业数据、别名归一和数据质量。
           </p>
         </div>
         <div className={`admin-health admin-health-${runtime?.status || 'warn'}`}>
-          <strong>{runtime?.status || data.health.backend}</strong>
-          <span>{data.health.authMode} / {formatUptime(data.health.uptimeSeconds)}</span>
+          <strong>{displayHealth(runtimeStatus)}</strong>
+          <span>{authModeText[data.health.authMode] || data.health.authMode} / {formatUptime(data.health.uptimeSeconds)}</span>
         </div>
       </section>
 
       <section className="admin-status-strip">
-        <div><span>Backend API</span><strong>{data.health.backend}</strong></div>
-        <div><span>Runtime</span><strong>{runtime?.status || 'unknown'}</strong></div>
+        <div><span>后端 API</span><strong>{displayHealth(data.health.backend)}</strong></div>
+        <div><span>运行状态</span><strong>{displayHealth(runtime?.status || 'unknown')}</strong></div>
         <div><span>Node</span><strong>{runtime?.nodeVersion || '-'}</strong></div>
-        <div><span>App DB</span><strong>{topology.appStore.provider}</strong></div>
-        <div><span>Cache</span><strong>{topology.cache.provider}</strong></div>
-        <div><span>Search</span><strong>{topology.search.provider}</strong></div>
+        <div><span>应用库</span><strong>{providerLabel(topology.appStore.provider)}</strong></div>
+        <div><span>缓存</span><strong>{providerLabel(topology.cache.provider)}</strong></div>
+        <div><span>搜索</span><strong>{providerLabel(topology.search.provider)}</strong></div>
       </section>
 
       <section className="admin-summary">
         <div><span>论文库</span><strong>{summary.papers.toLocaleString()}</strong><small>{summary.years?.minYear}-{summary.years?.maxYear}</small></div>
         <div><span>快照缓存</span><strong>{summary.snapshots}</strong><small>{formatBytes(summary.snapshotBytes)}</small></div>
-        <div><span>审核待处理</span><strong>{summary.moderationOpen}</strong><small>comments / reviews / reports</small></div>
-        <div><span>API Key</span><strong>{summary.apiKeys}</strong><small>configured</small></div>
-        <div><span>企业数据</span><strong>{summary.companies}</strong><small>companies</small></div>
-        <div><span>通知</span><strong>{summary.unreadNotifications ?? 0}</strong><small>{summary.notifications ?? 0} total</small></div>
+        <div><span>审核待处理</span><strong>{summary.moderationOpen}</strong><small>评论 / 评价 / 举报</small></div>
+        <div><span>访问密钥</span><strong>{summary.apiKeys}</strong><small>已配置</small></div>
+        <div><span>企业数据</span><strong>{summary.companies}</strong><small>家企业</small></div>
+        <div><span>通知</span><strong>{summary.unreadNotifications ?? 0}</strong><small>共 {summary.notifications ?? 0} 条</small></div>
       </section>
 
       <section className="admin-grid">
         <div className="admin-panel admin-panel-wide">
           <div className="admin-panel-head">
             <div>
-              <span>Operations</span>
+              <span>运维模块</span>
               <h2>后端运营模块</h2>
             </div>
             <Link to="/job-operations">打开任务台账</Link>
@@ -128,7 +162,7 @@ export default function AdminConsolePage() {
         <aside className="admin-panel">
           <div className="admin-panel-head">
             <div>
-              <span>Runtime</span>
+              <span>运行检查</span>
               <h2>生产检查</h2>
             </div>
           </div>
@@ -145,29 +179,29 @@ export default function AdminConsolePage() {
         <div className="admin-panel">
           <div className="admin-panel-head">
             <div>
-              <span>Moderation</span>
+              <span>审核</span>
               <h2>近期审核</h2>
             </div>
             <Link to="/moderation">进入审核</Link>
           </div>
           <div className="admin-moderation">
-            <div><strong>{data.recentModeration.totals?.comments || 0}</strong><span>comments</span></div>
-            <div><strong>{data.recentModeration.totals?.reviews || 0}</strong><span>reviews</span></div>
-            <div><strong>{data.recentModeration.totals?.reports || 0}</strong><span>reports</span></div>
+            <div><strong>{data.recentModeration.totals?.comments || 0}</strong><span>评论</span></div>
+            <div><strong>{data.recentModeration.totals?.reviews || 0}</strong><span>评价</span></div>
+            <div><strong>{data.recentModeration.totals?.reports || 0}</strong><span>举报</span></div>
           </div>
           <ul className="admin-mini-list">
             {data.recentModeration.reports.slice(0, 3).map((report) => (
-              <li key={report.id}><span>Report #{report.id}</span><small>{report.reason || report.target_type}</small></li>
+              <li key={report.id}><span>举报 {report.id}</span><small>{report.reason || moderationLabel[report.target_type] || report.target_type}</small></li>
             ))}
-            {!data.recentModeration.reports.length && <li><span>暂无 open report</span><small>审核队列保持安静是好事。</small></li>}
+            {!data.recentModeration.reports.length && <li><span>暂无待处理举报</span><small>审核队列保持安静是好事。</small></li>}
           </ul>
         </div>
 
         <div className="admin-panel">
           <div className="admin-panel-head">
             <div>
-              <span>Local Files</span>
-              <h2>PDF Inbox</h2>
+              <span>本地文件</span>
+              <h2>PDF 待匹配目录</h2>
             </div>
           </div>
           <p className="admin-path">{data.pdfInbox.path}</p>
@@ -175,7 +209,7 @@ export default function AdminConsolePage() {
             {data.pdfInbox.samples.map((pdf) => (
               <li key={pdf.path}><span>{pdf.name}</span><small>{pdf.path}</small></li>
             ))}
-            {!data.pdfInbox.samples.length && <li><span>暂无待匹配 PDF</span><small>{data.pdfInbox.importCommand}</small></li>}
+            {!data.pdfInbox.samples.length && <li><span>暂无待匹配 PDF</span><small>可通过本地 PDF 扫描流程重新匹配。</small></li>}
           </ul>
         </div>
       </section>

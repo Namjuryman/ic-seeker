@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
+import { friendlyError } from '../utils/errorMessages'
 
 type Props = {
   targetType: 'roadmap' | 'lesson'
@@ -47,7 +48,7 @@ export function LearningProgressActions({ targetType, targetId }: Props) {
     <section className="learning-section">
       <div className="learning-section-head">
         <div>
-          <span>Progress tracking</span>
+          <span>学习进度</span>
           <h3>学习状态</h3>
         </div>
         <p>
@@ -57,26 +58,26 @@ export function LearningProgressActions({ targetType, targetId }: Props) {
       </div>
       <div className="learning-progress-actions">
         <button type="button" disabled={busy} onClick={() => update.mutate('in_progress')}>
-          Mark started
+          标记开始
         </button>
         <button type="button" disabled={busy} onClick={() => update.mutate('completed')}>
-          Mark completed
+          标记完成
         </button>
         <button type="button" disabled={busy} onClick={() => update.mutate('review_later')}>
-          Review later
+          稍后复习
         </button>
         <button type="button" disabled={busy} onClick={() => queueRelated.mutate()}>
-          Add related papers
+          加入相关论文
         </button>
       </div>
       {(update.isError || queueRelated.isError) && (
         <p className="learning-muted" style={{ color: '#b42318', marginTop: '0.75rem' }}>
-          {(update.error as Error)?.message || (queueRelated.error as Error)?.message || 'Failed to update learning progress.'}
+          {friendlyError(update.error || queueRelated.error, '学习进度更新失败。')}
         </p>
       )}
       {queueRelated.data && queueRelated.data.errors.length > 0 && (
         <p className="learning-muted" style={{ color: '#b54708', marginTop: '0.75rem' }}>
-          {queueRelated.data.queuedCount} papers queued, {queueRelated.data.errors.length} skipped by quota or data checks.
+          已加入 {queueRelated.data.queuedCount} 篇论文，{queueRelated.data.errors.length} 篇因配额或数据校验被跳过。
         </p>
       )}
     </section>

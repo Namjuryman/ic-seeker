@@ -53,16 +53,16 @@ export const discussionService = {
     return rows.map((row) => ({
       ...row,
       verified: row.verification_status === "verified" || row.user_id === 0,
-      displayName: row.user_id === 0 ? "Local Admin" : (row.nickname || `User #${row.user_id}`),
+      displayName: row.user_id === 0 ? "本地管理员" : (row.nickname || `用户 #${row.user_id}`),
     }));
   },
 
   addComment(paperId: number, userId: number, body: Record<string, unknown>) {
-    if (!Number.isFinite(paperId) || paperId <= 0) throw new Error("Invalid paper id");
-    if (userId === undefined || userId === null || Number.isNaN(Number(userId))) throw new Error("Login required");
+    if (!Number.isFinite(paperId) || paperId <= 0) throw new Error("论文 ID 无效。");
+    if (userId === undefined || userId === null || Number.isNaN(Number(userId))) throw new Error("需要登录后才能评论。");
     const text = String(body.body || "").trim();
-    if (text.length < 2) throw new Error("Comment body is required");
-    if (text.length > 10000) throw new Error("Comment is too long");
+    if (text.length < 2) throw new Error("评论内容不能为空。");
+    if (text.length > 10000) throw new Error("评论内容过长。");
 
     const result = appDb.insert(paperComments).values({
       paperId,

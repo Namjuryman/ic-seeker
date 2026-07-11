@@ -7,9 +7,9 @@ export type SearchIndexName = "papers" | "companies" | "learning_routes";
 export type SearchIndexTarget = "all" | SearchIndexName;
 
 const INDEXES: Array<{ uid: SearchIndexName; primaryKey: string; label: string }> = [
-  { uid: "papers", primaryKey: "id", label: "Papers" },
-  { uid: "companies", primaryKey: "id", label: "Companies" },
-  { uid: "learning_routes", primaryKey: "slug", label: "Learning routes" },
+  { uid: "papers", primaryKey: "id", label: "论文索引" },
+  { uid: "companies", primaryKey: "id", label: "企业索引" },
+  { uid: "learning_routes", primaryKey: "slug", label: "学习路线索引" },
 ];
 
 const PAPER_BATCH_SIZE = 1000;
@@ -23,7 +23,7 @@ function host() {
 }
 
 async function meili<T>(path: string, init: RequestInit = {}, timeoutMs = 10_000): Promise<T> {
-  if (!configured()) throw new Error("Meilisearch is not configured");
+  if (!configured()) throw new Error("Meilisearch 未配置。");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -34,7 +34,7 @@ async function meili<T>(path: string, init: RequestInit = {}, timeoutMs = 10_000
     const text = await response.text();
     const payload = text ? JSON.parse(text) : {};
     if (!response.ok) {
-      throw new Error(payload?.message || payload?.error || `Meilisearch ${response.status}`);
+      throw new Error(payload?.message || payload?.error || `Meilisearch 请求失败：${response.status}`);
     }
     return payload as T;
   } finally {
@@ -307,7 +307,7 @@ export const searchIndexService = {
       return {
         ...base,
         reachable: false,
-        message: "Meilisearch is not configured. SQLite local search-document cache is available for facets/readiness.",
+        message: "Meilisearch 未配置；本地 SQLite 搜索文档缓存仍可用于分面和就绪检查。",
         indexes: INDEXES.map((index) => ({ ...index, exists: localCounts[index.uid] > 0, documents: localCounts[index.uid] || 0 })),
       };
     }
@@ -336,7 +336,7 @@ export const searchIndexService = {
   async rebuild(target: SearchIndexTarget = "all") {
     if (!configured()) return rebuildLocal(target);
     const selected = target === "all" ? INDEXES : INDEXES.filter((index) => index.uid === target);
-    if (!selected.length) throw new Error("Unknown search index");
+    if (!selected.length) throw new Error("未知搜索索引。");
 
     const indexed: Record<string, number> = {};
     const tasks: Record<string, unknown> = {};

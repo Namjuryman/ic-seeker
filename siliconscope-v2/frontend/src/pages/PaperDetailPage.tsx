@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
 import { useI18n } from '../i18n'
+import { aiModelLabel, collectionMethodLabel, downloadStatusLabel, paperRankLabel, providerLabel, verificationStatusLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import type { PaperAiSummary, PaperComment, PaperRow } from '../types'
 
 const COMMENTS_PAGE_SIZE = 20
@@ -16,6 +18,15 @@ const REPORT_REASONS = [
   'copyright concern',
   'other',
 ]
+
+const reportReasonLabels: Record<string, string> = {
+  'off-topic': '偏离主题',
+  'personal attack': '人身攻击',
+  spam: '垃圾信息',
+  misleading: '误导信息',
+  'copyright concern': '版权问题',
+  other: '其他',
+}
 
 const READING_STATUS_VALUES = [
   'unread',
@@ -37,9 +48,21 @@ function cleanText(value: string | undefined) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex') {
+function commentTypeLabel(value: string | undefined, language: 'zh' | 'en') {
+  if (!value) return language === 'zh' ? '评论' : 'Comment'
+  const labels: Record<string, { zh: string; en: string }> = {
+    comment: { zh: '评论', en: 'Comment' },
+    question: { zh: '问题', en: 'Question' },
+    correction: { zh: '纠错', en: 'Correction' },
+    note: { zh: '笔记', en: 'Note' },
+    review: { zh: '评价', en: 'Review' },
+  }
+  return labels[value]?.[language] || value.replace(/[_-]/g, ' ')
+}
+
+function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex', unknownAuthor = '作者待补全') {
   const authors = splitAuthors(paper.authors)
-  const authorText = authors.length ? authors.slice(0, 6).join(', ') + (authors.length > 6 ? ', et al.' : '') : 'Unknown Author'
+  const authorText = authors.length ? authors.slice(0, 6).join(', ') + (authors.length > 6 ? ', et al.' : '') : unknownAuthor
   const title = cleanText(paper.title)
   if (format === 'apa') return `${authorText} (${paper.year}). ${title}. ${paper.venue}. ${paper.doi ? `https://doi.org/${paper.doi}` : ''}`.trim()
   if (format === 'bibtex') {
@@ -103,13 +126,13 @@ export default function PaperDetailPage() {
         setTagText((data.tags || []).map((tag) => tag.name).join(', '))
         await loadComments(0, false)
       } catch (err: any) {
-        if (alive) setLoadError(err?.response?.data?.error || err?.message || t('paper.detailLoadFailed'))
+        if (alive) setLoadError(friendlyError(err, t('paper.detailLoadFailed'), language))
       }
     }
     load()
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paperId, t])
+  }, [language, paperId, t])
 
   async function saveState(nextFavorite = paper?.favorite) {
     if (!paper) return
@@ -132,7 +155,7 @@ export default function PaperDetailPage() {
       setAiSummary(result)
       setMessage(result.cacheHit ? t('paper.translateCached') : t('paper.translateFresh'))
     } catch (err: any) {
-      setMessage(err?.response?.data?.error || err?.message || t('paper.translateError'))
+      setMessage(friendlyError(err, t('paper.translateError'), language))
     } finally {
       setTranslating(false)
       setTimeout(() => setMessage(''), 1800)
@@ -150,7 +173,7 @@ export default function PaperDetailPage() {
 
   async function copyCitation(format: 'ieee' | 'apa' | 'bibtex') {
     if (!paper) return
-    await navigator.clipboard.writeText(citationText(paper, format))
+    await navigator.clipboard.writeText(citationText(paper, format, language === 'en' ? 'Unknown author' : '作者待补全'))
     setMessage(t('paper.copiedCitation', { format: format.toUpperCase() }))
     setTimeout(() => setMessage(''), 1600)
   }
@@ -172,7 +195,7 @@ export default function PaperDetailPage() {
       setMessage(t('paper.reportSubmitted'))
       setTimeout(() => setMessage(''), 1600)
     } catch (err: any) {
-      setMessage(err?.response?.data?.error || err?.message || t('paper.reportFailed'))
+      setMessage(friendlyError(err, t('paper.reportFailed'), language))
       setTimeout(() => setMessage(''), 1800)
     }
   }
@@ -194,15 +217,20 @@ export default function PaperDetailPage() {
       <section className="ss-paper-detail-hero">
         <div>
           <div className="ss-paper-meta">
-            <span className="rank">{paper.rank || '-'}</span>
+            <span className="rank">{paperRankLabel(paper.rank, language)}</span>
             <span>{paper.venue || '-'}</span>
             <span>{paper.field || 'General IC'}</span>
             <span>{paper.year}</span>
-            <span>score {Number(paper.score || 0).toFixed(1)}</span>
-            <span>{paper.citationCount || 0} citations</span>
+            <span>{language === 'zh' ? '排序信号' : 'sorting signal'} {Number(paper.score || 0).toFixed(1)}</span>
+            <span>{paper.citationCount || 0} {language === 'zh' ? '引用' : 'citations'}</span>
           </div>
           <h1>{cleanText(paper.title)}</h1>
           <p>{authors.slice(0, 14).join('; ')}{authors.length > 14 ? ' ...' : ''}</p>
+          <p className="text-xs text-ink-subtle mt-2">
+            {language === 'zh'
+              ? '排序信号由会议/期刊权重、引用和年份启发式计算，只用于检索排序，不代表论文最终学术价值。'
+              : 'The sorting signal is a heuristic from venue weight, citations, and recency, not a final academic judgment.'}
+          </p>
         </div>
         <div className="ss-paper-detail-actions">
           <button onClick={() => saveState(!paper.favorite)}>{paper.favorite ? t('common.favorited') : t('common.favorite')}</button>
@@ -227,7 +255,7 @@ export default function PaperDetailPage() {
               <div className="ss-ai-summary">
                 <strong>{t('paper.translation')}</strong>
                 <p>{translatedSummary}</p>
-                <small>{aiSummary?.cacheHit ? t('paper.translateCached') : `${aiSummary?.provider || 'AI'} · ${aiSummary?.model || ''}`}</small>
+                <small>{aiSummary?.cacheHit ? t('paper.translateCached') : `${providerLabel(aiSummary?.provider || 'AI', language)} · ${aiModelLabel(aiSummary?.model, language)}`}</small>
               </div>
             )}
           </section>
@@ -246,8 +274,8 @@ export default function PaperDetailPage() {
                 comments.map((comment) => (
                   <div key={comment.id} className="ss-comment-item">
                     <div className="ss-comment-header">
-                      <strong>{comment.displayName || comment.nickname || 'User'}</strong>
-                      <span>{comment.comment_type || comment.commentType || 'Comment'}</span>
+                      <strong>{comment.displayName || comment.nickname || (language === 'zh' ? '用户' : 'User')}</strong>
+                      <span>{commentTypeLabel(comment.comment_type || comment.commentType, language)}</span>
                     </div>
                     <p>{comment.body}</p>
                     <div className="ss-comment-actions">
@@ -260,7 +288,7 @@ export default function PaperDetailPage() {
                               onClick={() => reportComment(comment.id, reason)}
                               disabled={reportedIds.has(comment.id)}
                             >
-                              {reason}
+                              {language === 'zh' ? reportReasonLabels[reason] || reason : reason}
                             </button>
                           ))}
                           <button className="ss-report-cancel" onClick={() => setActiveReportId(null)}>{t('common.cancel')}</button>
@@ -288,12 +316,12 @@ export default function PaperDetailPage() {
             <div className="ss-comment-editor">
               <p className="ss-comment-hint">{t('paper.commentHint')}</p>
               <select value={commentType} onChange={(event) => setCommentType(event.target.value)}>
-                <option>Question</option>
-                <option>Technical Note</option>
-                <option>Reproduction Note</option>
-                <option>Related Work</option>
-                <option>Correction</option>
-                <option>Reading Summary</option>
+                <option value="Question">{language === 'zh' ? '问题' : 'Question'}</option>
+                <option value="Technical Note">{language === 'zh' ? '技术笔记' : 'Technical Note'}</option>
+                <option value="Reproduction Note">{language === 'zh' ? '复现记录' : 'Reproduction Note'}</option>
+                <option value="Related Work">{language === 'zh' ? '相关工作' : 'Related Work'}</option>
+                <option value="Correction">{language === 'zh' ? '纠错' : 'Correction'}</option>
+                <option value="Reading Summary">{language === 'zh' ? '阅读摘要' : 'Reading Summary'}</option>
               </select>
               <textarea value={commentBody} onChange={(event) => setCommentBody(event.target.value)} placeholder={t('paper.commentPlaceholder')} />
               <button className="ss-comment-submit" onClick={addComment} disabled={!commentBody.trim()}>{t('common.submit')}</button>
@@ -303,13 +331,13 @@ export default function PaperDetailPage() {
 
         <aside className="ss-profile-side">
           <section className="ss-panel">
-            <div className="ss-panel-head compact"><h2>{t('paper.metadata')}</h2></div>
+            <div className="ss-panel-head compact"><h2>{language === 'zh' ? '论文信息' : t('paper.metadata')}</h2></div>
             <dl className="ss-detail-facts">
               <dt>DOI</dt><dd>{paper.doi || '-'}</dd>
               <dt>{t('paper.institution')}</dt><dd>{paper.affiliations || '-'}</dd>
-              <dt>{t('paper.collectionSource')}</dt><dd>{paper.collectionMethod || '-'}</dd>
-              <dt>{t('paper.pdfStatus')}</dt><dd>{paper.downloadStatus || '-'}</dd>
-              <dt>{t('paper.verificationStatus')}</dt><dd>{paper.verificationStatus || '-'}</dd>
+              <dt>{t('paper.collectionSource')}</dt><dd>{collectionMethodLabel(paper.collectionMethod, language)}</dd>
+              <dt>{t('paper.pdfStatus')}</dt><dd>{downloadStatusLabel(paper.downloadStatus, language)}</dd>
+              <dt>{t('paper.verificationStatus')}</dt><dd>{verificationStatusLabel(paper.verificationStatus, language)}</dd>
             </dl>
             <div className="ss-detail-buttons">
               {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">{t('common.openDoi')}</a>}

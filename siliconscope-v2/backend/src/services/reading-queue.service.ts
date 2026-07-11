@@ -66,7 +66,7 @@ export const readingQueueService = {
 
   updateReadingStatus(userId: number, paperId: number, input: ReadingQueueInput) {
     const exists = metadataDb.select({ id: papers.id }).from(papers).where(eq(papers.id, paperId)).get();
-    if (!exists) return { ok: false, error: "Paper not found" };
+    if (!exists) return { ok: false, error: "论文不存在。" };
 
     const current = appDb
       .select({

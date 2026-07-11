@@ -4,6 +4,8 @@ import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EntityLink } from '../components/EntityLink'
 import { useI18n, type Language } from '../i18n'
+import { collectionMethodLabel, downloadStatusLabel, paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import { searchPath } from '../utils/routes'
 import type { ApiKeyInfo, PaperComment, PaperRow, PdfInboxInfo, SearchResult, SearchSuggestion, StatsData } from '../types'
 
@@ -67,6 +69,7 @@ const zhHomeCopy = {
   scopePapers: '论文',
   scopeAuthors: '作者',
   scopeInstitutions: '机构',
+  searchPlaceholder: 'mmWave phased array transceiver / 低功耗 ADC',
   searchLoading: '搜索中...',
   search: '搜索',
   advancedSearch: '高级搜索',
@@ -74,6 +77,7 @@ const zhHomeCopy = {
   history: '历史：',
   suggestion: '建议：',
   noAbstract: '暂无摘要。',
+  unknownAuthor: '作者待补全',
   favorited: '已收藏',
   openPaper: '论文',
   save: '收藏',
@@ -82,6 +86,7 @@ const zhHomeCopy = {
   nextBatch: '下一批',
   pageOf: '第 {page} / {pages} 页',
   detail: '论文详情',
+  detailLoading: '正在加载论文...',
   detailEmpty: '点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。',
   openFull: '打开完整页',
   close: '关闭',
@@ -104,8 +109,12 @@ const zhHomeCopy = {
   noComments: '暂无评论。',
   imported: 'DOI 导入完成',
   privateTools: '私人工具',
-  privateToolsHint: '只导入 metadata；PDF 保持在本地私库，或通过出版社官网跳转。',
+  privateToolsHint: '只导入论文元数据；PDF 保持在本地私库，或通过出版社官网跳转。',
   importDoi: '导入 DOI',
+  privatePdfInbox: 'PDF 收件箱',
+  privateFiles: '个文件',
+  privateKeys: '访问密钥',
+  none: '无',
   emptyHint: '试试放宽年份、会议或语义条件。',
   suggestionFallback: '换一个电路模块、会议或作者试试。',
   searchFailed: '搜索失败',
@@ -120,11 +129,11 @@ const zhHomeCopy = {
     resultCount: '结果数量',
     pdfLibrary: 'PDF 私库',
     matched: '已匹配',
-    ieee: 'IEEE 精修',
-    pending: '待接入',
-    enableAfterKey: 'API key 后启用',
-    trust: '数据可信度',
-    trustHint: '机构/作者消歧待加强',
+    ieee: '来源补全',
+    pending: '待配置',
+    enableAfterKey: '配置访问密钥后启用',
+    trust: '数据口径',
+    trustHint: '排序信号只用于检索排序，不是学术评价',
   },
   filters: {
     title: '精炼搜索',
@@ -142,18 +151,21 @@ const zhHomeCopy = {
     author: '作者',
     institution: '机构',
     country: '国家/地区',
-    minScore: '最低分',
+    minScore: '最低排序信号',
     minCitations: '最低引用',
     semantic: '语义扩展',
     localPdf: '仅看本地 PDF',
     favoritesOnly: '仅看收藏',
+    off: '关闭',
+    localOnly: '本地优先',
+    savedOnly: '已收藏',
     apply: '应用筛选',
   },
   result: {
     rows: '条结果',
     expanded: '扩展查询：{query}',
     relevance: '相关度',
-    score: '综合',
+    score: '排序信号',
     year: '最新',
     citations: '引用数',
     title: '标题',
@@ -162,14 +174,20 @@ const zhHomeCopy = {
     list: '列表',
     export: '导出',
     emptyTitle: '没有匹配论文',
+    scoreLabel: '排序信号',
+    scoreCaveat: '排序信号由会议/期刊权重、引用和年份启发式计算，只用于检索排序，不代表论文最终学术价值。',
+    citationsLabel: '引用',
+    localIndex: '本地索引',
+    manualImport: '手动导入',
+    durationSuffix: '毫秒',
   },
   tabs: {
     all: '全部',
     sPlus: '论文(S+)',
-    mentors: '导师/机构',
+    mentors: '研究者/机构',
     topics: '方向',
-    geo: 'Geo',
-    authors: '专家',
+    geo: '地域',
+    authors: '作者',
     institutions: '机构',
     venues: '会议/期刊',
   },
@@ -180,6 +198,11 @@ const zhHomeCopy = {
     important: '重点',
     skip: '跳过',
   },
+  companyEntry: {
+    title: '企业情报',
+    body: '查看 IC 企业、产业链类型、技术方向和相关论文。',
+    action: '查看企业 →',
+  },
 } as const
 
 function homeCopy(language: Language) {
@@ -189,6 +212,7 @@ function homeCopy(language: Language) {
       scopePapers: 'Papers',
       scopeAuthors: 'Authors',
       scopeInstitutions: 'Institutions',
+      searchPlaceholder: 'integrated circuit mmWave phased array transceiver',
       searchLoading: 'Searching...',
       search: 'Search',
       advancedSearch: 'Advanced search',
@@ -196,6 +220,7 @@ function homeCopy(language: Language) {
       history: 'History:',
       suggestion: 'Suggestion:',
       noAbstract: 'No abstract yet.',
+      unknownAuthor: 'Unknown author',
       favorited: 'Saved',
       openPaper: 'Paper',
       save: 'Save',
@@ -204,6 +229,7 @@ function homeCopy(language: Language) {
       nextBatch: 'Next batch',
       pageOf: 'Page {page} / {pages}',
       detail: 'Paper detail',
+      detailLoading: 'Loading paper...',
       detailEmpty: 'Click a paper in the center list to inspect DOI, abstract, source, reading state, notes, and quick citation.',
       openFull: 'Open full page',
       close: 'Close',
@@ -228,6 +254,10 @@ function homeCopy(language: Language) {
       privateTools: 'Private tools',
       privateToolsHint: 'Import metadata only; PDFs stay in your local library or open through publisher links.',
       importDoi: 'Import DOI',
+      privatePdfInbox: 'PDF inbox',
+      privateFiles: 'files',
+      privateKeys: 'Keys',
+      none: 'none',
       emptyHint: 'Try relaxing year, venue, or semantic filters.',
       suggestionFallback: 'Try another circuit block, venue, or author.',
       searchFailed: 'Search failed',
@@ -245,8 +275,8 @@ function homeCopy(language: Language) {
         ieee: 'IEEE enrichment',
         pending: 'Pending',
         enableAfterKey: 'Enabled after API key',
-        trust: 'Data trust',
-        trustHint: 'Institution/author disambiguation still improving',
+        trust: 'Data basis',
+        trustHint: 'Sorting signal is for retrieval order, not academic judgment',
       },
       filters: {
         title: 'Refine search',
@@ -264,18 +294,21 @@ function homeCopy(language: Language) {
         author: 'Author',
         institution: 'Institution',
         country: 'Country / region',
-        minScore: 'Min score',
+        minScore: 'Min sorting signal',
         minCitations: 'Min citations',
         semantic: 'Semantic expansion',
         localPdf: 'Local PDF only',
         favoritesOnly: 'Favorites only',
+        off: 'off',
+        localOnly: 'local only',
+        savedOnly: 'favorites only',
         apply: 'Apply filters',
       },
       result: {
         rows: 'results',
         expanded: 'Expanded query: {query}',
         relevance: 'Relevance',
-        score: 'Score',
+        score: 'Sorting signal',
         year: 'Newest',
         citations: 'Citations',
         title: 'Title',
@@ -284,6 +317,12 @@ function homeCopy(language: Language) {
         list: 'List',
         export: 'Export',
         emptyTitle: 'No matching papers',
+        scoreLabel: 'sorting signal',
+        scoreCaveat: 'Sorting signal is a heuristic from venue weight, citations, and recency. Use it for retrieval order, not final evaluation.',
+        citationsLabel: 'citations',
+        localIndex: 'Local index',
+        manualImport: 'Manual import',
+        durationSuffix: 'ms',
       },
       tabs: {
         all: 'All',
@@ -302,128 +341,14 @@ function homeCopy(language: Language) {
         important: 'Important',
         skip: 'Skip',
       },
+      companyEntry: {
+        title: 'Company Intelligence',
+        body: 'Explore IC industry employers and research labs.',
+        action: 'Explore companies →',
+      },
     }
   }
   return zhHomeCopy
-  return {
-    scopeAll: '全部',
-    scopePapers: '论文',
-    scopeAuthors: '作者',
-    scopeInstitutions: '机构',
-    searchLoading: '搜索中...',
-    search: '搜索',
-    advancedSearch: '高级搜索',
-    watchlist: '收藏夹',
-    history: '历史：',
-    suggestion: '建议：',
-    noAbstract: '暂无摘要。',
-    favorited: '已收藏',
-    openPaper: '论文',
-    save: '收藏',
-    previousPage: '上一页',
-    nextPage: '下一页',
-    nextBatch: '下一批',
-    pageOf: '第 {page} / {pages} 页',
-    detail: '论文详情',
-    detailEmpty: '点击中间列表中的论文后，这里会显示 DOI、摘要、来源、阅读状态、笔记和快捷引用。',
-    openFull: '打开完整页',
-    close: '关闭',
-    openDoi: '打开 DOI',
-    openPdf: '打开 PDF',
-    source: '来源',
-    authors: '作者',
-    institution: '机构',
-    status: '状态',
-    dataSource: '数据源',
-    citations: '引用数',
-    abstract: '摘要',
-    quickCitation: '快捷引用',
-    readingNotes: '阅读与笔记',
-    tags: '标签',
-    note: '笔记',
-    notePlaceholder: '写一点自己的阅读笔记...',
-    unsave: '取消收藏',
-    discussion: '讨论',
-    noComments: '暂无评论。',
-    imported: 'DOI 导入完成',
-    privateTools: '私人工具',
-    privateToolsHint: '只导入 metadata；PDF 接入走本地私库或出版社官网跳转。',
-    importDoi: '导入 DOI',
-    emptyHint: '试试放宽年份、会议或语义条件。',
-    suggestionFallback: '换一个电路模块、会议或作者试试。',
-    searchFailed: '搜索失败',
-    statsFailed: '统计数据加载失败',
-    copiedLink: '搜索链接已复制',
-    savedSearch: '搜索已保存',
-    savedSearchExists: '搜索已保存（已存在）',
-    saveFailed: '保存失败',
-    metrics: {
-      timeRange: '时间范围',
-      adjustable: '可在左侧调整',
-      resultCount: '结果数量',
-      pdfLibrary: 'PDF 私库',
-      matched: '已匹配',
-      ieee: 'IEEE 精修',
-      pending: '待接入',
-      enableAfterKey: 'API key 后启用',
-      trust: '数据可信度',
-      trustHint: '机构/作者消歧待加强',
-    },
-    filters: {
-      title: '精炼搜索',
-      clear: '清空',
-      startYear: '开始年份',
-      endYear: '结束年份',
-      recent5: '近 5 年',
-      recent10: '近 10 年',
-      recent15: '近 15 年',
-      venue: '会议/期刊',
-      addVenue: '添加会议/期刊',
-      field: '研究方向',
-      all: '全部',
-      rank: '期刊/会议等级',
-      author: '作者',
-      institution: '机构',
-      country: '国家/地区',
-      minScore: '最低分',
-      minCitations: '最低引用',
-      semantic: '语义扩展',
-      localPdf: '仅看本地 PDF',
-      favoritesOnly: '仅看收藏',
-      apply: '应用筛选',
-    },
-    result: {
-      rows: '条结果',
-      expanded: '扩展查询：{query}',
-      relevance: '相关度',
-      score: '综合',
-      year: '最新',
-      citations: '引用数',
-      title: '标题',
-      copy: '复制链接',
-      save: '保存搜索',
-      list: '列表',
-      export: '导出',
-      emptyTitle: '没有匹配论文',
-    },
-    tabs: {
-      all: '全部',
-      sPlus: '论文(S+)',
-      mentors: '导师/机构',
-      topics: '方向',
-      geo: 'Geo',
-      authors: '专家',
-      institutions: '机构',
-      venues: '会议/期刊',
-    },
-    reading: {
-      unread: '未读',
-      reading: '在读',
-      read: '已读',
-      important: '重点',
-      skip: '跳过',
-    },
-  }
 }
 
 function splitAuthors(authors: string) {
@@ -437,6 +362,18 @@ function formatNumber(value: number | string | undefined) {
 
 function cleanText(value: string | undefined) {
   return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function commentTypeLabel(value: string | undefined, language: Language) {
+  if (!value) return language === 'zh' ? '评论' : 'Comment'
+  const labels: Record<string, { zh: string; en: string }> = {
+    comment: { zh: '评论', en: 'Comment' },
+    question: { zh: '问题', en: 'Question' },
+    correction: { zh: '纠错', en: 'Correction' },
+    note: { zh: '笔记', en: 'Note' },
+    review: { zh: '评价', en: 'Review' },
+  }
+  return labels[value]?.[language] || value.replace(/[_-]/g, ' ')
 }
 
 function csvValues(value: string) {
@@ -518,21 +455,21 @@ function paramsFromControls(controls: SearchControls, page = 1) {
   return next
 }
 
-function activeFilterChips(controls: SearchControls) {
+function activeFilterChips(controls: SearchControls, text: ReturnType<typeof homeCopy>) {
   const chips: Array<{ key: keyof SearchControls; label: string; value: string; removeValue?: string }> = []
   for (const venue of csvValues(controls.venue)) {
-    chips.push({ key: 'venue', label: 'Venue', value: venue, removeValue: venue })
+    chips.push({ key: 'venue', label: text.filters.venue, value: venue, removeValue: venue })
   }
   const labels: Partial<Record<keyof SearchControls, string>> = {
-    field: 'Direction',
-    rank: 'Rank',
-    yearFrom: 'From',
-    yearTo: 'To',
-    author: 'Author',
-    institution: 'Institution',
-    country: 'Region',
-    minScore: 'Min score',
-    minCitations: 'Min citations',
+    field: text.filters.field,
+    rank: text.filters.rank,
+    yearFrom: text.filters.startYear,
+    yearTo: text.filters.endYear,
+    author: text.filters.author,
+    institution: text.filters.institution,
+    country: text.filters.country,
+    minScore: text.filters.minScore,
+    minCitations: text.filters.minCitations,
   }
   for (const [key, label] of Object.entries(labels) as Array<[keyof SearchControls, string]>) {
     const value = controls[key]
@@ -540,15 +477,15 @@ function activeFilterChips(controls: SearchControls) {
       chips.push({ key, label, value })
     }
   }
-  if (!controls.semantic) chips.push({ key: 'semantic', label: 'Semantic', value: 'off' })
-  if (controls.hasPdf) chips.push({ key: 'hasPdf', label: 'PDF', value: 'local only' })
-  if (controls.favorite) chips.push({ key: 'favorite', label: 'Saved', value: 'favorites only' })
+  if (!controls.semantic) chips.push({ key: 'semantic', label: text.filters.semantic, value: text.filters.off })
+  if (controls.hasPdf) chips.push({ key: 'hasPdf', label: text.filters.localPdf, value: text.filters.localOnly })
+  if (controls.favorite) chips.push({ key: 'favorite', label: text.filters.favoritesOnly, value: text.filters.savedOnly })
   return chips
 }
 
-function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex') {
+function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex', unknownAuthor = '作者待补全') {
   const authors = splitAuthors(paper.authors)
-  const authorText = authors.length ? authors.slice(0, 6).join(', ') + (authors.length > 6 ? ', et al.' : '') : 'Unknown Author'
+  const authorText = authors.length ? authors.slice(0, 6).join(', ') + (authors.length > 6 ? ', et al.' : '') : unknownAuthor
   const title = cleanText(paper.title)
   if (format === 'apa') return `${authorText} (${paper.year}). ${title}. ${paper.venue}. ${paper.doi ? `https://doi.org/${paper.doi}` : ''}`.trim()
   if (format === 'bibtex') {
@@ -556,6 +493,12 @@ function citationText(paper: PaperRow, format: 'ieee' | 'apa' | 'bibtex') {
     return `@article{${key},\n  title={${title}},\n  author={${authors.join(' and ')}},\n  journal={${paper.venue}},\n  year={${paper.year}},\n  doi={${paper.doi || ''}}\n}`
   }
   return `${authorText}, "${title}," ${paper.venue}, ${paper.year}${paper.doi ? `, doi: ${paper.doi}` : ''}.`
+}
+
+function searchEngineLabel(engine: string | undefined, text: ReturnType<typeof homeCopy>) {
+  if (!engine || engine === 'sqlite') return text.result.localIndex
+  if (engine === 'manual') return text.result.manualImport
+  return engine
 }
 
 function Metric({ label, value, hint, tone }: { label: string; value: string | number; hint?: string; tone?: 'good' | 'warn' }) {
@@ -574,6 +517,7 @@ const PaperCard = memo(function PaperCard({
   selected,
   query,
   text,
+  language,
   onOpen,
 }: {
   row: PaperRow
@@ -581,6 +525,7 @@ const PaperCard = memo(function PaperCard({
   selected: boolean
   query: string
   text: ReturnType<typeof homeCopy>
+  language: Language
   onOpen: (id: number) => void
 }) {
   const authors = splitAuthors(row.authors)
@@ -605,12 +550,12 @@ const PaperCard = memo(function PaperCard({
         </p>
         <p className="ss-abstract">{highlightParts(row.abstract, query) || text.noAbstract}</p>
         <div className="ss-paper-meta">
-          <span className="rank">{row.rank || '-'}</span>
+          <span className="rank">{paperRankLabel(row.rank, language)}</span>
           <EntityLink kind="venue" value={row.venue} params={{ yearFrom: row.year, yearTo: row.year }}>{row.venue || '-'}</EntityLink>
           <EntityLink kind="topic" value={row.field || 'General IC'}>{row.field || 'General IC'}</EntityLink>
           <span>{row.year}</span>
-          <span>score {Number(row.score || 0).toFixed(1)}</span>
-          <span>{row.citationCount || 0} citations</span>
+          <span>{text.result.scoreLabel} {Number(row.score || 0).toFixed(1)}</span>
+          <span>{row.citationCount || 0} {text.result.citationsLabel}</span>
           {row.favorite && <span className="favorite">{text.favorited}</span>}
           {row.matchReason && <span className="ss-match-reason">{row.matchReason}</span>}
         </div>
@@ -722,7 +667,7 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
 
   async function copyCitation(format: 'ieee' | 'apa' | 'bibtex') {
     if (!paper) return
-    await navigator.clipboard.writeText(citationText(paper, format))
+    await navigator.clipboard.writeText(citationText(paper, format, text.unknownAuthor))
     setMessage(language === 'zh' ? `已复制 ${format.toUpperCase()}` : `Copied ${format.toUpperCase()}`)
     setTimeout(() => setMessage(''), 1400)
   }
@@ -736,7 +681,7 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
     )
   }
 
-  if (!paper) return <aside className="ss-detail"><div className="ss-detail-loading">Loading paper...</div></aside>
+  if (!paper) return <aside className="ss-detail"><div className="ss-detail-loading">{text.detailLoading}</div></aside>
 
   const authors = splitAuthors(paper.authors)
 
@@ -752,12 +697,13 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
       <h2>{cleanText(paper.title)}</h2>
       <p className="ss-detail-authors">{authors.slice(0, 12).join('; ')}{authors.length > 12 ? ' ...' : ''}</p>
       <div className="ss-paper-meta detail-meta">
-        <span className="rank">{paper.rank || '-'}</span>
+        <span className="rank">{paperRankLabel(paper.rank, language)}</span>
         <span>{paper.venue || '-'}</span>
         <span>{paper.field || 'General IC'}</span>
         <span>{paper.year}</span>
-        <span>score {Number(paper.score || 0).toFixed(1)}</span>
+        <span>{text.result.scoreLabel} {Number(paper.score || 0).toFixed(1)}</span>
       </div>
+      <p className="ss-caveat compact">{text.result.scoreCaveat}</p>
       <div className="ss-detail-buttons">
         {paper.doi && <a href={`https://doi.org/${paper.doi}`} target="_blank" rel="noreferrer">{text.openDoi}</a>}
         {paper.pdfLink && <a href={paper.pdfLink} target="_blank" rel="noreferrer">{text.openPdf}</a>}
@@ -767,8 +713,8 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
         <dt>DOI</dt><dd>{paper.doi || '-'}</dd>
         <dt>{text.authors}</dt><dd>{authors.slice(0, 8).join('; ') || '-'}</dd>
         <dt>{text.institution}</dt><dd>{paper.affiliations || '-'}</dd>
-        <dt>{text.status}</dt><dd>{paper.downloadStatus || '-'}</dd>
-        <dt>{text.dataSource}</dt><dd>{paper.collectionMethod || '-'}</dd>
+        <dt>{text.status}</dt><dd>{downloadStatusLabel(paper.downloadStatus, language)}</dd>
+        <dt>{text.dataSource}</dt><dd>{collectionMethodLabel(paper.collectionMethod, language)}</dd>
         <dt>{text.citations}</dt><dd>{paper.citationCount || 0}</dd>
       </dl>
       <section>
@@ -803,8 +749,8 @@ function PaperDetailRail({ paperId, onClose, onUpdated }: { paperId: number | nu
         <div className="ss-comment-list">
           {comments.length ? comments.map((comment) => (
             <div key={comment.id}>
-              <strong>{comment.displayName || comment.nickname || 'User'}</strong>
-              <span>{comment.comment_type || comment.commentType || 'Comment'}</span>
+              <strong>{comment.displayName || comment.nickname || (language === 'zh' ? '用户' : 'User')}</strong>
+              <span>{commentTypeLabel(comment.comment_type || comment.commentType, language)}</span>
               <p>{comment.body}</p>
             </div>
           )) : <p>{text.noComments}</p>}
@@ -846,8 +792,8 @@ function AdminTools({ onImported }: { onImported: (paper: PaperRow) => void }) {
         <button onClick={importDoi}>{text.importDoi}</button>
       </div>
       <div className="ss-tool-meta">
-        <span>PDF inbox: {pdfInbox ? `${pdfInbox.count} files` : '-'}</span>
-        <span>Keys: {keys.length ? keys.map((key) => key.provider).slice(0, 4).join(', ') : 'none'}</span>
+        <span>{text.privatePdfInbox}: {pdfInbox ? `${pdfInbox.count} ${text.privateFiles}` : '-'}</span>
+        <span>{text.privateKeys}: {keys.length ? keys.map((key) => key.provider).slice(0, 4).join(', ') : text.none}</span>
       </div>
       {message && <div className="ss-toast inline">{message}</div>}
     </section>
@@ -878,7 +824,7 @@ export default function HomePage() {
   const rankOptions = useMemo(() => (stats?.ranks || []).filter(Boolean).slice(0, 40), [stats])
   const rows = results?.rows || []
   const controlsSignature = useMemo(() => JSON.stringify(controls), [controls])
-  const activeChips = useMemo(() => activeFilterChips(controls), [controls])
+  const activeChips = useMemo(() => activeFilterChips(controls, text), [controls, text])
 
   const runSearch = useCallback(async (nextControls: SearchControls, nextPage = 1, nextCursor = '') => {
     const id = ++requestId.current
@@ -921,21 +867,21 @@ export default function HomePage() {
     } catch (err) {
       if (controller.signal.aborted) return
       if (id === requestId.current) {
-        setError(err instanceof Error ? err.message : text.searchFailed)
+        setError(friendlyError(err, text.searchFailed, language))
         console.error(err)
       }
     } finally {
       if (searchAbortRef.current === controller) searchAbortRef.current = null
       if (id === requestId.current && !controller.signal.aborted) setLoading(false)
     }
-  }, [text.searchFailed, text.suggestionFallback])
+  }, [language, text.searchFailed, text.suggestionFallback])
 
   useEffect(() => {
     api.stats().then(setStats).catch((err) => {
       console.error(err)
-      setError(err instanceof Error ? err.message : text.statsFailed)
+      setError(friendlyError(err, text.statsFailed, language))
     })
-  }, [text.statsFailed])
+  }, [language, text.statsFailed])
 
   useEffect(() => {
     return () => searchAbortRef.current?.abort()
@@ -1021,12 +967,12 @@ export default function HomePage() {
   async function saveSearch() {
     try {
       const params = paramsFromControls(controls)
-      const label = controls.q || Object.entries(params).map(([key, value]) => `${key}:${value}`).join(' ') || 'all papers'
+      const label = controls.q || Object.entries(params).map(([key, value]) => `${key}:${value}`).join(' ') || (language === 'zh' ? '全部论文' : 'all papers')
       const data = await api.addWatchlistItem('search', label, params)
       setSaveMessage(data.alreadyExists ? text.savedSearchExists : text.savedSearch)
       setTimeout(() => setSaveMessage(''), 1400)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || text.saveFailed)
+      setError(friendlyError(err, text.saveFailed, language))
     }
   }
 
@@ -1053,7 +999,7 @@ export default function HomePage() {
           <input
             value={controls.q}
             onChange={(event) => updateControl('q', event.target.value)}
-            placeholder="integrated circuit mmWave phased array transceiver"
+            placeholder={text.searchPlaceholder}
           />
           <button disabled={loading}>{loading ? text.searchLoading : text.search}</button>
           <button type="button" className="ghost">{text.advancedSearch}</button>
@@ -1090,10 +1036,10 @@ export default function HomePage() {
 
       <section className="ss-command-strip">
         <Metric label={text.metrics.timeRange} value={`${controls.yearFrom || '-'}-${controls.yearTo || '-'}`} hint={text.metrics.adjustable} />
-        <Metric label={text.metrics.resultCount} value={formatNumber(results?.total ?? stats?.total)} hint={results?.engine || 'sqlite'} />
+        <Metric label={text.metrics.resultCount} value={formatNumber(results?.total ?? stats?.total)} hint={searchEngineLabel(results?.engine, text)} />
         <Metric label={text.metrics.pdfLibrary} value={`${stats?.pdfs || 0}`} hint={text.metrics.matched} />
         <Metric label={text.metrics.ieee} value={text.metrics.pending} hint={text.metrics.enableAfterKey} tone="warn" />
-        <Metric label={text.metrics.trust} value="80%" hint={text.metrics.trustHint} tone="good" />
+        <Metric label={text.metrics.trust} value={language === 'zh' ? '元数据' : 'Metadata'} hint={text.metrics.trustHint} tone="good" />
       </section>
 
       <div className="ss-content-grid">
@@ -1126,7 +1072,7 @@ export default function HomePage() {
             </div>
           )}
           <label><span>{text.filters.field}</span><select value={controls.field} onChange={(event) => updateControl('field', event.target.value)}><option value="">{text.filters.all}</option>{fieldOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-          <label><span>{text.filters.rank}</span><select value={controls.rank} onChange={(event) => updateControl('rank', event.target.value)}><option value="">{text.filters.all}</option>{rankOptions.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+          <label><span>{text.filters.rank}</span><select value={controls.rank} onChange={(event) => updateControl('rank', event.target.value)}><option value="">{text.filters.all}</option>{rankOptions.map((item) => <option key={item} value={item}>{paperRankLabel(item, language)}</option>)}</select></label>
           <label><span>{text.filters.author}</span><input value={controls.author} onChange={(event) => updateControl('author', event.target.value)} placeholder="Rui P. Martins" /></label>
           <label><span>{text.filters.institution}</span><input value={controls.institution} onChange={(event) => updateControl('institution', event.target.value)} placeholder="University of Macau" /></label>
           <label><span>{text.filters.country}</span><input value={controls.country} onChange={(event) => updateControl('country', event.target.value)} placeholder="China / United States" /></label>
@@ -1140,9 +1086,9 @@ export default function HomePage() {
           <button className="ss-apply-filter" onClick={() => submit(1)}>{text.filters.apply}</button>
           <AdminTools onImported={appendImported} />
           <section className="ss-tool-panel ss-company-entry">
-            <h3>Company Intelligence</h3>
-            <p>Explore IC industry employers and research labs.</p>
-            <Link to="/companies">Explore companies →</Link>
+            <h3>{text.companyEntry.title}</h3>
+            <p>{text.companyEntry.body}</p>
+            <Link to="/companies">{text.companyEntry.action}</Link>
           </section>
         </aside>
 
@@ -1151,8 +1097,8 @@ export default function HomePage() {
           <div className="ss-result-head">
             <div>
               <strong>{formatNumber(results?.total)} {text.result.rows}</strong>
-              <span>{results?.expandedQuery ? text.result.expanded.replace('{query}', results.expandedQuery) : results?.engine || 'sqlite'}</span>
-              {typeof results?.durationMs === 'number' && <span>{results.durationMs} ms</span>}
+              <span>{results?.expandedQuery ? text.result.expanded.replace('{query}', results.expandedQuery) : searchEngineLabel(results?.engine, text)}</span>
+              {typeof results?.durationMs === 'number' && <span>{results.durationMs} {text.result.durationSuffix}</span>}
               {saveMessage && <span className="ss-save-message">{saveMessage}</span>}
             </div>
             <div className="ss-result-tools">
@@ -1189,6 +1135,7 @@ export default function HomePage() {
                 selected={selectedId === row.id}
                 query={controls.q}
                 text={text}
+                language={language}
                 onOpen={setSelectedId}
               />
             ))}

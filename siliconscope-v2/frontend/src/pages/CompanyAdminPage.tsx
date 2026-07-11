@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { api } from '../api'
 import type { CompanyRow } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 
 interface FormState {
   name: string
@@ -54,6 +55,21 @@ const emptyForm: FormState = {
 
 const statusOptions = ['active', 'dissolved', 'acquired', 'merged', 'unknown']
 const employeeCountRangeOptions = ['exact', 'range', 'estimated', 'unknown']
+
+const statusLabel: Record<string, string> = {
+  active: '运营中',
+  dissolved: '已注销',
+  acquired: '已被收购',
+  merged: '已合并',
+  unknown: '未知',
+}
+
+const employeeRangeLabel: Record<string, string> = {
+  exact: '精确值',
+  range: '区间',
+  estimated: '估算',
+  unknown: '未知',
+}
 
 function parseCommaList(value: string): string[] {
   return value
@@ -128,7 +144,7 @@ export default function CompanyAdminPage() {
       const result = await api.companies({ limit: 100 })
       setRows(result.rows)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to load companies')
+      setError(friendlyError(err, '企业数据加载失败'))
     } finally {
       setLoading(false)
     }
@@ -140,7 +156,7 @@ export default function CompanyAdminPage() {
       setCompanyTypes(types)
     } catch (err: any) {
       // non-critical
-      console.error('Failed to load company types:', err)
+      console.error('企业类型加载失败:', err)
     }
   }
 
@@ -194,7 +210,7 @@ export default function CompanyAdminPage() {
 
   async function handleCreate() {
     if (!form.name.trim()) {
-      setError('Company name is required.')
+      setError('企业名称为必填项。')
       return
     }
     setLoading(true)
@@ -203,11 +219,11 @@ export default function CompanyAdminPage() {
     try {
       const body = buildBody(form)
       await api.createCompany(body)
-      setSuccess('Company created successfully.')
+      setSuccess('企业已创建。')
       resetForm()
       await load()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to create company')
+      setError(friendlyError(err, '企业创建失败'))
     } finally {
       setLoading(false)
     }
@@ -216,7 +232,7 @@ export default function CompanyAdminPage() {
   async function handleUpdate() {
     if (!editingId) return
     if (!form.name.trim()) {
-      setError('Company name is required.')
+      setError('企业名称为必填项。')
       return
     }
     setLoading(true)
@@ -225,11 +241,11 @@ export default function CompanyAdminPage() {
     try {
       const body = buildBody(form)
       await api.updateCompany(editingId, body)
-      setSuccess('Company updated successfully.')
+      setSuccess('企业已更新。')
       resetForm()
       await load()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to update company')
+      setError(friendlyError(err, '企业更新失败'))
     } finally {
       setLoading(false)
     }
@@ -241,11 +257,11 @@ export default function CompanyAdminPage() {
     setSuccess('')
     try {
       await api.deleteCompany(id)
-      setSuccess('Company deleted successfully.')
+      setSuccess('企业已删除。')
       if (editingId === id) resetForm()
       await load()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to delete company')
+      setError(friendlyError(err, '企业删除失败'))
     } finally {
       setLoading(false)
       setDeleteConfirmId(null)
@@ -265,9 +281,9 @@ export default function CompanyAdminPage() {
       {/* Hero */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Admin</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">Company Admin</h1>
-          <p className="text-sm text-ink-muted mt-1">Manually create and edit company records.</p>
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">企业数据</p>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">企业资料管理</h1>
+          <p className="text-sm text-ink-muted mt-1">人工创建、校正和维护 IC 企业资料。公开页面会把这些资料当作情报线索展示，请尽量补充来源和置信度。</p>
         </div>
       </section>
 
@@ -282,13 +298,13 @@ export default function CompanyAdminPage() {
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div className="flex justify-between items-center">
           <h2 className="font-semibold text-ink-text">
-            {editingId ? 'Edit Company' : 'Create Company'}
+            {editingId ? '编辑企业' : '创建企业'}
           </h2>
           <button
             onClick={() => setFormExpanded((v) => !v)}
             className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary hover:bg-surface-soft transition-colors"
           >
-            {formExpanded ? 'Collapse' : 'Expand'}
+            {formExpanded ? '收起' : '展开'}
           </button>
         </div>
 
@@ -297,59 +313,59 @@ export default function CompanyAdminPage() {
             {/* Required */}
             <div className="space-y-1">
               <label className="text-xs text-ink-subtle">
-                Name <span className="text-semantic-danger">*</span>
+                企业名称 <span className="text-semantic-danger">*</span>
               </label>
               <input
                 value={form.name}
                 onChange={(e) => updateForm('name', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="Company name"
+                placeholder="例如 TSMC"
               />
             </div>
 
             {/* Optional text fields */}
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Legal Name</label>
+              <label className="text-xs text-ink-subtle">法定名称</label>
               <input
                 value={form.legalName}
                 onChange={(e) => updateForm('legalName', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="Legal name"
+                placeholder="企业工商或注册名称"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Aliases (comma separated)</label>
+              <label className="text-xs text-ink-subtle">别名（逗号分隔）</label>
               <input
                 value={form.aliases}
                 onChange={(e) => updateForm('aliases', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="Alias 1, Alias 2"
+                placeholder="台积电, Taiwan Semiconductor"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Country</label>
+              <label className="text-xs text-ink-subtle">国家/地区</label>
               <input
                 value={form.country}
                 onChange={(e) => updateForm('country', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. China"
+                placeholder="例如 China"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">City</label>
+              <label className="text-xs text-ink-subtle">城市</label>
               <input
                 value={form.city}
                 onChange={(e) => updateForm('city', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. Shenzhen"
+                placeholder="例如 Shenzhen"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Website</label>
+              <label className="text-xs text-ink-subtle">官网</label>
               <input
                 value={form.website}
                 onChange={(e) => updateForm('website', e.target.value)}
@@ -359,13 +375,13 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Company Type</label>
+              <label className="text-xs text-ink-subtle">企业类型</label>
               <select
                 value={form.companyType}
                 onChange={(e) => updateForm('companyType', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
               >
-                <option value="">— Select —</option>
+                <option value="">请选择</option>
                 {companyTypes.map((t) => (
                   <option key={t} value={t}>
                     {t}
@@ -375,7 +391,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Status</label>
+              <label className="text-xs text-ink-subtle">状态</label>
               <select
                 value={form.status}
                 onChange={(e) => updateForm('status', e.target.value)}
@@ -383,45 +399,45 @@ export default function CompanyAdminPage() {
               >
                 {statusOptions.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {statusLabel[s]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Founded Year</label>
+              <label className="text-xs text-ink-subtle">成立年份</label>
               <input
                 type="number"
                 value={form.foundedYear}
                 onChange={(e) => updateForm('foundedYear', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. 2000"
+                placeholder="例如 2000"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Registered Capital</label>
+              <label className="text-xs text-ink-subtle">注册资本</label>
               <input
                 value={form.registeredCapital}
                 onChange={(e) => updateForm('registeredCapital', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. 100M CNY"
+                placeholder="例如 100M CNY"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Employee Count</label>
+              <label className="text-xs text-ink-subtle">员工数量</label>
               <input
                 value={form.employeeCount}
                 onChange={(e) => updateForm('employeeCount', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. 5000"
+                placeholder="例如 5000"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Employee Count Range</label>
+              <label className="text-xs text-ink-subtle">员工数量类型</label>
               <select
                 value={form.employeeCountRange}
                 onChange={(e) => updateForm('employeeCountRange', e.target.value)}
@@ -429,46 +445,46 @@ export default function CompanyAdminPage() {
               >
                 {employeeCountRangeOptions.map((o) => (
                   <option key={o} value={o}>
-                    {o}
+                    {employeeRangeLabel[o]}
                   </option>
                 ))}
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Stock Ticker</label>
+              <label className="text-xs text-ink-subtle">股票代码</label>
               <input
                 value={form.stockTicker}
                 onChange={(e) => updateForm('stockTicker', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. AAPL"
+                placeholder="例如 AAPL"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Exchange</label>
+              <label className="text-xs text-ink-subtle">交易所</label>
               <input
                 value={form.exchange}
                 onChange={(e) => updateForm('exchange', e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300"
-                placeholder="e.g. NASDAQ"
+                placeholder="例如 NASDAQ"
               />
             </div>
 
             <div className="space-y-1 md:col-span-2 lg:col-span-3">
-              <label className="text-xs text-ink-subtle">Description</label>
+              <label className="text-xs text-ink-subtle">简介</label>
               <textarea
                 value={form.description}
                 onChange={(e) => updateForm('description', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 rounded-lg border border-line text-sm bg-surface-panel focus:outline-none focus:ring-2 focus:ring-brand-300 resize-y"
-                placeholder="Short description of the company..."
+                placeholder="简要说明企业主营方向、代表产品或 IC 相关业务..."
               />
             </div>
 
             {/* Comma separated lists */}
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Product Lines (comma separated)</label>
+              <label className="text-xs text-ink-subtle">产品线（逗号分隔）</label>
               <input
                 value={form.productLines}
                 onChange={(e) => updateForm('productLines', e.target.value)}
@@ -478,7 +494,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Domains (comma separated)</label>
+              <label className="text-xs text-ink-subtle">技术领域（逗号分隔）</label>
               <input
                 value={form.domains}
                 onChange={(e) => updateForm('domains', e.target.value)}
@@ -488,7 +504,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Technology Keywords (comma separated)</label>
+              <label className="text-xs text-ink-subtle">技术关键词（逗号分隔）</label>
               <input
                 value={form.technologyKeywords}
                 onChange={(e) => updateForm('technologyKeywords', e.target.value)}
@@ -498,7 +514,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Application Markets (comma separated)</label>
+              <label className="text-xs text-ink-subtle">应用市场（逗号分隔）</label>
               <input
                 value={form.applicationMarkets}
                 onChange={(e) => updateForm('applicationMarkets', e.target.value)}
@@ -508,7 +524,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Career Roles (comma separated)</label>
+              <label className="text-xs text-ink-subtle">岗位方向（逗号分隔）</label>
               <input
                 value={form.careerRoles}
                 onChange={(e) => updateForm('careerRoles', e.target.value)}
@@ -518,7 +534,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Hiring Signals (comma separated)</label>
+              <label className="text-xs text-ink-subtle">招聘线索（逗号分隔）</label>
               <input
                 value={form.hiringSignals}
                 onChange={(e) => updateForm('hiringSignals', e.target.value)}
@@ -528,7 +544,7 @@ export default function CompanyAdminPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs text-ink-subtle">Data Confidence (0–100)</label>
+              <label className="text-xs text-ink-subtle">数据置信度（0-100）</label>
               <input
                 type="number"
                 min={0}
@@ -551,14 +567,14 @@ export default function CompanyAdminPage() {
                   disabled={loading}
                   className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
                 >
-                  {loading ? 'Updating...' : 'Update Company'}
+                  {loading ? '更新中...' : '更新企业'}
                 </button>
                 <button
                   onClick={resetForm}
                   disabled={loading}
                   className="px-4 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
                 >
-                  Cancel
+                  取消
                 </button>
               </>
             ) : (
@@ -567,7 +583,7 @@ export default function CompanyAdminPage() {
                 disabled={loading}
                 className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
               >
-                {loading ? 'Creating...' : 'Create Company'}
+                {loading ? '创建中...' : '创建企业'}
               </button>
             )}
           </div>
@@ -577,22 +593,22 @@ export default function CompanyAdminPage() {
       {/* Company List */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="font-semibold text-ink-text">Companies</h2>
+          <h2 className="font-semibold text-ink-text">企业列表</h2>
           <button
             onClick={load}
             disabled={loading}
             className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
           >
-            Reload
+            重新加载
           </button>
         </div>
 
         {loading && rows.length === 0 && (
-          <p className="text-sm text-ink-muted">Loading companies...</p>
+          <p className="text-sm text-ink-muted">正在加载企业...</p>
         )}
 
         {!loading && rows.length === 0 && (
-          <p className="text-sm text-ink-muted">No companies found.</p>
+          <p className="text-sm text-ink-muted">没有找到企业记录。</p>
         )}
 
         {rows.length > 0 && (
@@ -600,12 +616,12 @@ export default function CompanyAdminPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                  <th className="py-2 pr-3 font-medium">Name</th>
-                  <th className="py-2 pr-3 font-medium">Type</th>
-                  <th className="py-2 pr-3 font-medium">Country</th>
-                  <th className="py-2 pr-3 font-medium">Confidence</th>
-                  <th className="py-2 pr-3 font-medium">Updated</th>
-                  <th className="py-2 pr-3 font-medium text-right">Actions</th>
+                  <th className="py-2 pr-3 font-medium">名称</th>
+                  <th className="py-2 pr-3 font-medium">类型</th>
+                  <th className="py-2 pr-3 font-medium">国家/地区</th>
+                  <th className="py-2 pr-3 font-medium">置信度</th>
+                  <th className="py-2 pr-3 font-medium">更新时间</th>
+                  <th className="py-2 pr-3 font-medium text-right">操作</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-subtle">
@@ -623,7 +639,7 @@ export default function CompanyAdminPage() {
                           disabled={loading}
                           className="px-2 py-1 rounded-lg bg-surface-elevated border border-line text-xs text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
                         >
-                          Edit
+                          编辑
                         </button>
                         {deleteConfirmId === row.id ? (
                           <div className="flex gap-2">
@@ -632,14 +648,14 @@ export default function CompanyAdminPage() {
                               disabled={loading}
                               className="px-2 py-1 rounded-lg bg-red-600 text-white text-xs disabled:opacity-50"
                             >
-                              Confirm
+                              确认
                             </button>
                             <button
                               onClick={() => setDeleteConfirmId(null)}
                               disabled={loading}
                               className="px-2 py-1 rounded-lg bg-surface-elevated border border-line text-xs text-ink-secondary disabled:opacity-50"
                             >
-                              Cancel
+                              取消
                             </button>
                           </div>
                         ) : (
@@ -648,7 +664,7 @@ export default function CompanyAdminPage() {
                             disabled={loading}
                             className="px-2 py-1 rounded-lg bg-red-50 border border-red-100 text-xs text-red-700 disabled:opacity-50 hover:bg-red-100 transition-colors"
                           >
-                            Delete
+                            删除
                           </button>
                         )}
                       </div>
@@ -663,12 +679,12 @@ export default function CompanyAdminPage() {
 
       {/* CSV Import Note */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-        <h2 className="font-semibold text-ink-text mb-2">CSV Import</h2>
+        <h2 className="font-semibold text-ink-text mb-2">CSV 批量导入</h2>
         <p className="text-sm text-ink-muted mb-2">
-          Coming soon — bulk CSV import will be supported via the admin API.
+          批量导入应通过后台 API 和复核队列执行，避免别名、地区或企业状态误写入公开画像。
         </p>
         <p className="text-xs text-ink-subtle">
-          Template fields: name, legalName, country, city, website, companyType, domains, registeredCapital, employeeCount, sourceUrl, notes
+          模板字段：name, legalName, country, city, website, companyType, domains, registeredCapital, employeeCount, sourceUrl, notes
         </p>
       </section>
     </div>

@@ -4,10 +4,21 @@ import { api } from '../api'
 import type { NotificationItem } from '../types'
 
 const severityLabels: Record<NotificationItem['severity'], string> = {
-  info: 'Info',
-  success: 'Success',
-  warning: 'Warning',
-  critical: 'Critical',
+  info: '提示',
+  success: '完成',
+  warning: '提醒',
+  critical: '重要',
+}
+
+const kindLabels: Record<string, string> = {
+  system: '系统',
+  import: '导入',
+  export: '导出',
+  moderation: '审核',
+  billing: '订阅',
+  watchlist: '关注',
+  weekly: '周报',
+  access: '访问',
 }
 
 function formatDate(value: string) {
@@ -32,7 +43,7 @@ function NotificationCard({
       <div className="notification-card-main">
         <div className="notification-meta">
           <span>{severityLabels[item.severity]}</span>
-          <em>{item.kind}</em>
+          <em>{kindLabels[item.kind] || item.kind}</em>
           <small>{formatDate(item.createdAt)}</small>
         </div>
         <h3>{item.title}</h3>
@@ -40,14 +51,14 @@ function NotificationCard({
         <div className="notification-actions">
           {item.href && (
             <Link to={item.href} onClick={onRead}>
-              {item.actionLabel || 'Open'}
+              {item.actionLabel || '查看'}
             </Link>
           )}
-          {!item.readAt && <button onClick={onRead}>Mark read</button>}
-          <button className="subtle" onClick={onDelete}>Delete</button>
+          {!item.readAt && <button onClick={onRead}>标为已读</button>}
+          <button className="subtle" onClick={onDelete}>删除</button>
         </div>
       </div>
-      {!item.readAt && <div className="notification-dot" aria-label="Unread" />}
+      {!item.readAt && <div className="notification-dot" aria-label="未读" />}
     </article>
   )
 }
@@ -86,25 +97,25 @@ export default function NotificationsPage() {
     <div className="notifications-page">
       <section className="notifications-hero">
         <div>
-          <span>Notification Center</span>
+          <span>通知中心</span>
           <h1>通知中心</h1>
-          <p>集中接收系统公告、审核结果、导入任务、周报摘要和未来订阅提醒。这个模块会成为商业版用户运营和后台任务回执的基础。</p>
+          <p>集中接收系统公告、审核结果、导入任务、周报摘要和订阅提醒。重要状态会在这里留痕，方便之后回看。</p>
         </div>
         <div className="notifications-unread">
           <strong>{data?.unread ?? 0}</strong>
-          <span>unread</span>
+          <span>未读</span>
           <button disabled={!data?.unread || markAll.isPending} onClick={() => markAll.mutate()}>
-            Mark all read
+            全部标为已读
           </button>
         </div>
       </section>
 
-      {notifications.isLoading && <div className="learning-muted">Loading notifications...</div>}
+      {notifications.isLoading && <div className="learning-muted">正在加载通知...</div>}
 
       {!notifications.isLoading && rows.length === 0 && (
         <div className="notifications-empty">
-          <h2>No notifications</h2>
-          <p>When weekly sync, moderation, exports, or subscription features are enabled, messages will appear here.</p>
+          <h2>暂无通知</h2>
+          <p>周报同步、审核、导出或订阅状态有更新时，会在这里显示。</p>
         </div>
       )}
 

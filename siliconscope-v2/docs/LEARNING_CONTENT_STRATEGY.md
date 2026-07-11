@@ -32,7 +32,7 @@ cd backend
 npm run learning:sync
 ```
 
-This syncs the v3 seed catalog into `learning_content_items`, rebuilds the normalized projection tables, and prints a content-quality score. The current v3 seed is designed to pass the built-in quality gate with route coverage, lesson coverage, search hooks, venue hooks, project outputs, and stage/module checks.
+This syncs the v3 seed catalog into `learning_content_items`, rebuilds the normalized projection tables, and prints a content-quality signal. The current v3 seed is designed to pass the built-in quality gate with route coverage, lesson coverage, search hooks, venue hooks, project outputs, and stage/module checks.
 
 ## Database Model
 
@@ -142,7 +142,7 @@ Short term:
 
 - Build structured editing on top of the `learning_content_items` registry for routes, stages, prerequisites, lessons, diagrams, and reading lists.
 - Expand projection tables for route stages, modules, resources, practice prompts, and diagram assets after the editor is stable.
-- Persist content-quality findings so weekly syncs create an auditable review queue instead of only printing a transient score.
+- Persist content-quality findings so weekly syncs create an auditable review queue instead of only printing a transient signal.
 - Add route-level representative diagrams and thumbnails.
 - Expand the new `learning_progress` workflow into spaced review: review due dates, reminders, saved study plans, and per-route completion ratios.
 

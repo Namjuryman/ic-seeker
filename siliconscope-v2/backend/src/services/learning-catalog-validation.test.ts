@@ -15,6 +15,6 @@ describe("learning catalog validation", () => {
       routeFamilies: [],
     });
     expect(result.ok).toBe(false);
-    expect(result.errors.join("\n")).toContain("unknown roadmapSlug");
+    expect(result.errors.join("\n")).toContain("不存在的路线 slug");
   });
 });

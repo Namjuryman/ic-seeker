@@ -196,9 +196,9 @@ function thisEvent(id: number) {
 function assertTransition(job: IngestionJob, next: IngestionJobStatus) {
   const current = job.status;
   if (current === next) return;
-  if (current === "cancelled" && next !== "queued") throw new Error("Cancelled jobs can only be retried.");
-  if (current === "running" && next === "queued") throw new Error("Running jobs cannot be moved back to queued directly.");
-  if (current === "succeeded" && next === "running") throw new Error("Succeeded jobs should be retried first.");
+  if (current === "cancelled" && next !== "queued") throw new Error("已取消的任务只能通过重试重新排队。");
+  if (current === "running" && next === "queued") throw new Error("运行中的任务不能直接退回排队状态。");
+  if (current === "succeeded" && next === "running") throw new Error("已成功的任务需要先创建重试任务。");
 }
 
 export const ingestionJobService = {
@@ -246,7 +246,7 @@ export const ingestionJobService = {
     recordEvent({
       jobId: job.id,
       eventType: "created",
-      message: "Ingestion job registered from admin console.",
+      message: "已从管理后台登记采集任务。",
       payload: { provider: job.provider, mode: job.mode, scope: job.scope },
       createdByUserId: input.createdByUserId ?? null,
     });
@@ -255,7 +255,7 @@ export const ingestionJobService = {
 
   updateStatus(id: number, input: { status?: string; counts?: Record<string, unknown>; error?: string | null; notes?: string | null; actorUserId?: number | null }) {
     const existing = this.get(id);
-    if (!existing) throw new Error(`Unknown ingestion job: ${id}`);
+    if (!existing) throw new Error(`未知采集任务：${id}`);
     const status = input.status ? normalizeStatus(input.status) : existing.status;
     assertTransition(existing, status);
     const counts = input.counts ? normalizeCounts(input.counts) : existing.counts;
@@ -291,7 +291,7 @@ export const ingestionJobService = {
                 : status === "running"
                   ? "started"
                   : "progress",
-        message: error || notes || `Job status changed from ${existing.status} to ${status}.`,
+        message: error || notes || `任务状态已从 ${existing.status} 更新为 ${status}。`,
         payload: { previousStatus: existing.status, status, counts },
         createdByUserId: input.actorUserId ?? null,
       });
@@ -301,14 +301,14 @@ export const ingestionJobService = {
 
   start(id: number, actorUserId?: number | null) {
     const job = this.get(id);
-    if (!job) throw new Error(`Unknown ingestion job: ${id}`);
+    if (!job) throw new Error(`未知采集任务：${id}`);
     if (job.status === "running") return job;
     if (job.status !== "queued" && job.status !== "review_required") {
-      throw new Error(`Only queued or review_required jobs can be started. Current status: ${job.status}`);
+      throw new Error(`只有排队中或待复核的任务可以启动。当前状态：${job.status}`);
     }
     const updated = this.updateStatus(id, {
       status: "running",
-      notes: job.notes || "Worker execution boundary marked as started from admin console.",
+      notes: job.notes || "已从管理后台标记任务开始执行。",
       actorUserId: actorUserId ?? null,
     });
     return updated;
@@ -337,12 +337,12 @@ export const ingestionJobService = {
 
   cancel(id: number, actorUserId?: number | null) {
     const job = this.get(id);
-    if (!job) throw new Error(`Unknown ingestion job: ${id}`);
-    if (job.status === "succeeded") throw new Error("Succeeded jobs cannot be cancelled.");
+    if (!job) throw new Error(`未知采集任务：${id}`);
+    if (job.status === "succeeded") throw new Error("已成功的任务不能取消。");
     if (job.status === "cancelled") return job;
     const updated = this.updateStatus(id, {
       status: "cancelled",
-      notes: "Cancelled from admin console.",
+      notes: "已从管理后台取消。",
       actorUserId: actorUserId ?? null,
     });
     return updated;
@@ -350,8 +350,8 @@ export const ingestionJobService = {
 
   retry(id: number, actorUserId?: number | null) {
     const job = this.get(id);
-    if (!job) throw new Error(`Unknown ingestion job: ${id}`);
-    if (job.status === "running") throw new Error("Running jobs cannot be retried.");
+    if (!job) throw new Error(`未知采集任务：${id}`);
+    if (job.status === "running") throw new Error("运行中的任务不能重试。");
     const result = appSqlite.prepare(`
       INSERT INTO ingestion_jobs (provider, mode, status, scope_json, counts_json, notes, created_by_user_id)
       VALUES (?, ?, 'queued', ?, ?, ?, ?)
@@ -360,21 +360,21 @@ export const ingestionJobService = {
       job.mode,
       JSON.stringify({ ...job.scope, retryOf: job.id }),
       JSON.stringify(normalizeCounts({})),
-      `Retry of ingestion job #${job.id}`,
+      `重试采集任务 #${job.id}`,
       actorUserId ?? job.createdByUserId
     );
     const retried = this.get(Number(result.lastInsertRowid))!;
     recordEvent({
       jobId: retried.id,
       eventType: "retry",
-      message: `Created retry from ingestion job #${job.id}.`,
+      message: `已从采集任务 #${job.id} 创建重试任务。`,
       payload: { retryOf: job.id, previousStatus: job.status },
       createdByUserId: actorUserId ?? null,
     });
     recordEvent({
       jobId: job.id,
       eventType: "retry",
-      message: `Retry job #${retried.id} was created.`,
+      message: `已创建重试任务 #${retried.id}。`,
       payload: { retryJobId: retried.id },
       createdByUserId: actorUserId ?? null,
     });

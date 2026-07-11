@@ -86,14 +86,15 @@ function bestProfile(rows: AuthorProfileRow[]): AuthorProfileMetadata | null {
 
 export const authorProfileService = {
   getByName(name: string): AuthorProfileMetadata | null {
-    const normalizedName = authorIdentityService.canonicalize(name).normalizedKey;
-    if (!normalizedName) return null;
-    const rows = appDb.select().from(authorProfiles).where(inArray(authorProfiles.normalizedName, [normalizedName])).all();
+    const keys = authorIdentityService.matchKeysFor(name);
+    if (!keys.length) return null;
+    const rows = appDb.select().from(authorProfiles).where(inArray(authorProfiles.normalizedName, keys)).all();
     return bestProfile(rows);
   },
 
   getMapByNormalizedNames(normalizedNames: string[]): Map<string, AuthorProfileMetadata> {
-    const keys = [...new Set(normalizedNames.map((key) => clean(key)).filter((key): key is string => Boolean(key)))];
+    const requestedKeys = [...new Set(normalizedNames.map((key) => clean(key)).filter((key): key is string => Boolean(key)))];
+    const keys = [...new Set(requestedKeys.flatMap((key) => authorIdentityService.matchKeysFor(key)))];
     const result = new Map<string, AuthorProfileMetadata>();
     if (!keys.length) return result;
 
@@ -108,6 +109,12 @@ export const authorProfileService = {
     for (const [key, group] of grouped.entries()) {
       const profile = bestProfile(group);
       if (profile) result.set(key, profile);
+    }
+    for (const requestedKey of requestedKeys) {
+      const requestedMatchKeys = authorIdentityService.matchKeysFor(requestedKey);
+      const candidates = requestedMatchKeys.flatMap((key) => grouped.get(key) || []);
+      const profile = bestProfile(candidates);
+      if (profile) result.set(requestedKey, profile);
     }
     return result;
   },

@@ -52,7 +52,7 @@ function optionsFromJob(job: IngestionJob): ImportOptions {
   const scope = job.scope || {};
   const sources = normalizeSources(job.provider, scope);
   if (!sources.length) {
-    throw new Error(`Provider ${job.provider} does not map to a metadata import source. Use openalex, crossref, ieee, csv, scholar-csv, aminer, semantic-scholar, or dblp.`);
+    throw new Error(`采集来源 ${job.provider} 无法映射到可用的元数据导入源。可用来源：openalex、crossref、ieee、csv、scholar-csv、aminer、semantic-scholar、dblp。`);
   }
 
   const query = String(scope.query || "").trim();
@@ -106,12 +106,12 @@ function compactSummary(summary: PaperImportSummary) {
 async function execute(jobId: number, actorUserId: number | null) {
   try {
     const job = ingestionJobService.get(jobId);
-    if (!job) throw new Error(`Unknown ingestion job: ${jobId}`);
+    if (!job) throw new Error(`未知采集任务：${jobId}`);
     const options = optionsFromJob(job);
     ingestionJobService.recordEvent({
       jobId,
       eventType: "progress",
-      message: `Running ${options.sources.join(", ")} import for ${options.yearFrom}-${options.yearTo}.`,
+      message: `正在运行 ${options.sources.join(", ")} 采集，年份范围 ${options.yearFrom}-${options.yearTo}。`,
       payload: {
         sources: options.sources,
         queries: options.queries,
@@ -128,7 +128,7 @@ async function execute(jobId: number, actorUserId: number | null) {
       ingestionJobService.recordEvent({
         jobId,
         eventType: "note",
-        message: "Import finished after cancellation; final success state was not applied.",
+        message: "任务取消后采集才结束，因此未写入最终成功状态。",
         payload: compactSummary(summary),
         createdByUserId: actorUserId,
       });
@@ -139,15 +139,15 @@ async function execute(jobId: number, actorUserId: number | null) {
       status: summary.upsert.errors.length ? "review_required" : "succeeded",
       counts: countsFromSummary(summary),
       notes: summary.upsert.errors.length
-        ? `Import finished with ${summary.upsert.errors.length} upsert error(s); review required.`
-        : `Import finished: ${summary.raw} fetched, ${summary.upsert.inserted} inserted, ${summary.upsert.updated} updated.`,
+        ? `采集完成，但有 ${summary.upsert.errors.length} 条写入错误，需要复核。`
+        : `采集完成：抓取 ${summary.raw} 条，新增 ${summary.upsert.inserted} 条，更新 ${summary.upsert.updated} 条。`,
       error: summary.upsert.errors.length ? summary.upsert.errors.slice(0, 5).join("; ") : null,
       actorUserId,
     });
     ingestionJobService.recordEvent({
       jobId,
       eventType: "progress",
-      message: "Source and upsert summary.",
+      message: "来源与写入摘要。",
       payload: compactSummary(summary),
       createdByUserId: actorUserId,
     });
@@ -158,7 +158,7 @@ async function execute(jobId: number, actorUserId: number | null) {
       ingestionJobService.updateStatus(jobId, {
         status: "failed",
         error: message,
-        notes: "Import runner failed. Check provider credentials, network, and scope.",
+        notes: "采集执行失败，请检查来源凭据、网络和任务范围。",
         actorUserId,
       });
     }
@@ -171,13 +171,13 @@ export const ingestionRunnerService = {
   start(id: number, actorUserId?: number | null) {
     const existingRunning = ingestionJobService.runningJob(id);
     const job = ingestionJobService.get(id);
-    if (!job) throw new Error(`Unknown ingestion job: ${id}`);
+    if (!job) throw new Error(`未知采集任务：${id}`);
     if (job.status === "running") return job;
     if ((activeJobId && activeJobId !== id) || existingRunning) {
       ingestionJobService.recordEvent({
         jobId: id,
         eventType: "note",
-        message: `Another ingestion job is already running${existingRunning ? ` (#${existingRunning.id})` : ""}; this job remains queued.`,
+        message: `已有采集任务正在运行${existingRunning ? `（#${existingRunning.id}）` : ""}；当前任务继续排队。`,
         payload: { activeJobId, runningJobId: existingRunning?.id || null },
         createdByUserId: actorUserId ?? null,
       });

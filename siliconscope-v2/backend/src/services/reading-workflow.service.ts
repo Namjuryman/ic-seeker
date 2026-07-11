@@ -80,16 +80,16 @@ export const readingWorkflowService = {
         updatedAt: null,
       },
       suggestedTemplate: {
-        summary: "Problem -> method -> claimed contribution -> evidence/spec -> limitation -> how it changes my project/application plan.",
-        contributionPrompts: ["What is technically new?", "Which metric improved and under what condition?", "What baseline is used?"],
-        limitationPrompts: ["Which measurement condition is missing?", "What may not generalize?", "What source/provenance should I verify?"],
+        summary: "问题 -> 方法 -> 声称贡献 -> 证据/规格 -> 局限 -> 对我的项目或应用计划有什么影响。",
+        contributionPrompts: ["技术上新在哪里？", "哪个指标在什么条件下改善了？", "使用了什么基线？"],
+        limitationPrompts: ["缺少哪些测量条件？", "哪些结论可能不具备泛化性？", "哪些来源或出处需要复核？"],
       },
     };
   },
 
   update(userId: number, paperId: number, body: Record<string, unknown>) {
     const exists = paper(paperId);
-    if (!exists) throw new Error("Paper not found");
+    if (!exists) throw new Error("论文不存在。");
     appSqlite.prepare(`
       INSERT INTO reading_workflow_items (
         user_id, paper_id, reading_goal, literature_review_note, project_note, application_note,
@@ -138,7 +138,7 @@ export const readingWorkflowService = {
     const queue = readingQueueService.getReadingQueue(userId).flatMap((group) => group.papers);
     const ids = queue.map((item: any) => Number(item.paper.id)).filter(Number.isFinite);
     if (!ids.length) {
-      return { format: options.format || "markdown", content: options.format === "json" ? "[]" : "# Reading Queue Literature Material\n\nNo queued papers yet." };
+      return { format: options.format || "markdown", content: options.format === "json" ? "[]" : "# 阅读队列文献素材\n\n当前还没有排队论文。" };
     }
     const placeholders = ids.map(() => "?").join(",");
     const workflows = (appSqlite.prepare(`SELECT * FROM reading_workflow_items WHERE user_id = ? AND paper_id IN (${placeholders})`).all(userId, ...ids) as any[]).map(mapWorkflow);
@@ -163,23 +163,23 @@ export const readingWorkflowService = {
 
     if (options.format === "json") return { format: "json", content: JSON.stringify({ generatedAt: new Date().toISOString(), rows }, null, 2) };
     const content = [
-      "# Reading Queue Literature Material",
+      "# 阅读队列文献素材",
       "",
-      `Generated at: ${new Date().toISOString()}`,
+      `生成时间：${new Date().toISOString()}`,
       "",
-      "> Metadata/citation/notes export only. Verify papers and source links manually; copyrighted PDFs are not exported.",
+      "> 仅导出元数据、引用信息和阅读笔记。论文与来源链接请人工复核；不会导出受版权保护的 PDF。",
       "",
       ...rows.flatMap((row: any, idx: number) => [
         `## ${idx + 1}. ${row.paper.title}`,
         "",
-        `- Venue/year: ${row.paper.venue || "-"} ${row.paper.year || ""}`,
+        `- 会议/年份：${row.paper.venue || "-"} ${row.paper.year || ""}`,
         `- DOI: ${row.paper.doi || "-"}`,
-        `- State: ${row.readingState}`,
-        `- Use cases: ${row.useCases.join(", ") || "-"}`,
-        `- Summary: ${row.summary || "TODO"}`,
-        `- Contributions: ${row.contributions.join("; ") || "TODO"}`,
-        `- Limitations: ${row.limitations.join("; ") || "TODO"}`,
-        `- Literature note: ${row.notes.literatureReview || "TODO"}`,
+        `- 阅读状态：${row.readingState}`,
+        `- 使用场景：${row.useCases.join(", ") || "-"}`,
+        `- 摘要：${row.summary || "待补充"}`,
+        `- 贡献：${row.contributions.join("; ") || "待补充"}`,
+        `- 局限：${row.limitations.join("; ") || "待补充"}`,
+        `- 文献综述笔记：${row.notes.literatureReview || "待补充"}`,
         "",
       ]),
     ].join("\n");

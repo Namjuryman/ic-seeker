@@ -2,8 +2,8 @@
 // and is served through /api/learning/*. The frontend keeps only this source
 // disclosure block for the route-library page.
 export const learningSource = {
-  name: 'SiliconScope curated IC roadmap',
+  name: 'SiliconScope IC 学习路线整理版',
   url: 'https://github.com/Crys-Chen/ic-guide',
   note:
-    'The route structure is inspired by public IC learning guides and rewritten as a SiliconScope product catalog. University-specific and advisor-specific content is intentionally excluded.',
+    '路线结构参考公开 IC 学习资料，并改写为 SiliconScope 的学习目录。这里刻意不包含特定学校、研究者或录取建议。',
 }

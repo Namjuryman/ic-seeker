@@ -51,7 +51,7 @@ function ensureRuntimeUser(email: string, role: "admin" | "user"): AuthUserPaylo
   const created = appDb.insert(users).values({
     email,
     passwordHash: marker,
-    nickname: role === "admin" ? "Admin" : "Local User",
+    nickname: role === "admin" ? "管理员" : "本地用户",
     verificationStatus: "verified",
     verificationLevel: role,
     subscriptionPlan: "internal",

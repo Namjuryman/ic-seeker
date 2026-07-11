@@ -45,12 +45,12 @@ adminRouter.get("/users", requireAdmin, async (req, res) => {
 adminRouter.get("/users/:id", requireAdmin, async (req, res) => {
   const userId = Number(req.params.id);
   if (!Number.isFinite(userId)) {
-    res.status(400).json({ error: "Invalid user ID" });
+    res.status(400).json({ error: "用户 ID 无效。" });
     return;
   }
   const user = billingService.getBillingUser(userId);
   if (!user) {
-    res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "用户不存在。" });
     return;
   }
   res.json(user);
@@ -59,7 +59,7 @@ adminRouter.get("/users/:id", requireAdmin, async (req, res) => {
 adminRouter.patch("/users/:id/plan", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const userId = Number(req.params.id);
   if (!Number.isFinite(userId)) {
-    res.status(400).json({ error: "Invalid user ID" });
+    res.status(400).json({ error: "用户 ID 无效。" });
     return;
   }
   try {

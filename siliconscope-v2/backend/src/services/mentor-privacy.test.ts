@@ -5,7 +5,7 @@ function review(overall: number, text = "Great research fit from 2024, contact m
   return {
     structuredScoresJson: JSON.stringify({ overall, research_fit: overall, communication: overall }),
     strengthsText: text,
-    cautionsText: "Caution text",
+    cautionsText: "需要注意的文本",
     fitText: "Fit text",
   };
 }
@@ -30,7 +30,7 @@ describe("mentor privacy thresholds", () => {
   it("shows threshold-safe structured summary but no curated comments for 5 to 9 reviews", () => {
     const view = buildMentorThresholdView(Array.from({ length: 7 }, () => review(4, "Raw nickname and University 2024 should not be copied")));
     expect(view.visibilityLevel).toBe("summary");
-    expect(view.summary).toContain("Threshold-safe summary");
+    expect(view.summary).toContain("阈值安全摘要");
     expect(view.summary).not.toContain("Raw nickname");
     expect(view.summary).not.toContain("University 2024");
     expect(view.curatedComments).toEqual([]);
@@ -40,7 +40,7 @@ describe("mentor privacy thresholds", () => {
     const view = buildMentorThresholdView(Array.from({ length: 10 }, () => review(5)));
     expect(view.visibilityLevel).toBe("curated");
     expect(view.curatedComments.length).toBeGreaterThan(0);
-    expect(view.curatedComments[0].publicAlias).toBe("Anonymous verified reviewer");
+    expect(view.curatedComments[0].publicAlias).toBe("匿名已验证评价者");
     expect(view.curatedComments[0].text).not.toContain("user@example.com");
     expect(view.curatedComments[0].text).not.toContain("2024");
   });

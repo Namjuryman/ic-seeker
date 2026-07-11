@@ -75,7 +75,7 @@ Owner handoff: 本手册面向执行代理（GPT Pro）。它自包含——不�
 | `year` `venue` | 年份、规范 venue 标签 | venue 用库内规范值（见 §8 对照表），不要写全称 |
 | `venue_rank` | S+/S/A 等 | 用 `classify.ts` 的 `inferVenueRank(venue)` |
 | `domain` `domain_hits` | 领域分类 | 用 `classify.ts` 的 `inferDomain({title,abstract,venue,...})` |
-| `quality_score` | 排序分 | 用 `classify.ts` 的 `qualityScore(rank, year, citation)` |
+| `quality_score` | 排序信号 | 用 `classify.ts` 的 `qualityScore(rank, year, citation)` |
 | `doi` | 唯一键（归一化后） | 主去重键，库内 DOI 全唯一 |
 | `citation_count` | 引用 | OpenAlex `cited_by_count` |
 | `semantic_text` | FTS 扩展文本 | 用 `classify.ts` 的 `semanticText([title,abstract,domain,venue])` |
@@ -95,7 +95,7 @@ Owner handoff: 本手册面向执行代理（GPT Pro）。它自包含——不�
 | `npm run backfill:venue` | 按 venue+year 用权威目录补缺失论文（当前：会议=DBLP） | `--venue=ISSCC --year=2024`、`--years=2016-2026`、`--apply`（默认干跑） |
 | `npm run enrich:openalex` | 按 DOI 批量回填机构/摘要/作者/引用、修标题、重建 FTS | `--dry-run`、`--limit=N`、`--refresh-citations`、`--overwrite`、`--batch=50`、`--sleep=150` |
 | `npm run clean:frontmatter` | 删前言/刊头等非论文行，级联清理关联表 | 默认干跑，`--apply` 才删，`--limit=N` |
-| `npm run snapshots:refresh` | 重算画像/排行榜/导师/地图快照（数据大改后必跑） | 无 |
+| `npm run snapshots:refresh` | 重算画像/排序/研究者/地图快照（数据大改后必跑） | 无 |
 | `npm run search:smoke` | 搜索性能冒烟（改数据后跑，防慢） | `--threshold-ms=300` |
 
 脚本源码位置：`backend/src/scripts/{backfill-venue,enrich-openalex,clean-frontmatter}.ts`。

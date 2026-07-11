@@ -40,48 +40,48 @@ const publicSiteUrl = import.meta.env.VITE_PUBLIC_SITE_URL || 'http://localhost:
 
 const adminNav = [
   {
-    section: 'Command',
+    section: '总览',
     items: [
-      { to: '/', label: 'Overview', icon: 'A' },
-      { to: '/launch', label: 'Launch checklist', icon: 'G' },
-      { to: '/job-operations', label: 'Operations ledger', icon: 'J' },
-      { to: '/site-settings', label: 'Site settings', icon: 'F' },
-      { to: '/access-requests', label: 'Access requests', icon: 'U' },
-      { to: '/observability', label: 'Observability', icon: 'O' },
-      { to: '/completion-report', label: '20-task report', icon: '20' },
+      { to: '/', label: '控制台概览', icon: '总' },
+      { to: '/launch', label: '上线检查', icon: '检' },
+      { to: '/job-operations', label: '运营记录', icon: '记' },
+      { to: '/site-settings', label: '站点设置', icon: '设' },
+      { to: '/access-requests', label: '访问申请', icon: '访' },
+      { to: '/observability', label: '运行观测', icon: '观' },
+      { to: '/completion-report', label: '任务报告', icon: '20' },
     ],
   },
   {
-    section: 'Jobs',
+    section: '任务',
     items: [
-      { to: '/journal-ingestion', label: 'Ingestion jobs', icon: 'D' },
-      { to: '/scheduler', label: 'Scheduler', icon: 'S' },
-      { to: '/maintenance', label: 'Maintenance', icon: 'T' },
-      { to: '/backups', label: 'Backups', icon: 'R' },
-      { to: '/snapshots', label: 'Snapshots', icon: 'K' },
-      { to: '/search-index', label: 'Search index', icon: 'X' },
-      { to: '/ai-enrichment', label: 'AI enrichment', icon: 'Y' },
+      { to: '/journal-ingestion', label: '采集任务', icon: '采' },
+      { to: '/scheduler', label: '调度器', icon: '调' },
+      { to: '/maintenance', label: '维护任务', icon: '维' },
+      { to: '/backups', label: '备份', icon: '备' },
+      { to: '/snapshots', label: '快照', icon: '照' },
+      { to: '/search-index', label: '搜索索引', icon: '索' },
+      { to: '/ai-enrichment', label: 'AI 标注', icon: 'AI' },
     ],
   },
   {
-    section: 'Governance',
+    section: '治理',
     items: [
-      { to: '/audit-logs', label: 'Audit logs', icon: 'L' },
-      { to: '/moderation', label: 'Moderation', icon: 'M' },
-      { to: '/learning-content', label: 'Learning content', icon: 'E' },
-      { to: '/topic-taxonomy', label: 'Topic taxonomy', icon: 'T' },
-      { to: '/identity', label: 'Identity aliases', icon: 'I' },
-      { to: '/data-quality', label: 'Data quality', icon: 'Q' },
+      { to: '/audit-logs', label: '审计日志', icon: '审' },
+      { to: '/moderation', label: '内容审核', icon: '核' },
+      { to: '/learning-content', label: '学习内容', icon: '学' },
+      { to: '/topic-taxonomy', label: '主题分类', icon: '题' },
+      { to: '/identity', label: '身份别名', icon: '名' },
+      { to: '/data-quality', label: '数据质量', icon: '质' },
     ],
   },
   {
-    section: 'Business',
+    section: '业务',
     items: [
-      { to: '/billing', label: 'Billing admin', icon: 'B' },
-      { to: '/companies', label: 'Company data', icon: 'C' },
-      { to: '/notifications', label: 'Notifications', icon: 'N' },
-      { to: '/venue-matrix', label: 'Venue matrix', icon: 'V' },
-      { to: '/platform', label: 'Platform map', icon: 'P' },
+      { to: '/billing', label: '订阅管理', icon: '订' },
+      { to: '/companies', label: '企业数据', icon: '企' },
+      { to: '/notifications', label: '通知', icon: '通' },
+      { to: '/venue-matrix', label: '会议/期刊矩阵', icon: '会' },
+      { to: '/platform', label: '平台中枢', icon: '台' },
     ],
   },
 ]
@@ -109,31 +109,31 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
       await api.login(password)
       setStatus(await api.authStatus())
     } catch (err: any) {
-      setError(err?.response?.data?.error || 'Admin login failed')
+      setError(err?.response?.data?.error || '管理端登录失败。')
     } finally {
       setLoading(false)
     }
   }
 
-  if (!status) return <div className="ss-loading">Loading SiliconScope Admin...</div>
+  if (!status) return <div className="ss-loading">正在进入 SiliconScope 管理后台...</div>
 
   if (!status.authenticated) {
     return (
       <div className="ss-login">
         <div className="ss-login-card">
-          <div className="ss-mark">A</div>
-          <h1>SiliconScope Admin</h1>
-          <p>Independent operations console. Public deployments should protect this hostname with Access, VPN, or an equivalent gate.</p>
+          <div className="ss-mark">管</div>
+          <h1>SiliconScope 管理后台</h1>
+          <p>独立运营后台。公开部署时，请用访问网关、VPN 或等效访问控制保护管理域名。</p>
           <input
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && login()}
-            placeholder="ADMIN_PASSWORD"
+            placeholder="管理员密码"
           />
           {error && <div className="ss-login-error">{error}</div>}
           <button disabled={loading || !password} onClick={login}>
-            {loading ? 'Signing in...' : 'Admin sign in'}
+            {loading ? '登录中...' : '进入管理后台'}
           </button>
         </div>
       </div>
@@ -143,13 +143,12 @@ function AdminLoginGate({ children }: { children: React.ReactNode }) {
   if (status.user?.role !== 'admin') {
     return (
       <div className="ss-admin-denied">
-        <span>Admin only</span>
-        <h1>Access denied</h1>
+        <span>仅管理员可访问</span>
+        <h1>无权访问</h1>
         <p>
-          This admin application is intentionally separate from the public frontend. Use an administrator session,
-          Cloudflare Access, VPN, or the local development launcher with IC_SEEKER_LOCAL_ADMIN enabled.
+          管理后台与公开站点相互隔离。请使用管理员会话、访问网关、VPN，或在本地开发环境启用管理端访问。
         </p>
-        <a href={publicSiteUrl}>Return to public app</a>
+        <a href={publicSiteUrl}>返回公开站点</a>
       </div>
     )
   }
@@ -164,11 +163,11 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
         <div className="ss-brand">
           <div className="ss-brand-logo">A</div>
           <div>
-            <strong>SiliconScope Admin</strong>
-            <span>Private control plane</span>
+            <strong>SiliconScope 管理后台</strong>
+            <span>私有运营后台</span>
           </div>
         </div>
-        <nav className="ss-nav" aria-label="Admin navigation">
+        <nav className="ss-nav" aria-label="管理端导航">
           {adminNav.map((group) => (
             <div className="ss-nav-group" key={group.section}>
               <em>{group.section}</em>
@@ -187,8 +186,8 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="ss-sidebar-foot">
-          <a href={publicSiteUrl}>Public app</a>
-          <span>Deploy as admin.siliconscope.com</span>
+          <a href={publicSiteUrl}>公开站点</a>
+          <span>建议部署为独立管理域名</span>
         </div>
       </aside>
       <section className="ss-workspace">
@@ -244,7 +243,7 @@ function AdminApp() {
       <AdminLoginGate>
         <BrowserRouter>
           <AdminLayout>
-            <Suspense fallback={<div className="ss-loading">Loading admin module...</div>}>
+            <Suspense fallback={<div className="ss-loading">正在加载管理模块...</div>}>
               <AdminRoutes />
             </Suspense>
           </AdminLayout>

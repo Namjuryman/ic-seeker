@@ -81,23 +81,23 @@ function aggregateScores(rows: MentorReviewLike[]): MentorAggregate {
 
 function scorePhrase(label: string, value: number | null): string | null {
   if (value == null) return null;
-  if (value >= 4.2) return `${label} is consistently high`;
-  if (value >= 3.4) return `${label} is generally positive`;
-  if (value >= 2.6) return `${label} is mixed`;
-  return `${label} needs careful manual verification`;
+  if (value >= 4.2) return `${label}持续较高`;
+  if (value >= 3.4) return `${label}整体偏正向`;
+  if (value >= 2.6) return `${label}反馈分化`;
+  return `${label}需要谨慎人工核验`;
 }
 
 export function thresholdSafeSummary(aggregate: MentorAggregate, approvedCount: number): string {
   const signals = [
-    scorePhrase("overall signal", aggregate.overall),
-    scorePhrase("research fit", aggregate.researchFit),
-    scorePhrase("mentoring-style signal", aggregate.mentoringStyle),
-    scorePhrase("communication signal", aggregate.communication),
-    scorePhrase("workload signal", aggregate.workload),
+    scorePhrase("总体信号", aggregate.overall),
+    scorePhrase("研究匹配", aggregate.researchFit),
+    scorePhrase("指导风格信号", aggregate.mentoringStyle),
+    scorePhrase("沟通信号", aggregate.communication),
+    scorePhrase("工作负载信号", aggregate.workload),
   ].filter(Boolean);
 
-  const signalText = signals.length ? signals.join("; ") : "structured score coverage is limited";
-  return `Threshold-safe summary from ${approvedCount} approved reviews: ${signalText}. Free-text review content is withheld until at least 10 approved reviews and should never be treated as a ranking or guarantee.`;
+  const signalText = signals.length ? signals.join("；") : "结构化评分覆盖有限";
+  return `基于 ${approvedCount} 条已通过评价的阈值安全摘要：${signalText}。自由文本评价在至少 10 条已通过评价前不会展示，也不应被当作排名或保证。`;
 }
 
 export function buildMentorThresholdView(rows: MentorReviewLike[]): MentorThresholdView {
@@ -118,7 +118,7 @@ export function buildMentorThresholdView(rows: MentorReviewLike[]): MentorThresh
 
   const curatedComments = rows
     .map((row) => ({
-      publicAlias: row.publicAlias || "Anonymous verified reviewer",
+      publicAlias: row.publicAlias || "匿名已验证评价者",
       text: sanitizeMentorReviewText(row.strengthsText || row.cautionsText || row.fitText || "", 400),
     }))
     .filter((row) => row.text)

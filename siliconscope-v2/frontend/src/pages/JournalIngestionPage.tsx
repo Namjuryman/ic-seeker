@@ -2,10 +2,22 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { IngestionJob, IngestionJobEvent, IngestionJobStatus } from '../types'
+import { providerLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 
 const providerOptions = ['openalex', 'crossref', 'ieee', 'semantic-scholar', 'dblp', 'csv', 'scholar-csv', 'aminer', 'pdf', 'manual'] as const
 const runnableProviders = new Set(['openalex', 'crossref', 'ieee', 'semantic-scholar', 'dblp', 'csv', 'scholar-csv', 'aminer'])
 const statusOptions: IngestionJobStatus[] = ['queued', 'running', 'succeeded', 'failed', 'review_required', 'cancelled']
+const modeOptions = ['metadata_sync', 'dry_run', 'full', 'incremental', 'manual', 'retry'] as const
+
+const statusLabel: Record<IngestionJobStatus, string> = {
+  queued: '排队中',
+  running: '运行中',
+  succeeded: '已完成',
+  failed: '失败',
+  review_required: '需复核',
+  cancelled: '已取消',
+}
 
 function formatTime(value: string | null) {
   if (!value) return '-'
@@ -19,9 +31,9 @@ function scopeText(scope: Record<string, unknown>) {
     scope.yearFrom && scope.yearTo ? `${scope.yearFrom}-${scope.yearTo}` : null,
     Array.isArray(scope.venues) ? scope.venues.join(', ') : null,
     scope.query ? String(scope.query) : null,
-    scope.retryOf ? `retry of #${scope.retryOf}` : null,
+    scope.retryOf ? `重试自任务 ${scope.retryOf}` : null,
   ].filter(Boolean)
-  return parts.join(' / ') || 'manual scope'
+  return parts.join(' / ') || '手动范围'
 }
 
 function statusClass(status: string) {
@@ -31,8 +43,49 @@ function statusClass(status: string) {
   return 'ok'
 }
 
+function modeLabel(mode: string) {
+  const labels: Record<string, string> = {
+    metadata_sync: '元数据同步',
+    dry_run: '试运行',
+    full: '全量导入',
+    incremental: '增量导入',
+    manual: '手动登记',
+    retry: '重试',
+  }
+  return labels[mode] || mode.replace(/[_-]/g, ' ')
+}
+
 function eventLabel(event: IngestionJobEvent) {
-  return event.eventType.replace(/_/g, ' ')
+  const labels: Record<string, string> = {
+    created: '已创建',
+    queued: '已排队',
+    started: '开始运行',
+    progress: '进度更新',
+    completed: '已完成',
+    succeeded: '已成功',
+    failed: '失败',
+    cancelled: '已取消',
+    review_required: '需要复核',
+    retry: '重试',
+    note: '备注',
+  }
+  return labels[event.eventType] || event.eventType.replace(/[_-]/g, ' ')
+}
+
+function eventMessage(event: IngestionJobEvent) {
+  const message = String(event.message || '').trim()
+  if (!message) return ''
+  const retrySource = message.match(/^Created retry from ingestion job #(\d+)\.$/)
+  if (retrySource) return `已从任务 ${retrySource[1]} 创建重试任务。`
+  const retryTarget = message.match(/^Retry job #(\d+) was created\.$/)
+  if (retryTarget) return `已创建重试任务 ${retryTarget[1]}。`
+  const statusUpdate = message.match(/^任务状态已从 ([a-z_]+) 更新为 ([a-z_]+)。$/)
+  if (statusUpdate) {
+    const from = statusLabel[statusUpdate[1] as IngestionJobStatus] || statusUpdate[1]
+    const to = statusLabel[statusUpdate[2] as IngestionJobStatus] || statusUpdate[2]
+    return `任务状态已从 ${from} 更新为 ${to}。`
+  }
+  return message
 }
 
 function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => void }) {
@@ -46,7 +99,7 @@ function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => 
   const [dryRun, setDryRun] = useState(false)
   const [refreshTopics, setRefreshTopics] = useState(false)
   const [includeLowRelevance, setIncludeLowRelevance] = useState(false)
-  const [notes, setNotes] = useState('Weekly metadata import candidate. PDF download remains publisher/manual only.')
+  const [notes, setNotes] = useState('周更元数据导入候选。PDF 仍仅保留出版方跳转或人工本地处理。')
 
   const mutation = useMutation({
     mutationFn: () => api.createIngestionJob({
@@ -70,63 +123,65 @@ function IngestionCreateForm({ onCreated }: { onCreated: (job: IngestionJob) => 
   return (
     <section className="ingestion-form">
       <div className="ingestion-section-head">
-        <span>Register job</span>
-        <h2>New ingestion boundary</h2>
+        <span>登记任务</span>
+        <h2>新建导入边界</h2>
       </div>
       <label>
-        Provider
+        数据源
         <select value={provider} onChange={(event) => setProvider(event.target.value as typeof provider)}>
-          {providerOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          {providerOptions.map((option) => <option key={option} value={option}>{providerLabel(option)}</option>)}
         </select>
       </label>
       <label>
-        Mode
-        <input value={mode} onChange={(event) => setMode(event.target.value)} />
+        模式
+        <select value={mode} onChange={(event) => setMode(event.target.value)}>
+          {modeOptions.map((option) => <option key={option} value={option}>{modeLabel(option)}</option>)}
+        </select>
       </label>
       <div className="ingestion-form-pair">
         <label>
-          Year from
+          起始年份
           <input type="number" value={yearFrom} onChange={(event) => setYearFrom(Number(event.target.value))} />
         </label>
         <label>
-          Year to
+          结束年份
           <input type="number" value={yearTo} onChange={(event) => setYearTo(Number(event.target.value))} />
         </label>
       </div>
       <label>
-        Venues
+        会议/期刊
         <input value={venues} onChange={(event) => setVenues(event.target.value)} />
       </label>
       <label>
-        Query
+        查询词
         <input value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
       <label>
-        Limit
+        本次上限
         <input type="number" min={1} max={500} value={limit} onChange={(event) => setLimit(Number(event.target.value))} />
       </label>
       <div className="ingestion-checks">
         <label>
           <input type="checkbox" checked={dryRun} onChange={(event) => setDryRun(event.target.checked)} />
-          Dry run only
+          仅试运行
         </label>
         <label>
           <input type="checkbox" checked={refreshTopics} onChange={(event) => setRefreshTopics(event.target.checked)} />
-          Refresh topic taxonomy
+          刷新主题分类
         </label>
         <label>
           <input type="checkbox" checked={includeLowRelevance} onChange={(event) => setIncludeLowRelevance(event.target.checked)} />
-          Include low-relevance rows
+          包含低相关行
         </label>
       </div>
       <label>
-        Notes
+        备注
         <textarea rows={4} value={notes} onChange={(event) => setNotes(event.target.value)} />
       </label>
       <button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-        {mutation.isPending ? 'Registering...' : 'Create ingestion job'}
+        {mutation.isPending ? '登记中...' : '创建导入任务'}
       </button>
-      {mutation.error && <p className="ingestion-error">Create failed: {(mutation.error as any)?.response?.data?.error || String(mutation.error)}</p>}
+      {mutation.error && <p className="ingestion-error">创建失败：{friendlyError(mutation.error, '导入任务创建失败')}</p>}
     </section>
   )
 }
@@ -143,31 +198,31 @@ function IngestionEventPanel({ selectedJob }: { selectedJob: IngestionJob | null
     return (
       <aside className="ingestion-events">
         <div className="ingestion-section-head">
-          <span>Timeline</span>
-          <h2>Select a job</h2>
+          <span>时间线</span>
+          <h2>选择一个任务</h2>
         </div>
-        <p className="learning-muted">Click a job row to inspect status changes, retries, review notes, and future worker progress.</p>
+        <p className="learning-muted">点击任务行查看状态变化、重试记录、复核备注和执行进度。</p>
       </aside>
     )
   }
 
   return (
     <aside className="ingestion-events">
-      <div className="ingestion-section-head">
-        <span>Timeline</span>
-        <h2>Job #{selectedJob.id}</h2>
-      </div>
+        <div className="ingestion-section-head">
+          <span>时间线</span>
+          <h2>任务编号 {selectedJob.id}</h2>
+        </div>
       <p className="learning-muted">{scopeText(selectedJob.scope)}</p>
       <div className="ingestion-event-list">
         {events.data?.rows.map((event) => (
           <article className={`ingestion-event ingestion-event-${statusClass(event.eventType)}`} key={event.id}>
             <strong>{eventLabel(event)}</strong>
             <small>{formatTime(event.createdAt)}</small>
-            {event.message && <p>{event.message}</p>}
+            {eventMessage(event) && <p>{eventMessage(event)}</p>}
           </article>
         ))}
-        {events.isLoading && <p className="learning-muted">Loading events...</p>}
-        {!events.isLoading && !events.data?.rows.length && <p className="learning-muted">No events recorded yet.</p>}
+        {events.isLoading && <p className="learning-muted">正在加载事件...</p>}
+        {!events.isLoading && !events.data?.rows.length && <p className="learning-muted">暂无事件记录。</p>}
       </div>
     </aside>
   )
@@ -196,15 +251,15 @@ function JobActions({ job, onSelected }: { job: IngestionJob; onSelected: (job: 
     <div className="ingestion-actions" onClick={(event) => event.stopPropagation()}>
       <button
         disabled={busy || !canRun || (job.status !== 'queued' && job.status !== 'review_required')}
-        title={canRun ? 'Run this metadata import job' : 'This provider is registry-only until its runner is implemented'}
+        title={canRun ? '运行这个元数据导入任务' : '该数据源当前只记录任务，暂不自动抓取'}
         onClick={() => start.mutate()}
       >
-        Start
+        开始
       </button>
-      <button className="subtle" disabled={busy || job.status === 'succeeded' || job.status === 'cancelled'} onClick={() => cancel.mutate()}>Cancel</button>
-      <button className="subtle" disabled={busy || job.status === 'running'} onClick={() => retry.mutate()}>Retry</button>
+      <button className="subtle" disabled={busy || job.status === 'succeeded' || job.status === 'cancelled'} onClick={() => cancel.mutate()}>取消</button>
+      <button className="subtle" disabled={busy || job.status === 'running'} onClick={() => retry.mutate()}>重试</button>
       <select value={job.status} disabled={busy} onChange={(event) => status.mutate(event.target.value as IngestionJobStatus)}>
-        {statusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+        {statusOptions.map((option) => <option key={option} value={option}>{statusLabel[option]}</option>)}
       </select>
     </div>
   )
@@ -223,21 +278,21 @@ function IngestionJobRow({
   return (
     <article className={`ingestion-row ${selected ? 'is-selected' : ''}`} onClick={() => onSelect(job)}>
       <div>
-        <strong>#{job.id} {job.provider}</strong>
-        <small>{job.mode}</small>
+        <strong>任务 {job.id} · {providerLabel(job.provider)}</strong>
+        <small>{modeLabel(job.mode)}</small>
       </div>
-      <span className={`pill pill-${statusClass(job.status)}`}>{job.status}</span>
+      <span className={`pill pill-${statusClass(job.status)}`}>{statusLabel[job.status]}</span>
       <div>
         <p>{scopeText(job.scope)}</p>
-        <small>{job.notes || 'No notes'}</small>
+        <small>{job.notes || '无备注'}</small>
       </div>
       <div>
         <strong>{totalTouched.toLocaleString()}</strong>
-        <small>{job.counts.inserted} inserted / {job.counts.updated} updated / {job.counts.review} review</small>
+        <small>{job.counts.inserted} 新增 / {job.counts.updated} 更新 / {job.counts.review} 待复核</small>
       </div>
       <div>
         <strong>{formatTime(job.updatedAt)}</strong>
-        <small>created {formatTime(job.createdAt)}</small>
+        <small>创建于 {formatTime(job.createdAt)}</small>
       </div>
       <JobActions job={job} onSelected={onSelect} />
     </article>
@@ -279,16 +334,16 @@ export default function JournalIngestionPage() {
     <div className="ingestion-page">
       <section className="ingestion-hero">
         <div>
-          <span>Ingestion control plane</span>
-          <h1>Weekly import jobs</h1>
+          <span>导入控制台</span>
+          <h1>周更导入任务</h1>
           <p>
-            Register and run IEEE, OpenAlex, Crossref, CSV, and local metadata imports as auditable jobs.
-            Each run records source scope, counts, errors, and review status so weekly database updates stay traceable.
+            把 IEEE、OpenAlex、Crossref、CSV 和本地元数据导入登记为可审计任务。每次运行都会记录来源范围、
+            数量、错误和复核状态，让周更数据库可追踪、可回滚。
           </p>
         </div>
         <div className="ingestion-hero-card">
           <strong>{stats.total.toLocaleString()}</strong>
-          <span>{stats.active} active / {stats.failed} failed / {stats.review} review</span>
+          <span>{stats.active} 个活跃 / {stats.failed} 个失败 / {stats.review} 个需复核</span>
         </div>
       </section>
 
@@ -296,14 +351,14 @@ export default function JournalIngestionPage() {
         <IngestionCreateForm onCreated={handleCreated} />
         <div className="ingestion-policy">
           <div className="ingestion-section-head">
-            <span>Import policy</span>
-            <h2>Safe metadata first</h2>
+            <span>导入策略</span>
+            <h2>先保证元数据安全</h2>
           </div>
           <ul>
-            <li>Metadata imports should be repeatable by provider, venue, year, DOI, and source revision.</li>
-            <li>PDF collection remains local/private or publisher redirected; public demo should expose DOI and abstracts only.</li>
-            <li>Large imports must run after a backup and should refresh snapshots after alias and venue review.</li>
-            <li>Failed or risky rows should move into review_required instead of silently changing leaderboards.</li>
+            <li>元数据导入应能按数据源、会议期刊、年份、DOI 和来源版本重复执行。</li>
+            <li>PDF 采集保持本地/私有或跳转出版方，公开页面只展示 DOI、摘要等允许范围。</li>
+            <li>大批量导入前先备份；别名和会议期刊复核后再刷新快照。</li>
+            <li>失败或高风险行进入“需复核”，不要静默改变排序快照或对比结果。</li>
           </ul>
         </div>
       </section>
@@ -312,10 +367,10 @@ export default function JournalIngestionPage() {
         <div className="ingestion-board">
           <div className="ingestion-board-head">
             <div>
-              <span>Jobs</span>
-              <h2>{stats.total.toLocaleString()} registered jobs</h2>
+              <span>任务</span>
+              <h2>{stats.total.toLocaleString()} 个已登记任务</h2>
             </div>
-            <strong>{jobs.isFetching ? 'refreshing' : 'sqlite'}</strong>
+            <strong>{jobs.isFetching ? '刷新中' : '本地任务库'}</strong>
           </div>
           <div className="ingestion-table">
             {jobs.data?.rows.map((job) => (
@@ -326,8 +381,8 @@ export default function JournalIngestionPage() {
                 onSelect={(next) => setSelectedJobId(next.id)}
               />
             ))}
-            {jobs.isLoading && <p className="learning-muted">Loading ingestion jobs...</p>}
-            {!jobs.isLoading && !jobs.data?.rows.length && <p className="learning-muted">No ingestion job yet. Register the first import boundary above.</p>}
+            {jobs.isLoading && <p className="learning-muted">正在加载导入任务...</p>}
+            {!jobs.isLoading && !jobs.data?.rows.length && <p className="learning-muted">还没有导入任务。可以先在上方登记第一个导入边界。</p>}
           </div>
         </div>
         <IngestionEventPanel selectedJob={selectedJob} />

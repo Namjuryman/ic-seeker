@@ -19,17 +19,17 @@ describe("export format utilities", () => {
     expect(csv(["a", "b"], [["hello, world", "x"]])).toBe('a,b\n"hello, world",x');
   });
 
-  it("includes generatedAt, filters, caveat, and representative paper rows in topic CSV", () => {
+  it("includes metadata, filters, caveat, and representative paper rows in topic CSV", () => {
     const out = topicCsv(report, "2026-06-30T00:00:00.000Z");
-    expect(out).toContain("generatedAt");
-    expect(out).toContain("filter,field,PMIC");
-    expect(out).toContain("caveat,caveat,metadata caveat");
-    expect(out).toContain('paper,"A, B",2024,ISSCC,S+,PMIC,10.1/test');
+    expect(out).toContain("生成时间");
+    expect(out).toContain("筛选条件,方向,PMIC");
+    expect(out).toContain("使用提示,说明,metadata caveat");
+    expect(out).toContain('论文,"A, B",2024,ISSCC,S+,PMIC,10.1/test');
   });
 
   it("includes AI/report verification disclaimer in markdown", () => {
     const out = topicMarkdown(report, "2026-06-30T00:00:00.000Z");
-    expect(out).toContain("Generated from SiliconScope metadata");
-    expect(out).toContain("Representative Papers");
+    expect(out).toContain("本报告由 SiliconScope 元数据和用户输入生成");
+    expect(out).toContain("代表论文");
   });
 });

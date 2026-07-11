@@ -138,9 +138,17 @@ function normalizeKey(value: string): string {
 }
 
 const builtinAliasIndex = new Map<string, BuiltinInstitution>();
+function indexInstitutionAlias(alias: string, inst: BuiltinInstitution) {
+  const key = normalizeKey(alias);
+  if (!key) return;
+  const existing = builtinAliasIndex.get(key);
+  if (!existing || Number(inst.paperCount || 0) > Number(existing.paperCount || 0)) {
+    builtinAliasIndex.set(key, inst);
+  }
+}
 for (const inst of ALL_INSTITUTIONS) {
-  builtinAliasIndex.set(normalizeKey(inst.canonicalName), inst);
-  for (const alias of inst.aliases) builtinAliasIndex.set(normalizeKey(alias), inst);
+  indexInstitutionAlias(inst.canonicalName, inst);
+  for (const alias of inst.aliases) indexInstitutionAlias(alias, inst);
 }
 
 type CanonicalInstitution = ReturnType<typeof buildCanonicalInstitution>;
@@ -190,6 +198,7 @@ function buildCanonicalInstitution(raw: string) {
 
   const manual = manualAliasRows([key, original.toLowerCase()])[0];
   if (manual) {
+    const master = MASTER_INSTITUTIONS.find((inst) => normalizeKey(inst.canonicalName) === normalizeKey(manual.canonicalName));
     return {
       raw: original,
       canonicalName: manual.canonicalName,
@@ -197,10 +206,17 @@ function buildCanonicalInstitution(raw: string) {
       countryCode: manual.countryCode || undefined,
       countryName: manual.countryName || undefined,
       city: manual.city || undefined,
-      latitude: undefined,
-      longitude: undefined,
-      confidence: Number(manual.confidence || 100) / 100,
-      source: "manual" as const,
+      latitude: master?.latitude,
+      longitude: master?.longitude,
+      acronym: master?.acronym,
+      rorId: master?.rorId,
+      paperCount: master?.paperCount,
+      rawMentionCount: master?.rawMentionCount,
+      geoConfidence: master?.geoConfidence,
+      matchStatus: master?.matchStatus,
+      mergedSubunits: master?.mergedSubunits,
+      confidence: Math.max(Number(manual.confidence || 100) / 100, master?.geoConfidence ? master.geoConfidence / 100 : 0),
+      source: master ? "institution-master" as const : "manual" as const,
     };
   }
 

@@ -30,7 +30,8 @@
     "identity:candidates": "tsx src/scripts/refresh-identity-candidates.ts",
     "foundation:refresh": "tsx src/scripts/run-foundation-refresh.ts",
     "search:smoke": "tsx src/scripts/search-smoke.ts",
-    "dedupe:scan": "tsx src/scripts/scan-paper-dedupe.ts"
+    "dedupe:scan": "tsx src/scripts/scan-paper-dedupe.ts",
+    "institutions:geo:enrich": "tsx src/scripts/enrich-institution-geography.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.0",

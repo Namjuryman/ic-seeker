@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { paperRankLabel } from '../utils/displayLabels'
 import type { ReadingQueueGroup } from '../types'
 
 const readingStateActions = [
@@ -49,10 +50,13 @@ export default function ReadingQueuePage() {
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-        <p className="text-xs font-semibold text-brand uppercase tracking-wide">Reading Queue</p>
+        <p className="text-xs font-semibold text-brand uppercase tracking-wide">阅读队列</p>
         <h1 className="text-2xl font-bold text-ink-text mt-0.5">阅读队列</h1>
         <p className="text-sm text-ink-muted mt-1">
-          共 {totalPapers} 篇论文。阅读状态、重要标记和用途已经拆开，后面迁移到用户系统时不会互相覆盖。
+          共 {totalPapers} 篇论文。阅读状态、重要标记和用途会分别保存，方便筛选和复习。
+        </p>
+        <p className="text-xs text-ink-subtle mt-2">
+          这里的排序信号只用于回看和检索排序，不代表论文最终学术价值。
         </p>
       </section>
 
@@ -62,7 +66,7 @@ export default function ReadingQueuePage() {
         </div>
       )}
 
-      {queue.isLoading && <p className="text-sm text-ink-muted">Loading reading queue...</p>}
+      {queue.isLoading && <p className="text-sm text-ink-muted">正在加载阅读队列...</p>}
 
       {!queue.isLoading && totalPapers === 0 && (
         <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm text-sm text-ink-muted">
@@ -75,7 +79,7 @@ export default function ReadingQueuePage() {
           <section key={group.status} className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">{group.status}</p>
+                <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">阅读状态</p>
                 <h2 className="text-lg font-bold text-ink-text">{group.label}</h2>
               </div>
               <span className="text-xs text-ink-muted">{group.count} 篇</span>
@@ -93,7 +97,7 @@ export default function ReadingQueuePage() {
                         <PaperLink id={paper.id} title={paper.title} />
                       </div>
                       <div className="text-xs text-ink-muted truncate">
-                        {paper.venue} · {paper.year} · {paper.rank} · {paper.field} · score {paper.score}
+                        {paper.venue} · {paper.year} · {paperRankLabel(paper.rank)} · {paper.field} · 排序信号 {paper.score}
                       </div>
                       <div className="reading-queue-badges">
                         {item.important && <span className="important">重要</span>}

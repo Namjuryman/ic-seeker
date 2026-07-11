@@ -174,7 +174,12 @@ for (const city of cityPoints) {
 }
 
 function splitList(value: string): string[] {
-  return String(value || "").split(";").map((item) => item.trim()).filter(Boolean);
+  return String(value || "")
+    .replace(/&#x([0-9a-f]+);?/gi, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);?/g, (_match, code) => String.fromCodePoint(parseInt(code, 10)))
+    .split(";")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function normalize(value: string): string {
@@ -241,6 +246,10 @@ function cityForInstitution(value: string, country: CountryPattern | null, ident
     confidence: 0.72,
     source: "city-keyword",
   };
+}
+
+function isTrustedInstitutionIdentity(identity: ReturnType<typeof institutionIdentityService.canonicalize>) {
+  return identity.source !== "normalized" && identity.source !== "empty" && identity.confidence >= 0.72;
 }
 
 function rankIncrement(rank: string | null): "sPlus" | "s" | "a" | "other" {
@@ -310,6 +319,14 @@ interface GeoCountry {
   cityMappedInstitutions: number;
   countryOnlyInstitutions: number;
   topInstitutions: GeoInstitution[];
+  cityHeatPoints: Array<{
+    city: string;
+    lat: number;
+    lon: number;
+    papers: number;
+    institutions: number;
+    byYear: Array<{ year: number; papers: number; institutions: number }>;
+  }>;
   byField: Array<{ key: string; count: number }>;
   byYear: Array<{ year: number; papers: number; score: number }>;
 }
@@ -385,14 +402,14 @@ function buildGeo(requestedField: string | null): GeoResult {
       const identity = institutionIdentityService.canonicalize(affiliation);
       rawAffiliations.add(affiliation);
       affiliationMentions += 1;
-      if (identity.normalizedKey) canonicalInstitutions.add(identity.normalizedKey);
+      if (identity.normalizedKey && isTrustedInstitutionIdentity(identity)) canonicalInstitutions.add(identity.normalizedKey);
     }
     const affiliationCountryPairs = affiliations
       .map((affiliation) => {
         const identity = institutionIdentityService.canonicalize(affiliation);
         const country = countryForAffiliation(affiliation);
         const city = cityForInstitution(affiliation, country, identity);
-        if (identity.normalizedKey) {
+        if (identity.normalizedKey && isTrustedInstitutionIdentity(identity)) {
           if (country) mappedInstitutions.add(identity.normalizedKey);
           else unmappedInstitutions.add(identity.normalizedKey);
           if (country && city) cityMappedInstitutions.add(identity.normalizedKey);
@@ -429,6 +446,7 @@ function buildGeo(requestedField: string | null): GeoResult {
           cityMappedInstitutions: 0,
           countryOnlyInstitutions: 0,
           topInstitutions: [],
+          cityHeatPoints: [],
           byField: [],
           byYear: [],
         });
@@ -449,6 +467,8 @@ function buildGeo(requestedField: string | null): GeoResult {
       addCount(countryFieldMaps.get(country.code)!, row.domain || "General IC");
       for (const pair of affiliationCountryPairs) {
         if (pair.country.code !== country.code) continue;
+        const trustedIdentity = isTrustedInstitutionIdentity(pair.identity);
+        if (!trustedIdentity) continue;
         const name = pair.identity.canonicalName || pair.affiliation;
         const key = pair.identity.normalizedKey || normalize(name);
         const instMap = countryInstitutionMaps.get(country.code)!;
@@ -505,6 +525,45 @@ function buildGeo(requestedField: string | null): GeoResult {
         ...row,
         byYear: [...yearCounts.entries()].map(([year, papers]) => ({ year, papers })).sort((a, b) => a.year - b.year),
       }));
+      const cityHeatMap = new Map<string, {
+        city: string;
+        lat: number;
+        lon: number;
+        papers: number;
+        institutions: number;
+        yearPapers: Map<number, number>;
+        yearInstitutions: Map<number, number>;
+      }>();
+      for (const row of institutionRows) {
+        if (!row.cityMapped || !Number.isFinite(row.lat) || !Number.isFinite(row.lon)) continue;
+        const lat = Number(row.lat);
+        const lon = Number(row.lon);
+        const key = `${lat.toFixed(3)}:${lon.toFixed(3)}`;
+        const point = cityHeatMap.get(key) || {
+          city: row.city || item.name,
+          lat,
+          lon,
+          papers: 0,
+          institutions: 0,
+          yearPapers: new Map<number, number>(),
+          yearInstitutions: new Map<number, number>(),
+        };
+        point.papers += row.count;
+        point.institutions += 1;
+        for (const [year, papers] of row.yearCounts.entries()) {
+          point.yearPapers.set(year, (point.yearPapers.get(year) || 0) + papers);
+          if (papers > 0) point.yearInstitutions.set(year, (point.yearInstitutions.get(year) || 0) + 1);
+        }
+        cityHeatMap.set(key, point);
+      }
+      const cityHeatPoints = [...cityHeatMap.values()]
+        .map(({ yearPapers, yearInstitutions, ...point }) => ({
+          ...point,
+          byYear: [...yearPapers.entries()]
+            .map(([year, papers]) => ({ year, papers, institutions: yearInstitutions.get(year) || 0 }))
+            .sort((a, b) => a.year - b.year),
+        }))
+        .sort((a, b) => b.papers - a.papers || b.institutions - a.institutions || a.city.localeCompare(b.city));
       const byYear = [...(countryYearMaps.get(item.code) || new Map()).values()]
         .sort((a, b) => a.year - b.year)
         .map((row) => ({ ...row, score: Math.round(row.score * 10) / 10 }));
@@ -516,6 +575,7 @@ function buildGeo(requestedField: string | null): GeoResult {
         cityMappedInstitutions: institutionRows.filter((row) => row.cityMapped).length,
         countryOnlyInstitutions: institutionRows.filter((row) => !row.cityMapped).length,
         topInstitutions,
+        cityHeatPoints,
         byYear,
         score: scoreEntity({
           scoreSum: item.score,

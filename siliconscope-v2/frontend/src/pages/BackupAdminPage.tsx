@@ -9,6 +9,16 @@ function bytes(value: number) {
   return `${value} B`
 }
 
+function deploymentModeLabel(value?: string | null) {
+  const labels: Record<string, string> = {
+    local: '本地运行',
+    development: '开发环境',
+    production: '生产环境',
+    demo: '演示环境',
+  }
+  return labels[String(value || '').toLowerCase()] || value || '未标注'
+}
+
 export default function BackupAdminPage() {
   const queryClient = useQueryClient()
   const [label, setLabel] = useState('manual')
@@ -32,31 +42,31 @@ export default function BackupAdminPage() {
     onSuccess: refresh,
   })
 
-  if (backups.isLoading) return <div className="ss-loading">Loading backup operations...</div>
-  if (!backups.data) return <div className="ss-loading">Backup service unavailable.</div>
+  if (backups.isLoading) return <div className="ss-loading">正在加载备份操作...</div>
+  if (!backups.data) return <div className="ss-loading">备份服务暂不可用。</div>
 
   return (
     <div className="backup-admin-page">
       <section className="backup-hero">
         <div>
-          <span>PRODUCTION OPS</span>
+          <span>生产运维</span>
           <h1>数据库备份与恢复点</h1>
-          <p>为 SQLite 私有版和早期公网部署提供手动恢复点。未来迁到 Postgres / R2 后，这个页面会升级成跨存储备份控制台。</p>
+          <p>为当前数据库提供手动恢复点，并保留跨存储备份、恢复校验和迁移审计入口。</p>
         </div>
         <div className="backup-hero-card">
-          <span>Backup root</span>
+          <span>备份目录</span>
           <strong>{backups.data.backupDir}</strong>
-          <em>{backups.data.total} backups · {bytes(backups.data.totalBytes)}</em>
+          <em>{backups.data.total} 个备份 · {bytes(backups.data.totalBytes)}</em>
         </div>
       </section>
 
       <section className="backup-actions">
         <article>
           <span>创建恢复点</span>
-          <h2>SQLite online backup</h2>
-          <p>使用 better-sqlite3 backup API，在运行中创建一致性的数据库副本。</p>
+          <h2>在线数据库备份</h2>
+          <p>在服务运行时创建一致性的数据库副本，用作导入、清洗和发布前的人工恢复点。</p>
           <div className="backup-action-row">
-            <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="backup label" />
+            <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="备份标签" />
             <button onClick={() => create.mutate()} disabled={create.isPending}>
               {create.isPending ? '创建中...' : '创建备份'}
             </button>
@@ -64,7 +74,7 @@ export default function BackupAdminPage() {
         </article>
         <article>
           <span>保留策略</span>
-          <h2>Prune old backups</h2>
+          <h2>清理旧备份</h2>
           <p>删除旧恢复点，只保留最近 N 个。生产环境建议先确认已完成异地备份。</p>
           <div className="backup-action-row">
             <input type="number" min={1} max={100} value={keep} onChange={(event) => setKeep(Number(event.target.value))} />
@@ -77,7 +87,7 @@ export default function BackupAdminPage() {
 
       <section className="backup-restore-note">
         <strong>恢复策略</strong>
-        <p>恢复暂时保持 manual-first：停止 API，备份当前数据库，把目标 `.sqlite` 覆盖到 `DATABASE_URL` 指向的位置，再重启服务。不要在服务运行时直接覆盖生产库。</p>
+        <p>恢复暂时保持人工确认：先停止 API，保留当前库快照，再用目标恢复点替换运行数据库并重启服务。不要在服务运行时直接覆盖生产库。</p>
       </section>
 
       <section className="backup-table">
@@ -96,10 +106,10 @@ export default function BackupAdminPage() {
             </div>
             <div>
               <strong>{bytes(row.dbBytes)}</strong>
-              <small>{bytes(row.manifestBytes)} manifest</small>
+              <small>{bytes(row.manifestBytes)} 清单</small>
             </div>
             <div>
-              <strong>{row.source.deploymentMode}</strong>
+              <strong>{deploymentModeLabel(row.source.deploymentMode)}</strong>
               <small>{row.source.databasePath}</small>
             </div>
             <div className="backup-row-actions">

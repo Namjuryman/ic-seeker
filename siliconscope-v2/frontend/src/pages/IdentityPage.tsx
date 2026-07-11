@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../api'
 import type { IdentityAliasInput, IdentityAliasRow, IdentityCandidateRow } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 
 type AliasType = 'author' | 'institution'
 type CandidateStatus = 'pending' | 'all' | 'auto' | 'merged' | 'rejected' | 'split_required'
@@ -17,17 +18,49 @@ const emptyForm: IdentityAliasInput = {
   confidence: 100,
 }
 
+const typeLabel: Record<AliasType, string> = {
+  author: '作者',
+  institution: '机构',
+}
+
+const candidateStatusLabel: Record<CandidateStatus, string> = {
+  pending: '待复核',
+  all: '全部',
+  auto: '自动候选',
+  merged: '已合并',
+  rejected: '已拒绝',
+  split_required: '需拆分',
+}
+
+const actionLabel: Record<CandidateAction, string> = {
+  apply: '应用合并',
+  reject: '拒绝',
+  undo: '撤销',
+  'split-required': '标记需拆分',
+}
+
+function sourceLabel(value?: string | null) {
+  const raw = String(value || 'manual')
+  const labels: Record<string, string> = {
+    manual: '人工维护',
+    'candidate-review': '候选复核',
+    import: '导入',
+    crawler: '采集',
+  }
+  return labels[raw] || '来源待确认'
+}
+
 function AliasBadge({ row }: { row: IdentityAliasRow }) {
   return (
     <div className="identity-alias-card">
       <div className="min-w-0">
-        <p className="profile-kicker">{row.source || 'manual'} / confidence {row.confidence}%</p>
+        <p className="profile-kicker">{sourceLabel(row.source)} / 置信度 {row.confidence}%</p>
         <h3>{row.canonicalName}</h3>
-        <p className="hint break-all">alias key: {row.alias}</p>
-        {row.institutionHint && <p className="hint">institution hint: {row.institutionHint}</p>}
+        <p className="hint break-all">别名键：{row.alias}</p>
+        {row.institutionHint && <p className="hint">机构线索：{row.institutionHint}</p>}
         {(row.countryName || row.city) && <p className="hint">{[row.countryName, row.city].filter(Boolean).join(' / ')}</p>}
       </div>
-      <span>{row.updatedAt || 'updated'}</span>
+      <span>{row.updatedAt || '已更新'}</span>
     </div>
   )
 }
@@ -48,17 +81,17 @@ function CandidateCard({
     ].filter(Boolean).join(' · ')
     : [
       [row.countryName, row.city].filter(Boolean).join(' / '),
-      row.parentInstitution ? `parent ${row.parentInstitution}` : '',
-      row.labOrSchool ? `lab/school ${row.labOrSchool}` : '',
+      row.parentInstitution ? `上级机构 ${row.parentInstitution}` : '',
+      row.labOrSchool ? `学院/实验室 ${row.labOrSchool}` : '',
     ].filter(Boolean).join(' · ')
 
   return (
     <article className="identity-candidate-card">
       <div className="identity-candidate-main">
         <div>
-          <p className="profile-kicker">{row.reviewStatus} / {row.paperCount} papers / confidence {row.confidence}%</p>
+          <p className="profile-kicker">{candidateStatusLabel[row.reviewStatus as CandidateStatus] || row.reviewStatus} / {row.paperCount} 篇论文 / 置信度 {row.confidence}%</p>
           <h3>{row.canonicalName}</h3>
-          <p className="hint break-all">key: {row.normalizedKey}</p>
+          <p className="hint break-all">归一键：{row.normalizedKey}</p>
           {detail && <p className="hint">{detail}</p>}
         </div>
         <div className="identity-candidate-score">{row.confidence}%</div>
@@ -67,10 +100,10 @@ function CandidateCard({
         {(row.aliases || []).slice(0, 10).map((alias) => <span key={alias}>{alias}</span>)}
       </div>
       <div className="identity-row-actions">
-        <button disabled={busy} onClick={() => onAction(row, 'apply')}>Apply merge</button>
-        <button disabled={busy} onClick={() => onAction(row, 'reject')}>Reject</button>
-        <button disabled={busy} onClick={() => onAction(row, 'split-required')}>Needs split</button>
-        <button disabled={busy} className="danger" onClick={() => onAction(row, 'undo')}>Undo</button>
+        <button disabled={busy} onClick={() => onAction(row, 'apply')}>应用合并</button>
+        <button disabled={busy} onClick={() => onAction(row, 'reject')}>拒绝</button>
+        <button disabled={busy} onClick={() => onAction(row, 'split-required')}>需拆分</button>
+        <button disabled={busy} className="danger" onClick={() => onAction(row, 'undo')}>撤销</button>
       </div>
     </article>
   )
@@ -89,7 +122,7 @@ export default function IdentityPage() {
   const [loading, setLoading] = useState(false)
   const [candidateBusyId, setCandidateBusyId] = useState('')
 
-  const modeLabel = useMemo(() => type === 'author' ? 'Author' : 'Institution', [type])
+  const modeLabel = useMemo(() => typeLabel[type], [type])
 
   const loadAliases = async () => {
     setLoading(true)
@@ -97,7 +130,7 @@ export default function IdentityPage() {
     try {
       setRows(await api.identityAliases(type, { q: query, limit: 80 }))
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || '加载 alias 失败')
+      setError(friendlyError(err, '加载别名失败'))
     } finally {
       setLoading(false)
     }
@@ -110,7 +143,7 @@ export default function IdentityPage() {
       setCandidates(result.rows)
       setCandidateTotal(result.total)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || '加载候选失败，请先运行 identity:candidates')
+      setError(friendlyError(err, '加载候选失败，请先运行身份候选扫描。'))
       setCandidates([])
       setCandidateTotal(0)
     }
@@ -130,11 +163,11 @@ export default function IdentityPage() {
     setMessage('')
     try {
       const saved = await api.saveIdentityAlias(type, form)
-      setMessage(`已保存 alias: ${saved.alias} -> ${saved.canonicalName}`)
+      setMessage(`已保存别名：${saved.alias} -> ${saved.canonicalName}`)
       setForm({ ...emptyForm, source: 'manual', confidence: 100 })
       await reload()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || '保存失败')
+      setError(friendlyError(err, '保存失败'))
     }
   }
 
@@ -143,10 +176,10 @@ export default function IdentityPage() {
     setMessage('')
     try {
       await api.deleteIdentityAlias(type, alias)
-      setMessage(`已删除 alias: ${alias}`)
+      setMessage(`已删除别名：${alias}`)
       await reload()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || '删除失败')
+      setError(friendlyError(err, '删除失败'))
     }
   }
 
@@ -156,10 +189,10 @@ export default function IdentityPage() {
     setCandidateBusyId(row.id)
     try {
       const result = await api.reviewIdentityCandidate(type, row.id, action)
-      setMessage(`候选 ${row.canonicalName} 已执行 ${action}，写入 ${result.aliasesWritten} 条，回滚 ${result.aliasesDeleted} 条。`)
+      setMessage(`候选 ${row.canonicalName} 已执行“${actionLabel[action]}”，写入 ${result.aliasesWritten} 条，回滚 ${result.aliasesDeleted} 条。`)
       await reload()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || '候选复核失败')
+      setError(friendlyError(err, '候选复核失败'))
     } finally {
       setCandidateBusyId('')
     }
@@ -182,26 +215,26 @@ export default function IdentityPage() {
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="hero-panel identity-hero">
         <div>
-          <p className="profile-kicker">Identity normalization</p>
-          <h1>身份消歧与 Alias 管理</h1>
-          <p>这里处理作者和机构的 metadata normalization。它不是最终身份认证，后续仍需要 IEEE affiliation、ORCID、ROR 和人工审核继续校准。</p>
+          <p className="profile-kicker">实体归一</p>
+          <h1>身份消歧与别名管理</h1>
+          <p>这里处理作者和机构的元数据归一。它不是最终身份认证，仍需要 IEEE affiliation、ORCID、ROR 和人工审核持续校准。</p>
         </div>
         <div className="hero-metrics">
-          <div><span>Mode</span><strong>{modeLabel}</strong></div>
-          <div><span>Aliases</span><strong>{rows.length}</strong></div>
-          <div><span>Candidates</span><strong>{candidateTotal}</strong></div>
+          <div><span>模式</span><strong>{modeLabel}</strong></div>
+          <div><span>别名</span><strong>{rows.length}</strong></div>
+          <div><span>候选</span><strong>{candidateTotal}</strong></div>
         </div>
       </section>
 
       <section className="identity-workbench">
         <div className="identity-toolbar">
           <div className="flex gap-2 flex-wrap">
-            <button className={`profile-filter ${type === 'author' ? 'active' : ''}`} onClick={() => setType('author')}>Author aliases</button>
-            <button className={`profile-filter ${type === 'institution' ? 'active' : ''}`} onClick={() => setType('institution')}>Institution aliases</button>
+            <button className={`profile-filter ${type === 'author' ? 'active' : ''}`} onClick={() => setType('author')}>作者别名</button>
+            <button className={`profile-filter ${type === 'institution' ? 'active' : ''}`} onClick={() => setType('institution')}>机构别名</button>
           </div>
           <div className="identity-search">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && loadAliases()} placeholder="Search alias / canonical / country" />
-            <button onClick={loadAliases} disabled={loading}>{loading ? 'Loading...' : 'Search'}</button>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && loadAliases()} placeholder="搜索别名 / 标准名 / 国家地区" />
+            <button onClick={loadAliases} disabled={loading}>{loading ? '加载中...' : '搜索'}</button>
           </div>
         </div>
 
@@ -213,16 +246,16 @@ export default function IdentityPage() {
           <div className="identity-list">
             <div className="identity-list-head">
               <div>
-                <p className="profile-kicker">Review queue</p>
+                <p className="profile-kicker">复核队列</p>
                 <h2>候选合并复核</h2>
               </div>
               <select className="workbench-input" value={candidateStatus} onChange={(e) => setCandidateStatus(e.target.value as CandidateStatus)}>
-                <option value="pending">pending</option>
-                <option value="all">all</option>
-                <option value="auto">auto</option>
-                <option value="merged">merged</option>
-                <option value="rejected">rejected</option>
-                <option value="split_required">split required</option>
+                <option value="pending">待复核</option>
+                <option value="all">全部</option>
+                <option value="auto">自动候选</option>
+                <option value="merged">已合并</option>
+                <option value="rejected">已拒绝</option>
+                <option value="split_required">需拆分</option>
               </select>
             </div>
             {!candidates.length && <div className="empty">没有候选。可以运行 backend 的 identity:candidates 生成，或切换状态查看历史。</div>}
@@ -232,36 +265,36 @@ export default function IdentityPage() {
           </div>
 
           <form className="identity-form" onSubmit={(e) => { e.preventDefault(); save() }}>
-            <h2>{type === 'author' ? 'Manual author merge / split' : 'Manual institution mapping'}</h2>
-            <p className="hint">Merge: 把某个 alias 指向 canonical。Split: 删除错误 alias 或改到新的 canonical。</p>
-            <label>Alias / raw spelling<input value={form.alias} onChange={(e) => setForm((prev) => ({ ...prev, alias: e.target.value }))} placeholder={type === 'author' ? 'e.g. R. P. Martins' : 'e.g. CUHK Shenzhen'} /></label>
-            <label>Canonical name<input value={form.canonicalName} onChange={(e) => setForm((prev) => ({ ...prev, canonicalName: e.target.value }))} placeholder={type === 'author' ? 'e.g. Rui P. Martins' : 'e.g. The Chinese University of Hong Kong, Shenzhen'} /></label>
+            <h2>{type === 'author' ? '人工作者合并 / 拆分' : '人工机构映射'}</h2>
+            <p className="hint">合并：把某个别名指向标准名。拆分：删除错误别名，或改到新的标准名。</p>
+            <label>别名 / 原始写法<input value={form.alias} onChange={(e) => setForm((prev) => ({ ...prev, alias: e.target.value }))} placeholder={type === 'author' ? '例如 R. P. Martins' : '例如 CUHK Shenzhen'} /></label>
+            <label>标准名<input value={form.canonicalName} onChange={(e) => setForm((prev) => ({ ...prev, canonicalName: e.target.value }))} placeholder={type === 'author' ? '例如 Rui P. Martins' : '例如 The Chinese University of Hong Kong, Shenzhen'} /></label>
             {type === 'author' ? (
-              <label>Institution hint<input value={form.institutionHint || ''} onChange={(e) => setForm((prev) => ({ ...prev, institutionHint: e.target.value }))} placeholder="optional disambiguation hint" /></label>
+              <label>机构线索<input value={form.institutionHint || ''} onChange={(e) => setForm((prev) => ({ ...prev, institutionHint: e.target.value }))} placeholder="可选的消歧线索" /></label>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <label>Country code<input value={form.countryCode || ''} onChange={(e) => setForm((prev) => ({ ...prev, countryCode: e.target.value.toUpperCase() }))} placeholder="MO" /></label>
-                <label>Country/region<input value={form.countryName || ''} onChange={(e) => setForm((prev) => ({ ...prev, countryName: e.target.value }))} placeholder="Macau" /></label>
-                <label>City<input value={form.city || ''} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} placeholder="Macau" /></label>
+                <label>国家/地区代码<input value={form.countryCode || ''} onChange={(e) => setForm((prev) => ({ ...prev, countryCode: e.target.value.toUpperCase() }))} placeholder="MO" /></label>
+                <label>国家/地区<input value={form.countryName || ''} onChange={(e) => setForm((prev) => ({ ...prev, countryName: e.target.value }))} placeholder="Macau" /></label>
+                <label>城市<input value={form.city || ''} onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))} placeholder="Macau" /></label>
               </div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label>Source<input value={form.source || 'manual'} onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))} /></label>
-              <label>Confidence<input type="number" min={0} max={100} value={form.confidence ?? 100} onChange={(e) => setForm((prev) => ({ ...prev, confidence: Number(e.target.value) }))} /></label>
+              <label>来源<input value={form.source || 'manual'} onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))} /></label>
+              <label>置信度<input type="number" min={0} max={100} value={form.confidence ?? 100} onChange={(e) => setForm((prev) => ({ ...prev, confidence: Number(e.target.value) }))} /></label>
             </div>
-            <button type="submit" disabled={!form.alias.trim() || !form.canonicalName.trim()}>Save alias</button>
+            <button type="submit" disabled={!form.alias.trim() || !form.canonicalName.trim()}>保存别名</button>
           </form>
         </div>
 
         <div className="identity-list mt-4">
-          <div className="identity-list-head"><h2>Current mappings</h2><span>{rows.length} rows</span></div>
-          {!rows.length && <div className="empty">No aliases found. Add one above, or search a different keyword.</div>}
+          <div className="identity-list-head"><h2>当前映射</h2><span>{rows.length} 条</span></div>
+          {!rows.length && <div className="empty">没有找到别名。可以在上方新增，或换个关键词搜索。</div>}
           {rows.map((row) => (
             <div key={row.alias} className="identity-row-shell">
               <AliasBadge row={row} />
               <div className="identity-row-actions">
-                <button onClick={() => edit(row)}>Edit</button>
-                <button className="danger" onClick={() => remove(row.alias)}>Delete</button>
+                <button onClick={() => edit(row)}>编辑</button>
+                <button className="danger" onClick={() => remove(row.alias)}>删除</button>
               </div>
             </div>
           ))}

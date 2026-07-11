@@ -2,10 +2,39 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { BillingPlan, BillingUserRow } from '../types'
+import { providerLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
+
+const planLabel: Record<BillingPlan['id'], string> = {
+  free: '免费预览',
+  pro: '个人专业版',
+  lab: '实验室版',
+  enterprise: '机构版',
+  internal: '内部计划',
+}
+
+const usageLabel: Record<string, string> = {
+  savedSearches: '保存搜索',
+  watchlistItems: '关注项',
+  readingQueueItems: '阅读队列',
+  aiSummariesPerMonth: 'AI 摘要',
+  exportsPerMonth: '导出次数',
+  alerts: '提醒',
+  apiRequestsPerMonth: 'API 请求',
+  privatePdfStorageGb: '私有 PDF 空间',
+}
+
+const rolloutLabel: Record<string, string> = {
+  'partial-watchlist-reading-queue': '部分启用：关注列表与阅读队列已计入配额',
+}
 
 function formatLimit(value: number) {
-  if (value < 0) return 'Unlimited'
+  if (value < 0) return '不限'
   return value.toLocaleString()
+}
+
+function displayPlanName(plan: Pick<BillingPlan, 'id' | 'name'>) {
+  return planLabel[plan.id] || plan.name
 }
 
 function primaryUsage(user: BillingUserRow) {
@@ -28,13 +57,13 @@ function PlanSelect({ user, plans }: { user: BillingUserRow; plans: BillingPlan[
   return (
     <div className="billing-admin-actions">
       <select value={planId} onChange={(event) => setPlanId(event.target.value as BillingPlan['id'])}>
-        {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}</option>)}
+        {plans.map((plan) => <option key={plan.id} value={plan.id}>{displayPlanName(plan)}</option>)}
       </select>
-      <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="reason / beta note" />
+      <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="调整原因 / 运营备注" />
       <button disabled={mutation.isPending || planId === user.subscriptionPlan} onClick={() => mutation.mutate()}>
-        {mutation.isPending ? 'Saving...' : 'Update'}
+        {mutation.isPending ? '保存中...' : '更新'}
       </button>
-      {mutation.error && <small>{(mutation.error as any)?.response?.data?.error || 'Update failed'}</small>}
+      {mutation.error && <small>{friendlyError(mutation.error, '更新失败')}</small>}
     </div>
   )
 }
@@ -48,60 +77,60 @@ export default function AdminBillingPage() {
     queryFn: () => api.adminBillingUsers({ q, plan, limit: 50 }),
   })
 
-  if (overview.isLoading || users.isLoading) return <div className="ss-loading">Loading billing operations...</div>
-  if (overview.error || users.error || !overview.data || !users.data) return <div className="ss-empty">Billing operations unavailable.</div>
+  if (overview.isLoading || users.isLoading) return <div className="ss-loading">正在加载订阅运营数据...</div>
+  if (overview.error || users.error || !overview.data || !users.data) return <div className="ss-empty">暂时无法读取订阅运营数据。</div>
 
   return (
     <div className="billing-admin-page">
       <section className="billing-admin-hero">
         <div>
-          <span className="eyebrow">ADMIN BILLING</span>
+          <span className="eyebrow">订阅运营</span>
           <h1>订阅运营后台</h1>
-          <p>管理 beta 用户计划、检查用量账本，并为未来 Stripe/Paddle webhook 留出运营入口。</p>
+          <p>管理受控访问用户计划、检查用量账本，并为支付与账务校验保留运营入口。</p>
         </div>
         <div className="billing-admin-provider">
-          <span>{overview.data.paymentProvider}</span>
-          <strong>{overview.data.paymentConfigured ? 'Provider ready' : 'Checkout pending'}</strong>
-          <p>{overview.data.rollout.entitlementEnforcement}</p>
+          <span>支付适配：{providerLabel(overview.data.paymentProvider)}</span>
+          <strong>{overview.data.paymentConfigured ? '已配置' : '尚未开放付费'}</strong>
+          <p>{rolloutLabel[overview.data.rollout.entitlementEnforcement] || overview.data.rollout.entitlementEnforcement}</p>
         </div>
       </section>
 
       <section className="billing-admin-stats">
-        <div><span>Users</span><strong>{overview.data.totals.users.toLocaleString()}</strong></div>
-        <div><span>Subscriptions</span><strong>{overview.data.totals.subscriptions.toLocaleString()}</strong></div>
-        <div><span>Usage events</span><strong>{overview.data.totals.usageEvents.toLocaleString()}</strong></div>
-        <div><span>Billing events</span><strong>{overview.data.totals.billingEvents.toLocaleString()}</strong></div>
+        <div><span>用户</span><strong>{overview.data.totals.users.toLocaleString()}</strong></div>
+        <div><span>订阅记录</span><strong>{overview.data.totals.subscriptions.toLocaleString()}</strong></div>
+        <div><span>用量事件</span><strong>{overview.data.totals.usageEvents.toLocaleString()}</strong></div>
+        <div><span>账务事件</span><strong>{overview.data.totals.billingEvents.toLocaleString()}</strong></div>
       </section>
 
       <section className="billing-admin-filters">
-        <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search user email or nickname" />
+        <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="搜索用户邮箱或昵称" />
         <select value={plan} onChange={(event) => setPlan(event.target.value)}>
-          <option value="">All plans</option>
-          {overview.data.plans.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          <option value="">全部计划</option>
+          {overview.data.plans.map((item) => <option key={item.id} value={item.id}>{displayPlanName(item)}</option>)}
         </select>
       </section>
 
       <section className="billing-admin-table">
         <div className="billing-admin-row billing-admin-head">
-          <span>User</span>
-          <span>Plan</span>
-          <span>Quota usage</span>
-          <span>Manual plan change</span>
+          <span>用户</span>
+          <span>计划</span>
+          <span>配额用量</span>
+          <span>手动调整计划</span>
         </div>
         {users.data.rows.map((user) => (
           <div className="billing-admin-row" key={user.id}>
             <div>
               <strong>{user.email}</strong>
-              <small>#{user.id} · {user.roleHint} · {new Date(user.createdAt).toLocaleDateString()}</small>
+              <small>用户 {user.id} · {user.roleHint} · {new Date(user.createdAt).toLocaleDateString()}</small>
             </div>
             <div>
-              <strong>{user.planName}</strong>
+              <strong>{planLabel[user.subscriptionPlan] || user.planName}</strong>
               <small>{user.subscriptionPlan}</small>
             </div>
             <div className="billing-admin-usage">
               {primaryUsage(user).map((item) => (
                 <p key={item.metric}>
-                  <span>{item.label}</span>
+                  <span>{usageLabel[item.metric] || item.label}</span>
                   <strong>{item.used.toLocaleString()} / {formatLimit(item.limit)}</strong>
                 </p>
               ))}

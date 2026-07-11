@@ -18,6 +18,62 @@ export function normalizeAuthorName(value: string): string {
   return clean.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
 }
 
+function tokensFor(value: string): string[] {
+  return normalizeAuthorName(value).split(/\s+/).filter(Boolean);
+}
+
+function dedupe(values: string[]): string[] {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function matchKeysForTokens(tokens: string[]): string[] {
+  const normalized = tokens.join(" ");
+  if (!normalized) return [];
+  const keys = new Set([normalized]);
+  if (tokens.length < 2) return [...keys];
+
+  const family = tokens[tokens.length - 1];
+  const given = tokens.slice(0, -1);
+  const compactGiven = given.join("");
+  const initials = given.map((token) => token[0]).join("");
+
+  if (compactGiven.length >= 2 && family.length >= 2) keys.add(`${compactGiven} ${family}`);
+  if (initials.length >= 2 && family.length >= 2) keys.add(`${initials} ${family}`);
+
+  // Conservatively handles three-part surname-first inputs such as "Zeng Wen Liang".
+  const surnameFirstGiven = tokens.slice(1).join("");
+  if (tokens.length >= 3 && tokens[0].length >= 2 && surnameFirstGiven.length >= 2) {
+    keys.add(`${surnameFirstGiven} ${tokens[0]}`);
+  }
+
+  return [...keys];
+}
+
+function matchKeysForName(value: string): string[] {
+  return matchKeysForTokens(tokensFor(value));
+}
+
+function searchTermsForName(value: string): string[] {
+  const tokens = tokensFor(value);
+  const terms = new Set<string>();
+  if (!tokens.length) return [];
+  if (tokens.length === 1) {
+    if (tokens[0].length >= 2) terms.add(tokens[0]);
+    return [...terms];
+  }
+
+  const family = tokens[tokens.length - 1];
+  if (family.length >= 2) terms.add(family);
+  for (const token of tokens) {
+    if (token.length >= 4) terms.add(token);
+  }
+  const compactGiven = tokens.slice(0, -1).join("");
+  if (compactGiven.length >= 4) terms.add(compactGiven);
+  const surnameFirstGiven = tokens.slice(1).join("");
+  if (tokens.length >= 3 && surnameFirstGiven.length >= 4) terms.add(surnameFirstGiven);
+  return [...terms];
+}
+
 function titleCaseName(value: string): string {
   return String(value || "")
     .split(/\s+/)
@@ -89,9 +145,27 @@ export const authorIdentityService = {
     return [...variants].filter(Boolean);
   },
 
+  matchKeysFor(name: string) {
+    const canonical = this.canonicalize(name);
+    return dedupe([
+      ...matchKeysForName(name),
+      ...matchKeysForName(canonical.canonicalName),
+      canonical.normalizedKey,
+    ]);
+  },
+
+  searchTermsFor(name: string) {
+    const canonical = this.canonicalize(name);
+    return dedupe([
+      ...this.variantsFor(name),
+      ...searchTermsForName(name),
+      ...searchTermsForName(canonical.canonicalName),
+    ]);
+  },
+
   sameAuthor(candidate: string, requested: string) {
-    const requestedKey = this.canonicalize(requested).normalizedKey;
-    const candidateKey = this.canonicalize(candidate).normalizedKey;
-    return Boolean(requestedKey && candidateKey && requestedKey === candidateKey);
+    const requestedKeys = new Set(this.matchKeysFor(requested));
+    const candidateKeys = this.matchKeysFor(candidate);
+    return candidateKeys.some((key) => requestedKeys.has(key));
   },
 };

@@ -174,7 +174,7 @@ Next work:
 - Do not break the local private workflow while adding production scaffolding.
 - Prefer optional adapters before hard dependencies.
 - Keep large paper metadata and user-generated business data separable.
-- Compute expensive rankings/snapshots offline where possible.
+- Compute expensive profile snapshots and aggregate read models offline where possible.
 - Use public DOI/metadata links by default; do not redistribute publisher PDFs.
 
 ## Database Shape Target
@@ -186,7 +186,7 @@ The advanced form is not one bigger database. It is a small set of purpose-built
 | Corpus store | Imported paper metadata, DOI/source IDs, raw venue/year imports | SQLite metadata cache first; later mirrored to Postgres partitions | Optimized for weekly bulk import and reproducible snapshots |
 | App store | Users, roles, comments, reviews, notes, companies, billing, admin audit | PostgreSQL | Strong constraints, transactional writes, backups, row-level permissions later |
 | Search store | Fast cross-entity keyword/semantic-ish lookup | Meilisearch | Rebuildable read model; never the source of truth |
-| Snapshot/cache store | Rankings, geo summaries, profile payloads, facets | Redis plus Postgres snapshot registry | Removes live heavy aggregation from hot pages |
+| Snapshot/cache store | Profile summaries, geo aggregates, profile payloads, facets | Redis plus Postgres snapshot registry | Removes live heavy aggregation from hot pages |
 | Object store | PDFs, avatars, logos, attachments | S3-compatible storage | Keeps large binary files out of the relational database |
 
 Weekly update flow should be: ingest metadata, normalize aliases and projections, refresh snapshots, rebuild search indexes, run data-quality checks, then publish the refreshed read models.

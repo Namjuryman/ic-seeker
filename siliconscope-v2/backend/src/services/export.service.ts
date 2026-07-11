@@ -46,7 +46,7 @@ function respond(kind: ExportKind, format: ExportFormat, name: string, source: R
 export const exportService = {
   exportTopicReport(params: Record<string, unknown>, format: ExportFormat): ExportPayload {
     const field = String(params.field || "").trim();
-    if (!field) throw new Error("field is required");
+    if (!field) throw new Error("方向字段不能为空。");
     const report = topicReportService.getReport(field);
     return respond("topic-report", format, field, { report }, topicMarkdown(report), topicCsv(report));
   },
@@ -55,20 +55,20 @@ export const exportService = {
     if (kind === "company-compare") {
       const ids = asList(params.ids);
       const result = companyService.compareCompanies(ids);
-      return respond(kind, format, ids.join("-"), { result }, compareMarkdown("Company Compare", result.companies, result.caveat), compareCsv(result.companies));
+      return respond(kind, format, ids.join("-"), { result }, compareMarkdown("公司对比", result.companies, result.caveat), compareCsv(result.companies));
     }
     if (kind === "institution-compare") {
       const names = asList(params.names);
       const result = institutionCompareService.compare(names);
-      return respond(kind, format, names.join("-"), { result }, compareMarkdown("Institution Compare", result.institutions, result.caveat), compareCsv(result.institutions));
+      return respond(kind, format, names.join("-"), { result }, compareMarkdown("机构对比", result.institutions, result.caveat), compareCsv(result.institutions));
     }
     if (kind === "author-compare") {
       const names = asList(params.names);
       const result = authorCompareService.compare(names);
-      return respond(kind, format, names.join("-"), { result }, compareMarkdown("Author Compare", result.authors, result.caveat), compareCsv(result.authors));
+      return respond(kind, format, names.join("-"), { result }, compareMarkdown("作者对比", result.authors, result.caveat), compareCsv(result.authors));
     }
     const names = asList(params.names);
     const result = mentorCompareService.compare(names);
-    return respond(kind, format, names.join("-"), { result }, compareMarkdown("Mentor Compare", result.mentors, result.caveat), compareCsv(result.mentors));
+    return respond(kind, format, names.join("-"), { result }, compareMarkdown("研究者线索对比", result.mentors, result.caveat), compareCsv(result.mentors));
   },
 };

@@ -25,8 +25,8 @@ const typeLabels: Record<string, string> = {
 
 const sortOptions = [
   { value: 'name:asc', label: '名称 A-Z' },
-  { value: 'dataConfidence:desc', label: '可信度优先' },
-  { value: 'stockChangePercent:desc', label: '涨幅优先' },
+  { value: 'dataConfidence:desc', label: '来源可信度优先' },
+  { value: 'stockChangePercent:desc', label: '行情字段涨幅优先' },
   { value: 'lastEnrichedAt:desc', label: '最近更新' },
 ]
 
@@ -42,29 +42,29 @@ function marketTone(change?: number | null) {
 }
 
 function formatChange(change?: number | null) {
-  if (change === undefined || change === null || Number.isNaN(change)) return '行情待接入'
+  if (change === undefined || change === null || Number.isNaN(change)) return '暂无行情'
   return `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`
 }
 
 function marketSummary(company: CompanyRow) {
   const ticker = [company.exchange, company.stockTicker].filter(Boolean).join(' / ')
   const price = [company.stockCurrency, company.stockPrice].filter(Boolean).join(' ')
-  const primary = company.marketCapLabel || company.marketCapUsd || '市值待接入'
-  const secondary = price || ticker || (company.status === 'private' ? '未上市 / 私有公司' : '行情待接入')
+  const primary = company.marketCapLabel || company.marketCapUsd || '暂无市值'
+  const secondary = price || ticker || (company.status === 'private' ? '未上市 / 私有公司' : '暂无行情')
   return { primary, secondary, ticker }
 }
 
 function companyTitle(company: CompanyRow) {
-  const primary = company.name || company.legalName || 'Unknown company'
+  const primary = company.name || company.legalName || '未知公司'
   const secondary = company.legalName && company.legalName !== primary ? company.legalName : ''
   return { primary, secondary }
 }
 
 function cleanDescription(company: CompanyRow) {
   if (company.description) return company.description
-  const type = typeLabels[company.companyType || ''] || company.companyType || 'semiconductor'
+  const type = typeLabels[company.companyType || ''] || company.companyType || '半导体'
   const domains = company.domains?.slice(0, 2).join(' / ')
-  return `${company.legalName || company.name} is a ${type} company${domains ? ` focused on ${domains}` : ''}.`
+  return `${company.legalName || company.name || '该公司'} 是一家${type}相关公司${domains ? `，方向覆盖 ${domains}` : ''}。`
 }
 
 function buildParams(q: string, domain: string, companyType: string, sort: string, page: number) {
@@ -159,12 +159,17 @@ export default function CompaniesPage() {
     <div className="company-page">
       <section className="company-hero">
         <div>
-          <span>Company Intelligence</span>
+          <span>公司情报</span>
           <h1>半导体企业情报</h1>
           <p>
             按产业链、国家地区、技术方向和公开行情字段浏览主要 IC 公司。
             市值、股价和涨跌只作为公司画像信号，不构成投资建议。
           </p>
+          <div className="ss-chip-row">
+            <span>公开来源</span>
+            <span>字段可信度</span>
+            <span>非投资/求职结论</span>
+          </div>
         </div>
         <div className="company-hero-actions">
           <Link to="/compare/companies">公司对比</Link>
@@ -178,11 +183,15 @@ export default function CompaniesPage() {
         <div><span>行情字段</span><strong>{marketCoverage}/{rows.length || 0}</strong></div>
       </section>
 
+      <section className="ss-caveat compact">
+        企业可信度表示字段完整度和来源可追溯性；行情字段来自公开数据或手动整理，只用于画像参考，不代表公司综合表现、薪资水平或雇主质量。
+      </section>
+
       <div className="company-layout">
         <aside className="company-filter">
           <div className="company-filter-head">
             <div>
-              <span>Refine</span>
+              <span>筛选</span>
               <h2>筛选企业</h2>
             </div>
             <button onClick={clearFilters}>清空</button>
@@ -237,8 +246,8 @@ export default function CompaniesPage() {
 
           <div className="company-results-head">
             <div>
-              <span>Results</span>
-              <h2>{total.toLocaleString()} companies</h2>
+              <span>结果</span>
+              <h2>{total.toLocaleString()} 家公司</h2>
             </div>
             <p>第 {page} / {pages} 页</p>
           </div>
@@ -259,7 +268,7 @@ export default function CompaniesPage() {
                       </div>
                       <p>{cleanDescription(company)}</p>
                       <div className="company-tags">
-                        <em>{typeLabels[company.companyType || ''] || company.companyType || 'Company'}</em>
+                        <em>{typeLabels[company.companyType || ''] || company.companyType || '公司'}</em>
                         <em>{company.country || '-'}</em>
                         {company.city && <em>{company.city}</em>}
                         {(company.employeeCount || company.employeeCountRange) && (
@@ -272,11 +281,11 @@ export default function CompaniesPage() {
                       <small>{market.secondary}</small>
                       <b className={marketTone(company.stockChangePercent)}>{formatChange(company.stockChangePercent)}</b>
                       {market.ticker && <i>{market.ticker}</i>}
-                      {company.marketDataAsOf && <i>as of {company.marketDataAsOf}</i>}
+                      {company.marketDataAsOf && <i>截至 {company.marketDataAsOf}</i>}
                     </div>
                     <div className="company-row-side">
                       <span>{company.dataConfidence ?? '-'}%</span>
-                      <small>confidence</small>
+                      <small>来源可信度</small>
                       <div>
                         {company.domains?.slice(0, 2).map((item) => <i key={item}>{item}</i>)}
                       </div>
@@ -300,14 +309,14 @@ export default function CompaniesPage() {
               {total === 0 ? (
                 <div>
                   <p>还没有企业数据。</p>
-                  <p className="mt-2">运行 <code>npm run companies:seed</code>，或从独立管理后台手动添加。</p>
+                  <p className="mt-2">可以先在企业管理后台补充记录，再完成来源和可信度复核。</p>
                 </div>
               ) : (
                 '没有匹配的企业。'
               )}
             </div>
           )}
-          {companies.isLoading && <p className="learning-muted">Loading...</p>}
+          {companies.isLoading && <p className="learning-muted">正在加载...</p>}
 
           {pages > 1 && (
             <nav className="ss-pagination company-pagination">

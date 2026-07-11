@@ -114,7 +114,7 @@ function LoginGate({ children, initialStatus }: { children: React.ReactNode; ini
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && login()}
-            placeholder="ADMIN_PASSWORD"
+            placeholder="管理员密码"
           />
           {error && <div className="ss-login-error">{error}</div>}
           <button disabled={loading || !password} onClick={login}>
@@ -141,11 +141,11 @@ function Layout({
   const { t } = useI18n()
   const [navOpen, setNavOpen] = useState(true)
   const navItems = [
-    { to: '/', label: t('nav.search'), icon: 'S', section: t('nav.section.product') },
-    { to: '/intelligence', label: t('nav.intelligence'), icon: 'I', section: t('nav.section.product') },
-    { to: '/learning', label: t('nav.learning'), icon: 'L', section: t('nav.section.product') },
-    { to: '/workspace', label: t('nav.workspace'), icon: 'W', section: t('nav.section.product') },
-    { to: '/account', label: t('nav.account'), icon: 'A', section: t('nav.section.product') },
+    { to: '/', label: t('nav.search'), icon: '检', section: t('nav.section.product') },
+    { to: '/intelligence', label: t('nav.intelligence'), icon: '情', section: t('nav.section.product') },
+    { to: '/learning', label: t('nav.learning'), icon: '学', section: t('nav.section.product') },
+    { to: '/workspace', label: t('nav.workspace'), icon: '工', section: t('nav.section.product') },
+    { to: '/account', label: t('nav.account'), icon: '账', section: t('nav.section.product') },
   ]
   const grouped = navItems.reduce<Record<string, typeof navItems>>((acc, item) => {
     acc[item.section] = acc[item.section] || []
@@ -160,10 +160,10 @@ function Layout({
           <div className="ss-brand-logo">S</div>
           <div>
             <strong>SiliconScope</strong>
-            <span>IC intelligence</span>
+            <span>IC 情报工作台</span>
           </div>
         </div>
-        <nav className="ss-nav" aria-label="Primary navigation">
+        <nav className="ss-nav" aria-label="主导航">
           {Object.entries(grouped).map(([section, items]) => (
             <div className="ss-nav-group" key={section}>
               <em>{section}</em>

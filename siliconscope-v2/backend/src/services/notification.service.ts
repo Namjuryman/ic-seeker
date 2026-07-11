@@ -63,10 +63,10 @@ function ensureWelcomeNotification(userId: number) {
       (?, 'system', 'info', ?, ?, ?, ?, ?)
   `).run(
     userId,
-    "Welcome to SiliconScope",
-    "Notification Center is ready for weekly digests, moderation results, import jobs, and product announcements.",
+    "欢迎使用 SiliconScope",
+    "通知中心已可用于每周摘要、审核结果、导入任务和产品公告。",
     "/platform",
-    "Open platform status",
+    "查看平台状态",
     JSON.stringify({ seeded: true, source: "notification.service" })
   );
 }
@@ -125,9 +125,9 @@ export const notificationService = {
   },
 
   create(input: NotificationInput) {
-    if (!input.title || !String(input.title).trim()) throw new Error("Notification title is required");
+    if (!input.title || !String(input.title).trim()) throw new Error("通知标题不能为空。");
     const severity = input.severity || "info";
-    if (!["info", "success", "warning", "critical"].includes(severity)) throw new Error("Invalid notification severity");
+    if (!["info", "success", "warning", "critical"].includes(severity)) throw new Error("通知级别无效。");
     const result = appSqlite.prepare(`
       INSERT INTO notifications
         (user_id, kind, severity, title, body, href, action_label, metadata_json)

@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import { searchPath, roadmapPath } from '../utils/routes'
 import type { CompanyRow, PaperRow, SearchResult, CompanyFieldFact } from '../types'
 
@@ -30,6 +32,33 @@ function formatDate(iso: string | undefined): string {
   }
 }
 
+function companyStatusLabel(status?: string | null) {
+  if (!status) return '—'
+  const labels: Record<string, string> = {
+    active: '活跃 / 正常经营',
+    private: '未上市 / 私有公司',
+    public: '上市公司',
+    dissolved: '已注销或解散',
+    acquired: '已被收购',
+    merged: '已合并',
+    unknown: '状态待核验',
+  }
+  return labels[status] || '状态待核验'
+}
+
+function roadmapLevelLabel(level?: string | null) {
+  if (!level) return '未标注'
+  const labels: Record<string, string> = {
+    intro: '入门',
+    beginner: '入门',
+    core: '核心',
+    intermediate: '进阶',
+    advanced: '深入',
+    project: '项目',
+  }
+  return labels[level] || '阶段待确认'
+}
+
 function findFieldFact(fieldFacts: CompanyFieldFact[] | undefined, fieldName: string): CompanyFieldFact | undefined {
   return fieldFacts?.find((f) => f.fieldName === fieldName)
 }
@@ -37,7 +66,7 @@ function findFieldFact(fieldFacts: CompanyFieldFact[] | undefined, fieldName: st
 function FieldProvenance({ fieldFacts, fieldName }: { fieldFacts: CompanyFieldFact[] | undefined; fieldName: string }) {
   const fact = findFieldFact(fieldFacts, fieldName)
   if (!fact || !fact.sourceName) {
-    return <span className="text-xs text-ink-subtle">source not verified</span>
+    return <span className="text-xs text-ink-subtle">来源未核验</span>
   }
   return (
     <span className="text-xs text-ink-secondary">
@@ -55,7 +84,7 @@ function FieldProvenance({ fieldFacts, fieldName }: { fieldFacts: CompanyFieldFa
         <span>{fact.sourceName}</span>
       )}
       {' · '}
-      <span className={confidenceBadge(fact.confidence)}>{fact.confidence}% confidence</span>
+      <span className={confidenceBadge(fact.confidence)}>{fact.confidence}% 可信度</span>
       {' · '}
       <span>{formatDate(fact.fetchedAt)}</span>
     </span>
@@ -83,7 +112,7 @@ export default function CompanyProfilePage() {
 
   const watchMutation = useMutation({
     mutationFn: async () => {
-      if (!companyId) throw new Error('Missing company ID')
+      if (!companyId) throw new Error('缺少企业 ID')
       if (watched) return api.unwatchCompany(companyId)
       return api.watchCompany(companyId)
     },
@@ -95,14 +124,14 @@ export default function CompanyProfilePage() {
       setTimeout(() => setMessage(''), 1400)
     },
     onError: (err: any) => {
-      setError(err?.message || 'Failed to update watchlist')
+      setError(friendlyError(err, '更新关注失败'))
     },
   })
 
   useEffect(() => {
     if (!companyId) {
       setLoading(false)
-      setError('Missing company ID')
+      setError('缺少企业 ID')
       return
     }
 
@@ -120,7 +149,7 @@ export default function CompanyProfilePage() {
         setRoadmaps(r)
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : '加载企业详情失败')
+        setError(friendlyError(err, '加载企业详情失败'))
         setCompany(null)
       })
       .finally(() => setLoading(false))
@@ -129,7 +158,7 @@ export default function CompanyProfilePage() {
   if (loading) {
     return (
       <div className="ss-skeleton-page">
-        <p>Loading company profile...</p>
+        <p>正在加载企业画像...</p>
       </div>
     )
   }
@@ -140,7 +169,7 @@ export default function CompanyProfilePage() {
         {error}
         <div className="mt-4">
           <button className="ss-button-secondary" onClick={() => navigate('/companies')}>
-            Back to companies
+            返回企业列表
           </button>
         </div>
       </div>
@@ -150,10 +179,10 @@ export default function CompanyProfilePage() {
   if (!company) {
     return (
       <div className="ss-empty-state">
-        Company not found.
+        未找到该企业。
         <div className="mt-4">
           <button className="ss-button-secondary" onClick={() => navigate('/companies')}>
-            Back to companies
+            返回企业列表
           </button>
         </div>
       </div>
@@ -161,7 +190,7 @@ export default function CompanyProfilePage() {
   }
 
   const displayName = company.name || '—'
-  const displayType = company.companyType || 'Company'
+  const displayType = company.companyType || '企业'
   const displayCountry = company.country || '—'
   const displayCity = company.city || '—'
   const displayWebsite = company.website
@@ -177,7 +206,7 @@ export default function CompanyProfilePage() {
       )}
 
       <button className="ss-back-button" onClick={() => navigate('/companies')}>
-        Back to companies
+        返回企业列表
       </button>
 
       {/* Hero Section */}
@@ -188,9 +217,11 @@ export default function CompanyProfilePage() {
           <div className="ss-chip-row">
             {company.companyType && <span className="ss-chip">{company.companyType}</span>}
             <span>{displayCountry}{company.city ? `, ${displayCity}` : ''}</span>
+            <span>公开来源画像</span>
+            <span>非投资建议</span>
             {confidence !== undefined && confidence !== null && (
               <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${confidenceBadge(confidence)}`}>
-                Confidence: {confidence}
+                来源可信度：{confidence}%
               </span>
             )}
             {displayWebsite && (
@@ -201,16 +232,16 @@ export default function CompanyProfilePage() {
                 className="text-brand-600 hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
-                Website
+                官网
               </a>
             )}
           </div>
           <p className="text-xs text-ink-subtle mt-2">
-            Confidence is a metadata completeness and provenance score, not a company strength, salary level, or employment quality ranking.
+            来源可信度表示字段完整度和来源可追溯性，不代表公司综合表现、薪资水平或雇主质量。
           </p>
           {aliases.length > 0 && (
             <p className="text-sm text-ink-muted mt-2">
-              Also known as: {aliases.join(', ')}
+              别名/曾用名：{aliases.join(', ')}
             </p>
           )}
         </div>
@@ -219,15 +250,15 @@ export default function CompanyProfilePage() {
             className={`ss-button ${watched ? 'ss-button-secondary' : ''}`}
             disabled={watchMutation.isPending}
             onClick={() => watchMutation.mutate()}
-            title={watched ? 'Unwatch this company' : 'Watch this company'}
+            title={watched ? '取消关注该企业' : '关注该企业'}
           >
-            {watchMutation.isPending ? '...' : watched ? 'Unwatch' : 'Watch company'}
+            {watchMutation.isPending ? '...' : watched ? '取消关注' : '关注企业'}
           </button>
         </div>
       </section>
 
       <section className="ss-caveat">
-        Company data is collected from public sources and may be incomplete or stale. Verify critical decisions manually.
+        企业数据来自公开来源和本地整理，可能不完整或滞后；用于产业研究和学习方向参考，不构成投资建议、求职结论或雇主评价。
       </section>
 
       <div className="ss-profile-grid">
@@ -236,44 +267,44 @@ export default function CompanyProfilePage() {
           <section className="ss-panel">
             <div className="ss-panel-head">
               <div>
-                <p>Overview</p>
-                <h2>Basic Facts</h2>
+                <p>概览</p>
+                <h2>基础信息</h2>
               </div>
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-ink-muted">Founded</span>
+                <span className="text-ink-muted">成立时间</span>
                 <div className="font-medium text-ink-text">{company.foundedYear ?? '—'}</div>
                 <FieldProvenance fieldFacts={company.fieldFacts} fieldName="foundedYear" />
               </div>
               <div>
-                <span className="text-ink-muted">Registered Capital</span>
+                <span className="text-ink-muted">注册资本</span>
                 <div className="font-medium text-ink-text">{company.registeredCapital || '—'}</div>
                 <FieldProvenance fieldFacts={company.fieldFacts} fieldName="registeredCapital" />
               </div>
               <div>
-                <span className="text-ink-muted">Employees</span>
+                <span className="text-ink-muted">员工规模</span>
                 <div className="font-medium text-ink-text">{company.employeeCount || company.employeeCountRange || '—'}</div>
                 <FieldProvenance fieldFacts={company.fieldFacts} fieldName="employees" />
               </div>
               <div>
-                <span className="text-ink-muted">Status</span>
-                <div className="font-medium text-ink-text">{company.status || '—'}</div>
+                <span className="text-ink-muted">状态</span>
+                <div className="font-medium text-ink-text">{companyStatusLabel(company.status)}</div>
                 <FieldProvenance fieldFacts={company.fieldFacts} fieldName="status" />
               </div>
               <div>
-                <span className="text-ink-muted">Stock Ticker</span>
+                <span className="text-ink-muted">股票代码</span>
                 <div className="font-medium text-ink-text">
                   {company.stockTicker ? `${company.stockTicker}${company.exchange ? ` (${company.exchange})` : ''}` : '—'}
                 </div>
               </div>
               <div>
-                <span className="text-ink-muted">Last Enriched</span>
+                <span className="text-ink-muted">最近更新</span>
                 <div className="font-medium text-ink-text">{formatDate(company.lastEnrichedAt)}</div>
               </div>
               {company.description && (
                 <div className="sm:col-span-2">
-                  <span className="text-ink-muted">Description</span>
+                  <span className="text-ink-muted">简介</span>
                   <div className="font-medium text-ink-text mt-1 leading-relaxed">{company.description}</div>
                 </div>
               )}
@@ -284,14 +315,14 @@ export default function CompanyProfilePage() {
           <section className="ss-panel">
             <div className="ss-panel-head">
               <div>
-                <p>Business</p>
-                <h2>Business Directions</h2>
+                <p>业务</p>
+                <h2>业务方向</h2>
               </div>
             </div>
             <div className="p-4 space-y-4 text-sm">
               {company.domains && company.domains.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Domains</span>
+                  <span className="text-ink-muted block mb-1">技术方向</span>
                   <div className="flex flex-wrap gap-2">
                     {company.domains.map((d) => (
                       <Link
@@ -308,7 +339,7 @@ export default function CompanyProfilePage() {
               )}
               {company.productLines && company.productLines.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Product Lines</span>
+                  <span className="text-ink-muted block mb-1">产品线</span>
                   <div className="flex flex-wrap gap-2">
                     {company.productLines.map((pl) => (
                       <span key={pl} className="ss-chip">{pl}</span>
@@ -318,7 +349,7 @@ export default function CompanyProfilePage() {
               )}
               {company.technologyKeywords && company.technologyKeywords.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Technology Keywords</span>
+                  <span className="text-ink-muted block mb-1">技术关键词</span>
                   <div className="flex flex-wrap gap-2">
                     {company.technologyKeywords.map((kw) => (
                       <Link
@@ -334,7 +365,7 @@ export default function CompanyProfilePage() {
               )}
               {company.applicationMarkets && company.applicationMarkets.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Application Markets</span>
+                  <span className="text-ink-muted block mb-1">应用市场</span>
                   <div className="flex flex-wrap gap-2">
                     {company.applicationMarkets.map((m) => (
                       <span key={m} className="ss-chip">{m}</span>
@@ -346,7 +377,7 @@ export default function CompanyProfilePage() {
                (!company.productLines || company.productLines.length === 0) &&
                (!company.technologyKeywords || company.technologyKeywords.length === 0) &&
                (!company.applicationMarkets || company.applicationMarkets.length === 0) && (
-                <div className="text-ink-muted">No business direction data available.</div>
+                <div className="text-ink-muted">暂无业务方向数据。</div>
               )}
             </div>
           </section>
@@ -355,14 +386,14 @@ export default function CompanyProfilePage() {
           <section className="ss-panel">
             <div className="ss-panel-head">
               <div>
-                <p>Talent</p>
-                <h2>Career Intelligence</h2>
+                <p>人才</p>
+                <h2>岗位与学习线索</h2>
               </div>
             </div>
             <div className="p-4 space-y-4 text-sm">
               {company.careerRoles && company.careerRoles.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Career Roles</span>
+                  <span className="text-ink-muted block mb-1">相关岗位</span>
                   <ul className="list-disc list-inside text-ink-text">
                     {company.careerRoles.map((r) => (
                       <li key={r}>{r}</li>
@@ -372,7 +403,7 @@ export default function CompanyProfilePage() {
               )}
               {company.hiringSignals && company.hiringSignals.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Hiring Signals</span>
+                  <span className="text-ink-muted block mb-1">招聘线索</span>
                   <ul className="list-disc list-inside text-ink-text">
                     {company.hiringSignals.map((s) => (
                       <li key={s}>{s}</li>
@@ -382,12 +413,12 @@ export default function CompanyProfilePage() {
               )}
               {roadmaps.length > 0 && (
                 <div>
-                  <span className="text-ink-muted block mb-1">Suggested Learning Roadmaps</span>
+                  <span className="text-ink-muted block mb-1">建议学习路线</span>
                   <div className="ss-link-list">
                     {roadmaps.map((r) => (
                       <Link key={r.slug} to={roadmapPath(r.slug)} className="block">
                         <span>{r.title}</span>
-                        <span className="text-ink-muted text-xs">{r.domain} · {r.level}</span>
+                        <span className="text-ink-muted text-xs">{r.domain} · {roadmapLevelLabel(r.level)}</span>
                       </Link>
                     ))}
                   </div>
@@ -396,7 +427,7 @@ export default function CompanyProfilePage() {
               {(!company.careerRoles || company.careerRoles.length === 0) &&
                (!company.hiringSignals || company.hiringSignals.length === 0) &&
                roadmaps.length === 0 && (
-                <div className="text-ink-muted">No career intelligence data available.</div>
+                <div className="text-ink-muted">暂无岗位与学习线索。</div>
               )}
             </div>
           </section>
@@ -405,10 +436,10 @@ export default function CompanyProfilePage() {
           <section className="ss-panel">
             <div className="ss-panel-head">
               <div>
-                <p>Research</p>
-                <h2>Related Papers</h2>
+                <p>研究</p>
+                <h2>相关论文</h2>
               </div>
-              <span>{papers?.total ?? 0} matched</span>
+              <span>{papers?.total ?? 0} 条匹配</span>
             </div>
             <div className="p-4 text-sm">
               {papers?.rows && papers.rows.length > 0 ? (
@@ -419,22 +450,22 @@ export default function CompanyProfilePage() {
                         <h4><PaperLink id={paper.id} title={paper.title} /></h4>
                         <p>{paper.authors || '-'}</p>
                         {paper.matchReason && (
-                          <span className="text-xs text-ink-subtle">Matched by: {paper.matchReason}</span>
+                          <span className="text-xs text-ink-subtle">匹配原因：{paper.matchReason}</span>
                         )}
                       </div>
                       <div className="ss-mini-meta">
                         <span>{paper.venue}</span>
                         <span>{paper.year}</span>
-                        <span>{paper.rank}</span>
+                        <span>{paperRankLabel(paper.rank)}</span>
                       </div>
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="text-ink-muted">No papers matched by affiliation text.</div>
+                <div className="text-ink-muted">暂无通过 affiliation 文本匹配到的论文。</div>
               )}
               <p className="mt-3 text-xs text-ink-muted">
-                This is based on affiliation text matching and may miss subsidiaries or aliases.
+                论文匹配基于 affiliation 文本，可能漏掉子公司、实验室别名或历史名称，也可能混入同名实体；请结合来源记录复核。
               </p>
             </div>
           </section>
@@ -444,7 +475,7 @@ export default function CompanyProfilePage() {
           {/* Source Provenance */}
           <section className="ss-panel">
             <div className="ss-panel-head compact">
-              <h2>Source Provenance</h2>
+              <h2>来源记录</h2>
             </div>
             <div className="p-4">
               {company.sources && company.sources.length > 0 ? (
@@ -452,10 +483,10 @@ export default function CompanyProfilePage() {
                   <table className="w-full text-sm text-left">
                     <thead className="border-b border-line">
                       <tr>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Type</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Name</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Conf.</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Fetched</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">类型</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">来源</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">可信度</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">抓取时间</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -484,24 +515,24 @@ export default function CompanyProfilePage() {
                     </tbody>
                   </table>
                   {company.sources.length > 20 && (
-                    <p className="text-xs text-ink-muted mt-2">+{company.sources.length - 20} more sources</p>
+                    <p className="text-xs text-ink-muted mt-2">另有 {company.sources.length - 20} 条来源</p>
                   )}
                 </div>
               ) : (
-                <div className="text-ink-muted text-sm">No source data available.</div>
+                <div className="text-ink-muted text-sm">暂无来源数据。</div>
               )}
 
               {company.fieldFacts && company.fieldFacts.length > 0 && (
                 <div className="mt-4 overflow-x-auto">
-                  <h3 className="text-xs font-semibold text-ink-subtle uppercase tracking-wide mb-2">Field Facts</h3>
+                  <h3 className="text-xs font-semibold text-ink-subtle uppercase tracking-wide mb-2">字段证据</h3>
                   <table className="w-full text-sm text-left">
                     <thead className="border-b border-line">
                       <tr>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Field</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Value</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Source</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Conf.</th>
-                        <th className="py-1 pr-2 text-ink-secondary font-medium">Fetched</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">字段</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">值</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">来源</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">可信度</th>
+                        <th className="py-1 pr-2 text-ink-secondary font-medium">抓取时间</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -531,7 +562,7 @@ export default function CompanyProfilePage() {
                     </tbody>
                   </table>
                   {company.fieldFacts.length > 20 && (
-                    <p className="text-xs text-ink-muted mt-2">+{company.fieldFacts.length - 20} more field facts</p>
+                    <p className="text-xs text-ink-muted mt-2">另有 {company.fieldFacts.length - 20} 条字段证据</p>
                   )}
                 </div>
               )}

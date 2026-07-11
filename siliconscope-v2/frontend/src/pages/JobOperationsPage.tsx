@@ -1,14 +1,23 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
-import type { OperationStatus } from '../types'
+import type { OperationLane, OperationStatus } from '../types'
 
 const statusLabel: Record<OperationStatus, string> = {
-  ok: 'OK',
-  warning: 'Attention',
-  error: 'Failed',
-  running: 'Running',
-  idle: 'Idle',
+  ok: '正常',
+  warning: '需关注',
+  error: '失败',
+  running: '运行中',
+  idle: '空闲',
+}
+
+const laneLabel: Record<OperationLane, string> = {
+  scheduler: '计划',
+  maintenance: '维护',
+  backup: '备份',
+  snapshot: '快照',
+  quality: '数据质量',
+  ingestion: '导入',
 }
 
 function formatTime(value: string | null) {
@@ -26,11 +35,11 @@ export default function JobOperationsPage() {
   })
 
   if (overview.isLoading) {
-    return <div className="learning-muted">Loading operations ledger...</div>
+    return <div className="learning-muted">正在加载任务台账...</div>
   }
 
   if (!overview.data) {
-    return <div className="learning-muted">Operations ledger is not available.</div>
+    return <div className="learning-muted">任务台账暂不可用。</div>
   }
 
   const data = overview.data
@@ -39,25 +48,25 @@ export default function JobOperationsPage() {
     <div className="jobops-page">
       <section className="jobops-hero">
         <div>
-          <span>JOB OPERATIONS</span>
-          <h1>Operations ledger</h1>
+          <span>任务运维</span>
+          <h1>任务台账</h1>
           <p>
-            A production-facing view for scheduled jobs, maintenance runs, backups, snapshots, data-quality scans,
-            and ingestion jobs. This is the admin page to check before weekly imports and public announcements.
+            集中查看计划任务、维护运行、备份、快照、数据质量扫描和导入任务。周更导入或公开发布前，
+            先在这里确认最近一次运行状态。
           </p>
         </div>
         <div className={`jobops-runtime jobops-runtime-${data.runtimeStatus}`}>
-          <strong>{data.runtimeStatus.toUpperCase()}</strong>
-          <span>next run {formatTime(data.nextRunAt)}</span>
+          <strong>{data.runtimeStatus === 'ok' ? '正常' : data.runtimeStatus === 'warn' ? '警告' : '异常'}</strong>
+          <span>下次运行 {formatTime(data.nextRunAt)}</span>
         </div>
       </section>
 
       <section className="jobops-counts">
-        <div><span>Scheduler</span><strong>{data.counts.enabledSchedulerJobs}/{data.counts.schedulerJobs}</strong></div>
-        <div><span>Maintenance</span><strong>{data.counts.maintenanceRuns}</strong></div>
-        <div><span>Failed</span><strong>{data.counts.failedRuns}</strong></div>
-        <div><span>Backups</span><strong>{data.counts.backups}</strong></div>
-        <div><span>Ingestion</span><strong>{data.counts.ingestionJobs ?? 0}</strong></div>
+        <div><span>计划任务</span><strong>{data.counts.enabledSchedulerJobs}/{data.counts.schedulerJobs}</strong></div>
+        <div><span>维护运行</span><strong>{data.counts.maintenanceRuns}</strong></div>
+        <div><span>失败</span><strong>{data.counts.failedRuns}</strong></div>
+        <div><span>备份</span><strong>{data.counts.backups}</strong></div>
+        <div><span>导入</span><strong>{data.counts.ingestionJobs ?? 0}</strong></div>
       </section>
 
       <section className="jobops-lanes">
@@ -76,15 +85,15 @@ export default function JobOperationsPage() {
       <section className="jobops-board">
         <div className="jobops-board-head">
           <div>
-            <span>RECENT ACTIVITY</span>
-            <h2>Recent operation events</h2>
+            <span>最近活动</span>
+            <h2>最近任务事件</h2>
           </div>
-          <strong>{data.timeline.length} loaded</strong>
+          <strong>{data.timeline.length} 条</strong>
         </div>
         <div className="jobops-timeline">
           {data.timeline.map((item) => (
             <Link to={item.href} className={`jobops-event jobops-event-${item.status}`} key={item.id}>
-              <i>{item.lane}</i>
+              <i>{laneLabel[item.lane]}</i>
               <div>
                 <strong>{item.title}</strong>
                 <p>{item.detail}</p>
@@ -92,7 +101,7 @@ export default function JobOperationsPage() {
               <span>{formatTime(item.at)}</span>
             </Link>
           ))}
-          {!data.timeline.length && <p className="learning-muted">No operation event yet. Create a backup or ingestion job first.</p>}
+          {!data.timeline.length && <p className="learning-muted">暂无任务事件。可以先创建一次备份或导入任务。</p>}
         </div>
       </section>
 

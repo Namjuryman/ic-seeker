@@ -66,7 +66,7 @@ function candidateRowsByAuthor(name: string) {
 export const authorCompareService = {
   compare(names: string[]) {
     const unique = [...new Set(names)].slice(0, 4);
-    if (unique.length < 2) throw new Error("At least 2 authors are required");
+    if (unique.length < 2) throw new Error("请至少输入 2 位作者再进行对比。");
 
     const currentYear = new Date().getFullYear();
 
@@ -115,13 +115,13 @@ export const authorCompareService = {
         coauthors: [...coauthors.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count).slice(0, 10),
         representativePapers,
         metadataConfidence: identity.confidence,
-        normalizationCaveat: "Author identity is normalized and may still need OpenAlex/ORCID/manual merge-split verification.",
+        normalizationCaveat: "作者身份经过别名归一，但仍可能需要 OpenAlex、ORCID 或人工合并/拆分复核。",
       };
     });
 
     return {
       authors,
-      caveat: "Author comparison is based on publication metadata and name-based normalization. It is not a final evaluation of academic quality or mentorship.",
+      caveat: "作者对比基于论文元数据和姓名归一结果，只适合作为研究线索，不代表对学术水平或研究者质量的完整判断。",
     };
   },
 };

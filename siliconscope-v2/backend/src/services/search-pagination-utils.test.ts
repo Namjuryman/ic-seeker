@@ -77,7 +77,7 @@ describe("search pagination utilities", () => {
       cursor: "abc",
     });
     expect(relaxations).toHaveLength(5);
-    expect(relaxations.map((item) => item.label)).toContain("Remove venue filter");
+    expect(relaxations.map((item) => item.label)).toContain("移除会议/期刊筛选");
     expect(relaxations[0].params).not.toHaveProperty("offset");
     expect(relaxations[0].params).not.toHaveProperty("cursor");
   });

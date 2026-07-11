@@ -119,9 +119,9 @@ export const backupService = {
         nodeVersion: process.version,
       },
       notes: [
-        "SQLite backup created through better-sqlite3 backup API.",
-        "Restore is intentionally manual-first: stop the API, copy this sqlite file over the active database, then restart.",
-        input.actor ? `Created by ${input.actor}.` : "Created by system or local script.",
+        "已创建一致性数据库恢复点。",
+        "恢复保持人工确认：先停止 API，替换运行数据库，再重启服务。",
+        input.actor ? `创建人：${input.actor}。` : "创建来源：系统或本地脚本。",
       ],
     };
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));

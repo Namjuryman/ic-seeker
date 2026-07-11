@@ -30,37 +30,37 @@ export type MaintenanceRun = {
 const jobs: MaintenanceJob[] = [
   {
     id: "backup",
-    title: "Create database restore point",
+    title: "创建数据库还原点",
     category: "backup",
-    description: "Create a SQLite online backup plus manifest before imports, deploys, or schema maintenance.",
-    expectedDuration: "seconds",
+    description: "在导入、部署或结构维护前创建 SQLite 在线备份和清单。",
+    expectedDuration: "数秒",
     risk: "low",
     defaultPayload: { label: "admin-maintenance" },
   },
   {
     id: "snapshot-core",
-    title: "Refresh core snapshots",
+    title: "刷新核心快照",
     category: "cache",
-    description: "Refresh the most important cached lists: professors, institutions, topics, geo overview, venue matrix, and mentor institutions.",
-    expectedDuration: "seconds to minutes",
+    description: "刷新作者线索、机构、主题、地域概览、会议矩阵和研究者机构等核心缓存列表。",
+    expectedDuration: "数秒到数分钟",
     risk: "low",
     defaultPayload: { keys: ["profiles:professors:top80", "profiles:institutions:top80", "topics:list", "geo:overall", "venue-matrix", "mentor:institutions"] },
   },
   {
     id: "snapshot-full",
-    title: "Refresh full intelligence cache",
+    title: "刷新完整情报缓存",
     category: "cache",
-    description: "Refresh core snapshots plus top profile/topic/geo/mentor detail caches. Run after large imports or alias repair.",
-    expectedDuration: "minutes",
+    description: "在核心快照基础上刷新重点画像、主题、地域和研究者详情缓存。适合在大规模导入或别名修复后执行。",
+    expectedDuration: "数分钟",
     risk: "medium",
     defaultPayload: { keys: ["all"] },
   },
   {
     id: "data-quality",
-    title: "Run bounded data-quality scan",
+    title: "运行数据质量扫描",
     category: "quality",
-    description: "Scan DOI duplicates, weak topics, venue mapping, institution variants, and author ambiguity with bounded sample size.",
-    expectedDuration: "seconds",
+    description: "在有限样本内检查 DOI 重复、弱主题、会议映射、机构变体和作者歧义。",
+    expectedDuration: "数秒",
     risk: "low",
     defaultPayload: { scanLimit: 12000, sampleLimit: 50 },
   },
@@ -176,7 +176,7 @@ export const maintenanceService = {
 
   async run(jobId: MaintenanceJobId, input: { actorUserId?: number; payload?: Record<string, unknown>; actorEmail?: string } = {}) {
     const job = jobs.find((item) => item.id === jobId);
-    if (!job) throw new Error(`Unknown maintenance job: ${jobId}`);
+    if (!job) throw new Error(`未知维护任务：${jobId}`);
     const payload = { ...(job.defaultPayload || {}), ...(input.payload || {}) };
     const runId = startRun(jobId, input.actorUserId ?? null, payload);
     try {
@@ -197,7 +197,7 @@ export const maintenanceService = {
           failed: result.filter((row) => !row.ok).length,
           failures: result.filter((row) => !row.ok).slice(0, 8),
         };
-        if (result.some((row) => !row.ok)) throw new Error(`${summary.failed} snapshot refreshes failed`);
+        if (result.some((row) => !row.ok)) throw new Error(`${summary.failed} 个快照刷新失败。`);
       } else {
         const report = dataQualityService.getReport({
           scanLimit: Number(payload.scanLimit || 12000),

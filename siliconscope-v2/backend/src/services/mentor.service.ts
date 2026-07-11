@@ -48,6 +48,7 @@ function authorParts(name: string) {
 }
 
 function compatibleAuthorVariant(a: string, b: string): boolean {
+  if (authorIdentityService.sameAuthor(a, b)) return true;
   const left = authorParts(a);
   const right = authorParts(b);
   if (!left || !right || left.last !== right.last || !left.initials || !right.initials) return false;
@@ -197,6 +198,28 @@ function rosterVerifications(normalizedInstitution: string): Map<string, RosterV
   } catch {
     return new Map();
   }
+}
+
+function findRosterVerification(
+  rosterMap: Map<string, RosterVerificationRow>,
+  authorName: string,
+  normalizedKey: string
+): RosterVerificationRow | null {
+  const canonicalKey = authorIdentityService.canonicalize(authorName).normalizedKey;
+  for (const key of [canonicalKey, normalizedKey]) {
+    const direct = key ? rosterMap.get(key) : null;
+    if (direct) return direct;
+  }
+  for (const row of rosterMap.values()) {
+    if (
+      authorIdentityService.sameAuthor(row.authorName, authorName) ||
+      authorIdentityService.sameAuthor(row.normalizedAuthor, normalizedKey) ||
+      compatibleAuthorVariant(row.authorName, authorName)
+    ) {
+      return row;
+    }
+  }
+  return null;
 }
 
 function verifiedRosterCounts(): Map<string, number> {
@@ -424,6 +447,113 @@ function writeMaterializedSummaries(rows: MentorInstitutionSummary[]) {
     }
   });
   refresh(rows);
+}
+
+function rowsByAuthorName(name: string) {
+  const variants = authorIdentityService.searchTermsFor(name);
+  const seen = new Map<number, typeof papers.$inferSelect>();
+  for (const variant of variants) {
+    const rowsForVariant = metadataDb.select().from(papers)
+      .where(sql`${papers.authors} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
+      .all();
+    for (const row of rowsForVariant) seen.set(row.id, row);
+  }
+  return [...seen.values()]
+    .filter((row) => splitList(row.authors).some((author) => authorIdentityService.sameAuthor(author, name)));
+}
+
+function summarizeAuthorRowsForMentor(name: string, rows: Array<typeof papers.$inferSelect>) {
+  const currentYear = new Date().getFullYear();
+  const stats = {
+    papers: rows.length,
+    scoreSum: 0,
+    citations: 0,
+    sPlus: 0,
+    s: 0,
+    a: 0,
+    domains: new Map<string, number>(),
+    years: new Map<number, number>(),
+    firstAuthorPapers: 0,
+    seniorAuthorPapers: 0,
+    recentSeniorAuthorPapers: 0,
+  };
+
+  for (const row of rows) {
+    stats.scoreSum += Number(row.qualityScore || 0);
+    stats.citations += Number(row.citationCount || 0);
+    stats.domains.set(String(row.domain || "General IC"), (stats.domains.get(String(row.domain || "General IC")) || 0) + 1);
+    stats.years.set(Number(row.year || 0), (stats.years.get(Number(row.year || 0)) || 0) + 1);
+    if (isEliteRank(row.venueRank)) stats.sPlus += 1;
+    else if (row.venueRank === "S") stats.s += 1;
+    else if (String(row.venueRank || "").startsWith("A")) stats.a += 1;
+
+    const rowAuthors = splitList(row.authors);
+    const authorIndex = rowAuthors.findIndex((author) => authorIdentityService.sameAuthor(author, name));
+    if (authorIndex === 0) stats.firstAuthorPapers += 1;
+    if (authorIndex >= 0 && isSeniorAuthorPosition(authorIndex, rowAuthors.length)) {
+      stats.seniorAuthorPapers += 1;
+      if (Number(row.year || 0) >= currentYear - 4) stats.recentSeniorAuthorPapers += 1;
+    }
+  }
+
+  return stats;
+}
+
+function buildRosterOnlyMentor(row: RosterVerificationRow) {
+  const paperRows = rowsByAuthorName(row.authorName);
+  const stats = summarizeAuthorRowsForMentor(row.authorName, paperRows);
+  const currentYear = new Date().getFullYear();
+  const recentCount = [...stats.years.entries()]
+    .filter(([year]) => year >= currentYear - 4)
+    .reduce((sum, [, count]) => sum + count, 0);
+  const previousCount = [...stats.years.entries()]
+    .filter(([year]) => year >= currentYear - 9 && year < currentYear - 4)
+    .reduce((sum, [, count]) => sum + count, 0);
+  const trendRatio = previousCount ? recentCount / previousCount : recentCount ? 2 : 0;
+  const role = inferMentorCandidate({
+    papers: stats.papers,
+    sPlus: stats.sPlus,
+    s: stats.s,
+    citations: stats.citations,
+    scoreSum: stats.scoreSum,
+    years: stats.years,
+    seniorAuthorPapers: stats.seniorAuthorPapers,
+    firstAuthorPapers: stats.firstAuthorPapers,
+    recentPapers: recentCount,
+    recentSeniorAuthorPapers: stats.recentSeniorAuthorPapers,
+  });
+
+  return {
+    name: row.authorName,
+    normalizedKey: row.normalizedAuthor || authorIdentityService.canonicalize(row.authorName).normalizedKey,
+    papers: stats.papers,
+    citations: stats.citations,
+    sPlus: stats.sPlus,
+    s: stats.s,
+    a: stats.a,
+    avgScore: Math.round((stats.scoreSum / Math.max(1, stats.papers)) * 10) / 10,
+    authorScore: scoreAuthor(stats),
+    topDomains: [...stats.domains.entries()]
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => b.count - a.count || String(a.key).localeCompare(String(b.key)))
+      .slice(0, 3),
+    yearlyActivity: [...stats.years.entries()]
+      .filter(([year]) => year > 0)
+      .map(([year, count]) => ({ year, count }))
+      .sort((a, b) => a.year - b.year),
+    recentPapers: recentCount,
+    trend: trendRatio >= 1.25 ? "rising" : trendRatio <= 0.75 ? "cooling" : "stable",
+    roleStage: "verified-current-faculty",
+    likelyMentor: true,
+    mentorConfidence: Number(row.confidence || 95) / 100,
+    rosterVerification: row,
+    seniorAuthorPapers: stats.seniorAuthorPapers,
+    firstAuthorPapers: stats.firstAuthorPapers,
+    recentSeniorAuthorPapers: stats.recentSeniorAuthorPapers,
+    firstYear: role.firstYear,
+    lastYear: role.lastYear,
+    careerSpan: role.careerSpan,
+  };
 }
 
 export const mentorService = {
@@ -681,8 +811,7 @@ export const mentorService = {
           recentPapers: recentCount,
           recentSeniorAuthorPapers: item.recentSeniorAuthorPapers,
         });
-        const profileNormalizedKey = authorIdentityService.canonicalize(item.name).normalizedKey;
-        const rosterVerification = rosterMap.get(profileNormalizedKey) || rosterMap.get(item.normalizedKey) || null;
+        const rosterVerification = findRosterVerification(rosterMap, item.name, item.normalizedKey);
         return {
           name: item.name,
           normalizedKey: item.normalizedKey,
@@ -729,36 +858,16 @@ export const mentorService = {
     const rosterOnlyMentors = hasOfficialRoster
       ? [...rosterMap.values()]
         .filter((row) => row.status === "verified_current" && !existingMentorKeys.has(row.normalizedAuthor) && !existingMentorNames.some((name) => compatibleAuthorVariant(name, row.authorName)))
-        .map((row) => ({
-          name: row.authorName,
-          normalizedKey: row.normalizedAuthor,
-          papers: 0,
-          citations: 0,
-          sPlus: 0,
-          s: 0,
-          a: 0,
-          avgScore: 0,
-          authorScore: 0,
-          topDomains: [] as Array<{ key: string; count: number }>,
-          yearlyActivity: [] as Array<{ year: number; count: number }>,
-          recentPapers: 0,
-          trend: "stable",
-          roleStage: "verified-current-faculty",
-          likelyMentor: true,
-          mentorConfidence: Number(row.confidence || 95) / 100,
-          rosterVerification: row,
-          seniorAuthorPapers: 0,
-          firstAuthorPapers: 0,
-          recentSeniorAuthorPapers: 0,
-          firstYear: null as number | null,
-          lastYear: null as number | null,
-          careerSpan: 0,
-        }))
+        .map((row) => buildRosterOnlyMentor(row))
       : [];
     const displayMentors = [...mentors, ...rosterOnlyMentors]
       .sort((a, b) => b.authorScore - a.authorScore || b.papers - a.papers || a.name.localeCompare(b.name));
     const topMentors = displayMentors.slice(0, broadCandidateScope ? 400 : 120);
-    const profiles = authorProfileService.getMapByNormalizedNames(topMentors.map((item) => item.normalizedKey));
+    const profiles = authorProfileService.getMapByNormalizedNames(topMentors.flatMap((item) => [
+      item.normalizedKey,
+      authorIdentityService.canonicalize(item.name).normalizedKey,
+      item.rosterVerification?.normalizedAuthor || "",
+    ]));
 
     return {
       institution: name,
@@ -766,7 +875,10 @@ export const mentorService = {
       companyId: companyIdentity?.id || null,
       mentors: topMentors.map((item) => ({
         ...item,
-        profile: profiles.get(authorIdentityService.canonicalize(item.name).normalizedKey) || profiles.get(item.normalizedKey) || null,
+        profile: profiles.get(authorIdentityService.canonicalize(item.name).normalizedKey)
+          || profiles.get(item.normalizedKey)
+          || (item.rosterVerification?.normalizedAuthor ? profiles.get(item.rosterVerification.normalizedAuthor) : null)
+          || null,
       })),
       mentorCandidateCount: displayMentors.length,
       mentorCountSource: hasOfficialRoster ? "official-roster" : companyIdentity ? "industry-publication-heuristic" : "publication-heuristic",
@@ -791,31 +903,8 @@ export const mentorService = {
   getMentorProfile(name: string, _params: Record<string, string>) {
     // Delegate to profile service for now
     const targetIdentity = authorIdentityService.canonicalize(name);
-    const variants = authorIdentityService.variantsFor(name);
-    const seen = new Map<number, typeof papers.$inferSelect>();
-    for (const variant of variants) {
-      const rowsForVariant = metadataDb.select().from(papers)
-        .where(sql`${papers.authors} LIKE ${`%${variant}%`} AND COALESCE(${papers.venueRank}, '') != 'Hidden'`)
-        .all();
-      for (const row of rowsForVariant) seen.set(row.id, row);
-    }
-    const rows = [...seen.values()]
-      .filter((row) => splitList(row.authors).some((author) => authorIdentityService.canonicalize(author).normalizedKey === targetIdentity.normalizedKey));
-
-    const summary = {
-      papers: rows.length,
-      scoreSum: rows.reduce((sum, r) => sum + Number(r.qualityScore || 0), 0),
-      sPlus: 0,
-      s: 0,
-      citations: rows.reduce((sum, r) => sum + Number(r.citationCount || 0), 0),
-      years: new Map<number, number>(),
-    };
-
-    for (const row of rows) {
-      summary.years.set(row.year, (summary.years.get(row.year) || 0) + 1);
-      if (isEliteRank(row.venueRank)) summary.sPlus += 1;
-      else if (row.venueRank === "S") summary.s++;
-    }
+    const rows = rowsByAuthorName(name);
+    const summary = summarizeAuthorRowsForMentor(name, rows);
 
     const authorScore = scoreAuthor({ scoreSum: summary.scoreSum, sPlus: summary.sPlus, s: summary.s, citations: summary.citations });
     const role = inferMentorCandidate({

@@ -236,6 +236,14 @@ export interface GeoCountry {
     source: string;
     cityMapped: boolean;
   }>;
+  cityHeatPoints: Array<{
+    city: string;
+    lat: number;
+    lon: number;
+    papers: number;
+    institutions: number;
+    byYear: Array<{ year: number; papers: number; institutions: number }>;
+  }>;
   byField: Array<{ key: string; count: number }>;
   byYear: Array<{ year: number; papers: number; score: number }>;
 }

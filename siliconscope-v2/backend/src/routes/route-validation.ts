@@ -11,10 +11,99 @@ const booleanLikeSchema = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
+const fieldLabels: Record<string, string> = {
+  action: "操作",
+  actionLabel: "操作按钮文案",
+  body: "正文",
+  counts: "计数",
+  dryRun: "试运行",
+  error: "错误信息",
+  href: "链接",
+  key: "快照键",
+  keys: "快照键列表",
+  keep: "保留数量",
+  kind: "类型",
+  label: "标签",
+  limit: "数量上限",
+  metadata: "元数据",
+  minTopicConfidence: "最低主题置信度",
+  mode: "模式",
+  model: "模型",
+  notes: "备注",
+  payloadJson: "内容 JSON",
+  persist: "写入候选",
+  planId: "方案",
+  prefix: "前缀",
+  provider: "服务提供方",
+  reason: "原因",
+  refresh: "刷新",
+  sampleLimit: "每类样本数",
+  scanLimit: "扫描行数",
+  scope: "范围",
+  severity: "级别",
+  status: "状态",
+  target: "索引目标",
+  title: "标题",
+  userId: "用户 ID",
+  value: "配置值",
+  writeTopicEdges: "写入主题边",
+};
+
+function hasChinese(value: string) {
+  return /[\u3400-\u9fff]/.test(value);
+}
+
+function pathLabel(path: Array<string | number>) {
+  if (!path.length) return "";
+  return path.map((part) => fieldLabels[String(part)] || String(part)).join(".");
+}
+
+function formatValues(values: unknown[]) {
+  return values.map((value) => String(value)).join("、");
+}
+
+function issueMessage(issue: z.ZodIssue) {
+  const row = issue as z.ZodIssue & Record<string, any>;
+  if (hasChinese(issue.message)) return issue.message;
+
+  switch (issue.code) {
+    case "unrecognized_keys":
+      return `不支持字段：${formatValues(row.keys || [])}`;
+    case "invalid_enum_value":
+      return `取值无效，允许：${formatValues(row.options || [])}`;
+    case "too_big": {
+      const maximum = row.maximum;
+      if (row.type === "string") return `长度不能超过 ${maximum} 个字符`;
+      if (row.type === "array") return `最多只能包含 ${maximum} 项`;
+      return `数值不能超过 ${maximum}`;
+    }
+    case "too_small": {
+      const minimum = row.minimum;
+      if (row.type === "string") return Number(minimum) <= 1 ? "不能为空" : `长度不能少于 ${minimum} 个字符`;
+      if (row.type === "array") return `至少需要 ${minimum} 项`;
+      return `数值不能小于 ${minimum}`;
+    }
+    case "invalid_type":
+      if (row.received === "undefined") return "不能为空";
+      return `类型不正确，应为 ${row.expected}`;
+    case "invalid_union":
+      return "格式不符合要求";
+    case "invalid_string":
+      return "字符串格式无效";
+    case "not_multiple_of":
+      return `必须是 ${row.multipleOf} 的倍数`;
+    case "custom":
+      return issue.message || "格式不符合要求";
+    default:
+      return "格式不符合要求";
+  }
+}
+
 export function zodErrorMessage(error: z.ZodError) {
   return error.issues.map((issue) => {
-    const path = issue.path.length ? `${issue.path.join(".")}: ` : "";
-    return `${path}${issue.message}`;
+    const path = pathLabel(issue.path);
+    const message = issueMessage(issue);
+    return path ? `${path}: ${message}` : message;
   }).join("; ");
 }
 
@@ -60,7 +149,7 @@ export const paperAiSummaryBodySchema = z.object({
 }).strict();
 
 export const importDoiBodySchema = z.object({
-  doi: z.string({ required_error: "doi is required" }).trim().min(1, "doi is required").max(500),
+  doi: z.string({ required_error: "DOI 不能为空。" }).trim().min(1, "DOI 不能为空。").max(500),
 }).strict();
 
 export const siteSettingUpdateBodySchema = z.object({
@@ -159,12 +248,12 @@ export const snapshotRefreshBodySchema = z.object({
   key: snapshotKey.optional(),
   keys: z.array(snapshotKey).max(200).optional(),
 }).strict().refine((body) => !(body.key && body.keys?.length), {
-  message: "Provide either key or keys, not both",
+  message: "key 和 keys 只能提供其中一个。",
 });
 
 export const snapshotClearBodySchema = z.object({
   key: snapshotKey.optional(),
   prefix: snapshotKey.optional(),
 }).strict().refine((body) => !(body.key && body.prefix), {
-  message: "Provide either key or prefix, not both",
+  message: "key 和 prefix 只能提供其中一个。",
 });

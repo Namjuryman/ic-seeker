@@ -23,8 +23,8 @@ export type SiteSettingRow = SiteSettingDefinition & {
 const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   {
     key: "public_registration_enabled",
-    label: "Public registration",
-    description: "Allow visitors to create accounts without an invitation. Keep off during private beta.",
+    label: "开放注册",
+    description: "允许访客无需邀请创建账号。受控开放或数据复核阶段建议保持关闭。",
     groupName: "Access",
     valueType: "boolean",
     defaultValue: false,
@@ -33,8 +33,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "invite_only_mode",
-    label: "Invite-only mode",
-    description: "Treat the product as a controlled private beta even when public pages are reachable.",
+    label: "邀请制访问",
+    description: "即使公共页面可访问，也将核心功能保持在受控邀请范围内。",
     groupName: "Access",
     valueType: "boolean",
     defaultValue: true,
@@ -43,8 +43,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "maintenance_mode",
-    label: "Maintenance mode",
-    description: "Show a public maintenance notice while admin-side ingestion, backup, or migration work is running.",
+    label: "维护模式",
+    description: "当采集、备份或迁移任务运行时，向公开页面展示维护提示。",
     groupName: "Operations",
     valueType: "boolean",
     defaultValue: false,
@@ -53,18 +53,18 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "data_readiness_banner",
-    label: "Data readiness banner",
-    description: "Short public note about metadata-only coverage, source limitations, and verification status.",
+    label: "数据状态提示",
+    description: "面向公开页面的简短说明，用于提示元数据覆盖范围、来源限制和核验状态。",
     groupName: "Operations",
     valueType: "string",
-    defaultValue: "Metadata-only intelligence. PDF access redirects to publisher sources; rankings are exploratory signals.",
+    defaultValue: "当前情报主要基于论文元数据；PDF 访问会跳转到出版方来源，排行仅作为探索性信号。",
     isPublic: true,
     displayOrder: 40,
   },
   {
     key: "ai_reports_enabled",
-    label: "AI reports",
-    description: "Enable paid AI-assisted report entry points after provider budgets and citations are ready.",
+    label: "AI 报告",
+    description: "在模型预算、引用来源和审核边界就绪后，开放 AI 辅助报告入口。",
     groupName: "Commercial",
     valueType: "boolean",
     defaultValue: false,
@@ -73,8 +73,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "export_center_enabled",
-    label: "Advanced exports",
-    description: "Enable paid CSV/BibTeX/portfolio exports after quota enforcement and copyright boundaries are reviewed.",
+    label: "高级导出",
+    description: "在配额约束和版权边界复核后，开放 CSV、BibTeX 和研究组合导出。",
     groupName: "Commercial",
     valueType: "boolean",
     defaultValue: false,
@@ -83,8 +83,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "checkout_enabled",
-    label: "Checkout",
-    description: "Expose real paid checkout only after Stripe/Paddle adapters and webhook verification are implemented.",
+    label: "支付入口",
+    description: "仅在 Stripe/Paddle 适配器和支付回调校验完成后开放真实支付。",
     groupName: "Commercial",
     valueType: "boolean",
     defaultValue: false,
@@ -93,8 +93,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "team_workspace_enabled",
-    label: "Team workspace",
-    description: "Enable lab/team seats, shared reading queues, and workspace-level permissions.",
+    label: "团队工作台",
+    description: "开放实验室/团队席位、共享阅读队列和工作台级权限。",
     groupName: "Commercial",
     valueType: "boolean",
     defaultValue: false,
@@ -103,8 +103,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "paper_discussion_enabled",
-    label: "Paper discussion",
-    description: "Allow public paper comments. Moderation remains admin-controlled.",
+    label: "论文讨论",
+    description: "允许公开论文评论；评论展示仍由管理端审核控制。",
     groupName: "Community",
     valueType: "boolean",
     defaultValue: true,
@@ -113,8 +113,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "mentor_reviews_enabled",
-    label: "Mentor reviews",
-    description: "Allow mentor review submission and display only approved, threshold-protected summaries.",
+    label: "研究者评价",
+    description: "允许提交研究者/课题组评价，仅展示通过审核且满足阈值保护的汇总内容。",
     groupName: "Community",
     valueType: "boolean",
     defaultValue: true,
@@ -123,8 +123,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "company_intelligence_enabled",
-    label: "Company intelligence",
-    description: "Expose company database, comparisons, and related paper links.",
+    label: "企业情报",
+    description: "开放企业数据库、企业对比和相关论文链接。",
     groupName: "Research",
     valueType: "boolean",
     defaultValue: true,
@@ -133,8 +133,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "topic_reports_enabled",
-    label: "Topic reports",
-    description: "Expose deterministic topic reports before AI synthesis is connected.",
+    label: "方向报告",
+    description: "在 AI 综合生成接入前，开放基于规则和元数据的方向报告。",
     groupName: "Research",
     valueType: "boolean",
     defaultValue: true,
@@ -143,8 +143,8 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "weekly_ingestion_enabled",
-    label: "Weekly ingestion",
-    description: "Operational flag for scheduled metadata update jobs. Actual workers still run from admin/backend only.",
+    label: "周度采集",
+    description: "控制定时元数据更新任务；实际执行仍由管理端和后端任务负责。",
     groupName: "Operations",
     valueType: "boolean",
     defaultValue: false,
@@ -153,11 +153,11 @@ const SETTING_DEFINITIONS: SiteSettingDefinition[] = [
   },
   {
     key: "admin_access_policy",
-    label: "Admin access policy",
-    description: "Internal reminder for production admin access controls.",
+    label: "管理端访问策略",
+    description: "生产环境管理端访问控制提醒。",
     groupName: "Access",
     valueType: "string",
-    defaultValue: "Use independent admin domain + backend admin role + Cloudflare Access or VPN.",
+    defaultValue: "使用独立管理域名、后端管理员角色，并配合 Cloudflare Access 或 VPN。",
     isPublic: false,
     displayOrder: 140,
   },
@@ -307,10 +307,10 @@ export const siteSettingsService = {
     ensureDefaults();
     const definition = definitionsByKey.get(key);
     if (!definition) {
-      throw new Error(`Unknown site setting: ${key}`);
+      throw new Error(`未知站点设置：${key}`);
     }
     if (definition.isSensitive) {
-      throw new Error(`${definition.label} is sensitive and cannot be changed through this endpoint.`);
+      throw new Error(`${definition.label} 是敏感设置，不能通过该接口修改。`);
     }
 
     const nextValue = coerceValue(definition, value);

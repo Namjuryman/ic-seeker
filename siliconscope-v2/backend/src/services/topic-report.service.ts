@@ -8,7 +8,7 @@ import { toPaperRow } from "./paper-row.js";
 export const topicReportService = {
   getReport(field: string) {
     const target = String(field || "").trim();
-    if (!target) throw new Error("Topic field is required");
+    if (!target) throw new Error("请输入一个研究方向。");
 
     const detail = topicService.getTopicDetail(target);
     const currentYear = new Date().getFullYear();
@@ -56,10 +56,10 @@ export const topicReportService = {
 
     // Suggested searches
     const suggestedSearches = [
-      { label: `Latest ${target}`, params: { q: target, sort: "year", yearFrom: String(currentYear - 4) } },
-      { label: `Top venues in ${target}`, params: { q: target, sort: "score", rank: "S+" } },
-      { label: `Highly cited ${target}`, params: { q: target, sort: "citations", yearFrom: "2015" } },
-      { label: `${target} review`, params: { q: `${target} review survey`, sort: "citations" } },
+      { label: `${target} 近 5 年论文`, params: { q: target, sort: "year", yearFrom: String(currentYear - 4) } },
+      { label: `${target} S+ 论文`, params: { q: target, sort: "score", rank: "S+" } },
+      { label: `${target} 高引用论文`, params: { q: target, sort: "citations", yearFrom: "2015" } },
+      { label: `${target} 综述/调研`, params: { q: `${target} review survey`, sort: "citations" } },
     ];
 
     return {
@@ -91,7 +91,7 @@ export const topicReportService = {
       relatedCompanies,
       relatedRoadmaps,
       suggestedSearches,
-      caveat: "This report is based on structured publication metadata, not AI-generated analysis. It is intended for directional research exploration, not as a definitive topic ranking.",
+      caveat: "本报告基于结构化论文元数据生成，用于方向探索、检索和对比，不代表最终方向排名或学术结论。",
     };
   },
 };

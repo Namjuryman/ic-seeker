@@ -11,12 +11,12 @@ export const appDbRuntime: AppDbRuntime = appConfig.postgresUrl
   ? {
       provider: "postgres-planned",
       writable: true,
-      description: "POSTGRES_URL is configured, but the current app-db adapter still falls back to SQLite until the Postgres driver is implemented.",
+      description: "已配置 POSTGRES_URL；当前 app-db 适配器仍回退到 SQLite，等待 Postgres 驱动接入。",
     }
   : {
       provider: "sqlite",
       writable: true,
-      description: "Private MVP mode: user, community, admin, and company data are stored in the local SQLite database.",
+      description: "私有 MVP 模式：用户、社区、后台和公司数据存储在本地 SQLite 数据库中。",
     };
 
 // App/business data adapter. Today this intentionally points at SQLite to preserve

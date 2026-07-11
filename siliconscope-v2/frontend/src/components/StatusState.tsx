@@ -23,7 +23,7 @@ interface ErrorStateProps {
   onRetry?: () => void
 }
 
-export function EmptyState({ eyebrow = 'Empty state', title, description, action, tone = 'neutral' }: EmptyStateProps) {
+export function EmptyState({ eyebrow = '暂无内容', title, description, action, tone = 'neutral' }: EmptyStateProps) {
   return (
     <section className={`ss-state ss-state-${tone}`}>
       <span>{eyebrow}</span>
@@ -37,7 +37,7 @@ export function EmptyState({ eyebrow = 'Empty state', title, description, action
 export function ErrorState({ title = '暂时无法加载', description, retryLabel = '重试', onRetry }: ErrorStateProps) {
   return (
     <section className="ss-state ss-state-danger">
-      <span>Error</span>
+      <span>加载失败</span>
       <h2>{title}</h2>
       {description && <p>{description}</p>}
       {onRetry && (

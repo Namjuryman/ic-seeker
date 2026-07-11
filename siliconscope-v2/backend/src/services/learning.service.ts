@@ -1,22 +1,37 @@
 import { searchService } from "./search.service.js";
 import { learningContentService } from "./learning-content.service.js";
+import {
+  localizeFoundationsDisplay,
+  localizeLessonsDisplay,
+  localizeRoadmapsDisplay,
+  localizeRouteFamiliesDisplay,
+} from "./learning-display-localization.js";
 import type { DailyLessonSeed, LearningRoadmapSeed } from "./learning-content.service.js";
 
 const slugAliases: Record<string, string> = {
   "analog-foundations": "analog-mixed-signal",
-  "data-converters": "analog-mixed-signal",
-  "pll-clocking": "analog-mixed-signal",
-  "wireline-serdes": "analog-mixed-signal",
+  "pll-clocking": "clocking-pll-timing",
   "digital-soc-accelerator": "digital-asic",
   "eda-cad-ai": "eda-tools",
 };
 
-function resolveSlug(slug: string): string {
+function resolveSlug(slug: string, roadmaps: LearningRoadmapSeed[]): string {
+  if (roadmaps.some((roadmap) => roadmap.slug === slug)) return slug;
   return slugAliases[slug] || slug;
 }
 
 function activeContent() {
   return learningContentService.activeContent();
+}
+
+function activeDisplayContent() {
+  const { roadmaps, lessons, routeFamilies, commonFoundations } = activeContent();
+  return {
+    roadmaps: localizeRoadmapsDisplay(roadmaps),
+    lessons: localizeLessonsDisplay(lessons),
+    routeFamilies: localizeRouteFamiliesDisplay(routeFamilies),
+    commonFoundations: localizeFoundationsDisplay(commonFoundations),
+  };
 }
 
 function summarizeRoadmap(roadmap: LearningRoadmapSeed, lessons: DailyLessonSeed[]) {
@@ -45,14 +60,14 @@ function lessonWithRoadmap(lesson: DailyLessonSeed, roadmaps: LearningRoadmapSee
 
 export const learningService = {
   getDashboard() {
-    const { roadmaps, lessons, routeFamilies, commonFoundations } = activeContent();
+    const { roadmaps, lessons, routeFamilies, commonFoundations } = activeDisplayContent();
     const today = this.getTodayLesson();
     return {
       generatedAt: new Date().toISOString(),
       caveats: {
-        roadmap: "Learning roadmaps are structured guides for IC research preparation. They are not a substitute for textbooks, lectures, datasheets, or advisor guidance.",
-        lesson: "Lessons are educational placeholders linked to SiliconScope metadata. Verify equations, specs, and paper interpretations before using them in design or research.",
-        intelligence: "Related papers, authors, institutions, and venues are generated from metadata-based search and may be incomplete or noisy.",
+        roadmap: "学习路线用于组织 IC 研究准备，不替代教材、课程、数据手册或指导教师建议。",
+        lesson: "课程内容会关联 SiliconScope 元数据；用于设计或研究前，请复核公式、指标和论文解读。",
+        intelligence: "相关论文、作者、机构和会议来自元数据检索，可能存在缺漏或噪声。",
       },
       summary: {
         roadmaps: roadmaps.length,
@@ -69,13 +84,13 @@ export const learningService = {
   },
 
   listRoadmaps() {
-    const { roadmaps, lessons } = activeContent();
+    const { roadmaps, lessons } = activeDisplayContent();
     return roadmaps.map((roadmap) => summarizeRoadmap(roadmap, lessons));
   },
 
   getRoadmap(slug: string) {
-    const { roadmaps, lessons } = activeContent();
-    const resolved = resolveSlug(slug);
+    const { roadmaps, lessons } = activeDisplayContent();
+    const resolved = resolveSlug(slug, roadmaps);
     const roadmap = roadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
     return {
@@ -86,20 +101,20 @@ export const learningService = {
   },
 
   listLessons(params: Record<string, string> = {}) {
-    const { roadmaps, lessons } = activeContent();
+    const { roadmaps, lessons } = activeDisplayContent();
     const roadmapSlug = params.roadmapSlug || params.roadmap;
     const rows = roadmapSlug ? lessons.filter((lesson) => lesson.roadmapSlug === roadmapSlug) : lessons;
     return rows.map((lesson) => lessonWithRoadmap(lesson, roadmaps));
   },
 
   getLesson(id: string) {
-    const { roadmaps, lessons } = activeContent();
+    const { roadmaps, lessons } = activeDisplayContent();
     const lesson = lessons.find((item) => item.id === id);
     return lesson ? lessonWithRoadmap(lesson, roadmaps) : null;
   },
 
   getTodayLesson(date = new Date()) {
-    const { roadmaps, lessons } = activeContent();
+    const { roadmaps, lessons } = activeDisplayContent();
     if (lessons.length === 0) return null;
     const start = Date.UTC(2026, 0, 1);
     const now = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
@@ -109,7 +124,7 @@ export const learningService = {
 
   relatedPapersForRoadmap(slug: string, userId = 0, limit = 8) {
     const { roadmaps } = activeContent();
-    const resolved = resolveSlug(slug);
+    const resolved = resolveSlug(slug, roadmaps);
     const roadmap = roadmaps.find((item) => item.slug === resolved);
     if (!roadmap) return null;
     const q = roadmap.paperQuery || roadmap.relatedSearchQueries[0] || roadmap.title;
@@ -125,10 +140,10 @@ export const learningService = {
   },
 
   listRouteFamilies() {
-    return activeContent().routeFamilies;
+    return localizeRouteFamiliesDisplay(activeContent().routeFamilies);
   },
 
   listFoundations() {
-    return activeContent().commonFoundations;
+    return localizeFoundationsDisplay(activeContent().commonFoundations);
   },
 };

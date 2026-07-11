@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { api } from '../api'
 import type { CompanyRow, CompanyCompareResult } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 
 function formatNumber(value: string | number | undefined): string {
   if (value === undefined || value === null) return '-'
@@ -42,7 +43,7 @@ export default function CompanyComparePage() {
       const result = await api.companies({ limit: 200 })
       setCompanies(result.rows)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to load companies')
+      setError(friendlyError(err, '加载公司失败'))
     } finally {
       setLoading(false)
     }
@@ -80,7 +81,7 @@ export default function CompanyComparePage() {
   async function handleCompare() {
     const ids = Array.from(selectedIds)
     if (ids.length < 2 || ids.length > 4) {
-      setCompareError('Please select 2–4 companies to compare.')
+      setCompareError('请选择 2–4 家公司进行对比。')
       return
     }
     setCompareLoading(true)
@@ -89,7 +90,7 @@ export default function CompanyComparePage() {
       const result = await api.compareCompanies(ids)
       setCompareResult(result)
     } catch (err: any) {
-      setCompareError(err?.response?.data?.error || err.message || 'Failed to compare companies')
+      setCompareError(friendlyError(err, '公司对比失败'))
     } finally {
       setCompareLoading(false)
     }
@@ -108,11 +109,16 @@ export default function CompanyComparePage() {
       {/* Hero */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Intelligence</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">Compare Companies</h1>
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">公司对比</p>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">半导体公司横向对比</h1>
           <p className="text-sm text-ink-muted mt-1">
-            Select 2–4 companies to compare directions, domains, and fit.
+            选择 2–4 家公司，对比产业链类型、技术方向、产品线和学习/岗位匹配线索。结果不是投资建议，也不是雇主排名。
           </p>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-ink-secondary">
+            <span className="px-2 py-0.5 rounded border border-line bg-surface-elevated">公开来源</span>
+            <span className="px-2 py-0.5 rounded border border-line bg-surface-elevated">字段完整度</span>
+            <span className="px-2 py-0.5 rounded border border-line bg-surface-elevated">非投资/求职结论</span>
+          </div>
         </div>
       </section>
 
@@ -127,9 +133,9 @@ export default function CompanyComparePage() {
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <h2 className="font-semibold text-ink-text">
-            Select Companies{' '}
+            选择公司{' '}
             <span className="text-ink-muted font-normal">
-              ({selectedIds.size} selected)
+              (已选 {selectedIds.size})
             </span>
           </h2>
           <div className="flex gap-2">
@@ -138,24 +144,24 @@ export default function CompanyComparePage() {
               disabled={loading || selectedIds.size === 0}
               className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
             >
-              Clear
+              清空
             </button>
             <button
               onClick={handleCompare}
               disabled={!canCompare || compareLoading}
               className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
             >
-              {compareLoading ? 'Comparing...' : 'Compare'}
+              {compareLoading ? '对比中...' : '开始对比'}
             </button>
           </div>
         </div>
 
         {loading && companies.length === 0 && (
-          <p className="text-sm text-ink-muted">Loading companies...</p>
+          <p className="text-sm text-ink-muted">正在加载公司...</p>
         )}
 
         {!loading && companies.length === 0 && (
-          <p className="text-sm text-ink-muted">No companies available.</p>
+          <p className="text-sm text-ink-muted">暂无可选公司。</p>
         )}
 
         {companies.length > 0 && (
@@ -184,7 +190,7 @@ export default function CompanyComparePage() {
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-ink-text truncate">{company.name || '-'}</div>
                     <div className="text-xs text-ink-muted truncate">
-                      {company.companyType || 'Unknown type'} · {company.country || 'Unknown country'}
+                      {company.companyType || '未知类型'} · {company.country || '未知国家/地区'}
                     </div>
                   </div>
                 </label>
@@ -205,7 +211,7 @@ export default function CompanyComparePage() {
                 <button
                   onClick={() => toggleSelect(c.id)}
                   className="ml-1 text-brand-600 hover:text-brand-800 font-bold"
-                  aria-label={`Remove ${c.name}`}
+                  aria-label={`移除 ${c.name}`}
                 >
                   ×
                 </button>
@@ -227,11 +233,11 @@ export default function CompanyComparePage() {
         <section className="space-y-5">
           {/* Basic Info Table */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm overflow-x-auto">
-            <h2 className="font-semibold text-ink-text mb-4">Basic Information</h2>
+            <h2 className="font-semibold text-ink-text mb-4">基础信息</h2>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                  <th className="py-2 pr-4 font-medium">Attribute</th>
+                  <th className="py-2 pr-4 font-medium">指标</th>
                   {compareResult.companies.map((c) => (
                     <th key={c.id} className="py-2 pr-4 font-medium">{c.name || '-'}</th>
                   ))}
@@ -239,31 +245,31 @@ export default function CompanyComparePage() {
               </thead>
               <tbody className="divide-y divide-line-subtle">
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Type</td>
+                  <td className="py-2 pr-4 text-ink-subtle">类型</td>
                   {compareResult.companies.map((c) => (
                     <td key={c.id} className="py-2 pr-4 text-ink-secondary">{c.companyType || '-'}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Country</td>
+                  <td className="py-2 pr-4 text-ink-subtle">国家/地区</td>
                   {compareResult.companies.map((c) => (
                     <td key={c.id} className="py-2 pr-4 text-ink-secondary">{c.country || '-'}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Founded Year</td>
+                  <td className="py-2 pr-4 text-ink-subtle">成立年份</td>
                   {compareResult.companies.map((c) => (
                     <td key={c.id} className="py-2 pr-4 text-ink-secondary">{formatNumber(c.foundedYear)}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Employee Count</td>
+                  <td className="py-2 pr-4 text-ink-subtle">员工规模</td>
                   {compareResult.companies.map((c) => (
                     <td key={c.id} className="py-2 pr-4 text-ink-secondary">{c.employeeCount || '-'}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Data Confidence</td>
+                  <td className="py-2 pr-4 text-ink-subtle">来源可信度</td>
                   {compareResult.companies.map((c) => (
                     <td key={c.id} className="py-2 pr-4 text-ink-secondary">{formatConfidence(c.dataConfidence)}</td>
                   ))}
@@ -274,11 +280,11 @@ export default function CompanyComparePage() {
 
           {/* Domains */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">IC Domains</h2>
+            <h2 className="font-semibold text-ink-text mb-4">IC 技术方向</h2>
 
             {compareResult.sharedDomains.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs text-ink-subtle mb-2 uppercase tracking-wide">Shared Domains</p>
+                <p className="text-xs text-ink-subtle mb-2 uppercase tracking-wide">共同方向</p>
                 <div className="flex flex-wrap gap-2">
                   {compareResult.sharedDomains.map((d) => (
                     <Badge key={d} tone="green">
@@ -290,14 +296,14 @@ export default function CompanyComparePage() {
             )}
 
             <div className="space-y-3">
-              <p className="text-xs text-ink-subtle uppercase tracking-wide">Per-Company Domains</p>
+              <p className="text-xs text-ink-subtle uppercase tracking-wide">各公司方向</p>
               {compareResult.companies.map((c) => {
                 return (
                   <div key={c.id} className="flex flex-wrap gap-2 items-start">
                     <span className="text-sm font-medium text-ink-text min-w-[120px]">{c.name}:</span>
                     <div className="flex flex-wrap gap-2">
                       {(c.domains || []).length === 0 && (
-                        <span className="text-sm text-ink-muted">No domains listed</span>
+                        <span className="text-sm text-ink-muted">暂无方向数据</span>
                       )}
                       {(c.domains || []).map((d) => (
                         <Badge key={d} tone={compareResult.sharedDomains.includes(d) ? 'green' : 'default'}>
@@ -313,10 +319,10 @@ export default function CompanyComparePage() {
 
           {/* Product Lines */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Product Lines</h2>
+            <h2 className="font-semibold text-ink-text mb-4">产品线</h2>
             {compareResult.sharedProductLines.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs text-ink-subtle mb-2 uppercase tracking-wide">Shared Product Lines</p>
+                <p className="text-xs text-ink-subtle mb-2 uppercase tracking-wide">共同产品线</p>
                 <div className="flex flex-wrap gap-2">
                   {compareResult.sharedProductLines.map((p) => (
                     <Badge key={p} tone="blue">
@@ -327,13 +333,13 @@ export default function CompanyComparePage() {
               </div>
             )}
             <div className="space-y-3">
-              <p className="text-xs text-ink-subtle uppercase tracking-wide">Per-Company Product Lines</p>
+              <p className="text-xs text-ink-subtle uppercase tracking-wide">各公司产品线</p>
               {compareResult.companies.map((c) => (
                 <div key={c.id} className="flex flex-wrap gap-2 items-start">
                   <span className="text-sm font-medium text-ink-text min-w-[120px]">{c.name}:</span>
                   <div className="flex flex-wrap gap-2">
                     {(c.productLines || []).length === 0 && (
-                      <span className="text-sm text-ink-muted">No product lines listed</span>
+                      <span className="text-sm text-ink-muted">暂无产品线数据</span>
                     )}
                     {(c.productLines || []).map((p) => (
                       <Badge
@@ -352,7 +358,7 @@ export default function CompanyComparePage() {
           {/* Fit Matching */}
           {compareResult.fitMatching && Object.keys(compareResult.fitMatching).length > 0 && (
             <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-ink-text mb-4">Fit Matching</h2>
+              <h2 className="font-semibold text-ink-text mb-4">方向匹配</h2>
               <div className="space-y-3">
                 {Object.entries(compareResult.fitMatching).map(([category, companyNames]) => (
                   <div key={category} className="flex flex-wrap gap-2 items-start">
@@ -360,7 +366,7 @@ export default function CompanyComparePage() {
                     <div className="flex flex-wrap gap-2">
                       {companyNames.map((name) => (
                         <Badge key={name} tone="amber">
-                          Better fit for {name}
+                          更匹配 {name}
                         </Badge>
                       ))}
                     </div>
@@ -376,7 +382,7 @@ export default function CompanyComparePage() {
       {selectedIds.size === 0 && !compareResult && (
         <div className="bg-surface-panel border border-line rounded-xl p-8 shadow-sm text-center">
           <p className="text-ink-muted text-sm">
-            Select 2–4 companies above to begin a comparison.
+            选择 2–4 家公司后开始对比。
           </p>
         </div>
       )}
@@ -384,7 +390,7 @@ export default function CompanyComparePage() {
       {/* Caveat */}
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <p className="text-xs text-ink-subtle leading-relaxed">
-          This comparison is based on public metadata and may be incomplete. It is not an investment recommendation or a final employer ranking.
+          公司对比基于公开元数据和本地整理字段，可能不完整或滞后。来源可信度表示字段完整度和可追溯性，不代表公司综合表现。它用于产业研究和学习方向匹配，不构成投资建议、薪资判断或最终雇主排名。
         </p>
       </section>
     </div>

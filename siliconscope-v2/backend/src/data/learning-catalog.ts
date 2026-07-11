@@ -748,7 +748,7 @@ export const learningRoadmaps: LearningRoadmapSeed[] = [
     projectIdeas:     [
           '做 LDO/BUCK/SC converter 架构表',
           '把 DC-DC 论文从 RFIC 误分类中纠正出来',
-          '整理 PMIC 强校/强导师列表'
+          '整理 PMIC 强校/研究者与课题组线索'
         ],
   },
   {
@@ -2555,7 +2555,7 @@ export const learningRoadmaps: LearningRoadmapSeed[] = [
                 kind: 'paper',
                 provider: 'Local database',
                 url: 'localSearch(\'EDA',
-                note: '后续可以用本地论文库生成 reading list。'
+                note: '可用本地论文库生成 reading list。'
               }
             ]
           }
@@ -3862,7 +3862,7 @@ export const learningRoadmaps: LearningRoadmapSeed[] = [
     caveat: '制造/设备/材料路线论文以外还要看白皮书、设备公司资料和产线实践。',
     family: 'device-manufacturing',
     accent: '#64748b',
-    subtitle: '如果 SiliconScope 未来要覆盖“所有 IC”，制造、设备和材料必须和设计路线并列。',
+    subtitle: '要完整理解 IC 产业，制造、设备和材料必须和设计路线并列。',
     paperQuery: 'semiconductor manufacturing OR equipment OR lithography OR etch OR deposition OR metrology',
     venues: ['IEDM', 'VLSI Symposium', 'IRPS'],
     foundation: ['半导体物理', '材料化学', '统计良率', '工艺流程', '供应链地图'],
@@ -3989,7 +3989,7 @@ export const commonFoundations: FoundationGroupSeed[] = [
 export const learningSource = {
   name: 'Crys-Chen/ic-guide',
   url: 'https://github.com/Crys-Chen/ic-guide',
-  note: '路线结构参考 Crys-Chen/ic-guide 的通用学习地图与科研方向导览；已过滤复旦课程表、FDU 课程页和复旦定向导师条目。',
+  note: '路线结构参考 Crys-Chen/ic-guide 的通用学习地图与科研方向导览；已过滤复旦课程表、FDU 课程页和复旦定向人员条目。',
 };
 
 const rawLessons: Array<[string, string, string, string, LessonLevel, number, string[], string[], string[]]> = [

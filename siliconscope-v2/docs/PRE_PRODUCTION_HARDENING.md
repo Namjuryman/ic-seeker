@@ -21,7 +21,7 @@ It is not:
 The mature deployment model is split by hostname:
 
 - `www.example.com`: public product frontend
-- `admin.example.com`: private admin control plane
+- `admin.example.com`: private operations console
 - `api.example.com`: backend API
 
 The public frontend should not bundle admin pages or expose direct admin workflow links. If a public page needs to mention maintenance, it should link to `ADMIN_SITE_URL` as an external admin console entry only.

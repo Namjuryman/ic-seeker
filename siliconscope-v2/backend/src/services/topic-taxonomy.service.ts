@@ -221,7 +221,7 @@ function listFromSeed() {
     },
     nodes: seedTopicNodes,
     tree: seedTree(),
-    caveat: "This taxonomy is a curated IC hierarchy for search, reports, and future paper_topic_edges. Paper-level labels still require confidence scoring and manual correction.",
+    caveat: "这套分类是面向检索、报告和 paper_topic_edges 的 IC 方向层级。论文级标签仍需要置信度信号和人工抽样校正。",
   };
 }
 
@@ -275,7 +275,7 @@ function listFromDatabase() {
     },
     nodes,
     tree: buildTree(nodes),
-    caveat: "This taxonomy is loaded from the database projection. Paper-level topic edges are still heuristic-ready infrastructure until the classifier writes confidence scores.",
+    caveat: "这套分类来自后台方向库。论文级方向关联仍是启发式线索，需要结合置信度和人工复核使用。",
   };
 }
 
@@ -448,9 +448,9 @@ function adminOverview() {
       inSync: missingInDb.length === 0 && extraInDb.length === 0,
     },
     next: [
-      "Review paper_topic_edges samples and tune keyword weights for noisy fields.",
-      "Add admin manual correction for topic aliases and keyword rules.",
-      "Expose topic confidence badges on paper detail and topic reports.",
+      "抽样复核 paper_topic_edges，并为噪声较高的方向调整关键词权重。",
+      "为 topic aliases 和 keyword rules 增加后台人工校正入口。",
+      "在论文详情和方向报告中展示 topic 置信度标记。",
     ],
   };
 }

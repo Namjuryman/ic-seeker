@@ -104,7 +104,7 @@ function sendStaticEntry(req: Request, res: Response, entry: StaticCacheEntry) {
 router.get("/download/csv", requireAuth, async (_req, res) => {
   const stat = await fs.stat(appConfig.csvPath).catch(() => null);
   if (!stat?.isFile()) {
-    res.status(404).json({ error: "CSV not found" });
+    res.status(404).json({ error: "CSV 文件不存在。" });
     return;
   }
 

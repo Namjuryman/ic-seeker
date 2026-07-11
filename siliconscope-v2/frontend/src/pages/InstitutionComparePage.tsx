@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { AutocompleteInput } from '../components/AutocompleteInput'
 import type { InstitutionCompareResult } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 import { institutionPath } from '../utils/routes'
 
 interface InstitutionListItem {
@@ -33,7 +34,7 @@ export default function InstitutionComparePage() {
         setSuggestionsError('')
       })
       .catch((err) => {
-        setSuggestionsError(err?.response?.data?.error || err.message || '加载机构列表失败')
+        setSuggestionsError(friendlyError(err, '加载机构列表失败'))
       })
       .finally(() => setSuggestionsLoading(false))
   }, [])
@@ -42,7 +43,7 @@ export default function InstitutionComparePage() {
     return institutions.map((i) => ({
       label: i.name,
       value: i.name,
-      subtitle: `${i.papers} papers · Score ${i.institutionScore}`,
+      subtitle: `${i.papers} 篇 · 元数据信号 ${i.institutionScore}`,
     }))
   }, [institutions])
 
@@ -68,7 +69,7 @@ export default function InstitutionComparePage() {
   async function handleCompare() {
     const validNames = names.map((n) => n.trim()).filter(Boolean)
     if (validNames.length < 2) {
-      setError('At least 2 institution names are required.')
+      setError('至少需要输入 2 个机构。')
       return
     }
     setLoading(true)
@@ -77,7 +78,7 @@ export default function InstitutionComparePage() {
       const data = await api.compareInstitutions(validNames)
       setResult(data)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to compare institutions')
+      setError(friendlyError(err, '机构对比失败'))
     } finally {
       setLoading(false)
     }
@@ -89,10 +90,10 @@ export default function InstitutionComparePage() {
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Intelligence</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">Compare Institutions</h1>
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">机构对比</p>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">机构论文画像对比</h1>
           <p className="text-sm text-ink-muted mt-1">
-            Enter 2–4 institution names to compare publication volume, quality, and active authors.
+            输入 2–4 个机构，对比 IC 论文覆盖、近年活跃度、方向分布和作者线索。结果依赖机构归一化，不等同于最终机构评价或现任人员名录。
           </p>
         </div>
       </section>
@@ -113,14 +114,14 @@ export default function InstitutionComparePage() {
                 onSelect={(val) => updateName(index, val)}
                 options={autocompleteOptions}
                 loading={suggestionsLoading}
-                placeholder={`Institution name ${index + 1}`}
+                placeholder={`机构名称 ${index + 1}`}
               />
               {names.length > 1 && (
                 <button
                   onClick={() => removeName(index)}
                   className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary hover:bg-surface-soft transition-colors"
                 >
-                  Remove
+                  移除
                 </button>
               )}
             </div>
@@ -139,14 +140,14 @@ export default function InstitutionComparePage() {
             disabled={!canAdd}
             className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
           >
-            Add Institution
+            添加机构
           </button>
           <button
             onClick={handleCompare}
             disabled={!canCompare || loading}
             className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
           >
-            {loading ? 'Comparing...' : 'Compare'}
+            {loading ? '对比中...' : '开始对比'}
           </button>
         </div>
       </section>
@@ -155,11 +156,11 @@ export default function InstitutionComparePage() {
         <section className="space-y-5">
           {/* Basic Info Table */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm overflow-x-auto">
-            <h2 className="font-semibold text-ink-text mb-4">Overview</h2>
+            <h2 className="font-semibold text-ink-text mb-4">概览</h2>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                  <th className="py-2 pr-4 font-medium">Attribute</th>
+                  <th className="py-2 pr-4 font-medium">指标</th>
                   {result.institutions.map((inst) => (
                     <th key={inst.name} className="py-2 pr-4 font-medium">
                       <Link to={institutionPath(inst.name)} className="hover:text-brand-600 transition-colors">
@@ -171,43 +172,43 @@ export default function InstitutionComparePage() {
               </thead>
               <tbody className="divide-y divide-line-subtle">
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Total Papers</td>
+                  <td className="py-2 pr-4 text-ink-subtle">论文总数</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.totalPapers}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Recent Papers (5y)</td>
+                  <td className="py-2 pr-4 text-ink-subtle">近 5 年论文</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.recentPapers}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Avg Score</td>
+                  <td className="py-2 pr-4 text-ink-subtle">元数据信号均值</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.avgScore}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Citations</td>
+                  <td className="py-2 pr-4 text-ink-subtle">引用</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.citations.toLocaleString()}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">Country</td>
+                  <td className="py-2 pr-4 text-ink-subtle">国家/地区</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.country || '-'}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">City</td>
+                  <td className="py-2 pr-4 text-ink-subtle">城市</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.city || '-'}</td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-2 pr-4 text-ink-subtle">QS World Rank</td>
+                  <td className="py-2 pr-4 text-ink-subtle">QS 参考位次</td>
                   {result.institutions.map((inst) => (
                     <td key={inst.name} className="py-2 pr-4 text-ink-secondary">{inst.qs?.qsWorldRank ?? '-'}</td>
                   ))}
@@ -218,7 +219,7 @@ export default function InstitutionComparePage() {
 
           {/* Top Fields */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Top Fields</h2>
+            <h2 className="font-semibold text-ink-text mb-4">主要方向</h2>
             <div className="space-y-3">
               {result.institutions.map((inst) => (
                 <div key={inst.name}>
@@ -229,7 +230,7 @@ export default function InstitutionComparePage() {
                         {f.key} ({f.count})
                       </span>
                     ))}
-                    {inst.topFields.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {inst.topFields.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -238,7 +239,7 @@ export default function InstitutionComparePage() {
 
           {/* Active Authors */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Active Authors</h2>
+            <h2 className="font-semibold text-ink-text mb-4">活跃作者线索</h2>
             <div className="space-y-3">
               {result.institutions.map((inst) => (
                 <div key={inst.name}>
@@ -249,7 +250,7 @@ export default function InstitutionComparePage() {
                         {a.name} ({a.count})
                       </span>
                     ))}
-                    {inst.activeAuthors.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {inst.activeAuthors.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -258,7 +259,7 @@ export default function InstitutionComparePage() {
 
           {/* Venue Rank Distribution */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-            <h2 className="font-semibold text-ink-text mb-4">Venue Rank Distribution</h2>
+            <h2 className="font-semibold text-ink-text mb-4">会议/期刊等级分布</h2>
             <div className="space-y-3">
               {result.institutions.map((inst) => (
                 <div key={inst.name}>
@@ -274,7 +275,7 @@ export default function InstitutionComparePage() {
                         {r.key}: {r.count}
                       </span>
                     ))}
-                    {inst.venueRankDistribution.length === 0 && <span className="text-xs text-ink-muted">No data</span>}
+                    {inst.venueRankDistribution.length === 0 && <span className="text-xs text-ink-muted">暂无数据</span>}
                   </div>
                 </div>
               ))}
@@ -285,13 +286,13 @@ export default function InstitutionComparePage() {
 
       {activeNames.length === 0 && !result && (
         <div className="bg-surface-panel border border-line rounded-xl p-8 shadow-sm text-center">
-          <p className="text-ink-muted text-sm">Enter 2–4 institution names to begin a comparison.</p>
+          <p className="text-ink-muted text-sm">输入 2–4 个机构后开始对比。</p>
         </div>
       )}
 
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <p className="text-xs text-ink-subtle leading-relaxed">
-          {result?.caveat || 'This comparison is based on available publication metadata and institution name normalization. It is not a final ranking of academic strength.'}
+          {result?.caveat || '机构对比基于可用论文元数据和机构名称归一化结果，不是最终机构评价或现任人员名录；分校、实验室、历史名称和作者流动仍需人工复核。'}
         </p>
       </section>
     </div>

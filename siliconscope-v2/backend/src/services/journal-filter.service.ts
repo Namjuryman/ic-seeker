@@ -94,17 +94,17 @@ export const journalFilterService = {
     else if (score >= threshold - reviewWindow || hasNegativeConflict) decision = "review";
 
     return {
-      venue: venue?.venue || input.venue || "Unknown",
+      venue: venue?.venue || input.venue || "会议/期刊待确认",
       threshold,
       score,
       decision,
       hasStrongEvidence,
       hits: buckets,
       reason: decision === "insert"
-        ? "score meets threshold with strong IC evidence"
+        ? "分数达到阈值，且有较强 IC 相关证据"
         : decision === "review"
-          ? "borderline score or negative-keyword conflict"
-          : "not enough IC evidence",
+          ? "分数接近阈值或存在负向关键词冲突"
+          : "IC 相关证据不足",
     };
   },
 };

@@ -21,7 +21,7 @@ type CandidateAction = "apply" | "reject" | "undo" | "split-required";
 
 function aliasType(value: unknown): AliasType {
   const type = String(value || "").trim();
-  if (type !== "author" && type !== "institution") throw new Error("Alias type must be author or institution");
+  if (type !== "author" && type !== "institution") throw new Error("别名类型必须是 author 或 institution。");
   return type;
 }
 
@@ -66,7 +66,7 @@ function candidateTable(type: AliasType): string {
 function candidateAction(value: unknown): CandidateAction {
   const action = cleanText(value, 80).replace(/_/g, "-") as CandidateAction;
   if (!["apply", "reject", "undo", "split-required"].includes(action)) {
-    throw new Error("Candidate action must be apply, reject, undo, or split-required");
+    throw new Error("候选操作必须是 apply、reject、undo 或 split-required。");
   }
   return action;
 }
@@ -123,11 +123,11 @@ export const identityAdminService = {
     const type = aliasType(typeValue);
     const rawAlias = cleanText(body.alias, 240);
     const canonicalName = cleanText(body.canonicalName, 240);
-    if (!rawAlias) throw new Error("Alias is required");
-    if (!canonicalName) throw new Error("Canonical name is required");
+    if (!rawAlias) throw new Error("别名不能为空。");
+    if (!canonicalName) throw new Error("标准名称不能为空。");
 
     const alias = normalizedAlias(type, rawAlias);
-    if (!alias) throw new Error("Alias normalizes to an empty key");
+    if (!alias) throw new Error("别名归一化后为空，无法保存。");
 
     if (type === "author") {
       appDb.run(sql`
@@ -223,7 +223,7 @@ export const identityAdminService = {
     const type = aliasType(typeValue);
     const candidateId = cleanText(id, 240);
     const status = cleanText(statusValue, 80);
-    if (!["pending", "approved", "rejected", "merged", "split_required"].includes(status)) throw new Error("Invalid candidate status");
+    if (!["pending", "approved", "rejected", "merged", "split_required"].includes(status)) throw new Error("候选状态无效。");
     const table = type === "author" ? "author_identity_candidates" : "institution_identity_candidates";
     sqlite.prepare(`UPDATE ${table} SET review_status = @status, updated_at = CURRENT_TIMESTAMP WHERE id = @id`).run({ id: candidateId, status });
     return { type, id: candidateId, status };
@@ -233,14 +233,14 @@ export const identityAdminService = {
     const type = aliasType(typeValue);
     const action = candidateAction(actionValue);
     const candidateId = cleanText(id, 240);
-    if (!candidateId) throw new Error("Candidate id is required");
+    if (!candidateId) throw new Error("候选 ID 不能为空。");
 
     const table = candidateTable(type);
     const row = sqlite.prepare(`SELECT * FROM ${table} WHERE id = @id`).get({ id: candidateId }) as any;
-    if (!row) throw new Error("Identity candidate not found");
+    if (!row) throw new Error("身份候选项不存在。");
 
     const canonicalName = cleanText(row.canonical_name, 240);
-    if (!canonicalName) throw new Error("Candidate canonical name is empty");
+    if (!canonicalName) throw new Error("候选项标准名称为空。");
 
     const aliases = candidateAliases(type, row);
     const candidateConfidence = confidence(row.confidence);
@@ -335,7 +335,7 @@ export const identityAdminService = {
   deleteAlias(typeValue: unknown, aliasValue: unknown) {
     const type = aliasType(typeValue);
     const rawAlias = cleanText(aliasValue, 240);
-    if (!rawAlias) throw new Error("Alias is required");
+    if (!rawAlias) throw new Error("别名不能为空。");
     const alias = normalizedAlias(type, rawAlias);
     if (type === "author") {
       appDb.run(sql`DELETE FROM author_aliases WHERE alias = ${alias}`);

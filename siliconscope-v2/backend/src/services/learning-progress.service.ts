@@ -12,17 +12,17 @@ const VALID_STATUSES = new Set<LearningProgressStatus>(["not_started", "in_progr
 
 function normalizeTargetType(value: string): LearningTargetType {
   if (VALID_TARGETS.has(value as LearningTargetType)) return value as LearningTargetType;
-  throw new Error("targetType must be roadmap or lesson");
+  throw new Error("学习目标类型必须是 roadmap 或 lesson。");
 }
 
 function normalizeStatus(value: string): LearningProgressStatus {
   if (VALID_STATUSES.has(value as LearningProgressStatus)) return value as LearningProgressStatus;
-  throw new Error("status must be not_started, in_progress, completed, or review_later");
+  throw new Error("学习状态必须是 not_started、in_progress、completed 或 review_later。");
 }
 
 function assertTargetExists(targetType: LearningTargetType, targetId: string) {
   const row = targetType === "roadmap" ? learningService.getRoadmap(targetId) : learningService.getLesson(targetId);
-  if (!row) throw new Error(`${targetType} not found`);
+  if (!row) throw new Error(targetType === "roadmap" ? "学习路线不存在。" : "课程不存在。");
 }
 
 function mapProgress(row: any) {
@@ -122,14 +122,14 @@ export const learningProgressService = {
     const result = targetType === "roadmap"
       ? learningService.relatedPapersForRoadmap(targetId, userId, cappedLimit)
       : learningService.relatedPapersForLesson(targetId, userId, cappedLimit);
-    if (!result) throw new Error(`${targetType} not found`);
+    if (!result) throw new Error("学习内容不存在。");
 
     const queued: number[] = [];
     const errors: Array<{ paperId: number; error: string }> = [];
     for (const paper of result.rows || []) {
       const update = readingQueueService.updateReadingStatus(userId, paper.id, "review_later");
       if (update.ok) queued.push(paper.id);
-      else errors.push({ paperId: paper.id, error: update.error || "Failed to queue paper" });
+      else errors.push({ paperId: paper.id, error: update.error || "加入阅读队列失败。" });
     }
 
     appDb.insert(learningProgress)

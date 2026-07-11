@@ -16,7 +16,7 @@ const actionToStatus: Record<string, "approved" | "rejected" | "pending"> = {
 function normalizeAction(action: string) {
   const clean = String(action || "").trim();
   const status = actionToStatus[clean];
-  if (!status) throw new Error("Invalid action");
+  if (!status) throw new Error("审核操作无效。");
   return { action: clean, status };
 }
 
@@ -108,10 +108,10 @@ export const moderationService = {
   },
 
   report(targetType: string, targetId: number, reporterUserId: number | null, reason: string) {
-    if (!allowedTargets.has(targetType)) throw new Error("Invalid target type");
-    if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("Invalid target id");
+    if (!allowedTargets.has(targetType)) throw new Error("举报对象类型无效。");
+    if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("举报对象 ID 无效。");
     const cleanReason = String(reason || "").trim().slice(0, 1000);
-    if (!cleanReason) throw new Error("Report reason is required");
+    if (!cleanReason) throw new Error("举报原因不能为空。");
     const row = appDb.insert(contentReports).values({
       targetType,
       targetId,
@@ -123,9 +123,9 @@ export const moderationService = {
   },
 
   moderate(targetType: string, targetId: number, action: string, moderatorId: number | null, reason = "") {
-    if (!allowedTargets.has(targetType)) throw new Error("Invalid target type");
+    if (!allowedTargets.has(targetType)) throw new Error("审核对象类型无效。");
     const normalized = normalizeAction(action);
-    if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("Invalid target id");
+    if (!Number.isFinite(targetId) || targetId <= 0) throw new Error("审核对象 ID 无效。");
 
     if (targetType === "paper_comment") {
       appDb.update(paperComments).set({ moderationStatus: normalized.status }).where(eq(paperComments.id, targetId)).run();

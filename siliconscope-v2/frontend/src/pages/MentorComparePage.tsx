@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { AutocompleteInput } from '../components/AutocompleteInput'
 import type { MentorCompareResult } from '../types'
+import { friendlyError } from '../utils/errorMessages'
 import { mentorPath } from '../utils/routes'
 
 interface AuthorListItem {
@@ -13,6 +14,14 @@ interface AuthorListItem {
   s: number
   a: number
   citations: number
+}
+
+const reviewDimensionLabels: Record<string, string> = {
+  overall: '综合',
+  researchFit: '方向匹配',
+  mentoringStyle: '指导方式',
+  workload: '工作强度',
+  communication: '沟通',
 }
 
 export default function MentorComparePage() {
@@ -33,7 +42,7 @@ export default function MentorComparePage() {
         setSuggestionsError('')
       })
       .catch((err) => {
-        setSuggestionsError(err?.response?.data?.error || err.message || '加载学者列表失败')
+        setSuggestionsError(friendlyError(err, '加载学者列表失败'))
       })
       .finally(() => setSuggestionsLoading(false))
   }, [])
@@ -42,7 +51,7 @@ export default function MentorComparePage() {
     return authors.map((a) => ({
       label: a.name,
       value: a.name,
-      subtitle: `${a.papers} papers · Score ${a.authorScore} · S+ ${a.sPlus}`,
+      subtitle: `${a.papers} 篇 · 元数据信号 ${a.authorScore} · S+ ${a.sPlus}`,
     }))
   }, [authors])
 
@@ -68,7 +77,7 @@ export default function MentorComparePage() {
   async function handleCompare() {
     const validNames = names.map((n) => n.trim()).filter(Boolean)
     if (validNames.length < 2) {
-      setError('At least 2 mentor names are required.')
+      setError('至少需要输入 2 位研究者。')
       return
     }
     setLoading(true)
@@ -77,7 +86,7 @@ export default function MentorComparePage() {
       const data = await api.compareMentors(validNames)
       setResult(data)
     } catch (err: any) {
-      setError(err?.response?.data?.error || err.message || 'Failed to compare mentors')
+      setError(friendlyError(err, '研究者对比失败'))
     } finally {
       setLoading(false)
     }
@@ -89,17 +98,17 @@ export default function MentorComparePage() {
     <div className="max-w-7xl mx-auto space-y-5">
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <div>
-          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">Intelligence</p>
-          <h1 className="text-2xl font-bold text-ink-text mt-0.5">导师口碑对比</h1>
+          <p className="text-xs font-semibold text-ink-subtle uppercase tracking-wide">研究者体验</p>
+          <h1 className="text-2xl font-bold text-ink-text mt-0.5">研究者/课题组体验线索对比</h1>
           <p className="text-sm text-ink-muted mt-1">
-            基于匿名评价横向对比 2–4 位导师。数据维度：指导质量、方向匹配、组内氛围等。
+            基于已审核匿名评价横向对比 2–4 位研究者。数据维度包括指导方式、方向匹配、沟通和组内体验。
           </p>
         </div>
       </section>
 
       <section className="bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm">
         <p className="text-sm text-amber-800 leading-relaxed">
-          <strong>注意：</strong>此处对比仅基于匿名评价，不是论文维度对比。如需查看学术产出，请去「导师档案」页面。
+          <strong>注意：</strong>此处对比仅基于匿名评价和样本阈值，不是论文维度对比，也不是研究者排名。如需查看学术产出，请去「研究者档案」页面。
         </p>
       </section>
 
@@ -119,14 +128,14 @@ export default function MentorComparePage() {
                 onSelect={(val) => updateName(index, val)}
                 options={autocompleteOptions}
                 loading={suggestionsLoading}
-                placeholder={`Mentor name ${index + 1}`}
+                placeholder={`研究者姓名 ${index + 1}`}
               />
               {names.length > 1 && (
                 <button
                   onClick={() => removeName(index)}
                   className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary hover:bg-surface-soft transition-colors"
                 >
-                  Remove
+                  移除
                 </button>
               )}
             </div>
@@ -145,14 +154,14 @@ export default function MentorComparePage() {
             disabled={!canAdd}
             className="px-3 py-2 rounded-lg bg-surface-elevated border border-line text-sm text-ink-secondary disabled:opacity-50 hover:bg-surface-soft transition-colors"
           >
-            Add Mentor
+            添加研究者
           </button>
           <button
             onClick={handleCompare}
             disabled={!canCompare || loading}
             className="px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-medium disabled:opacity-50 hover:bg-brand-700 transition-colors"
           >
-            {loading ? 'Comparing...' : 'Compare'}
+            {loading ? '对比中...' : '开始对比'}
           </button>
         </div>
       </section>
@@ -161,14 +170,14 @@ export default function MentorComparePage() {
         <section className="space-y-5">
           {/* Review Count & Visibility */}
           <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm overflow-x-auto">
-            <h2 className="font-semibold text-ink-text mb-4">Review Availability</h2>
+            <h2 className="font-semibold text-ink-text mb-4">评价可见性</h2>
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                  <th className="py-2 pr-4 font-medium">Mentor</th>
-                  <th className="py-2 pr-4 font-medium">Approved Reviews</th>
-                  <th className="py-2 pr-4 font-medium">Visibility Level</th>
-                  <th className="py-2 pr-4 font-medium">Profile</th>
+                  <th className="py-2 pr-4 font-medium">研究者</th>
+                  <th className="py-2 pr-4 font-medium">已公开评价</th>
+                  <th className="py-2 pr-4 font-medium">展示等级</th>
+                  <th className="py-2 pr-4 font-medium">档案</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-subtle">
@@ -187,12 +196,12 @@ export default function MentorComparePage() {
                         m.visibilityLevel === 'summary' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                         'bg-green-50 text-green-700 border-green-100'
                       }`}>
-                        {m.visibilityLevel}
+                        {m.visibilityLevel === 'insufficient' ? '样本不足' : m.visibilityLevel === 'aggregate' ? '仅聚合' : m.visibilityLevel === 'summary' ? '摘要' : '可展示'}
                       </span>
                     </td>
                     <td className="py-2 pr-4">
                       <Link to={m.publicationProfileLink} className="text-xs text-brand-600 hover:underline">
-                        View Profile
+                        查看档案
                       </Link>
                     </td>
                   </tr>
@@ -204,11 +213,11 @@ export default function MentorComparePage() {
           {/* Aggregate Scores */}
           {result.mentors.some((m) => m.aggregate) && (
             <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm overflow-x-auto">
-              <h2 className="font-semibold text-ink-text mb-4">Aggregate Scores</h2>
+              <h2 className="font-semibold text-ink-text mb-4">匿名评价聚合</h2>
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b border-line-strong text-left text-xs text-ink-subtle uppercase tracking-wide">
-                    <th className="py-2 pr-4 font-medium">Dimension</th>
+                    <th className="py-2 pr-4 font-medium">维度</th>
                     {result.mentors.map((m) => (
                       <th key={m.name} className="py-2 pr-4 font-medium">{m.name}</th>
                     ))}
@@ -217,7 +226,9 @@ export default function MentorComparePage() {
                 <tbody className="divide-y divide-line-subtle">
                   {['overall', 'researchFit', 'mentoringStyle', 'workload', 'communication'].map((dim) => (
                     <tr key={dim}>
-                      <td className="py-2 pr-4 text-ink-subtle capitalize">{dim.replace(/([A-Z])/g, ' $1').trim()}</td>
+                      <td className="py-2 pr-4 text-ink-subtle">
+                        {reviewDimensionLabels[dim] || dim}
+                      </td>
                       {result.mentors.map((m) => {
                         const val = m.aggregate?.[dim as keyof typeof m.aggregate] as number | null
                         return (
@@ -236,7 +247,7 @@ export default function MentorComparePage() {
           {/* Summaries */}
           {result.mentors.some((m) => m.summary) && (
             <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-ink-text mb-4">Review Summaries</h2>
+              <h2 className="font-semibold text-ink-text mb-4">评价摘要</h2>
               <div className="space-y-4">
                 {result.mentors.filter((m) => m.summary).map((m) => (
                   <div key={m.name} className="border-l-4 border-brand-300 pl-4">
@@ -248,10 +259,10 @@ export default function MentorComparePage() {
             </div>
           )}
 
-          {/* Curated Comments */}
+          {/* Reviewed Comments */}
           {result.mentors.some((m) => m.curatedComments.length > 0) && (
             <div className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
-              <h2 className="font-semibold text-ink-text mb-4">Curated Comments</h2>
+              <h2 className="font-semibold text-ink-text mb-4">已审核匿名评论</h2>
               <div className="space-y-4">
                 {result.mentors.filter((m) => m.curatedComments.length > 0).map((m) => (
                   <div key={m.name}>
@@ -274,8 +285,7 @@ export default function MentorComparePage() {
           {result.mentors.some((m) => m.visibilityLevel === 'insufficient') && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
               <p className="text-sm text-red-800">
-                Some mentors have fewer than 3 approved reviews. Their data is hidden for privacy protection. 
-                Please check their individual profile pages for publication-based information.
+                部分研究者通过审核的评价少于 3 条。为保护隐私，系统不会展示聚合评价；可进入个人档案查看论文维度信息。
               </p>
             </div>
           )}
@@ -284,13 +294,13 @@ export default function MentorComparePage() {
 
       {activeNames.length === 0 && !result && (
         <div className="bg-surface-panel border border-line rounded-xl p-8 shadow-sm text-center">
-          <p className="text-ink-muted text-sm">Enter 2–4 mentor names to begin a comparison.</p>
+          <p className="text-ink-muted text-sm">输入 2–4 位研究者后开始对比。</p>
         </div>
       )}
 
       <section className="bg-surface-panel border border-line rounded-xl p-5 shadow-sm">
         <p className="text-xs text-ink-subtle leading-relaxed">
-          {result?.caveat || 'Mentor comparison is verified anonymous and threshold-protected. It is intended for group experience and fit matching, not ranking or personal attacks.'}
+          {result?.caveat || '研究者/课题组体验线索对比基于通过审核的匿名评价，并受样本阈值保护。它用于了解课题组体验和匹配度，不用于排名、人身攻击或未经核实的指控。'}
         </p>
       </section>
     </div>

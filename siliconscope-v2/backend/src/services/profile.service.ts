@@ -103,7 +103,7 @@ function paperListForProfile(rows: Array<typeof papers.$inferSelect>) {
 }
 
 function candidateRowsByAuthor(name: string) {
-  const variants = authorIdentityService.variantsFor(name);
+  const variants = authorIdentityService.searchTermsFor(name);
   const seen = new Map<number, typeof papers.$inferSelect>();
   for (const variant of variants) {
     const rows = metadataDb.select().from(papers)
@@ -201,7 +201,7 @@ export const profileService = {
     for (const row of rows) {
       for (const author of splitList(row.authors)) {
         const identity = authorIdentityService.canonicalize(author);
-        if (identity.normalizedKey === requestedIdentity.normalizedKey) rawAliases.add(author);
+        if (authorIdentityService.sameAuthor(author, name)) rawAliases.add(author);
         else if (identity.canonicalName) coauthors.set(identity.canonicalName, (coauthors.get(identity.canonicalName) || 0) + 1);
       }
       for (const institution of institutionIdentityService.canonicalizeList(row.affiliations)) {
@@ -228,7 +228,7 @@ export const profileService = {
         normalizedKey: requestedIdentity.normalizedKey,
         aliases: [...rawAliases].sort(),
         confidence: requestedIdentity.confidence,
-        caveat: "Author identity is normalized and may still need OpenAlex/ORCID/manual merge-split verification.",
+        caveat: "作者身份经过姓名归一，但仍可能需要 OpenAlex、ORCID 或人工合并/拆分复核。",
       },
       ...summary,
       coauthors: [...coauthors.entries()]
@@ -353,7 +353,7 @@ export const profileService = {
         geoConfidence: requestedIdentity.geoConfidence,
         matchStatus: requestedIdentity.matchStatus,
         mergedSubunits: requestedIdentity.mergedSubunits,
-        caveat: "Institution identity uses alias normalization and may still need ROR/OpenAlex/manual verification.",
+        caveat: "机构身份使用别名归一，仍可能需要 ROR、OpenAlex 或人工复核。",
       },
       ...summary,
       authors: [...authors.entries()]

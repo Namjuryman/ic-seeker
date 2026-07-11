@@ -46,7 +46,7 @@ function geoPoint(name: string) {
     canonicalName: alias.canonical_name,
     countryCode: alias.country_code,
     countryName: alias.country_name,
-    region: alias.country_name || "Unknown",
+      region: alias.country_name || "待确认",
     city: alias.city,
     latitude: null,
     longitude: null,
@@ -89,11 +89,11 @@ export const entityIntelligenceService = {
       representativeAuthors: profile.authors || [],
       collaborationHints: {
         coauthorInstitutions: [],
-        note: "Collaboration graph requires normalized institution edges; use this as a metadata-based starting point only.",
+        note: "合作图谱依赖已归一化的机构边；当前仅适合作为元数据线索起点。",
       },
       confidence,
       confidenceBucket: confidenceBucket(confidence),
-      caveat: "Institution intelligence is metadata-based and depends on author/institution normalization completeness. It is not an admission guarantee, ranking, or final academic evaluation.",
+      caveat: "机构情报基于论文元数据，依赖作者和机构归一化完整度；不等同于录取保证、官方排名或最终学术评价。",
     };
   },
 
@@ -124,9 +124,9 @@ export const entityIntelligenceService = {
       reviewPolicy: {
         thresholdProtected: true,
         commentsReturnedOnlyAtApprovedCountAtLeast: 10,
-        note: "Anonymous mentor review summaries must pass backend threshold protection and moderation before display.",
+        note: "匿名研究者评价汇总必须通过阈值保护和审核后才会展示。",
       },
-      caveat: "Mentor intelligence combines publication metadata and threshold-protected community information. It is not a blacklist, ranking, or admission/employment advice.",
+      caveat: "研究者画像结合论文元数据和阈值保护后的社区信息；不构成定性裁决、录取建议或就业建议。",
     };
   },
 
@@ -144,8 +144,8 @@ export const entityIntelligenceService = {
       careerDirections: company.careerRoles || [],
       relatedPapers: papers?.rows || papers?.papers || [],
       relatedRoadmaps: roadmaps?.roadmaps || roadmaps || [],
-      marketDataCaveat: "Market data is contextual metadata only. SiliconScope does not provide investment advice.",
-      companyDataPolicy: "Company intelligence uses public metadata, official/company sources where possible, and field-level provenance. It is not a company blacklist, employee review wall, or recruiting crawler.",
+      marketDataCaveat: "行情数据仅作为背景元数据。SiliconScope 不提供投资建议。",
+      companyDataPolicy: "企业情报尽量使用公开元数据、官方/企业来源和字段级溯源；不作为企业定性裁决、员工评价或招聘抓取。",
     };
   },
 
@@ -166,13 +166,13 @@ export const entityIntelligenceService = {
         const key = institutionIdentityService.normalizeKey(inst);
         const geo = byKey.get(key);
         if (!geo?.city && !geo?.country_name) continue;
-        const cityKey = [geo.country_code || geo.country_name || "XX", geo.city || "Unknown"].join("|");
+        const cityKey = [geo.country_code || geo.country_name || "XX", geo.city || "待确认城市"].join("|");
         const entry = cityMap.get(cityKey) || {
           key: cityKey,
           countryCode: geo.country_code,
           countryName: geo.country_name,
           region: geo.region,
-          city: geo.city || "Unknown",
+          city: geo.city || "待确认城市",
           latitude: geo.latitude,
           longitude: geo.longitude,
           papers: 0,
@@ -206,7 +206,7 @@ export const entityIntelligenceService = {
       filters: params,
       totalCities: rows.length,
       rows,
-      caveat: "City-level map requires manual or trusted geocoding for institutions. Missing/ambiguous affiliations are excluded rather than guessed aggressively.",
+      caveat: "城市级地图依赖人工或可信地理编码；缺失或模糊的单位会被排除，而不是强行猜测。",
     };
   },
 };

@@ -11,7 +11,7 @@ This document records the current product modules and the next high-value improv
 | Mentor Intelligence | Partial | Builds a mentor/institution view for applicants and students. | Add verified reviews, abuse controls, and career timeline enrichment. |
 | Company Intelligence | Partial | Connects IC papers, roadmaps, companies, jobs, and supply chain. | Add job/news/source ingestion and confidence review workflow. |
 | Learning and Daily Circuit | Ready | Makes the database useful for self-study, not only search. Current seed catalog has 23 route maps and 38 daily lessons, with a DB-backed content registry, admin sync/editing, normalized projection tables, quality scoring, per-user progress state, and reading queue handoff. | Add type-specific structured editors, spaced review scheduling, route diagrams, and completion analytics. |
-| Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is strong and which venues matter. | Improve city-level geocoding, venue weights, and expose paper-topic confidence filters. |
+| Geo, Topic, and Venue Intelligence | Partial | Helps answer where a field is active and which venues matter. | Improve city-level geocoding, venue weights, and expose paper-topic confidence filters. |
 | Content Quality and Knowledge Graph | Partial | Turns raw metadata into trusted product content: topic taxonomy, provenance, confidence, and weekly diffs. Topic nodes, aliases, keyword rules, and heuristic paper-topic edges now have DB projections plus admin refresh. | Add paper-topic sample review, manual correction, content-quality checks, source-backed claims, and report templates. |
 | Data Operations | Partial | Keeps weekly updates manageable. | Add scheduled ingestion jobs and snapshot diff reports. |
 | Commercial Stack | Partial | Required for public SaaS. Runtime checks, audit logs, independent admin, pull notifications, independent-domain deploy templates, billing catalog, usage ledger, partial quota enforcement, admin plan management, local backup operations, maintenance task records, and optional search-index controls are in place. | Connect PostgreSQL, Redis, object storage, payment checkout/webhooks, email, realtime delivery, and observability. |
@@ -22,7 +22,7 @@ The current backend now has explicit adapter boundaries:
 
 - `metadataDb`: paper corpus, FTS, venue, topic, institution, and author-derived reads.
 - `appDb`: user, community, company, review, admin, and mutable product data.
-- `cacheDb`: computed snapshots and ranking payloads.
+- `cacheDb`: computed snapshots and aggregate payloads.
 - `searchIndexService`: rebuildable Meilisearch read model for papers, companies, and learning routes, with SQLite as the fallback search path.
 
 The SQLite fallback remains intentional for private/local use. Public deployment should move app/business tables first, then snapshots, then full search.
@@ -114,4 +114,4 @@ Only after the above is stable:
 
 ## Product Principle
 
-Do not hide uncertain data. Mark it as inferred, show confidence, and give the admin a way to correct it. SiliconScope should feel like a research cockpit, not a magic ranking black box.
+Do not hide uncertain data. Mark it as inferred, show confidence, and give the admin a way to correct it. SiliconScope should feel like a research cockpit, not a magic evaluation black box.

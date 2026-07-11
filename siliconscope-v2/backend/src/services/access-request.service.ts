@@ -43,7 +43,7 @@ function cleanText(value: unknown, max = 1000) {
 function normalizeEmail(value: unknown) {
   const email = cleanText(value, 254).toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("A valid email is required.");
+    throw new Error("请输入有效邮箱。");
   }
   return email;
 }
@@ -135,7 +135,7 @@ export const accessRequestService = {
 
   get(id: number) {
     const row = appSqlite.prepare(`${selectSql("WHERE id = ?")}`).get(id);
-    if (!row) throw new Error("Access request not found.");
+    if (!row) throw new Error("没有找到这条访问申请。");
     return toRow(row);
   },
 
@@ -180,7 +180,7 @@ export const accessRequestService = {
   updateStatus(id: number, input: UpdateAccessRequestInput) {
     const status = cleanText(input.status, 40) as AccessRequestStatus;
     if (!VALID_STATUSES.has(status)) {
-      throw new Error("status must be pending, approved, rejected, or invited.");
+      throw new Error("申请状态必须是待审核、已通过、未通过或已邀请。");
     }
 
     const notes = input.notes == null ? null : cleanText(input.notes, 2000);

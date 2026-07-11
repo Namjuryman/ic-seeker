@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { EntityLink } from '../components/EntityLink'
+import { formatLessonLevel } from '../utils/learningLabels'
 import { searchPath } from '../utils/routes'
 import type { DailyCircuitItem } from '../types'
 
@@ -11,7 +12,7 @@ function CircuitCard({ item, featured = false }: { item: DailyCircuitItem; featu
     mutationFn: async (query: string) => {
       const search = await api.search({ q: query, limit: 5, semantic: 1 })
       const first = search.rows?.[0]
-      if (!first) return { queued: 0, message: 'No matching papers found yet.' }
+      if (!first) return { queued: 0, message: '暂时没有找到匹配论文。' }
       await api.updateReadingQueue(first.id, { readingStatus: 'review_later', useCases: ['learning'] })
       return { queued: 1, paper: first }
     },
@@ -25,12 +26,12 @@ function CircuitCard({ item, featured = false }: { item: DailyCircuitItem; featu
     <article className={`learning-section ${featured ? 'daily-circuit-featured' : ''}`}>
       <div className="learning-section-head">
         <div>
-          <span>{item.circuitKind} · {item.level || 'intermediate'} · {item.estimatedMinutes || 15} min</span>
+          <span>{item.circuitKind} · {formatLessonLevel(item.level || 'core')} · {item.estimatedMinutes || 15} 分钟</span>
           <h3>{item.title}</h3>
         </div>
         <div className="learning-progress-actions">
-          <Link to={`/learning/lessons/${encodeURIComponent(item.lessonId)}`}>Open lesson</Link>
-          <Link to={searchPath({ q: mainSearch, semantic: 1 })}>Find papers</Link>
+          <Link to={`/learning/lessons/${encodeURIComponent(item.lessonId)}`}>打开课程卡片</Link>
+          <Link to={searchPath({ q: mainSearch, semantic: 1 })}>查找论文</Link>
         </div>
       </div>
 
@@ -38,13 +39,13 @@ function CircuitCard({ item, featured = false }: { item: DailyCircuitItem; featu
 
       <div className="learning-two-column">
         <section className="learning-foundation-card">
-          <h4>Intuition</h4>
+          <h4>直觉理解</h4>
           <p>{payload.intuition}</p>
-          <h4>Minimal block</h4>
+          <h4>最小电路块</h4>
           <p>{payload.minimalBlock}</p>
         </section>
         <section className="learning-foundation-card">
-          <h4>Equations / checks</h4>
+          <h4>公式 / 检查点</h4>
           <ul className="admin-mini-list">
             {payload.equations.map((line) => <li key={line}><span>{line}</span></li>)}
           </ul>
@@ -53,31 +54,31 @@ function CircuitCard({ item, featured = false }: { item: DailyCircuitItem; featu
 
       <div className="learning-roadmap-grid compact">
         <section className="learning-foundation-card">
-          <h4>Specs to watch</h4>
+          <h4>重点规格</h4>
           {payload.specs.map((line) => <span key={line}>{line}</span>)}
         </section>
         <section className="learning-foundation-card">
-          <h4>Tradeoffs</h4>
+          <h4>设计取舍</h4>
           {payload.tradeoffs.map((line) => <span key={line}>{line}</span>)}
         </section>
         <section className="learning-foundation-card">
-          <h4>Common mistakes</h4>
+          <h4>常见误区</h4>
           {payload.pitfalls.map((line) => <span key={line}>{line}</span>)}
         </section>
       </div>
 
       <div className="learning-section-head">
         <div>
-          <span>Research bridge</span>
-          <h3>Jump from concept to papers</h3>
+          <span>论文桥接</span>
+          <h3>从概念跳到论文</h3>
         </div>
         <button type="button" disabled={queue.isPending} onClick={() => queue.mutate(mainSearch)}>
-          {queue.isPending ? 'Queueing...' : 'Queue first matching paper'}
+          {queue.isPending ? '加入中...' : '把第一篇匹配论文加入队列'}
         </button>
       </div>
       {queue.data && (
         <p className="learning-muted">
-          {queue.data.queued ? `Queued: ${queue.data.paper?.title}` : queue.data.message}
+          {queue.data.queued ? `已加入：${queue.data.paper?.title}` : queue.data.message}
         </p>
       )}
       <div className="learning-query-grid">
@@ -91,7 +92,7 @@ function CircuitCard({ item, featured = false }: { item: DailyCircuitItem; featu
         {item.roadmap && <Link to={`/learning/roadmaps/${item.roadmap.slug}`}>{item.roadmap.shortTitle || item.roadmap.title}</Link>}
       </div>
       <details className="learning-foundation-card">
-        <summary>Self-check questions</summary>
+        <summary>自测问题</summary>
         <ol>
           {payload.quiz.map((line) => <li key={line}>{line}</li>)}
         </ol>
@@ -106,8 +107,8 @@ export default function DailyCircuitPage() {
   const today = useQuery({ queryKey: ['daily-circuit', 'today'], queryFn: () => api.todayDailyCircuit() })
   const list = useQuery({ queryKey: ['daily-circuit', 'list'], queryFn: () => api.dailyCircuit({ limit: 18 }) })
 
-  if (today.isLoading || list.isLoading) return <div className="ss-skeleton-page"><p>Loading Daily Circuit...</p></div>
-  if (today.isError || list.isError) return <div className="ss-empty-state">Daily Circuit failed to load.</div>
+  if (today.isLoading || list.isLoading) return <div className="ss-skeleton-page"><p>正在加载每日电路...</p></div>
+  if (today.isError || list.isError) return <div className="ss-empty-state">每日电路加载失败。</div>
 
   const rows = list.data?.rows || []
   const todayItem = today.data?.item || rows[0]
@@ -116,20 +117,20 @@ export default function DailyCircuitPage() {
     <div className="learning-page learning-workbench">
       <section className="learning-hero compact">
         <div>
-          <h1>Daily Circuit</h1>
+          <h1>每日电路</h1>
           <p>
-            A daily IC concept with equations, design checks, paper directions, search links, and review prompts.
-            It is a learning-to-research bridge, not a replacement for textbooks or verified course notes.
+            每天用一个 IC 概念串起公式、设计检查、论文方向、检索入口和复习提示。
+            它是从学习走向研究的桥，不替代教材、课程讲义或人工校审笔记。
           </p>
           <div className="learning-hero-actions">
-            <Link to="/learning-path">Route library</Link>
-            <Link to="/reading-queue">Reading queue</Link>
-            <Link to="/reports/topics">Topic reports</Link>
+            <Link to="/learning-path">路线库</Link>
+            <Link to="/reading-queue">阅读队列</Link>
+            <Link to="/reports/topics">方向报告</Link>
           </div>
         </div>
         <aside>
-          <span>Review cadence</span>
-          <strong>{today.data?.nextReviewIntervals?.join(' / ') || '1 / 3 / 7 / 14'} days</strong>
+          <span>复习节奏</span>
+          <strong>{today.data?.nextReviewIntervals?.join(' / ') || '1 / 3 / 7 / 14'} 天</strong>
           <p>{today.data?.caveat || list.data?.caveat}</p>
         </aside>
       </section>
@@ -139,8 +140,8 @@ export default function DailyCircuitPage() {
       <section className="learning-section">
         <div className="learning-section-head">
           <div>
-            <span>{rows.length} items</span>
-            <h3>Upcoming concepts</h3>
+            <span>{rows.length} 个概念</span>
+            <h3>延伸概念</h3>
           </div>
         </div>
         <div className="learning-roadmap-grid">
@@ -150,7 +151,7 @@ export default function DailyCircuitPage() {
               <strong>{item.title}</strong>
               <p>{item.payload.problem}</p>
               <footer>
-                <em>{item.estimatedMinutes || 15} min</em>
+                <em>{item.estimatedMinutes || 15} 分钟</em>
                 <em>{item.relatedTopics?.[0] || item.roadmap?.domain}</em>
               </footer>
             </Link>

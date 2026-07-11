@@ -195,7 +195,7 @@ function annotateWithRules(row: PaperRow): AnnotationResult {
       venue: row.venue || row.publication_title || "",
       year: row.year || null,
       doi: row.doi || "",
-      source: "metadata-only",
+      source: "元数据推断",
     },
     metrics,
     confidence: Math.round(confidence * 100) / 100,

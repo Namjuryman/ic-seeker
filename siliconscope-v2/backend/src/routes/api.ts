@@ -322,7 +322,7 @@ router.post("/admin/ingestion/jobs", requireAdmin, async (req: AuthenticatedRequ
 router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid ingestion job ID" });
+    res.status(400).json({ error: "采集任务 ID 无效。" });
     return;
   }
   try {
@@ -351,7 +351,7 @@ router.patch("/admin/ingestion/jobs/:id", requireAdmin, async (req: Authenticate
 router.post("/admin/ingestion/jobs/:id/start", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid ingestion job ID" });
+    res.status(400).json({ error: "采集任务 ID 无效。" });
     return;
   }
   try {
@@ -373,7 +373,7 @@ router.post("/admin/ingestion/jobs/:id/start", requireAdmin, async (req: Authent
 router.post("/admin/ingestion/jobs/:id/cancel", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid ingestion job ID" });
+    res.status(400).json({ error: "采集任务 ID 无效。" });
     return;
   }
   try {
@@ -395,7 +395,7 @@ router.post("/admin/ingestion/jobs/:id/cancel", requireAdmin, async (req: Authen
 router.post("/admin/ingestion/jobs/:id/retry", requireAdmin, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid ingestion job ID" });
+    res.status(400).json({ error: "采集任务 ID 无效。" });
     return;
   }
   try {
@@ -417,7 +417,7 @@ router.post("/admin/ingestion/jobs/:id/retry", requireAdmin, async (req: Authent
 router.get("/admin/ingestion/jobs/:id/events", requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid ingestion job ID" });
+    res.status(400).json({ error: "采集任务 ID 无效。" });
     return;
   }
   res.json(ingestionJobService.events(id, req.query as Record<string, string>));
@@ -573,7 +573,7 @@ router.post("/notifications/read-all", requireAuth, async (req: AuthenticatedReq
 router.post("/notifications/:id/read", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid notification ID" });
+    res.status(400).json({ error: "通知 ID 无效。" });
     return;
   }
   res.json(notificationService.markRead(req.user?.userId ?? 0, id));
@@ -582,7 +582,7 @@ router.post("/notifications/:id/read", requireAuth, async (req: AuthenticatedReq
 router.delete("/notifications/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid notification ID" });
+    res.status(400).json({ error: "通知 ID 无效。" });
     return;
   }
   res.json(notificationService.delete(req.user?.userId ?? 0, id));
@@ -603,14 +603,14 @@ router.get("/author-profiles/:id/photo", requireAuth, async (req, res) => {
   try {
     const photo = await authorProfileService.readLocalPhoto(decodeURIComponent(req.params.id));
     if (!photo) {
-      res.status(404).json({ error: "Author photo not found" });
+      res.status(404).json({ error: "研究者照片不存在。" });
       return;
     }
     res.setHeader("content-type", photo.contentType);
     res.setHeader("cache-control", "private, max-age=86400");
     res.end(photo.bytes);
   } catch {
-    res.status(404).json({ error: "Author photo not found" });
+    res.status(404).json({ error: "研究者照片不存在。" });
   }
 });
 
@@ -633,7 +633,7 @@ router.get("/topics", requireAuth, async (_req, res) => {
 router.get("/topics/detail", requireAuth, async (req, res) => {
   const field = req.query.field as string;
   if (!field) {
-    res.status(400).json({ error: "field is required" });
+    res.status(400).json({ error: "方向字段不能为空。" });
     return;
   }
   privateCache(res, 300);
@@ -673,7 +673,7 @@ router.get("/learning/roadmaps", requireAuth, async (_req, res) => {
 router.get("/learning/roadmaps/:slug", requireAuth, async (req, res) => {
   const roadmap = learningService.getRoadmap(req.params.slug);
   if (!roadmap) {
-    res.status(404).json({ error: "Roadmap not found", requested: req.params.slug });
+    res.status(404).json({ error: "学习路线不存在。", requested: req.params.slug });
     return;
   }
   privateCache(res, 300);
@@ -683,7 +683,7 @@ router.get("/learning/roadmaps/:slug", requireAuth, async (req, res) => {
 router.get("/learning/roadmaps/:slug/related-papers", requireAuth, async (req: AuthenticatedRequest, res) => {
   const result = learningService.relatedPapersForRoadmap(req.params.slug, req.user?.userId ?? 0, Number(req.query.limit || 8));
   if (!result) {
-    res.status(404).json({ error: "Roadmap not found" });
+    res.status(404).json({ error: "学习路线不存在。" });
     return;
   }
   res.json(result);
@@ -711,7 +711,7 @@ router.get("/daily-circuit/today", requireAuth, async (_req, res) => {
 router.get("/daily-circuit/:id", requireAuth, async (req, res) => {
   const item = dailyCircuitService.get(req.params.id);
   if (!item) {
-    res.status(404).json({ error: "Daily circuit item not found" });
+    res.status(404).json({ error: "每日电路条目不存在。" });
     return;
   }
   res.json(item);
@@ -759,7 +759,7 @@ router.post("/learning/progress/:targetType/:targetId/queue-related", requireAut
 router.get("/learning/lessons/:lessonId", requireAuth, async (req, res) => {
   const lesson = learningService.getLesson(req.params.lessonId);
   if (!lesson) {
-    res.status(404).json({ error: "Lesson not found" });
+    res.status(404).json({ error: "课程不存在。" });
     return;
   }
   privateCache(res, 300);
@@ -769,7 +769,7 @@ router.get("/learning/lessons/:lessonId", requireAuth, async (req, res) => {
 router.get("/learning/lessons/:lessonId/related-papers", requireAuth, async (req: AuthenticatedRequest, res) => {
   const result = learningService.relatedPapersForLesson(req.params.lessonId, req.user?.userId ?? 0, Number(req.query.limit || 8));
   if (!result) {
-    res.status(404).json({ error: "Lesson not found" });
+    res.status(404).json({ error: "课程不存在。" });
     return;
   }
   res.json(result);
@@ -846,7 +846,7 @@ router.get("/companies/domains", requireAuth, async (_req, res) => {
 router.get("/companies/:id", requireAuth, async (req, res) => {
   const company = companyService.getCompany(req.params.id);
   if (!company) {
-    res.status(404).json({ error: "Company not found" });
+    res.status(404).json({ error: "企业不存在。" });
     return;
   }
   privateCache(res, 120);
@@ -856,7 +856,7 @@ router.get("/companies/:id", requireAuth, async (req, res) => {
 router.get("/companies/:id/related-papers", requireAuth, async (req, res) => {
   const result = companyService.getRelatedPapers(req.params.id, Number(req.query.limit || 20));
   if (!result) {
-    res.status(404).json({ error: "Company not found" });
+    res.status(404).json({ error: "企业不存在。" });
     return;
   }
   res.json(result);
@@ -865,7 +865,7 @@ router.get("/companies/:id/related-papers", requireAuth, async (req, res) => {
 router.get("/companies/:id/related-roadmaps", requireAuth, async (req, res) => {
   const result = companyService.getRelatedRoadmaps(req.params.id);
   if (!result) {
-    res.status(404).json({ error: "Company not found" });
+    res.status(404).json({ error: "企业不存在。" });
     return;
   }
   res.json(result);
@@ -874,7 +874,7 @@ router.get("/companies/:id/related-roadmaps", requireAuth, async (req, res) => {
 router.get("/companies/:id/intelligence", requireAuth, async (req, res) => {
   const result = entityIntelligenceService.company(req.params.id);
   if (!result) {
-    res.status(404).json({ error: "Company not found" });
+    res.status(404).json({ error: "企业不存在。" });
     return;
   }
   res.json(result);
@@ -939,7 +939,7 @@ router.get("/compare/mentors", requireAuth, async (req, res) => {
   try {
     const names = String(req.query.names || "").split(",").map((n) => n.trim()).filter(Boolean);
     if (names.length < 2) {
-      res.status(400).json({ error: "At least 2 mentor names are required" });
+      res.status(400).json({ error: "至少需要 2 个研究者姓名。" });
       return;
     }
     res.json(mentorCompareService.compare(names));
@@ -952,7 +952,7 @@ router.get("/reports/topics/:field", requireAuth, async (req, res) => {
   try {
     const field = String(req.params.field || "").trim();
     if (!field) {
-      res.status(400).json({ error: "Topic field is required" });
+      res.status(400).json({ error: "方向字段不能为空。" });
       return;
     }
     res.json(topicReportService.getReport(field));
@@ -968,7 +968,7 @@ router.get("/admin/audit-logs", requireAdmin, async (req, res) => {
 router.post("/admin/companies", requireAdmin, async (req: AuthenticatedRequest, res) => {
   try {
     const company = companyService.createCompany(req.body);
-    if (!company) throw new Error("Company creation returned empty result");
+    if (!company) throw new Error("企业创建没有返回结果。");
     adminAuditService.record({
       req,
       action: "company.create",
@@ -1038,7 +1038,7 @@ router.get("/watchlist", requireAuth, async (req: AuthenticatedRequest, res) => 
 router.get("/watchlist/type/:type", requireAuth, async (req: AuthenticatedRequest, res) => {
   const type = req.params.type;
   if (!WATCHLIST_VALID_TYPES.includes(type as any)) {
-    res.status(400).json({ error: 'Invalid target type' });
+    res.status(400).json({ error: "关注类型无效。" });
     return;
   }
   res.json(watchlistService.listWatchlistByType(req.user?.userId ?? 0, type));
@@ -1047,11 +1047,11 @@ router.get("/watchlist/type/:type", requireAuth, async (req: AuthenticatedReques
 router.post("/watchlist", requireAuth, async (req: AuthenticatedRequest, res) => {
   const { targetType, targetId, queryJson } = req.body as { targetType: string; targetId: string; queryJson?: Record<string, unknown> | string };
   if (!WATCHLIST_VALID_TYPES.includes(targetType as any)) {
-    res.status(400).json({ error: 'Invalid target type' });
+    res.status(400).json({ error: "关注类型无效。" });
     return;
   }
   if (!targetId || targetId.length > 256) {
-    res.status(400).json({ error: 'targetId is required and must be <= 256 chars' });
+    res.status(400).json({ error: "关注目标不能为空，且长度不能超过 256 个字符。" });
     return;
   }
   const result = watchlistService.addWatchlistItem(req.user?.userId ?? 0, targetType, targetId, queryJson);
@@ -1065,7 +1065,7 @@ router.post("/watchlist", requireAuth, async (req: AuthenticatedRequest, res) =>
 router.delete("/watchlist/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) {
-    res.status(400).json({ error: 'Invalid id' });
+    res.status(400).json({ error: "关注项 ID 无效。" });
     return;
   }
   const result = watchlistService.deleteWatchlistItem(req.user?.userId ?? 0, id);
@@ -1392,7 +1392,7 @@ router.get("/admin/learning-content/:kind/:id", requireAdmin, async (req, res) =
   try {
     const item = learningContentService.getItem(req.params.kind, decodeURIComponent(req.params.id));
     if (!item) {
-      res.status(404).json({ error: "Learning content item not found" });
+      res.status(404).json({ error: "学习内容条目不存在。" });
       return;
     }
     res.json(item);

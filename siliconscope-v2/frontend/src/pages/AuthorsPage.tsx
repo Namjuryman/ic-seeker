@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
+import { paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import { institutionPath, searchPath } from '../utils/routes'
 import type { AuthorProfile, AuthorProfileMetadata, PaperRow } from '../types'
 
@@ -69,7 +71,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
       <div className="ss-mini-meta">
         <span>{paper.venue || '-'}</span>
         <span>{paper.year || '-'}</span>
-        <span>{paper.rank || '-'}</span>
+        <span>{paperRankLabel(paper.rank)}</span>
       </div>
     </article>
   )
@@ -87,7 +89,7 @@ function BarList({
   const max = Math.max(1, rows[0]?.count || 1)
 
   if (!rows.length) {
-    return <EmptyState eyebrow="No data" title={emptyTitle} description="当前画像还没有足够的聚合信息。" />
+    return <EmptyState eyebrow="暂无数据" title={emptyTitle} description="当前画像还没有足够的聚合信息。" />
   }
 
   return (
@@ -119,7 +121,7 @@ export default function AuthorsPage() {
     setError('')
     api.professors({ limit: 120, minPapers: 2 })
       .then((data) => setList(data as AuthorListItem[]))
-      .catch((err) => setError(err instanceof Error ? err.message : '加载学者列表失败'))
+      .catch((err) => setError(friendlyError(err, '加载学者列表失败')))
       .finally(() => setLoadingList(false))
   }, [])
 
@@ -132,7 +134,7 @@ export default function AuthorsPage() {
     setError('')
     api.authorProfile(name)
       .then(setDetail)
-      .catch((err) => setError(err instanceof Error ? err.message : '加载学者画像失败'))
+      .catch((err) => setError(friendlyError(err, '加载学者画像失败')))
       .finally(() => setLoadingDetail(false))
   }, [name])
 
@@ -158,28 +160,30 @@ export default function AuthorsPage() {
         <section className="ss-profile-hero">
           <ScholarAvatar name={detail.name} profile={detail.profile} />
           <div>
-            <p className="ss-kicker">Author profile</p>
+            <p className="ss-kicker">学者画像</p>
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
               {detail.profile?.title && <span>{detail.profile.title}</span>}
               {detail.profile?.affiliation && <span>{detail.profile.affiliation}</span>}
-              <span>{detail.paperCount ?? 0} papers</span>
-              <span>Score {Math.round(detail.authorScore ?? 0)}</span>
+              <span>{detail.paperCount ?? 0} 篇论文</span>
+              <span>元数据信号 {Math.round(detail.authorScore ?? 0)}</span>
+              <span>姓名归一</span>
+              <span>身份待复核</span>
               <span>{rankLine(detail.ranks)}</span>
               {detail.primaryInstitution && <button type="button" onClick={() => navigate(institutionPath(detail.primaryInstitution))}>{detail.primaryInstitution}</button>}
               {detail.qs?.qs_world_rank && <span>QS {detail.qs.qs_world_rank}</span>}
             </div>
           </div>
           <div className="ss-profile-actions">
-            {detail.profile?.homepageUrl && <a href={detail.profile.homepageUrl} target="_blank" rel="noreferrer">Homepage</a>}
-            {detail.profile?.sourceUrl && <a href={detail.profile.sourceUrl} target="_blank" rel="noreferrer">Photo source</a>}
-            <a href={detail.external?.googleScholar} target="_blank" rel="noreferrer">Scholar</a>
-            <a href={detail.external?.webSearch} target="_blank" rel="noreferrer">Web search</a>
+            {detail.profile?.homepageUrl && <a href={detail.profile.homepageUrl} target="_blank" rel="noreferrer">个人主页</a>}
+            {detail.profile?.sourceUrl && <a href={detail.profile.sourceUrl} target="_blank" rel="noreferrer">照片来源</a>}
+            <a href={detail.external?.googleScholar} target="_blank" rel="noreferrer">Google Scholar</a>
+            <a href={detail.external?.webSearch} target="_blank" rel="noreferrer">网页搜索</a>
           </div>
         </section>
 
         <section className="ss-caveat">
-          作者归一化仍依赖论文元数据和 alias 表。这里显示的是本地数据库画像，不等同于最终学术评价；未来接入 IEEE API、ORCID 和主页爬虫后会继续校准。
+          作者归一化仍依赖论文元数据和 alias 表。这里显示的是本地数据库画像，不等同于最终学术评价；IEEE API、ORCID 和主页线索会作为持续校准来源。
         </section>
 
         <div className="ss-profile-grid">
@@ -187,10 +191,10 @@ export default function AuthorsPage() {
             <section className="ss-panel">
               <div className="ss-panel-head">
                 <div>
-                  <p>Publication stream</p>
+                  <p>论文流</p>
                   <h2>代表论文</h2>
                 </div>
-                <span>{detail.papers.length} loaded</span>
+                <span>{detail.papers.length} 篇已载入</span>
               </div>
               <div className="ss-mini-list">
                 {detail.papers.length ? (
@@ -253,13 +257,13 @@ export default function AuthorsPage() {
     <div className="ss-directory-page">
       <section className="ss-directory-hero">
         <div>
-          <p className="ss-kicker">Scholar graph</p>
+          <p className="ss-kicker">学者图谱</p>
           <h1>学者画像</h1>
-          <p>按论文质量、方向覆盖和近年活跃度浏览 IC 相关学者。当前为本地元数据评分，后续会继续接入 IEEE / ORCID / 学院主页校验。</p>
+          <p>按元数据信号、方向覆盖和近年活跃度浏览 IC 相关作者线索。当前为本地元数据画像，并结合 IEEE / ORCID / 学院主页线索做持续校准。</p>
         </div>
         <div className="ss-directory-search">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索学者姓名..." />
-          <span>{filtered.length} results</span>
+          <span>{filtered.length} 条结果</span>
         </div>
       </section>
 
@@ -267,14 +271,14 @@ export default function AuthorsPage() {
 
       <section className="ss-rank-table">
         <header>
-          <span>Rank</span>
-          <span>Scholar</span>
-          <span>Papers</span>
+          <span>排序</span>
+          <span>学者</span>
+          <span>论文</span>
           <span>S+</span>
-          <span>Citations</span>
-          <span>Score</span>
+          <span>引用</span>
+          <span>元数据信号</span>
         </header>
-        {loadingList && <SkeletonState variant="list" title="正在加载学者排行" description="整理作者分数、论文数和引用统计。" />}
+        {loadingList && <SkeletonState variant="list" title="正在加载学者列表" description="整理作者元数据信号、论文数和引用统计。" />}
         {!loadingList && filtered.map((author, index) => (
           <button key={author.name} onClick={() => navigate(`/authors/${encodeURIComponent(author.name)}`)}>
             <span>{index + 1}</span>

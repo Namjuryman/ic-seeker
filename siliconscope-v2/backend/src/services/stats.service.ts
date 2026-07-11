@@ -18,7 +18,7 @@ function methodLabel(method: string): string {
   if (/^openalex/i.test(value)) return "OpenAlex";
   if (/^venue_year_search/i.test(value)) return "OpenAlex";
   if (/^crossref/i.test(value)) return "Crossref";
-  if (/^manual/i.test(value)) return "Manual";
+  if (/^manual/i.test(value)) return "人工导入";
   return value;
 }
 
@@ -123,7 +123,7 @@ export const statsService = {
 
   setApiKey(provider: string, value: string) {
     const clean = String(provider || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 40);
-    if (!clean) throw new Error("Invalid provider");
+    if (!clean) throw new Error("服务提供方无效。");
     if (value) {
       appDb.insert(apiKeys).values({ provider: clean, value: String(value).trim() })
         .onConflictDoUpdate({ target: apiKeys.provider, set: { value: String(value).trim(), updatedAt: sql`CURRENT_TIMESTAMP` } })
@@ -144,14 +144,14 @@ export const statsService = {
       path: appConfig.pdfInboxPath,
       count: pdfs.length,
       pdfs,
-      importCommand: "v2 PDF importer pending; implement under siliconscope-v2/backend/src/scripts",
+      importCommand: "PDF 导入建议通过后台采集任务执行，并保留本地文件来源记录。",
     };
   },
 
   getMethodology() {
     return {
       scoring: {
-        formula: "quality_score = venue_base + citation_boost + recency_boost",
+        formula: "metadata_score = venue_base + citation_boost + recency_boost",
         citationBoost: "min(cited_by_count, 300) / 25",
         recencyBoost: "(publication_year - 2016) * 0.35, floored at 0",
         venueBase: {
@@ -187,19 +187,19 @@ export const statsService = {
         },
       },
       classification: [
-        "Each paper is scored against IC-domain keyword dictionaries using title, abstract, source name, and OpenAlex concepts.",
-        "The domain with the most keyword hits wins; if no domain wins but IC terms are present, it falls back to General IC.",
-        "Broad IC-adjacent journals are visible as metadata but heavily downweighted.",
-        "This is intentionally transparent and editable. It is not a learned model yet.",
+        "论文会用标题、摘要、来源名称和 OpenAlex concepts 匹配 IC 方向关键词表。",
+        "命中最多的方向作为主方向；如果没有明确方向但出现 IC 术语，则回退到 General IC。",
+        "宽口径 IC 邻近期刊保留为元数据，但会被明显降权。",
+        "这套规则刻意保持透明、可编辑；目前还不是训练得到的模型。",
       ],
       coverage: [
-        "The builder now uses venue-year OpenAlex search for every configured year, then backfills from resolved OpenAlex sources.",
-        "Conference coverage can still depend on how OpenAlex indexes a specific proceedings year.",
-        "Publisher PDFs are not mass-downloaded; local PDFs can be attached through the pdf_inbox workflow.",
+        "构建器会按会议/期刊和年份在 OpenAlex 检索，再用已解析的 OpenAlex 来源回填。",
+        "会议覆盖度仍会受 OpenAlex 对具体年份论文集的索引方式影响。",
+        "系统不会批量下载出版商 PDF；本地 PDF 只能通过 pdf_inbox 私有流程关联。",
       ],
       professorScoring: {
         formula: "author_score = score_sum + 5 * s_plus_count + 2 * s_count + citation_count / 50",
-        caveat: "Current author identity is name-based. ORCID/institution disambiguation should be added before using it seriously.",
+        caveat: "当前作者身份主要基于姓名归一。严肃使用前应加入 ORCID、机构和人工合并/拆分复核。",
       },
     };
   },

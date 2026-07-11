@@ -4,7 +4,7 @@ SiliconScope v2 is the active frontend/backend separated edition of the IC paper
 
 It builds on the original ChipSeeker-style private prototype, but v2 is now the canonical product path. The old single-process v1 source tree has been removed from the active repository; new product work should happen in this folder.
 
-It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, ranks papers by configurable venue/domain rules, and profiles authors and institutions by publication strength. The current product is split into a public research frontend, an independent admin frontend, and a backend API. It is still a private MVP, not a public multi-user SaaS.
+It uses a local SQLite database from public scholarly metadata, provides full-text and lightweight semantic search, sorts papers with transparent venue/domain metadata rules, and builds provisional author/institution profiles from publication signals. The current product is split into a public research frontend, an independent admin frontend, and a backend API. It is still a private MVP, not a public multi-user SaaS.
 
 ## 20-task completion surfaces
 
@@ -114,13 +114,13 @@ Git LFS is optional for development because `npm run db:build-from-csv` can recr
 - Private admin login with a signed HTTP-only cookie
 - Lightweight semantic search through IC-domain alias expansion
 - Venue, domain, rank, year, local-PDF, and sort filters
-- Paper detail view with DOI, source link, PDF link status, score, affiliations, and collection method
+- Paper detail view with DOI, source link, PDF link status, sorting signal, affiliations, and collection method
 - Quick citation copy from the paper detail panel in IEEE, APA, and BibTeX formats
 - Paper import by DOI through Crossref metadata
 - Manual paper import for missing records
 - Favorites, reading status, private notes, and tags
 - Notification Center for system messages, moderation results, import-job receipts, weekly digests, and future subscription notices
-- Subscription and quota scaffold with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
+- Subscription and quota layer with plan catalog, entitlement metadata, usage ledger, partial quota enforcement, admin plan management, and a payment-adapter boundary for future Stripe/Paddle integration
 - Admin backup operations for SQLite private/public-beta deployments, with CLI restore-point creation and retention pruning
 - Admin maintenance task center for backup, snapshot refresh, full cache refresh, and bounded data-quality scans
 - Admin scheduled operations center for server-side backup, snapshot refresh, and data-quality jobs, disabled by default and enabled with `SCHEDULER_ENABLED=1`
@@ -128,18 +128,18 @@ Git LFS is optional for development because `npm run db:build-from-csv` can recr
 - Admin ingestion job registry for IEEE/OpenAlex/Crossref/Semantic Scholar/DBLP/CSV/PDF metadata imports, with provider, scope, status, counts, provenance, metadata-confidence review, and audit trail before background workers are connected
 - Offline paper AI-enrichment pipeline with versioned annotation tables, a `rule-local` no-cost provider, batch jobs, admin API, and optional derived topic-edge writes
 - Backend API-key storage with masked display
-- Author/professor leaderboard
+- Author metadata profiles and sortable author lists
 - Clickable author profile with papers, venue/rank statistics, yearly trend, collaborators, institutions, and external Scholar search
-- AMiner-style author page layout: author papers stay in the main area while the right rail shows the professor profile, inferred career stage, yearly activity, collaborators, and institutions
-- Institution leaderboard for school/lab strength
+- AMiner-style author page layout: author papers stay in the main area while the right rail shows provisional profile metadata, inferred career stage, yearly activity, collaborators, and institutions
+- Institution profile list ordered by publication-derived metadata signals
 - Clickable institution profile with yearly output, venues, fields, authors, and papers
-- Topic intelligence page for domain strength, topic leaders, institutions, venues, and representative papers
+- Topic intelligence page for domain activity, author/institution leads, venues, and representative papers
 - IC learning-roadmap workspace covering circuit design, digital systems, device/manufacturing, EDA/security, and frontier interdisciplinary tracks
 - Learning foundations, route-specific prerequisites, staged goals, resources, practice projects, and paper-search links
 - Daily circuit learning workspace with route pages, lesson pages, today's circuit, and related SiliconScope paper-search links
 - Learning API endpoints for roadmaps, daily lessons, and related paper suggestions
 - Workspace status strip for database size, PDF coverage, source readiness, and data-quality caveats
-- Regional intelligence map with country hover, institution view, all-field strength, single-topic strength such as PMIC, and regional strength-change summaries
+- Regional intelligence map with country hover, institution view, all-field output density, single-topic output density such as PMIC, and regional activity-change summaries
 - Local Natural Earth world-country GeoJSON basemap for the regional intelligence map
 - Local PDF inbox workflow for matching personal PDFs by DOI/title while keeping files local-only
 - CSV export compatible with ChipSeeker-like workflows
@@ -180,7 +180,7 @@ The current local database remains convenient for private research, but the prod
 - **Metadata corpus**: paper records, venue data, imported bibliographic metadata, and local FTS stay in SQLite during the crawling/import phase.
 - **App database**: users, comments, reviews, companies, notes, watchlists, billing state, and admin logs should move to PostgreSQL first.
 - **Search index**: cross-entity search moves to Meilisearch first, with OpenSearch/Elasticsearch only if scale demands it.
-- **Cache/snapshots**: expensive rankings, profile summaries, geo views, and leaderboard payloads should be weekly computed into Redis or a snapshot registry instead of recalculated on every page load.
+- **Cache/snapshots**: expensive metadata lists, profile summaries, geo views, and aggregate payloads should be weekly computed into Redis or a snapshot registry instead of recalculated on every page load.
 - **Object storage**: professor photos, institution/company logos, PDFs, and attachments should move to S3-compatible storage such as Cloudflare R2 or MinIO.
 
 This keeps weekly data refreshes simple: import/update the corpus, rebuild normalized projections, refresh snapshots, rebuild search indexes, then publish.
@@ -191,8 +191,8 @@ This keeps weekly data refreshes simple: import/update the corpus, rebuild norma
 
 - **SiliconScope v2 is the canonical React + backend edition.** The legacy v1 app code has been removed; use Git history only if old behavior must be inspected.
 - **Learning catalog seed source is `backend/src/data/learning-catalog-v3.ts`; production reads prefer published rows in `learning_content_items` and fall back to the seed catalog if the database registry is empty.**
-- **Journal Ingestion is disabled until background jobs are implemented.**
-- **Data Quality analysis is manual-run only.** Open the Data Quality page and click "Run analysis" when needed.
+- **Journal Ingestion uses the admin task registry and review-first workflow.** Keep public imports behind admin controls until provider quotas and provenance checks are verified.
+- **Data Quality analysis is manual-run by default.** Open the Data Quality page and run the bounded analysis when source imports, alias repairs, or snapshot refreshes change the corpus.
 
 Requirements:
 
@@ -391,7 +391,7 @@ Recommended first public setup:
 - Keep `IC_SEEKER_LOCAL_ADMIN=0` on every public server. It is only for local development.
 - Allow both frontend origins in `FRONTEND_ORIGINS`, for example `https://www.siliconscope.com,https://admin.siliconscope.com`.
 - Back up `ic_database/ic_papers.sqlite` and `ic_database/pdfs/` regularly.
-- For a public product, expose only metadata, DOI, abstracts, rankings, and links. Do not proxy or redistribute publisher PDFs.
+- For a public product, expose only metadata, DOI, abstracts, transparent sorting signals, and source links. Do not proxy or redistribute publisher PDFs.
 - When traffic grows, move from SQLite-on-disk to Postgres plus object storage, and keep the current SQLite app as the private/local edition.
 
 Active independent-domain layout:
@@ -529,9 +529,9 @@ Current scope:
 - Learning content now uses a hybrid database model:
   - `learning_content_items` stores the versioned source payload, publication state, hash, and admin edits.
   - `learning_routes`, `learning_lessons`, `learning_route_families`, `learning_foundations`, `learning_route_family_members`, and `learning_terms` are normalized projection tables for search, analytics, graph traversal, and future recommendation jobs.
-- The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, projection-table health, and the route/lesson quality score.
+- The independent admin app has a Learning Content page for seed-to-database sync, JSON editing, content-health checks, stale/out-of-sync rows, projection-table health, and the route/lesson quality signal.
 - User progress is stored in `learning_progress` for both roadmap and lesson targets. Route and lesson pages can mark started/completed/review-later and add related papers to the reading queue.
-- Lesson pages intentionally use a structured placeholder format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
+- Lesson pages use a structured learning-note format: intuition, key equations, design traps, paper-reading pointers, and practice prompts.
 - Related papers are pulled from the local SiliconScope search service through metadata queries.
 
 Seed sync can also be run from the command line:
@@ -540,7 +540,7 @@ Seed sync can also be run from the command line:
 npm --workspace siliconscope-v2-backend run learning:sync
 ```
 
-The sync prints the seed version, row counts, projection coverage, and a product-content quality score so weekly updates can fail loudly before the public pages drift.
+The sync prints the seed version, row counts, projection coverage, and a product-content quality signal so weekly updates can fail loudly before the public pages drift.
 - Future work should add type-specific structured editing forms on top of the registry, plus spaced review scheduling, saved learning plans, and weekly paper recommendations per route.
 
 ## Database Import Direction
@@ -575,8 +575,8 @@ The current policy direction is:
 Broad journal policy:
 
 - `Nature` is treated as `SSS`; `Nature Electronics` is treated as `SS+`.
-- `Nature Communications`, `IEEE EDL`, `Advanced Materials`, and `Applied Physics Letters` are retained in SQLite but marked `Hidden`, so they do not affect default search, rankings, maps, topics, or mentor/institution scoring.
-- IEEE T-MTT is kept as a strong RF venue.
+- `Nature Communications`, `IEEE EDL`, `Advanced Materials`, and `Applied Physics Letters` are retained in SQLite but marked `Hidden`, so they do not affect default search, map density, topic summaries, or mentor/institution metadata signals.
+- IEEE T-MTT is kept as an important RF venue.
 - Broad materials/devices journals such as Advanced Materials and Applied Physics Letters are deliberately downweighted because keyword metadata can over-match non-IC work.
 
 ## IEEE Xplore API
@@ -607,11 +607,11 @@ npm run pdf:scan -- --dir=/path/to/personal/pdf/library
 
 It matches DOI/title metadata, stores local paths in `local_pdf_items`, and may attach a matched path to `papers.local_pdf` without uploading or redistributing PDFs. See [`docs/LOCAL_PDF_WORKFLOW.md`](docs/LOCAL_PDF_WORKFLOW.md).
 
-## Scoring
+## Sorting Signals
 
-> **Disclaimer:** Metadata score, rank, and topic classification are heuristic indicators, not final academic judgment.
+> **Disclaimer:** Paper metadata sorting signal, venue rank, and topic classification are heuristic indicators for sorting and retrieval, not final academic judgment, faculty identity, verified roster membership, or institutional evaluation.
 
-Paper score is intentionally transparent:
+Paper metadata sorting signal is intentionally transparent. The underlying database field remains `quality_score` for compatibility:
 
 ```text
 quality_score = venue_base + 10 * domain_keyword_hits + citation_boost + recency_boost
@@ -645,14 +645,14 @@ The Geo Intelligence page now separates spatial reading from numeric reading:
 - the map layer uses Natural Earth country boundaries
 - country color is kept subdued so dense regions stay readable
 - city-level rays are schematic IC hotspots, used to show intra-country density such as US West/East Coast and East Asia clusters
-- exact numbers are moved into the country share chart, country ranking, and country detail panel
+- exact numbers are moved into the country share chart, country list, and country detail panel
 
 The current city hotspot layer is a transition design. It is not yet a verified city-level database. The next data milestone is institution normalization plus geocoding, so affiliations such as Hong Kong, Macau, university branches, corporate labs, and renamed institutes can be disambiguated before city-level scoring is treated as factual.
 
 ## Caveats
 
 - Metadata quality depends on IEEE/OpenAlex/Crossref coverage and naming consistency.
-- Author identity is currently name-based; serious professor ranking should add ORCID/institution disambiguation.
+- Author identity is currently name-based; serious author or mentor analysis should add ORCID/institution disambiguation.
 - Institution names are raw affiliation strings and may need normalization.
 - Mentor/institution membership and mentor-vs-student status are currently inferred from local paper metadata. The mentor review page filters low-evidence authors as likely students/collaborators and treats the remaining entries as provisional mentor candidates. Future IEEE Xplore API enrichment and large-scale university/college/lab website crawlers should verify each professor's current affiliation, historical affiliation moves, lab homepage, title, department, research group, and faculty role before the platform treats mentor-school membership as factual.
 - Regional and city-level views are estimates until institution disambiguation and geocoding are connected.

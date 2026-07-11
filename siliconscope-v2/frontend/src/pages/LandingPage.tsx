@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { LanguageToggle, useI18n } from '../i18n'
 import type { PaperRow } from '../types'
+import { paperRankLabel, type DisplayLanguage } from '../utils/displayLabels'
 import { setPageMeta } from '../utils/pageMeta'
 
 function copy(language: 'zh' | 'en') {
@@ -13,22 +14,27 @@ function copy(language: 'zh' | 'en') {
       request: 'Request access',
       pricing: 'Pricing',
       legal: 'Legal',
+      navLabel: 'Public navigation',
       kicker: 'IC PAPER INTELLIGENCE',
       headline: 'A paper intelligence workspace built for IC engineers and researchers',
-      body: 'Search, track, learn, and compare across 38,000+ curated IC papers. Start from papers and routes, then explore authors, institutions, companies, and regional strength.',
-      requestPrivate: 'Request private beta',
+      body: 'Search, track, learn, and compare across 38,000+ indexed IC paper records. Start from papers and routes, then explore author, institution, company, and regional metadata signals.',
+      requestPrivate: 'Request access',
       viewPricing: 'View pricing',
-      liveDemo: 'Live search demo',
+      liveDemo: 'Live search',
       searching: 'searching...',
-      engine: 'SQLite + metadata',
+      engine: 'Local metadata index',
       searchLabel: 'Search papers, circuits, authors, DOI',
       empty: 'Enter at least two characters to preview real search results.',
+      searchUnavailable: 'Search is temporarily unavailable.',
+      unknownAuthors: 'Unknown authors',
+      searchDemoLabel: 'Live paper search',
+      capabilitiesLabel: 'Product capabilities',
       pricingKicker: 'PRICING BOUNDARY',
       pricingTitle: 'Core search and learning stay free; efficiency features become paid later',
       pricingBody: 'Free covers paper search, learning routes, and basic reading management. Pro focuses on AI structured reports, advanced export, team workspace, and private-library workflows.',
       openPricing: 'Open pricing',
       stats: [
-        { label: 'curated papers', value: '38k+' },
+        { label: 'indexed papers', value: '38k+' },
         { label: 'core venues', value: '16' },
         { label: 'coverage', value: '2016-2026' },
       ],
@@ -45,40 +51,45 @@ function copy(language: 'zh' | 'en') {
     request: '申请访问',
     pricing: '价格',
     legal: '法律',
-    kicker: 'IC PAPER INTELLIGENCE',
+    navLabel: '公开导航',
+    kicker: 'IC 论文情报',
     headline: '为 IC 工程师与研究生打造的论文情报工作台',
-    body: '围绕 38,000+ 篇精选 IC 论文完成检索、追踪、学习和对比。先从论文与路线出发，再沉淀作者、机构、公司和地域情报。',
-    requestPrivate: '申请私测访问',
+    body: '围绕 38,000+ 条本地收录的 IC 论文记录完成检索、追踪、学习和对比。先从论文与路线出发，再沉淀作者、机构、公司和地域情报。',
+    requestPrivate: '申请访问权限',
     viewPricing: '查看价格计划',
-    liveDemo: '实时搜索演示',
+    liveDemo: '实时搜索',
     searching: '搜索中...',
-    engine: 'SQLite + metadata',
+    engine: '论文元数据检索',
     searchLabel: '搜索论文、电路方向、作者、DOI',
     empty: '输入至少两个字符查看真实检索结果。',
-    pricingKicker: 'PRICING BOUNDARY',
+    searchUnavailable: '搜索暂时不可用。',
+    unknownAuthors: '作者信息待补全',
+    searchDemoLabel: '实时论文搜索',
+    capabilitiesLabel: '产品能力',
+    pricingKicker: '商业边界',
     pricingTitle: '核心检索和学习免费，效率型能力再收费',
     pricingBody: '免费层覆盖论文检索、学习路线和基础阅读管理。Pro 面向 AI 结构化报告、高级导出、团队空间和私有库工作流。',
-    openPricing: '打开 Pricing',
+    openPricing: '查看价格',
     stats: [
-      { label: '精选论文', value: '38k+' },
+      { label: '收录论文', value: '38k+' },
       { label: '核心会议/期刊', value: '16' },
       { label: '覆盖年份', value: '2016-2026' },
     ],
     capabilities: [
-      { title: 'Search', label: '论文检索', body: '按 DOI、作者、机构、会议、领域和电路关键词检索，适合快速定位某条技术路线的代表论文。', preview: ['JSSC / ISSCC', 'ADC, PLL, PMIC', 'authors + affiliations'] },
-      { title: 'Intelligence', label: '学术情报', body: '围绕作者、机构、地域和公司沉淀画像，帮助判断 IC 方向、合作网络和近年变化。', preview: ['authors', 'institutions', 'geo / companies'] },
-      { title: 'Learning', label: '学习路线', body: '把论文库连接到 IC 路线、每日电路和阅读队列，让学习不只停留在收藏夹。', preview: ['roadmaps', 'daily circuit', 'reading queue'] },
+      { title: '检索', label: '论文检索', body: '按 DOI、作者、机构、会议、领域和电路关键词检索，适合快速定位某条技术路线的代表论文。', preview: ['JSSC / ISSCC', 'ADC, PLL, PMIC', '作者与机构'] },
+      { title: '情报', label: '学术情报', body: '围绕作者、机构、地域和公司沉淀画像，帮助判断 IC 方向、合作网络和近年变化。', preview: ['作者线索', '机构画像', '地域/企业'] },
+      { title: '学习', label: '学习路线', body: '把论文库连接到 IC 路线、每日电路和阅读队列，让学习不只停留在收藏夹。', preview: ['学习路线', '每日电路', '阅读队列'] },
     ],
   }
 }
 
-function LandingSearchResult({ paper }: { paper: PaperRow }) {
+function LandingSearchResult({ paper, unknownAuthors, language }: { paper: PaperRow; unknownAuthors: string; language: DisplayLanguage }) {
   return (
     <Link className="landing-result" to={`/papers/${paper.id}`}>
       <strong>{paper.title}</strong>
-      <span>{paper.authors || 'Unknown authors'}</span>
+      <span>{paper.authors || unknownAuthors}</span>
       <div>
-        <em>{paper.rank || '-'}</em>
+        <em>{paperRankLabel(paper.rank, language)}</em>
         <em>{paper.venue || '-'}</em>
         <em>{paper.field || '-'}</em>
         <em>{paper.year || '-'}</em>
@@ -117,7 +128,7 @@ export default function LandingPage() {
       } catch (err: any) {
         if (!cancelled) {
           setRows([])
-          setError(err?.response?.data?.error || 'Search demo is temporarily unavailable.')
+          setError(text.searchUnavailable)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -128,11 +139,11 @@ export default function LandingPage() {
       cancelled = true
       window.clearTimeout(handle)
     }
-  }, [trimmedQuery])
+  }, [text.searchUnavailable, trimmedQuery])
 
   return (
     <main className="landing-page">
-      <nav className="landing-nav" aria-label="Public navigation">
+      <nav className="landing-nav" aria-label={text.navLabel}>
         <Link className="landing-brand" to="/">
           <span>S</span>
           <strong>SiliconScope</strong>
@@ -164,7 +175,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <section className="landing-search-demo" aria-label="Live paper search demo">
+        <section className="landing-search-demo" aria-label={text.searchDemoLabel}>
           <div className="landing-demo-head">
             <span>{text.liveDemo}</span>
             <em>{loading ? text.searching : text.engine}</em>
@@ -175,13 +186,13 @@ export default function LandingPage() {
           </label>
           <div className="landing-results">
             {error && <p className="landing-demo-error">{error}</p>}
-            {!error && rows.map((paper) => <LandingSearchResult paper={paper} key={paper.id} />)}
+            {!error && rows.map((paper) => <LandingSearchResult paper={paper} key={paper.id} unknownAuthors={text.unknownAuthors} language={language} />)}
             {!error && !loading && rows.length === 0 && <p className="landing-demo-empty">{text.empty}</p>}
           </div>
         </section>
       </section>
 
-      <section className="landing-capabilities" aria-label="Product capabilities">
+      <section className="landing-capabilities" aria-label={text.capabilitiesLabel}>
         {text.capabilities.map((item) => (
           <article key={item.title}>
             <span>{item.title}</span>

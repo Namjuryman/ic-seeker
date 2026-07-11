@@ -38,7 +38,7 @@ export const localPdfService = {
       policy: {
         localOnly: true,
         uploadedPdfStorage: false,
-        note: "SiliconScope stores local file paths and metadata matches only. Copyrighted PDFs are not uploaded, redistributed, or exported.",
+        note: "SiliconScope 只保存本地文件路径和元数据匹配结果；不会上传、再分发或导出受版权保护的 PDF。",
       },
     };
   },
@@ -46,9 +46,9 @@ export const localPdfService = {
   update(id: string, body: Record<string, unknown>) {
     const allowedStatus = new Set(["matched", "candidate", "unmatched", "ignored"]);
     const matchStatus = body.matchStatus ? String(body.matchStatus) : null;
-    if (matchStatus && !allowedStatus.has(matchStatus)) throw new Error("Invalid PDF match status");
+    if (matchStatus && !allowedStatus.has(matchStatus)) throw new Error("PDF 匹配状态无效。");
     const paperId = body.paperId === null || body.paperId === undefined || body.paperId === "" ? null : Number(body.paperId);
-    if (paperId !== null && !Number.isFinite(paperId)) throw new Error("Invalid paperId");
+    if (paperId !== null && !Number.isFinite(paperId)) throw new Error("论文 ID 无效。");
     sqlite.prepare(`
       UPDATE local_pdf_items
       SET paper_id = COALESCE(@paperId, paper_id),
@@ -65,7 +65,7 @@ export const localPdfService = {
       ocrStatus: body.ocrStatus ? String(body.ocrStatus) : null,
     });
     const row = sqlite.prepare("SELECT * FROM local_pdf_items WHERE id = ?").get(id) as any;
-    if (!row) throw new Error("Local PDF item not found");
+    if (!row) throw new Error("本地 PDF 条目不存在。");
     return mapRow(row);
   },
 };

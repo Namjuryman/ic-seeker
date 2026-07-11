@@ -3,10 +3,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
 import { EmptyState, ErrorState, SkeletonState } from '../components/StatusState'
+import { paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import type { AuthorProfileMetadata, MentorAuthor, MentorDetail, MentorInstitution, MentorProfile, MentorReview, MentorReviewStats, PaperRow } from '../types'
 
 const scoreFields = [
-  ['mentorship', '指导质量'],
+  ['mentorship', '指导支持'],
   ['researchFit', '方向匹配'],
   ['publicationSupport', '论文支持'],
   ['tapeoutOpportunity', '流片/实验机会'],
@@ -15,6 +17,14 @@ const scoreFields = [
   ['labCulture', '组内氛围'],
   ['workloadIntensity', '工作强度'],
   ['careerSupport', '升学/就业支持'],
+]
+
+const relationshipOptions = [
+  { value: 'Former Group Member', label: '曾经组内成员' },
+  { value: 'Current Group Member', label: '当前组内成员' },
+  { value: 'Applicant', label: '申请/套磁经历' },
+  { value: 'Collaborator', label: '合作经历' },
+  { value: 'Other', label: '其他' },
 ]
 
 type MentorProfileWithReviews = MentorProfile & { reviews?: MentorReview[]; reviewStats?: MentorReviewStats }
@@ -121,7 +131,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
       <div className="ss-mini-meta">
         <span>{paper.venue}</span>
         <span>{paper.year}</span>
-        <span>{paper.rank}</span>
+        <span>{paperRankLabel(paper.rank)}</span>
       </div>
     </article>
   )
@@ -163,7 +173,7 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
       setMessage('评价已提交，审核通过后会进入匿名统计。')
       await refresh()
     } catch (err: any) {
-      setError(err?.response?.data?.error || err?.message || '提交失败，请确认已登录后再试。')
+      setError(friendlyError(err, '提交失败，请确认已登录后再试。'))
     } finally {
       setSubmitting(false)
     }
@@ -180,10 +190,10 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
     <section className="ss-panel ss-review-panel">
       <div className="ss-panel-head">
         <div>
-          <p>Verified anonymous review</p>
-          <h2>导师评价</h2>
+          <p>匿名评价</p>
+          <h2>研究者/课题组评价</h2>
         </div>
-        <span>{approvedCount} approved / {stats.pending || 0} pending</span>
+        <span>{approvedCount} 已公开 / {stats.pending || 0} 待审核</span>
       </div>
 
       <div className="ss-caveat compact">
@@ -208,7 +218,7 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
           <h3>评价摘要</h3>
           {reviews.slice(0, 6).map((review) => (
             <div className="ss-text-block" key={review.id}>
-              <h4>{review.publicAlias || review.public_alias || 'Anonymous reviewer'}</h4>
+              <h4>{review.publicAlias || review.public_alias || '匿名评价者'}</h4>
               <p><strong>优势：</strong>{review.strengthsText || review.strengths_text || '-'}</p>
               <p><strong>注意：</strong>{review.cautionsText || review.cautions_text || '-'}</p>
               <p><strong>适合：</strong>{review.fitText || review.fit_text || '-'}</p>
@@ -219,7 +229,7 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
 
       <div className="ss-review-form">
         <select value={relationshipType} onChange={(event) => setRelationshipType(event.target.value)}>
-          {['Former Group Member', 'Current Group Member', 'Applicant', 'Collaborator', 'Other'].map((item) => <option key={item}>{item}</option>)}
+          {relationshipOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
         </select>
         <div className="ss-score-grid">
           {scoreFields.map(([key, label]) => (
@@ -237,7 +247,7 @@ function ReviewSection({ mentorName, profile }: { mentorName: string; profile: M
         </div>
         <div className="ss-textarea-grid">
           <textarea value={strengthsText} onChange={(event) => setStrengthsText(event.target.value)} placeholder="这个组做得好的地方" />
-          <textarea value={cautionsText} onChange={(event) => setCautionsText(event.target.value)} placeholder="未来学生需要注意什么" />
+          <textarea value={cautionsText} onChange={(event) => setCautionsText(event.target.value)} placeholder="申请者需要注意什么" />
           <textarea value={fitText} onChange={(event) => setFitText(event.target.value)} placeholder="适合什么类型的学生" />
         </div>
         {message && <p className="ss-form-message good">{message}</p>}
@@ -296,7 +306,7 @@ export default function MentorsPage() {
         if (requestId === institutionRequestId.current) setInstitutions(rows)
       })
       .catch((err) => {
-        if (requestId === institutionRequestId.current) setError(err instanceof Error ? err.message : '加载机构列表失败')
+        if (requestId === institutionRequestId.current) setError(friendlyError(err, '加载机构列表失败'))
       })
       .finally(() => {
         if (requestId === institutionRequestId.current) setLoadingInstitutions(false)
@@ -320,7 +330,7 @@ export default function MentorsPage() {
         if (requestId === detailRequestId.current) setDetail(row)
       })
       .catch((err) => {
-        if (requestId === detailRequestId.current) setError(err instanceof Error ? err.message : '加载导师列表失败')
+        if (requestId === detailRequestId.current) setError(friendlyError(err, '加载研究者列表失败'))
       })
       .finally(() => {
         if (requestId === detailRequestId.current) setLoadingDetail(false)
@@ -340,7 +350,7 @@ export default function MentorsPage() {
         if (requestId === profileRequestId.current) setProfile(row)
       })
       .catch((err) => {
-        if (requestId === profileRequestId.current) setError(err instanceof Error ? err.message : '加载导师画像失败')
+        if (requestId === profileRequestId.current) setError(friendlyError(err, '加载研究者画像失败'))
       })
       .finally(() => {
         if (requestId === profileRequestId.current) setLoadingProfile(false)
@@ -365,40 +375,46 @@ export default function MentorsPage() {
   }, [detail, recentOnly])
 
   if (mentor && loadingProfile) {
-    return <SkeletonState variant="detail" title="正在加载导师画像" description="整理论文流、职业阶段和评价摘要。" />
+    return <SkeletonState variant="detail" title="正在加载研究者画像" description="整理论文流、职业阶段和评价摘要。" />
   }
 
   if (mentor && error) {
-    return <ErrorState title="导师画像加载失败" description={error} onRetry={() => window.location.reload()} />
+    return <ErrorState title="研究者画像加载失败" description={error} onRetry={() => window.location.reload()} />
   }
 
   if (mentor && profile) {
     return (
       <div className="ss-profile-page">
         <button className="ss-back-button" onClick={() => navigate(`/mentors?institution=${encodeURIComponent(institution || '')}`)}>
-          返回导师列表
+          返回研究者列表
         </button>
 
         <section className="ss-profile-hero">
           <ScholarAvatar name={profile.name} profile={profile.profile} />
           <div>
-            <p className="ss-kicker">Mentor profile</p>
+            <p className="ss-kicker">研究者画像</p>
             <h1>{profile.name}</h1>
             <div className="ss-chip-row">
               {profile.profile?.title && <span>{profile.profile.title}</span>}
               {profile.profile?.affiliation && <span>{profile.profile.affiliation}</span>}
-              <span>{profile.paperCount} papers</span>
-              <span>Score {profile.authorScore}</span>
+              <span>{profile.paperCount} 篇论文</span>
+              <span>元数据信号 {profile.authorScore}</span>
+              <span>论文画像</span>
+              <span>研究者身份待核验</span>
               <span>{profile.roleStage || '阶段待校验'}</span>
               <span>{profile.firstYear || '-'} - {profile.lastYear || '-'}</span>
             </div>
           </div>
           {(profile.profile?.homepageUrl || profile.profile?.sourceUrl) && (
             <div className="ss-profile-actions">
-              {profile.profile.homepageUrl && <a href={profile.profile.homepageUrl} target="_blank" rel="noreferrer">Homepage</a>}
-              {profile.profile.sourceUrl && <a href={profile.profile.sourceUrl} target="_blank" rel="noreferrer">Photo source</a>}
+              {profile.profile.homepageUrl && <a href={profile.profile.homepageUrl} target="_blank" rel="noreferrer">个人主页</a>}
+              {profile.profile.sourceUrl && <a href={profile.profile.sourceUrl} target="_blank" rel="noreferrer">照片来源</a>}
             </div>
           )}
+        </section>
+
+        <section className="ss-caveat">
+          研究者画像由论文元数据、作者归一和已审核匿名评价共同生成；它是申请前的研究线索，不是官方身份、录取概率或评价排名。
         </section>
 
         <div className="ss-profile-grid">
@@ -406,16 +422,16 @@ export default function MentorsPage() {
             <section className="ss-panel">
               <div className="ss-panel-head">
                 <div>
-                  <p>Publication stream</p>
+                  <p>论文流</p>
                   <h2>论文与方向</h2>
                 </div>
-                <span>{profile.papers?.length || 0} loaded</span>
+                <span>{profile.papers?.length || 0} 篇已载入</span>
               </div>
               <div className="ss-mini-list">
                 {profile.papers?.length ? (
                   profile.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)
                 ) : (
-                  <EmptyState title="暂无论文" description="当前导师画像没有匹配到论文。" />
+                  <EmptyState title="暂无论文" description="当前研究者画像没有匹配到论文。" />
                 )}
               </div>
             </section>
@@ -440,11 +456,11 @@ export default function MentorsPage() {
   }
 
   if (institution && loadingDetail) {
-    return <SkeletonState variant="list" title="正在加载机构导师列表" description="按机构论文和导师候选重新排序。" />
+    return <SkeletonState variant="list" title="正在加载机构研究者列表" description="按机构论文和研究者候选重新排序。" />
   }
 
   if (institution && error) {
-    return <ErrorState title="机构导师列表加载失败" description={error} onRetry={() => window.location.reload()} />
+    return <ErrorState title="机构研究者列表加载失败" description={error} onRetry={() => window.location.reload()} />
   }
 
   if (institution && detail) {
@@ -453,11 +469,16 @@ export default function MentorsPage() {
         <button className="ss-back-button" onClick={() => setSearchParams({})}>返回机构列表</button>
         <section className="ss-directory-hero slim">
           <div>
-            <p className="ss-kicker">Mentor institution</p>
+            <p className="ss-kicker">机构研究者</p>
             <h1>{detail.institution}</h1>
             <p>
-              {detail.mentorCandidateCount} 位导师候选，已过滤 {detail.excludedLikelyStudentCount} 位疑似学生作者。单位归属仍需未来由 IEEE affiliation 和学院主页继续校验。
+              {detail.mentorCandidateCount} 位 IC 人员线索，已过滤 {detail.excludedLikelyStudentCount} 位疑似学生作者。是否为现任教师仍应以学院主页、ORCID 或官网人员名单为准。
             </p>
+            <div className="ss-chip-row">
+              <span>{detail.mentorCountSource === 'official-roster' ? '官网名单核验' : '论文估计'}</span>
+              <span>非完整教师名录</span>
+              <span>需人工复核</span>
+            </div>
           </div>
           <label className="ss-toggle">
             <input type="checkbox" checked={recentOnly} onChange={(event) => setRecentOnly(event.target.checked)} />
@@ -466,8 +487,8 @@ export default function MentorsPage() {
         </section>
 
         <section className="ss-caveat compact">
-          {detail.mentorCountSource === 'official-roster' ? '当前列表已按官方 roster 核验。' : '当前列表是“近期活跃导师候选”：优先要求近年机构论文和资深作者位证据。'}
-          历史资深作者 {detail.historicalSeniorAuthorCount || 0} 位，疑似学生/协作者 {detail.excludedLikelyStudentCount} 位；最终任职仍应以学院主页、ORCID 或人工 roster 为准。
+          {detail.mentorCountSource === 'official-roster' ? '当前列表已按官网人员名单核验。' : '当前列表是“近期活跃人员线索”：优先要求近年机构论文和资深作者位证据。'}
+          历史资深作者 {detail.historicalSeniorAuthorCount || 0} 位，疑似学生/协作者 {detail.excludedLikelyStudentCount} 位；退休、跳槽和兼职情况仍需人工复核。
         </section>
 
         <div className="ss-chip-row wide">
@@ -481,17 +502,17 @@ export default function MentorsPage() {
               <ScholarAvatar name={item.name} profile={item.profile} className="ss-mentor-avatar" />
               <div>
                 <h3>{item.name}</h3>
-                <p>Score {item.authorScore} · {item.papers} papers · {trendText(item.trend)}</p>
+                <p>元数据信号 {item.authorScore} · {item.papers} 篇论文 · {trendText(item.trend)}</p>
                 <em>{rankLine(item)}</em>
                 <div>
-                  {item.rosterVerification?.status === 'verified_current' && <span>Official roster</span>}
-                  <span>Senior evidence · {item.seniorAuthorPapers || 0}</span>
+                  {item.rosterVerification?.status === 'verified_current' && <span>官网核验</span>}
+                  <span>资深作者证据 · {item.seniorAuthorPapers || 0}</span>
                   {item.topDomains.slice(0, 3).map((domain) => <span key={domain.key}>{domain.key} · {domain.count}</span>)}
                 </div>
               </div>
             </button>
           ))}
-          {!mentors.length && <EmptyState title="暂无导师候选" description="当前筛选条件下没有可展示导师。" />}
+          {!mentors.length && <EmptyState title="暂无研究者候选" description="当前筛选条件下没有可展示研究者。" />}
         </section>
       </div>
     )
@@ -501,20 +522,25 @@ export default function MentorsPage() {
     <div className="ss-directory-page">
       <section className="ss-directory-hero">
         <div>
-          <p className="ss-kicker">Mentor intelligence</p>
-          <h1>导师/机构</h1>
-          <p>以机构为入口查看 IC 导师候选、研究方向、近年活跃度和匿名评价。当前导师身份为启发式判断，后续会接入 IEEE API 和学院官网爬虫进一步确认。</p>
+          <p className="ss-kicker">研究者情报</p>
+          <h1>研究者/机构</h1>
+          <p>以机构为入口查看 IC 研究者和产业作者线索、研究方向、近年活跃度和匿名评价。官网核验优先；论文估计不直接等同于现任教师名录。</p>
+          <div className="ss-chip-row">
+            <span>元数据线索</span>
+            <span>官网核验优先</span>
+            <span>非录取建议</span>
+          </div>
         </div>
         <div className="ss-directory-search">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索机构..." />
-          <span>{filteredInstitutions.length} institutions</span>
+          <span>{filteredInstitutions.length} 个机构</span>
         </div>
       </section>
 
-      {error && <ErrorState title="导师机构加载失败" description={error} />}
+      {error && <ErrorState title="研究者机构加载失败" description={error} />}
 
       <section className="ss-card-grid institution">
-        {loadingInstitutions && <SkeletonState variant="list" title="正在加载导师机构" description="按 IC 论文实力、导师候选和 QS 信息排序。" />}
+        {loadingInstitutions && <SkeletonState variant="list" title="正在加载研究者机构" description="按 IC 论文产出、人员线索和 QS 信息排序。" />}
         {!loadingInstitutions && visibleInstitutions.map((item, index) => (
           <button key={item.name} className="ss-institution-card" onClick={() => setSearchParams({ institution: item.name })}>
             <div className="ss-card-head">
@@ -523,9 +549,9 @@ export default function MentorsPage() {
             </div>
             <h3>{item.name}</h3>
             <div className="ss-fact-grid">
-              <div><span>IC 导师</span><strong>{item.mentorCount}</strong></div>
+              <div><span>人员线索</span><strong>{item.mentorCount}</strong></div>
               <div><span>IC 论文</span><strong>{item.papers}</strong></div>
-              <div><span>学术评分</span><strong>{item.institutionScore}</strong></div>
+              <div><span>元数据信号</span><strong>{item.institutionScore}</strong></div>
               <div><span>等级</span><strong>{rankLine(item)}</strong></div>
             </div>
           </button>
@@ -537,7 +563,7 @@ export default function MentorsPage() {
       {!loadingInstitutions && visibleInstitutions.length < filteredInstitutions.length && (
         <div className="ss-load-more">
           <button type="button" onClick={() => setVisibleInstitutionCount((count) => count + INSTITUTION_RENDER_STEP)}>
-            Show {Math.min(INSTITUTION_RENDER_STEP, filteredInstitutions.length - visibleInstitutions.length)} more
+            再显示 {Math.min(INSTITUTION_RENDER_STEP, filteredInstitutions.length - visibleInstitutions.length)} 个
           </button>
           <span>{visibleInstitutions.length} / {filteredInstitutions.length}</span>
         </div>

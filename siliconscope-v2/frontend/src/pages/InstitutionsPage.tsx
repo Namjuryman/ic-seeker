@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api'
 import { PaperLink } from '../components/PaperLink'
+import { paperRankLabel } from '../utils/displayLabels'
+import { friendlyError } from '../utils/errorMessages'
 import { searchPath } from '../utils/routes'
 import type { InstitutionProfile, MentorAuthor, MentorDetail, MentorInstitution, PaperRow } from '../types'
 
@@ -37,7 +39,7 @@ function MiniPaper({ paper }: { paper: PaperRow }) {
       <div className="ss-mini-meta">
         <span>{paper.venue}</span>
         <span>{paper.year}</span>
-        <span>{paper.rank}</span>
+        <span>{paperRankLabel(paper.rank)}</span>
       </div>
     </article>
   )
@@ -49,8 +51,8 @@ function rankLine(item: { sPlus?: number; s?: number; a?: number }) {
 
 function mentorCountLabel(item: InstitutionListItem) {
   if (typeof item.mentorCount !== 'number') return '-'
-  if (item.mentorCountSource === 'industry-publication-heuristic') return `${item.mentorCount} industry`
-  return item.mentorCountSource === 'official-roster' ? `${item.mentorCount} official` : `${item.mentorCount} est.`
+  if (item.mentorCountSource === 'industry-publication-heuristic') return `${item.mentorCount} 产业线索`
+  return item.mentorCountSource === 'official-roster' ? `${item.mentorCount} 官网核验` : `${item.mentorCount} 论文估计`
 }
 
 export default function InstitutionsPage() {
@@ -89,7 +91,7 @@ export default function InstitutionsPage() {
         }))
       })
       .catch((err) => {
-        if (requestId === listRequestId.current) setError(err instanceof Error ? err.message : '加载机构列表失败')
+        if (requestId === listRequestId.current) setError(friendlyError(err, '加载机构列表失败'))
       })
       .finally(() => {
         if (requestId === listRequestId.current) setLoadingList(false)
@@ -117,7 +119,7 @@ export default function InstitutionsPage() {
         if (requestId === detailRequestId.current) setDetail(row)
       })
       .catch((err) => {
-        if (requestId === detailRequestId.current) setError(err instanceof Error ? err.message : '加载机构画像失败')
+        if (requestId === detailRequestId.current) setError(friendlyError(err, '加载机构画像失败'))
       })
       .finally(() => {
         if (requestId === detailRequestId.current) setLoadingDetail(false)
@@ -146,11 +148,13 @@ export default function InstitutionsPage() {
         <section className="ss-profile-hero">
           <div className="ss-avatar">{initials(detail.name)}</div>
           <div>
-            <p className="ss-kicker">Institution profile</p>
+            <p className="ss-kicker">机构画像</p>
             <h1>{detail.name}</h1>
             <div className="ss-chip-row">
-              <span>{detail.paperCount ?? 0} papers</span>
-              <span>Score {detail.institutionScore ?? 0}</span>
+              <span>{detail.paperCount ?? 0} 篇论文</span>
+              <span>元数据信号 {detail.institutionScore ?? 0}</span>
+              <span>机构别名归一</span>
+              <span>非现任名录</span>
               {detail.identity?.acronym && <span>{detail.identity.acronym}</span>}
               <span>{rankLine(detail.ranks)}</span>
               {detail.identity?.countryName && (
@@ -169,8 +173,8 @@ export default function InstitutionsPage() {
         {(detail.identity?.city || detail.identity?.rorId || detail.identity?.mergedSubunits?.length) && (
           <section className="ss-panel">
             <div className="ss-panel-head compact">
-              <h2>Institution metadata</h2>
-              <span>{detail.identity?.matchStatus || detail.identity?.source || 'normalized'}</span>
+              <h2>机构元数据</h2>
+              <span>{detail.identity?.matchStatus || detail.identity?.source || '已归一化'}</span>
             </div>
             <div className="ss-chip-row">
               {detail.identity?.city && <span>{detail.identity.city}</span>}
@@ -178,20 +182,20 @@ export default function InstitutionsPage() {
               {typeof detail.identity?.latitude === 'number' && typeof detail.identity?.longitude === 'number' && (
                 <span>{Number(detail.identity?.latitude).toFixed(3)}, {Number(detail.identity?.longitude).toFixed(3)}</span>
               )}
-              {detail.identity?.geoConfidence && <span>{detail.identity.geoConfidence}% geo confidence</span>}
+              {detail.identity?.geoConfidence && <span>地理置信度 {detail.identity.geoConfidence}%</span>}
               {detail.identity?.rorId && <span>{detail.identity.rorId.replace('https://ror.org/', 'ROR ')}</span>}
             </div>
             {detail.identity?.mergedSubunits?.length ? (
-              <p className="text-xs text-ink-muted mt-3">Merged subunits: {detail.identity.mergedSubunits.slice(0, 8).join(' / ')}</p>
+              <p className="text-xs text-ink-muted mt-3">合并别名/子机构：{detail.identity.mergedSubunits.slice(0, 8).join(' / ')}</p>
             ) : null}
           </section>
         )}
 
         <section className="ss-caveat">
-          机构归一化仍会受到分校、实验室、企业团队和历史名称影响。当前结果用于探索，不作为最终排名；未来会结合 IEEE affiliation、机构官网和人工 alias 审核。
+          机构归一化仍会受到分校、实验室、企业团队、历史名称和作者跳槽影响。当前结果适合探索线索，不作为单一排序或现任教师名录。
         </section>
         <section className="ss-caveat">
-          Institution profiles depend on affiliation parsing and alias normalization. Verify names before using for decisions.
+          “IC 人员线索”会标注来源：官网核验优先；论文估计会过滤疑似学生作者，但仍需结合学院主页、ORCID 或人工名单复核。
         </section>
 
         <div className="ss-profile-grid">
@@ -199,10 +203,10 @@ export default function InstitutionsPage() {
             <section className="ss-panel">
               <div className="ss-panel-head">
                 <div>
-                  <p>Publication stream</p>
+                  <p>论文流</p>
                   <h2>机构论文</h2>
                 </div>
-                <span>{detail.papers.length} loaded</span>
+                <span>{detail.papers.length} 篇已载入</span>
               </div>
               <div className="ss-mini-list">
                 {detail.papers.slice(0, 60).map((paper) => <MiniPaper key={paper.id} paper={paper} />)}
@@ -214,33 +218,33 @@ export default function InstitutionsPage() {
             {mentorDetail && (
               <section className="ss-panel">
                 <div className="ss-panel-head compact">
-                  <h2>{mentorDetail.entityKind === 'company' ? 'IC 产业作者' : 'IC 老师'}</h2>
-                  <span>{mentorDetail.mentorCountSource === 'official-roster' ? 'Official roster' : mentorDetail.mentorCountSource === 'industry-publication-heuristic' ? 'Industry heuristic' : 'Heuristic'}</span>
+                  <h2>{mentorDetail.entityKind === 'company' ? 'IC 产业作者线索' : 'IC 人员线索'}</h2>
+                  <span>{mentorDetail.mentorCountSource === 'official-roster' ? '官网核验' : mentorDetail.mentorCountSource === 'industry-publication-heuristic' ? '产业论文线索' : '论文估计'}</span>
                 </div>
                 <div className="ss-caveat compact">
                   {mentorDetail.mentorCountSource === 'official-roster'
-                    ? `已按官方 roster 核验 ${mentorDetail.officialRosterMatchedCount || mentorDetail.mentors.length} 位。`
+                    ? `已按官网人员名单核验 ${mentorDetail.officialRosterMatchedCount || mentorDetail.mentors.length} 位现任或公开列名人员。`
                     : mentorDetail.mentorCountSource === 'industry-publication-heuristic'
                       ? `产业论文作者候选 ${mentorDetail.mentorCandidateCount || mentorDetail.mentors.length} 位，不等同于公司员工名录。`
-                      : `论文启发式候选 ${mentorDetail.mentorCandidateCount || mentorDetail.mentors.length} 位，需继续官网核验。`}
+                      : `论文估计候选 ${mentorDetail.mentorCandidateCount || mentorDetail.mentors.length} 位，已过滤明显学生作者，但仍需官网核验。`}
                 </div>
                 <div className="ss-link-list">
                   {mentorDetail.mentors.slice(0, 14).map((mentor: MentorAuthor) => (
                     <button key={mentor.name} onClick={() => navigate(`/mentors/${encodeURIComponent(mentor.name)}?institution=${encodeURIComponent(detail.name)}`)}>
                       <span>{mentor.name}</span>
-                      <strong>{mentor.rosterVerification?.roleTitle || `${mentor.papers || 0} papers`}</strong>
+                      <strong>{mentor.rosterVerification?.roleTitle || `${mentor.papers || 0} 篇论文`}</strong>
                     </button>
                   ))}
                   {!mentorDetail.mentors.length && <span className="ss-muted-line">暂无可展示的 IC 候选。</span>}
                 </div>
                 <button className="ss-back-button" type="button" onClick={() => navigate(`/mentors?institution=${encodeURIComponent(detail.name)}`)}>
-                  查看完整导师页
+                  查看完整人员线索
                 </button>
               </section>
             )}
 
             <section className="ss-panel">
-              <div className="ss-panel-head compact"><h2>活跃学者</h2></div>
+              <div className="ss-panel-head compact"><h2>活跃作者线索</h2></div>
               <div className="ss-link-list">
                 {detail.authors.slice(0, 12).map((item) => (
                   <button key={item.key} onClick={() => navigate(`/authors/${encodeURIComponent(item.key)}`)}>
@@ -308,13 +312,13 @@ export default function InstitutionsPage() {
     <div className="ss-directory-page">
       <section className="ss-directory-hero">
         <div>
-          <p className="ss-kicker">Institution graph</p>
-          <h1>机构实力</h1>
-          <p>按 IC 论文产出、S+ / S / A 分布和引用表现浏览高校、研究所与企业团队。当前排名以后会继续过滤非 IC 期刊噪声。</p>
+          <p className="ss-kicker">机构图谱</p>
+          <h1>机构画像</h1>
+          <p>按 IC 论文产出、S+ / S / A 分布、引用表现和机构归一化结果浏览高校、研究所与企业团队。人员列是作者/官网线索，不直接等同于现任教师人数。</p>
         </div>
         <div className="ss-directory-search">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索机构名称..." />
-          <span>{filtered.length} results</span>
+          <span>{filtered.length} 条结果</span>
         </div>
       </section>
 
@@ -322,15 +326,15 @@ export default function InstitutionsPage() {
 
       <section className="ss-rank-table">
         <header>
-          <span>Rank</span>
-          <span>Institution</span>
-          <span>Papers</span>
-          <span>IC People</span>
+          <span>排序</span>
+          <span>机构</span>
+          <span>论文</span>
+          <span>IC 人员线索</span>
           <span>S+</span>
-          <span>Citations</span>
-          <span>Score</span>
+          <span>引用</span>
+            <span>元数据信号</span>
         </header>
-        {loadingList && <div className="ss-table-loading">正在加载机构排行...</div>}
+        {loadingList && <div className="ss-table-loading">正在加载机构画像...</div>}
         {!loadingList && filtered.map((institution, index) => (
           <button key={institution.name} onClick={() => navigate(`/institutions/${encodeURIComponent(institution.name)}`)}>
             <span>{index + 1}</span>
@@ -340,7 +344,7 @@ export default function InstitutionsPage() {
               <em>{[institution.metadata?.acronym, institution.metadata?.city, institution.metadata?.countryCode].filter(Boolean).join(' · ') || rankLine(institution)}</em>
             </span>
             <span>{institution.papers ?? 0}</span>
-            <span title={institution.mentorCountSource === 'official-roster' ? 'official roster' : institution.mentorCountSource === 'industry-publication-heuristic' ? 'industry publication heuristic' : 'publication heuristic'}>{mentorCountLabel(institution)}</span>
+            <span title={institution.mentorCountSource === 'official-roster' ? '官网人员名单核验' : institution.mentorCountSource === 'industry-publication-heuristic' ? '产业论文作者线索' : '论文作者估计'}>{mentorCountLabel(institution)}</span>
             <span>{institution.sPlus ?? 0}</span>
             <span>{institution.citations ?? 0}</span>
             <span>{institution.institutionScore ?? 0}</span>

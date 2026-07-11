@@ -61,7 +61,7 @@ const venueRankMap = new Map<string, string>([
 ]);
 
 function venueRank(venue: string): string {
-  return venueRankMap.get(venue) || "User";
+  return venueRankMap.get(venue) || "用户导入";
 }
 
 function baseScore(venue: string, year: number, citations = 0): number {
@@ -158,11 +158,11 @@ export const paperService = {
 
   insertPaper(input: Record<string, unknown>) {
     const title = String(input.title || "").trim();
-    if (!title) throw new Error("Title is required");
+    if (!title) throw new Error("论文标题不能为空。");
     const doi = String(input.doi || "").trim().replace(/^https?:\/\/doi\.org\//i, "");
     const authors = Array.isArray(input.authors) ? (input.authors as string[]).join("; ") : String(input.authors || "");
     const abstract = String(input.abstract || "");
-    const venue = String(input.venue || input.publication_title || "User Import").trim();
+    const venue = String(input.venue || input.publication_title || "用户导入").trim();
     const year = Number(input.year || new Date().getFullYear());
     const domain = String(input.domain || inferDomain(`${title} ${abstract} ${venue}`));
     const citations = Number(input.citation_count || input.citations || 0);
@@ -212,12 +212,12 @@ export const paperService = {
 
   async importByDoi(doi: string) {
     const cleanDoi = String(doi || "").trim().replace(/^https?:\/\/doi\.org\//i, "");
-    if (!cleanDoi) throw new Error("DOI is required");
+    if (!cleanDoi) throw new Error("DOI 不能为空。");
     const mailto = appConfig.crossrefMailto ? `?mailto=${encodeURIComponent(appConfig.crossrefMailto)}` : "";
     const res = await fetch(`https://api.crossref.org/works/${encodeURIComponent(cleanDoi)}${mailto}`, {
       headers: { "user-agent": `SiliconScope (${appConfig.crossrefMailto || "local"})` },
     });
-    if (!res.ok) throw new Error(`Crossref returned ${res.status}`);
+    if (!res.ok) throw new Error(`Crossref 请求失败：${res.status}`);
     const data = await res.json() as { message?: Record<string, any> };
     const item = data.message || {};
     const published = item.published?.["date-parts"]?.[0] || item.created?.["date-parts"]?.[0] || [];

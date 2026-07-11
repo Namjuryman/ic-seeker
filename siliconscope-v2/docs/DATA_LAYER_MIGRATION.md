@@ -12,7 +12,7 @@ SiliconScope v2 currently uses one local SQLite database for both paper metadata
 | Community: comments, mentor reviews, notifications, content reports, moderation logs | SQLite | PostgreSQL | Public writes, moderation auditability, user operations |
 | Companies and aliases | SQLite | PostgreSQL | Business/admin data; needs auditing and enrichment |
 | API keys and admin settings | SQLite | PostgreSQL plus secret manager later | Operational state should not live in metadata DB |
-| Computed snapshots/rankings | SQLite | Redis cache plus Postgres snapshot registry | Avoid expensive recompute; allow invalidation |
+| Computed snapshots/read models | SQLite | Redis cache plus Postgres snapshot registry | Avoid expensive recompute; allow invalidation |
 | Search index | SQLite FTS plus optional Meilisearch adapter | Meilisearch first, OpenSearch later if needed | Better relevance and cross-entity search; rebuildable read model |
 | Files: avatars, PDFs, company logos, attachments | Local folders | S3-compatible object storage | Public deployment and backups |
 
@@ -38,7 +38,7 @@ Current Phase 1 status:
 - `auth.service.ts` now ensures the password-login admin user through `appDb`; local private mode keeps the historical `userId = 0` behavior.
 - `company.service.ts` now keeps company records, sources, field facts, aliases, and company watchlist records in `appSqlite`, while related-paper matching stays on metadata SQLite.
 - `identity-admin.service.ts`, `author-identity.service.ts`, and `institution-identity.service.ts` now use `appDb` for manual alias reads/writes.
-- `profile.service.ts`, `mentor.service.ts`, `author-compare.service.ts`, and `institution-compare.service.ts` are explicitly metadata-first because they derive live rankings from the paper corpus.
+- `profile.service.ts`, `mentor.service.ts`, `author-compare.service.ts`, and `institution-compare.service.ts` are explicitly metadata-first because they derive live corpus-based profile lists from the paper corpus.
 - `mentor-compare.service.ts` reads mentor-review aggregates through `appDb`.
 - `snapshot.service.ts` now uses `cacheDb`/`cacheSqlite`, a cache adapter that falls back to SQLite today and leaves a Redis path open.
 - `search-index.service.ts` now provides an optional Meilisearch adapter for `papers`, `companies`, and `learning_routes`; SQLite search remains the fallback until public search is routed through it.
@@ -74,7 +74,7 @@ Recommended service migration order:
 3. Paper user-state methods and search enrichment. Done for `paper.service.ts`, `search.service.ts`, and `stats.service.ts`.
 4. Auth and user profile. Initial password-admin user now uses `appDb`; full multi-user auth is still pending.
 5. Company/admin data. Initial company service and identity alias split done.
-6. Search and ranking only after Meilisearch/Redis are introduced. Initial Meilisearch indexing now exists for papers, companies, and learning routes.
+6. Search and snapshot-backed profile lists only after Meilisearch/Redis are introduced. Initial Meilisearch indexing now exists for papers, companies, and learning routes.
 
 ## Current Adapter Usage
 
@@ -93,7 +93,7 @@ Recommended service migration order:
 | `identity-admin.service.ts` | No | Yes | Manual alias management uses `appDb`. |
 | `author-identity.service.ts` | No | Yes | Manual author alias reads use `appDb`. |
 | `institution-identity.service.ts` | No | Yes | Manual institution alias reads use `appDb`; builtin aliases remain in code. |
-| `profile.service.ts` | Yes | No | Author/institution rankings are corpus-derived and use `metadataDb`. |
+| `profile.service.ts` | Yes | No | Author/institution profile lists are corpus-derived and use `metadataDb`. |
 | `mentor.service.ts` | Yes | No | Mentor/institution candidate inference is corpus-derived and uses `metadataDb`. |
 | `author-compare.service.ts` | Yes | No | Author comparison is corpus-derived and uses `metadataDb`. |
 | `institution-compare.service.ts` | Yes | No | Institution comparison is corpus-derived and uses `metadataDb`. |
@@ -114,7 +114,7 @@ Recommended service migration order:
 - Index `papers`, `companies`, and `roadmaps` in Meilisearch. Initial adapter and admin rebuild controls exist.
 - Add `authors`, `institutions`, `venues`, and `topics` after identity resolution is stronger.
 - Route public search through the search adapter when Meilisearch is healthy, while preserving SQLite fallback for local/private mode.
-- Store expensive ranking/snapshot payloads in Redis or Postgres-backed snapshot tables.
+- Store expensive profile/snapshot payloads in Redis or Postgres-backed snapshot tables.
 - Keep weekly rebuild scripts idempotent.
 
 ### Recommended Advanced Schema Shape
@@ -126,7 +126,7 @@ Use source tables for truth, projection tables for fast reads, and rebuildable i
 | Raw import | `paper_import_runs`, `paper_sources`, `raw_provider_payloads` | Per crawl/import |
 | Canonical metadata | `papers`, `paper_authors`, `paper_institutions`, `venues`, `doi_aliases` | Per import with upserts |
 | Manual curation | `author_aliases`, `institution_aliases`, `venue_overrides`, `company_aliases` | Admin edits |
-| Read projections | `author_profile_snapshots`, `institution_strength_snapshots`, `geo_strength_snapshots`, `learning_routes` | Weekly or on-demand |
+| Read projections | `author_profile_snapshots`, `institution_profile_snapshots`, `geo_density_snapshots`, `learning_routes` | Weekly or on-demand |
 | Search indexes | Meilisearch `papers`, `companies`, `learning_routes`, later `authors` and `institutions` | After projections refresh |
 | User/product state | `users`, `notes`, `favorites`, `comments`, `reviews`, `billing_events` | Realtime writes |
 
